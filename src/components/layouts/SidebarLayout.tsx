@@ -117,13 +117,13 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                 <Link
                   to={item.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     isActive(item.href)
                       ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1"
                   )}
                 >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  <item.icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200" />
                   {!sidebarCollapsed && (
                     <>
                       <span className="flex-1">{item.label}</span>
@@ -143,8 +143,8 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
               key={item.href}
               to={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-accent hover:text-accent-foreground",
-                sidebarCollapsed && "justify-center"
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:translate-x-1",
+                sidebarCollapsed && "justify-center hover:translate-x-0"
               )}
             >
               <item.icon className="h-5 w-5" />

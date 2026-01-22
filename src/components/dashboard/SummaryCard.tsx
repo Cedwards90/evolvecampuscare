@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, Settings } from 'lucide-react';
+import { TrendingUp, Settings, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SummaryItem {
@@ -28,22 +28,26 @@ export function SummaryCard({
   className 
 }: SummaryCardProps) {
   return (
-    <Card className={cn("border border-border/50 shadow-sm", className)}>
+    <Card className={cn("border border-border/50 shadow-sm overflow-hidden hover:shadow-lg", className)}>
       {/* Gradient Header */}
-      <div className="rounded-t-lg bg-gradient-to-br from-primary via-primary to-primary/80 p-5 text-primary-foreground">
+      <div className="bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-5 text-primary-foreground">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-3xl font-bold">{totalValue.toLocaleString()}</p>
-            <p className="text-sm opacity-90">{totalLabel}</p>
+            <p className="text-3xl font-bold tracking-tight">{totalValue.toLocaleString()}</p>
+            <p className="text-sm opacity-90 mt-1">{totalLabel}</p>
           </div>
           <div className="flex items-center gap-2">
-            {trendValue && (
-              <span className="flex items-center gap-1 rounded-md bg-white/20 px-2 py-1 text-xs font-medium">
+            {trendValue !== undefined && (
+              <span className="flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs font-medium backdrop-blur-sm">
                 <TrendingUp className="h-3 w-3" />
                 {trendValue}%
               </span>
             )}
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-white/20">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/20"
+            >
               <Settings className="h-4 w-4" />
             </Button>
           </div>
@@ -54,8 +58,11 @@ export function SummaryCard({
       <CardContent className="p-0">
         <div className="divide-y divide-border">
           {items.map((item, index) => (
-            <div key={index} className="flex items-center gap-3 px-5 py-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+            <div 
+              key={index} 
+              className="flex items-center gap-3 px-5 py-3 transition-colors duration-200 hover:bg-muted/50 cursor-pointer group"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary transition-transform duration-200 group-hover:scale-105">
                 {item.icon}
               </div>
               <div className="flex-1 min-w-0">
@@ -63,13 +70,18 @@ export function SummaryCard({
                 <p className="text-xs text-muted-foreground">{item.subtitle}</p>
               </div>
               <span className="text-sm font-semibold">{item.value}</span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           ))}
         </div>
         
         <div className="border-t border-border p-3">
-          <Button variant="ghost" className="w-full text-sm font-medium">
+          <Button 
+            variant="ghost" 
+            className="w-full text-sm font-medium hover:bg-primary/5"
+          >
             Full Details
+            <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
       </CardContent>
