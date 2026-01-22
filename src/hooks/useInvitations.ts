@@ -55,12 +55,18 @@ interface SendInvitationParams {
   autoAssignCaseManager?: string;
 }
 
+export interface InvitationResult {
+  invitation: Invitation;
+  inviteUrl: string;
+  emailSent: boolean;
+}
+
 export function useSendInvitation() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (params: SendInvitationParams) => {
+    mutationFn: async (params: SendInvitationParams): Promise<InvitationResult> => {
       // Generate a secure token
       const token = crypto.randomUUID() + '-' + crypto.randomUUID();
       const expiresAt = new Date();
@@ -87,8 +93,12 @@ export function useSendInvitation() {
 
       if (insertError) throw insertError;
 
+      // Build the invitation URL
+      const inviteUrl = `${window.location.origin}/auth?tab=signup&invite=${token}`;
+
       // Call edge function to send invitation email
-      const { error: emailError } = await supabase.functions.invoke('send-user-invitation', {
+      let emailSent = true;
+      const { data: emailResponse, error: emailError } = await supabase.functions.invoke('send-user-invitation', {
         body: {
           email: params.email,
           role: params.role,
@@ -98,23 +108,26 @@ export function useSendInvitation() {
         },
       });
 
-      if (emailError) {
-        console.error('Failed to send invitation email:', emailError);
-        // Don't throw - invitation is created, just email failed
+      if (emailError || emailResponse?.error) {
+        console.error('Failed to send invitation email:', emailError || emailResponse?.error);
+        emailSent = false;
       }
 
-      return invitation;
+      return { invitation: invitation as Invitation, inviteUrl, emailSent };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
-      toast({
-        title: 'Invitation sent',
-        description: 'The invitation email has been sent successfully.',
-      });
+      if (result.emailSent) {
+        toast({
+          title: 'Invitation sent',
+          description: 'The invitation email has been sent successfully.',
+        });
+      }
+      // Don't show toast if email failed - the dialog will show the link
     },
     onError: (error) => {
       toast({
-        title: 'Failed to send invitation',
+        title: 'Failed to create invitation',
         description: error.message,
         variant: 'destructive',
       });
