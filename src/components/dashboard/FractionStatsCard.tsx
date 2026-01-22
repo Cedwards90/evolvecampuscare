@@ -1,4 +1,5 @@
 import { LucideIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
@@ -8,6 +9,7 @@ interface FractionStatsCardProps {
   total: number;
   icon: LucideIcon;
   color?: 'blue' | 'green' | 'yellow' | 'red';
+  href?: string;
   className?: string;
 }
 
@@ -44,37 +46,52 @@ export function FractionStatsCard({
   total, 
   icon: Icon,
   color = 'blue',
+  href,
   className 
 }: FractionStatsCardProps) {
   const percentage = total > 0 ? (current / total) * 100 : 0;
   const styles = colorStyles[color];
 
+  const content = (
+    <CardContent className="p-5">
+      <div className="flex items-start gap-4">
+        <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-200 hover:scale-105", styles.iconBg)}>
+          <Icon className={cn("h-5 w-5", styles.iconText)} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <div className="flex items-baseline gap-1 mt-1">
+            <span className="text-2xl font-bold tracking-tight">{current}</span>
+            <span className="text-lg text-muted-foreground font-medium">/{total}</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Custom Progress Bar with Gradient */}
+      <div className="mt-4">
+        <div className={cn("h-2 w-full rounded-full overflow-hidden", styles.progressBg)}>
+          <div 
+            className={cn("h-full rounded-full transition-all duration-500 ease-out", styles.progressFill)}
+            style={{ width: `${Math.min(percentage, 100)}%` }}
+          />
+        </div>
+      </div>
+    </CardContent>
+  );
+
+  if (href) {
+    return (
+      <Link to={href}>
+        <Card className={cn("border border-border/50 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer hover:border-primary/50", className)}>
+          {content}
+        </Card>
+      </Link>
+    );
+  }
+
   return (
     <Card className={cn("border border-border/50 shadow-sm hover:shadow-lg transition-all duration-300", className)}>
-      <CardContent className="p-5">
-        <div className="flex items-start gap-4">
-          <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-200 hover:scale-105", styles.iconBg)}>
-            <Icon className={cn("h-5 w-5", styles.iconText)} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-2xl font-bold tracking-tight">{current}</span>
-              <span className="text-lg text-muted-foreground font-medium">/{total}</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Custom Progress Bar with Gradient */}
-        <div className="mt-4">
-          <div className={cn("h-2 w-full rounded-full overflow-hidden", styles.progressBg)}>
-            <div 
-              className={cn("h-full rounded-full transition-all duration-500 ease-out", styles.progressFill)}
-              style={{ width: `${Math.min(percentage, 100)}%` }}
-            />
-          </div>
-        </div>
-      </CardContent>
+      {content}
     </Card>
   );
 }
