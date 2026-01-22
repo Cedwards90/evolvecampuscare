@@ -28,6 +28,8 @@ import { Switch } from '@/components/ui/switch';
 import { PriorityBadge } from '@/components/PriorityBadge';
 import { CategoryBadge } from '@/components/CategoryBadge';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSubmitRequest } from '@/hooks/useSubmitRequest';
 import { cn } from '@/lib/utils';
 import type { RequestCategory, RequestPriority } from '@/types/database';
 
@@ -58,9 +60,10 @@ type RequestFormData = z.infer<typeof requestSchema>;
 
 export default function SubmitRequest() {
   const [step, setStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, profile } = useAuth();
+  const submitRequest = useSubmitRequest();
 
   const form = useForm<RequestFormData>({
     resolver: zodResolver(requestSchema),
@@ -92,16 +95,40 @@ export default function SubmitRequest() {
   const prevStep = () => setStep(step - 1);
 
   const onSubmit = async (data: RequestFormData) => {
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast({
-      title: 'Request submitted successfully!',
-      description: 'A case manager will review your request shortly.',
-    });
-    
-    navigate('/student-tracking-request-status-scheduling-meeting');
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Not authenticated',
+        description: 'Please log in to submit a request.',
+      });
+      return;
+    }
+
+    try {
+      await submitRequest.mutateAsync({
+        category: data.category,
+        title: data.title,
+        description: data.description,
+        priority: data.priority,
+        isEmergency: data.isEmergency,
+        userId: user.id,
+        studentName: profile?.full_name || 'Unknown Student',
+      });
+      
+      toast({
+        title: 'Request submitted successfully!',
+        description: 'A case manager will review your request shortly.',
+      });
+      
+      navigate('/student-tracking-request-status-scheduling-meeting');
+    } catch (error) {
+      console.error('Error submitting request:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Submission failed',
+        description: 'Please try again later.',
+      });
+    }
   };
 
   return (
@@ -333,8 +360,8 @@ export default function SubmitRequest() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={submitRequest.isPending}>
+                {submitRequest.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Submit Request
               </Button>
             )}
