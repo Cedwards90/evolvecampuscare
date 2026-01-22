@@ -20,74 +20,84 @@ import ManageRequests from "./pages/ManageRequests";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Create query client outside component to ensure stable reference
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    },
+  },
+});
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
           <LanguageProvider>
             <OfflineProvider>
-              <Toaster />
-              <Sonner />
-              <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<Landing />} />
-                <Route path="/auth" element={<Auth />} />
-                
-                {/* Protected routes - All authenticated users */}
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Student routes */}
-                <Route path="/student-submitting-a-support-request" element={
-                  <ProtectedRoute allowedRoles={['student']}>
-                    <SubmitRequest />
-                  </ProtectedRoute>
-                } />
-                <Route path="/student-tracking-request-status-scheduling-meeting" element={
-                  <ProtectedRoute allowedRoles={['student']}>
-                    <TrackRequests />
-                  </ProtectedRoute>
-                } />
-                <Route path="/student-creating-offline-draft-request" element={
-                  <ProtectedRoute allowedRoles={['student']}>
-                    <OfflineDraft />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Case Manager routes */}
-                <Route path="/case-manager-managing-student-requests" element={
-                  <ProtectedRoute allowedRoles={['case_manager']}>
-                    <ManageRequests />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Admin routes */}
-                <Route path="/admin-monitoring-reassigning-requests" element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Catch-all route */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <TooltipProvider delayDuration={0}>
+                <Toaster />
+                <Sonner />
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/auth" element={<Auth />} />
+                  
+                  {/* Protected routes - All authenticated users */}
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/settings" element={
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Student routes */}
+                  <Route path="/student-submitting-a-support-request" element={
+                    <ProtectedRoute allowedRoles={['student']}>
+                      <SubmitRequest />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/student-tracking-request-status-scheduling-meeting" element={
+                    <ProtectedRoute allowedRoles={['student']}>
+                      <TrackRequests />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/student-creating-offline-draft-request" element={
+                    <ProtectedRoute allowedRoles={['student']}>
+                      <OfflineDraft />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Case Manager routes */}
+                  <Route path="/case-manager-managing-student-requests" element={
+                    <ProtectedRoute allowedRoles={['case_manager']}>
+                      <ManageRequests />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Admin routes */}
+                  <Route path="/admin-monitoring-reassigning-requests" element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Catch-all route */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </TooltipProvider>
             </OfflineProvider>
           </LanguageProvider>
         </AuthProvider>
       </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+}
 
 export default App;
