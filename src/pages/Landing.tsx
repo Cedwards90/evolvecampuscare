@@ -78,37 +78,49 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="container space-y-12 py-12 md:py-24">
-        <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
-          <h1 className="font-display text-h1 md:text-5xl lg:text-6xl font-bold tracking-tight">
-            Student Support,{' '}
-            <span className="text-primary">Simplified</span>
-          </h1>
-          <p className="mt-6 text-lg text-muted-foreground md:text-xl max-w-2xl">
-            CampusCare connects students with the support they need. Submit requests, track progress, 
-            and schedule meetings with dedicated case managers—all in one place.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            {user ? (
-              <Button size="lg" asChild>
-                <Link to="/dashboard">
-                  Go to Dashboard
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            ) : (
-              <>
-                <Button size="lg" asChild>
-                  <Link to="/auth?tab=signup">
-                    Get Started
+      <section className="relative overflow-hidden">
+        {/* Subtle gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 pointer-events-none" />
+        <div className="absolute top-20 left-1/4 h-72 w-72 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 right-1/4 h-64 w-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="container relative space-y-12 py-16 md:py-28">
+          <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+            <h1 className="font-display text-h1 md:text-5xl lg:text-6xl font-bold tracking-tight">
+              Student Support,{' '}
+              <span className="text-primary relative">
+                Simplified
+                <svg className="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 200 8" fill="none">
+                  <path d="M2 6C50 2 150 2 198 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="text-primary/30"/>
+                </svg>
+              </span>
+            </h1>
+            <p className="mt-6 text-lg text-muted-foreground md:text-xl max-w-2xl leading-relaxed">
+              CampusCare connects students with the support they need. Submit requests, track progress, 
+              and schedule meetings with dedicated case managers—all in one place.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+              {user ? (
+                <Button size="lg" className="shadow-lg shadow-primary/25" asChild>
+                  <Link to="/dashboard">
+                    Go to Dashboard
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="outline" asChild>
-                  <Link to="/auth">Sign In</Link>
-                </Button>
-              </>
-            )}
+              ) : (
+                <>
+                  <Button size="lg" className="shadow-lg shadow-primary/25" asChild>
+                    <Link to="/auth?tab=signup">
+                      Get Started
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button size="lg" variant="outline" className="backdrop-blur-sm" asChild>
+                    <Link to="/auth">Sign In</Link>
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </section>

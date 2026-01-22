@@ -121,24 +121,21 @@ export default function Dashboard() {
             current={stats.totalRequests}
             total={stats.totalRequests + 10}
             icon={DollarSign}
-            subtitle="Requests Submitted"
-            progressColor="blue"
+            color="blue"
           />
           <FractionStatsCard
             title="In Progress"
             current={stats.pendingRequests}
             total={stats.totalRequests}
             icon={Target}
-            subtitle="Active Cases"
-            progressColor="green"
+            color="green"
           />
           <FractionStatsCard
             title="Resolved"
             current={stats.resolvedRequests}
             total={stats.totalRequests}
             icon={CheckCircle}
-            subtitle="Completed"
-            progressColor="green"
+            color="green"
           />
           <PercentageStatsCard
             title="Resolution Rate"

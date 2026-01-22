@@ -1,6 +1,5 @@
 import { LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
 interface FractionStatsCardProps {
@@ -8,70 +7,72 @@ interface FractionStatsCardProps {
   current: number;
   total: number;
   icon: LucideIcon;
-  subtitle?: string;
-  progressColor?: 'blue' | 'green' | 'orange' | 'red';
+  color?: 'blue' | 'green' | 'yellow' | 'red';
   className?: string;
 }
 
-const progressColors = {
-  blue: 'bg-primary',
-  green: 'bg-success',
-  orange: 'bg-warning',
-  red: 'bg-destructive',
-};
-
-const progressBgColors = {
-  blue: '[&>div]:bg-primary',
-  green: '[&>div]:bg-success',
-  orange: '[&>div]:bg-warning',
-  red: '[&>div]:bg-destructive',
+const colorStyles = {
+  blue: {
+    iconBg: 'bg-blue-100 dark:bg-blue-900/30',
+    iconText: 'text-blue-600 dark:text-blue-400',
+    progressBg: 'bg-blue-100 dark:bg-blue-900/30',
+    progressFill: 'bg-gradient-to-r from-blue-500 to-blue-600',
+  },
+  green: {
+    iconBg: 'bg-emerald-100 dark:bg-emerald-900/30',
+    iconText: 'text-emerald-600 dark:text-emerald-400',
+    progressBg: 'bg-emerald-100 dark:bg-emerald-900/30',
+    progressFill: 'bg-gradient-to-r from-emerald-500 to-emerald-600',
+  },
+  yellow: {
+    iconBg: 'bg-amber-100 dark:bg-amber-900/30',
+    iconText: 'text-amber-600 dark:text-amber-400',
+    progressBg: 'bg-amber-100 dark:bg-amber-900/30',
+    progressFill: 'bg-gradient-to-r from-amber-500 to-amber-600',
+  },
+  red: {
+    iconBg: 'bg-red-100 dark:bg-red-900/30',
+    iconText: 'text-red-600 dark:text-red-400',
+    progressBg: 'bg-red-100 dark:bg-red-900/30',
+    progressFill: 'bg-gradient-to-r from-red-500 to-red-600',
+  },
 };
 
 export function FractionStatsCard({ 
   title, 
   current, 
   total, 
-  icon: Icon, 
-  subtitle,
-  progressColor = 'blue',
+  icon: Icon,
+  color = 'blue',
   className 
 }: FractionStatsCardProps) {
   const percentage = total > 0 ? (current / total) * 100 : 0;
+  const styles = colorStyles[color];
 
   return (
-    <Card className={cn("border border-border/50 shadow-sm", className)}>
+    <Card className={cn("border border-border/50 shadow-sm hover:shadow-lg transition-all duration-300", className)}>
       <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-              <Icon className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold tracking-tight">{current}</span>
-                <span className="text-lg text-muted-foreground">/{total}</span>
-              </div>
-              <p className="text-sm text-muted-foreground">{title}</p>
+        <div className="flex items-start gap-4">
+          <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-200 hover:scale-105", styles.iconBg)}>
+            <Icon className={cn("h-5 w-5", styles.iconText)} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-2xl font-bold tracking-tight">{current}</span>
+              <span className="text-lg text-muted-foreground font-medium">/{total}</span>
             </div>
           </div>
-          <button className="text-muted-foreground hover:text-foreground">
-            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
-              <circle cx="8" cy="2" r="1.5" />
-              <circle cx="8" cy="8" r="1.5" />
-              <circle cx="8" cy="14" r="1.5" />
-            </svg>
-          </button>
         </div>
         
-        <div className="mt-4 space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{subtitle || title}</span>
-            <span className="font-medium">{percentage.toFixed(0)}%</span>
+        {/* Custom Progress Bar with Gradient */}
+        <div className="mt-4">
+          <div className={cn("h-2 w-full rounded-full overflow-hidden", styles.progressBg)}>
+            <div 
+              className={cn("h-full rounded-full transition-all duration-500 ease-out", styles.progressFill)}
+              style={{ width: `${Math.min(percentage, 100)}%` }}
+            />
           </div>
-          <Progress 
-            value={percentage} 
-            className={cn("h-1.5", progressBgColors[progressColor])}
-          />
         </div>
       </CardContent>
     </Card>
