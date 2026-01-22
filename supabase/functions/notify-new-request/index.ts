@@ -1,0 +1,217 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { Resend } from "npm:resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+interface NewRequestNotification {
+  requestId: string;
+  requestTitle: string;
+  category: string;
+  priority: string;
+  isEmergency: boolean;
+  studentId: string;
+  studentName: string;
+}
+
+const handler = async (req: Request): Promise<Response> => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      throw new Error("Missing Supabase environment variables");
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    const {
+      requestId,
+      requestTitle,
+      category,
+      priority,
+      isEmergency,
+      studentName,
+    }: NewRequestNotification = await req.json();
+
+    console.log("Notifying admins of new request:", {
+      requestId,
+      requestTitle,
+      category,
+      priority,
+      isEmergency,
+    });
+
+    // Fetch all admin user IDs from user_roles
+    const { data: adminRoles, error: rolesError } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "admin");
+
+    if (rolesError) {
+      console.error("Error fetching admin roles:", rolesError);
+      throw rolesError;
+    }
+
+    if (!adminRoles || adminRoles.length === 0) {
+      console.log("No admins found to notify");
+      return new Response(
+        JSON.stringify({ success: true, message: "No admins to notify" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Fetch admin profiles to get emails
+    const adminUserIds = adminRoles.map((r) => r.user_id);
+    const { data: adminProfiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("email, full_name")
+      .in("user_id", adminUserIds);
+
+    if (profilesError) {
+      console.error("Error fetching admin profiles:", profilesError);
+      throw profilesError;
+    }
+
+    if (!adminProfiles || adminProfiles.length === 0) {
+      console.log("No admin profiles found");
+      return new Response(
+        JSON.stringify({ success: true, message: "No admin profiles found" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Format category and priority for display
+    const categoryDisplay = category.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const priorityDisplay = priority.charAt(0).toUpperCase() + priority.slice(1);
+
+    // Determine priority color
+    const priorityColors: Record<string, string> = {
+      low: "#22c55e",
+      medium: "#f59e0b",
+      high: "#f97316",
+      emergency: "#ef4444",
+    };
+    const priorityColor = priorityColors[priority] || "#6b7280";
+
+    // Build email HTML
+    const emergencyBanner = isEmergency
+      ? `
+        <div style="background-color: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+          <p style="color: #dc2626; font-weight: bold; margin: 0; font-size: 16px;">
+            🚨 EMERGENCY REQUEST - Immediate Attention Required
+          </p>
+        </div>
+      `
+      : "";
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>New Support Request</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; padding: 40px 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+            <div style="background-color: #3B82F6; padding: 24px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">New Support Request</h1>
+            </div>
+            
+            <div style="padding: 32px;">
+              ${emergencyBanner}
+              
+              <p style="color: #374151; font-size: 16px; margin-bottom: 24px;">
+                A new support request has been submitted and requires assignment.
+              </p>
+              
+              <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                <h2 style="color: #1f2937; font-size: 18px; margin: 0 0 16px 0;">${requestTitle}</h2>
+                
+                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                  <span style="background-color: #e0e7ff; color: #4338ca; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 500;">
+                    ${categoryDisplay}
+                  </span>
+                  <span style="background-color: ${priorityColor}20; color: ${priorityColor}; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 500;">
+                    ${priorityDisplay} Priority
+                  </span>
+                </div>
+                
+                <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                  <strong>Submitted by:</strong> ${studentName || "Unknown Student"}
+                </p>
+              </div>
+              
+              <div style="text-align: center;">
+                <a href="https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app/requests/${requestId}" 
+                   style="display: inline-block; background-color: #3B82F6; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+                  View Request
+                </a>
+              </div>
+            </div>
+            
+            <div style="background-color: #f9fafb; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                This is an automated notification from Student Support Portal
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Send email to all admins
+    const adminEmails = adminProfiles.map((p) => p.email);
+    const subject = isEmergency
+      ? `🚨 [EMERGENCY] New Support Request: ${requestTitle}`
+      : `[${priorityDisplay}] New Support Request: ${requestTitle}`;
+
+    console.log("Sending notification to admins:", adminEmails);
+
+    const emailResponse = await resend.emails.send({
+      from: "Student Support Portal <onboarding@resend.dev>",
+      to: adminEmails,
+      subject,
+      html: emailHtml,
+    });
+
+    console.log("Email sent successfully:", emailResponse);
+
+    return new Response(
+      JSON.stringify({ success: true, emailResponse }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error in notify-new-request function:", errorMessage);
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
+  }
+};
+
+serve(handler);

@@ -2,3 +2,12 @@ project_id = "kxhykddsllizazoqxevu"
 
 [functions.send-assignment-notification]
 verify_jwt = false
+
+[functions.notify-new-request]
+verify_jwt = false
+
+[functions.notify-status-change]
+verify_jwt = false
+
+[functions.weekly-case-manager-summary]
+verify_jwt = false

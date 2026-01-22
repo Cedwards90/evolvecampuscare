@@ -72,11 +72,35 @@ export function useRequest(requestId: string | undefined) {
   });
 }
 
+async function sendStatusChangeNotification(params: {
+  requestId: string;
+  studentId: string;
+  requestTitle: string;
+  previousStatus: string;
+  newStatus: string;
+  note?: string;
+}) {
+  try {
+    await supabase.functions.invoke('notify-status-change', {
+      body: params,
+    });
+  } catch (error) {
+    console.error('Failed to send status change notification:', error);
+  }
+}
+
 export function useApproveRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ requestId, userId }: { requestId: string; userId: string }) => {
+      // Fetch request details first
+      const { data: requestData } = await supabase
+        .from('support_requests')
+        .select('student_id, title')
+        .eq('id', requestId)
+        .single();
+
       // Update status to in_progress
       const { error: updateError } = await supabase
         .from('support_requests')
@@ -98,6 +122,17 @@ export function useApproveRequest() {
         });
 
       if (noteError) throw noteError;
+
+      // Send notification to student
+      if (requestData) {
+        sendStatusChangeNotification({
+          requestId,
+          studentId: requestData.student_id,
+          requestTitle: requestData.title,
+          previousStatus: 'submitted',
+          newStatus: 'in_progress',
+        });
+      }
     },
     onSuccess: (_, { requestId }) => {
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
@@ -119,6 +154,13 @@ export function useDenyRequest() {
       userId: string; 
       reason: string;
     }) => {
+      // Fetch request details first
+      const { data: requestData } = await supabase
+        .from('support_requests')
+        .select('student_id, title')
+        .eq('id', requestId)
+        .single();
+
       // Update status to cancelled
       const { error: updateError } = await supabase
         .from('support_requests')
@@ -140,6 +182,18 @@ export function useDenyRequest() {
         });
 
       if (noteError) throw noteError;
+
+      // Send notification to student
+      if (requestData) {
+        sendStatusChangeNotification({
+          requestId,
+          studentId: requestData.student_id,
+          requestTitle: requestData.title,
+          previousStatus: 'submitted',
+          newStatus: 'cancelled',
+          note: reason,
+        });
+      }
     },
     onSuccess: (_, { requestId }) => {
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
@@ -153,6 +207,13 @@ export function useResolveRequest() {
 
   return useMutation({
     mutationFn: async ({ requestId, userId }: { requestId: string; userId: string }) => {
+      // Fetch request details first
+      const { data: requestData } = await supabase
+        .from('support_requests')
+        .select('student_id, title, status')
+        .eq('id', requestId)
+        .single();
+
       const { error: updateError } = await supabase
         .from('support_requests')
         .update({ 
@@ -163,18 +224,31 @@ export function useResolveRequest() {
 
       if (updateError) throw updateError;
 
+      const previousStatus = requestData?.status || 'in_progress';
+
       const { error: noteError } = await supabase
         .from('request_updates')
         .insert({
           request_id: requestId,
           user_id: userId,
-          previous_status: 'in_progress',
+          previous_status: previousStatus,
           new_status: 'resolved',
           note: 'Request has been resolved.',
           is_internal: false,
         });
 
       if (noteError) throw noteError;
+
+      // Send notification to student
+      if (requestData) {
+        sendStatusChangeNotification({
+          requestId,
+          studentId: requestData.student_id,
+          requestTitle: requestData.title,
+          previousStatus,
+          newStatus: 'resolved',
+        });
+      }
     },
     onSuccess: (_, { requestId }) => {
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
@@ -196,6 +270,13 @@ export function useEscalateRequest() {
       userId: string; 
       reason: string;
     }) => {
+      // Fetch request details first
+      const { data: requestData } = await supabase
+        .from('support_requests')
+        .select('student_id, title')
+        .eq('id', requestId)
+        .single();
+
       const { error: updateError } = await supabase
         .from('support_requests')
         .update({ 
@@ -218,6 +299,18 @@ export function useEscalateRequest() {
         });
 
       if (noteError) throw noteError;
+
+      // Send notification to student
+      if (requestData) {
+        sendStatusChangeNotification({
+          requestId,
+          studentId: requestData.student_id,
+          requestTitle: requestData.title,
+          previousStatus: 'in_progress',
+          newStatus: 'escalated',
+          note: reason,
+        });
+      }
     },
     onSuccess: (_, { requestId }) => {
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
