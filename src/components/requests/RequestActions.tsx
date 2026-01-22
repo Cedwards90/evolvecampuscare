@@ -190,8 +190,9 @@ export function RequestActions({
   };
 
   // Determine which actions are available based on current status
-  const canApprove = currentStatus === 'submitted';
-  const canDeny = currentStatus === 'submitted';
+  // Allow approve/deny for both submitted AND in_progress (for auto-started requests)
+  const canApprove = currentStatus === 'submitted' || currentStatus === 'in_progress';
+  const canDeny = currentStatus === 'submitted' || currentStatus === 'in_progress';
   const canResolve = currentStatus === 'in_progress' || currentStatus === 'escalated';
   const canEscalate = currentStatus === 'in_progress';
 
@@ -205,7 +206,7 @@ export function RequestActions({
             className="gap-2"
           >
             <CheckCircle className="h-4 w-4" />
-            Approve & Start
+            {currentStatus === 'in_progress' ? 'Confirm & Notify' : 'Approve & Start'}
           </Button>
         )}
 
@@ -250,10 +251,13 @@ export function RequestActions({
       <AlertDialog open={dialogType === 'approve'} onOpenChange={(open) => !open && closeDialog()}>
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Approve Request</AlertDialogTitle>
+            <AlertDialogTitle>
+              {currentStatus === 'in_progress' ? 'Confirm Request' : 'Approve Request'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This will approve the request and change its status to "In Progress". 
-              The student will be notified that their request is being handled.
+              {currentStatus === 'in_progress' 
+                ? 'This will confirm the request and notify the student that their case is being actively worked on.'
+                : 'This will approve the request and change its status to "In Progress". The student will be notified that their request is being handled.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           
