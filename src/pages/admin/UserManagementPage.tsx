@@ -15,6 +15,8 @@ import {
   ChevronRight,
   BarChart3,
   Send,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
@@ -61,7 +63,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useUsers, useUpdateUserRole } from '@/hooks/useUsers';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUsers, useUpdateUserRole, useDeleteUser } from '@/hooks/useUsers';
 import type { AppRole } from '@/types/database';
 
 const ITEMS_PER_PAGE = 10;
@@ -84,11 +87,15 @@ export default function UserManagementPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; currentRole: AppRole } | null>(null);
   const [newRole, setNewRole] = useState<AppRole | null>(null);
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string; email: string; role: AppRole } | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
   
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
   const { data: users, isLoading } = useUsers();
   const { data: pendingInvitations } = usePendingInvitations();
   const updateRole = useUpdateUserRole();
+  const deleteUser = useDeleteUser();
 
   // Filter and paginate users
   const filteredUsers = useMemo(() => {
@@ -155,6 +162,31 @@ export default function UserManagementPage() {
   const openRoleDialog = (userId: string, name: string, currentRole: AppRole, targetRole: AppRole) => {
     setSelectedUser({ id: userId, name, currentRole });
     setNewRole(targetRole);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete || deleteConfirmation !== 'DELETE') return;
+
+    try {
+      await deleteUser.mutateAsync(userToDelete.id);
+      toast({
+        title: 'User Deleted',
+        description: `${userToDelete.name} has been permanently removed from the system.`,
+      });
+      setUserToDelete(null);
+      setDeleteConfirmation('');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete user. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const openDeleteDialog = (userId: string, name: string, email: string, role: AppRole) => {
+    setUserToDelete({ id: userId, name, email, role });
+    setDeleteConfirmation('');
   };
 
   return (
@@ -372,9 +404,18 @@ export default function UserManagementPage() {
                                     onClick={() => openRoleDialog(user.user_id, user.full_name || 'User', user.role, 'admin')}
                                   >
                                     <Shield className="mr-2 h-4 w-4" />
-                                    Make Admin
+                                    Make Administrator
                                   </DropdownMenuItem>
                                 )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => openDeleteDialog(user.user_id, user.full_name || 'User', user.email, user.role)}
+                                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                  disabled={user.user_id === currentUser?.id}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete User
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -437,6 +478,69 @@ export default function UserManagementPage() {
               {updateRole.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirm Change
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => {
+        if (!open) {
+          setUserToDelete(null);
+          setDeleteConfirmation('');
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Delete User Permanently
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <p>
+                  You are about to permanently delete <strong>{userToDelete?.name}</strong> ({userToDelete?.email}).
+                </p>
+                
+                {userToDelete?.role === 'admin' && (
+                  <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-destructive text-sm">
+                    <strong>⚠️ Warning:</strong> This user is an administrator. Deleting them will remove their admin access.
+                  </div>
+                )}
+                
+                <div className="rounded-md bg-muted p-3 text-sm">
+                  <p className="font-medium mb-2">This action will:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    <li>Remove the user's profile and login access</li>
+                    <li>Delete their appointments and messages</li>
+                    <li>Remove their student/case manager assignments</li>
+                    <li>Clear case manager assignments on support requests</li>
+                  </ul>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">
+                    Type <strong>DELETE</strong> to confirm:
+                  </p>
+                  <Input
+                    value={deleteConfirmation}
+                    onChange={(e) => setDeleteConfirmation(e.target.value)}
+                    placeholder="DELETE"
+                    className="font-mono"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteUser.isPending}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteUser}
+              disabled={deleteConfirmation !== 'DELETE' || deleteUser.isPending}
+            >
+              {deleteUser.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete User
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
