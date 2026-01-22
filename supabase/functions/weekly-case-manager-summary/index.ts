@@ -298,7 +298,7 @@ const handler = async (req: Request): Promise<Response> => {
                 ${insightsSection}
                 
                 <div style="text-align: center; margin-top: 32px;">
-                  <a href="https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app/case-manager-managing-student-requests" 
+                  <a href="https://evolvecampuscare.lovable.app/case-manager-managing-student-requests" 
                      style="display: inline-block; background-color: #3B82F6; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
                     View Dashboard
                   </a>

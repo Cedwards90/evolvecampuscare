@@ -224,7 +224,7 @@ const handler = async (req: Request): Promise<Response> => {
               </div>
               
               <div style="text-align: center;">
-                <a href="https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app/requests/${requestId}" 
+                <a href="https://evolvecampuscare.lovable.app/requests/${requestId}" 
                    style="display: inline-block; background-color: #3B82F6; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
                   View Request
                 </a>

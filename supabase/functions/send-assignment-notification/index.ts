@@ -101,7 +101,7 @@ const handler = async (req: Request): Promise<Response> => {
           <p style="color: #4b5563;">Please log in to the support portal to review and respond to these requests.</p>
           
           <div style="margin-top: 24px;">
-            <a href="${Deno.env.get("SUPABASE_URL")?.replace('.supabase.co', '.lovable.app')}/manage-requests" 
+            <a href="https://evolvecampuscare.lovable.app/case-manager-managing-student-requests" 
                style="background: #3B82F6; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">
               View My Requests
             </a>
@@ -145,7 +145,7 @@ const handler = async (req: Request): Promise<Response> => {
           <p style="color: #4b5563;">Please log in to the support portal to review and respond to this request.</p>
           
           <div style="margin-top: 24px;">
-            <a href="${Deno.env.get("SUPABASE_URL")?.replace('.supabase.co', '.lovable.app')}/request/${requestId}" 
+            <a href="https://evolvecampuscare.lovable.app/requests/${requestId}" 
                style="background: #3B82F6; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">
               View Request
             </a>
