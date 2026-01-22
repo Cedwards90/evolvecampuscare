@@ -22,6 +22,7 @@ import UserManagementPage from "./pages/admin/UserManagementPage";
 import RequestDetail from "./pages/RequestDetail";
 import RequestsList from "./pages/RequestsList";
 import CaseManagerDetail from "./pages/CaseManagerDetail";
+import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
 
 // Create query client outside component to ensure stable reference
@@ -94,6 +95,18 @@ function App() {
                   <Route path="/admin/users" element={
                     <ProtectedRoute allowedRoles={['admin']}>
                       <UserManagementPage />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Staff routes (case_manager + admin) */}
+                  <Route path="/messages" element={
+                    <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                      <Messages />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/messages/:userId" element={
+                    <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                      <Messages />
                     </ProtectedRoute>
                   } />
                   

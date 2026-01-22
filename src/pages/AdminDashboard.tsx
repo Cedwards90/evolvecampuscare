@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { 
   Search, 
@@ -9,7 +10,8 @@ import {
   RefreshCw,
   UserCog,
   Loader2,
-  Eye
+  Eye,
+  MessageSquare
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { UserManagement } from '@/components/admin/UserManagement';
@@ -20,6 +22,8 @@ import { PriorityBadge } from '@/components/PriorityBadge';
 import { CategoryBadge } from '@/components/CategoryBadge';
 import { TimeAgo } from '@/components/TimeAgo';
 import { EmptyState } from '@/components/EmptyState';
+import { RequestQuickActions } from '@/components/requests/RequestQuickActions';
+import { ComposeMessage } from '@/components/messages/ComposeMessage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,12 +54,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { 
   BarChart, 
@@ -63,7 +65,7 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip, 
+  Tooltip as RechartsTooltip, 
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -189,7 +191,7 @@ export default function AdminDashboard() {
                       <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                       <XAxis dataKey="date" className="text-xs" />
                       <YAxis className="text-xs" />
-                      <Tooltip 
+                      <RechartsTooltip 
                         contentStyle={{ 
                           backgroundColor: 'hsl(var(--card))', 
                           border: '1px solid hsl(var(--border))' 
@@ -225,7 +227,7 @@ export default function AdminDashboard() {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <RechartsTooltip />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
@@ -276,6 +278,20 @@ export default function AdminDashboard() {
                         <p className="font-semibold">{cm.avg_response_time}h</p>
                       </div>
                     </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="flex-1" asChild>
+                        <Link to={`/case-managers/${cm.id}`}>View Details</Link>
+                      </Button>
+                      <ComposeMessage
+                        trigger={
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MessageSquare className="h-4 w-4" />
+                          </Button>
+                        }
+                        defaultRecipientId={cm.id}
+                        defaultSubject={`Quick message`}
+                      />
+                    </div>
                   </CardContent>
                 </Card>
               );
@@ -319,7 +335,9 @@ export default function AdminDashboard() {
                         <span className="font-medium">{request.student?.full_name}</span>
                       </TableCell>
                       <TableCell>
-                        <p className="font-medium truncate max-w-[200px]">{request.title}</p>
+                        <Link to={`/requests/${request.id}`} className="hover:underline">
+                          <p className="font-medium truncate max-w-[200px]">{request.title}</p>
+                        </Link>
                       </TableCell>
                       <TableCell>
                         <CategoryBadge category={request.category} />
@@ -336,17 +354,25 @@ export default function AdminDashboard() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setReassignDialogOpen(true);
-                          }}
-                        >
-                          <UserCog className="h-4 w-4 mr-1" />
-                          Reassign
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <RequestQuickActions request={request} />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => {
+                                  setSelectedRequest(request);
+                                  setReassignDialogOpen(true);
+                                }}
+                              >
+                                <UserCog className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Reassign</TooltipContent>
+                          </Tooltip>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -385,56 +411,68 @@ export default function AdminDashboard() {
             </Select>
           </div>
 
-          <Card className="border border-border/50">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Request</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Case Manager</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRequests.slice(0, 10).map((request) => (
-                  <TableRow key={request.id}>
-                    <TableCell className="font-medium">
-                      {request.student?.full_name}
-                    </TableCell>
-                    <TableCell>
-                      <p className="truncate max-w-[200px]">{request.title}</p>
-                    </TableCell>
-                    <TableCell>
-                      <PriorityBadge priority={request.priority} />
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={request.status} />
-                    </TableCell>
-                    <TableCell>
-                      {request.case_manager?.full_name || (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <TimeAgo date={request.created_at} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedRequest(request)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Request</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Case Manager</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
+                </TableHeader>
+                <TableBody>
+                  {filteredRequests.slice(0, 10).map((request) => (
+                    <TableRow key={request.id}>
+                      <TableCell className="font-medium">
+                        {request.student?.full_name}
+                      </TableCell>
+                      <TableCell>
+                        <Link to={`/requests/${request.id}`} className="hover:underline">
+                          <p className="truncate max-w-[200px]">{request.title}</p>
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <PriorityBadge priority={request.priority} />
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={request.status} />
+                      </TableCell>
+                      <TableCell>
+                        {request.case_manager?.full_name || (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <TimeAgo date={request.created_at} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <RequestQuickActions request={request} />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => {
+                                  setSelectedRequest(request);
+                                  setReassignDialogOpen(true);
+                                }}
+                              >
+                                <UserCog className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Reassign</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
         </section>
 
         {/* User Management Section */}
@@ -493,56 +531,6 @@ export default function AdminDashboard() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        {/* Request Detail Sheet */}
-        <Sheet open={!!selectedRequest && !reassignDialogOpen} onOpenChange={() => setSelectedRequest(null)}>
-          <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-            {selectedRequest && (
-              <>
-                <SheetHeader>
-                  <SheetTitle className="font-display">{selectedRequest.title}</SheetTitle>
-                  <SheetDescription>
-                    Request ID: {selectedRequest.id}
-                  </SheetDescription>
-                </SheetHeader>
-
-                <div className="mt-6 space-y-6">
-                  <div className="flex flex-wrap gap-2">
-                    <StatusBadge status={selectedRequest.status} />
-                    <PriorityBadge priority={selectedRequest.priority} />
-                    <CategoryBadge category={selectedRequest.category} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Student</h3>
-                    <p>{selectedRequest.student?.full_name}</p>
-                    <p className="text-sm text-muted-foreground">{selectedRequest.student?.email}</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Description</h3>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {selectedRequest.description}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Assigned Case Manager</h3>
-                    <p>{selectedRequest.case_manager?.full_name || 'Unassigned'}</p>
-                  </div>
-
-                  <Button 
-                    className="w-full"
-                    onClick={() => setReassignDialogOpen(true)}
-                  >
-                    <UserCog className="mr-2 h-4 w-4" />
-                    Reassign Request
-                  </Button>
-                </div>
-              </>
-            )}
-          </SheetContent>
-        </Sheet>
       </div>
     </SidebarLayout>
   );

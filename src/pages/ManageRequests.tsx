@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { 
   Search, 
@@ -9,8 +10,7 @@ import {
   MessageSquare,
   AlertCircle,
   TrendingUp,
-  Loader2,
-  Eye
+  Loader2
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -20,10 +20,9 @@ import { CategoryBadge } from '@/components/CategoryBadge';
 import { AIBadge } from '@/components/AIBadge';
 import { TimeAgo } from '@/components/TimeAgo';
 import { EmptyState } from '@/components/EmptyState';
+import { RequestQuickActions } from '@/components/requests/RequestQuickActions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -41,22 +40,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { mockRequests, mockAIInsights } from '@/lib/mock-data';
 import type { RequestStatus, RequestPriority } from '@/types/database';
@@ -67,9 +50,6 @@ export default function ManageRequests() {
   const [priorityFilter, setPriorityFilter] = useState<RequestPriority | 'all'>('all');
   const [sortField, setSortField] = useState<'created_at' | 'priority'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [selectedRequest, setSelectedRequest] = useState<typeof mockRequests[0] | null>(null);
-  const [newNote, setNewNote] = useState('');
-  const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const { toast } = useToast();
 
   // Filter requests for the logged-in case manager
@@ -99,26 +79,6 @@ export default function ManageRequests() {
 
   // Get AI insights for this case manager
   const insights = mockAIInsights.filter(i => i.case_manager_id === 'cm-user-1' && !i.is_dismissed);
-
-  const updateRequestStatus = (requestId: string, newStatus: RequestStatus) => {
-    toast({
-      title: 'Status updated',
-      description: `Request status changed to ${newStatus.replace('_', ' ')}.`,
-    });
-    setSelectedRequest(null);
-  };
-
-  const addNote = async () => {
-    if (!newNote.trim()) return;
-    setIsSubmittingNote(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    toast({
-      title: 'Note added',
-      description: 'Your note has been added to the request.',
-    });
-    setNewNote('');
-    setIsSubmittingNote(false);
-  };
 
   const priorityCount = {
     emergency: caseManagerRequests.filter(r => r.priority === 'emergency' && r.status !== 'resolved').length,
@@ -286,10 +246,12 @@ export default function ManageRequests() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="max-w-xs">
-                          <p className="font-medium truncate">{request.title}</p>
-                          <p className="text-sm text-muted-foreground truncate">{request.description}</p>
-                        </div>
+                        <Link to={`/requests/${request.id}`} className="hover:underline">
+                          <div className="max-w-xs">
+                            <p className="font-medium truncate">{request.title}</p>
+                            <p className="text-sm text-muted-foreground truncate">{request.description}</p>
+                          </div>
+                        </Link>
                       </TableCell>
                       <TableCell>
                         <CategoryBadge category={request.category} />
@@ -304,14 +266,7 @@ export default function ManageRequests() {
                         <TimeAgo date={request.created_at} />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedRequest(request)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
+                        <RequestQuickActions request={request} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -320,138 +275,6 @@ export default function ManageRequests() {
             </Card>
           )}
         </section>
-
-        {/* Request Detail Sheet */}
-        <Sheet open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
-          <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-            {selectedRequest && (
-              <>
-                <SheetHeader>
-                  <SheetTitle className="font-display">{selectedRequest.title}</SheetTitle>
-                  <SheetDescription>
-                    Request from {selectedRequest.student?.full_name}
-                  </SheetDescription>
-                </SheetHeader>
-
-                <div className="mt-6 space-y-6">
-                  {/* Status & Priority */}
-                  <div className="flex flex-wrap gap-2">
-                    <StatusBadge status={selectedRequest.status} />
-                    <PriorityBadge priority={selectedRequest.priority} />
-                    <CategoryBadge category={selectedRequest.category} />
-                    {selectedRequest.is_emergency && (
-                      <Badge variant="destructive">Emergency</Badge>
-                    )}
-                  </div>
-
-                  {/* Student Info */}
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Student Information</h3>
-                    <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-sm font-semibold text-primary">
-                          {selectedRequest.student?.full_name?.split(' ').map(n => n[0]).join('')}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="font-medium">{selectedRequest.student?.full_name}</p>
-                        <p className="text-sm text-muted-foreground">{selectedRequest.student?.email}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Description</h3>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {selectedRequest.description}
-                    </p>
-                  </div>
-
-                  {/* Timeline */}
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Timeline</h3>
-                    <div className="text-sm space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Submitted</span>
-                        <span>{format(new Date(selectedRequest.created_at), 'MMM d, yyyy h:mm a')}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Last Updated</span>
-                        <span>{format(new Date(selectedRequest.updated_at), 'MMM d, yyyy h:mm a')}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Update Status */}
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Update Status</h3>
-                    <Select 
-                      value={selectedRequest.status}
-                      onValueChange={(value) => updateRequestStatus(selectedRequest.id, value as RequestStatus)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="submitted">Submitted</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="escalated">Escalated</SelectItem>
-                        <SelectItem value="resolved">Resolved</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Add Note */}
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Add Note</h3>
-                    <Textarea
-                      placeholder="Add a note about this request..."
-                      value={newNote}
-                      onChange={(e) => setNewNote(e.target.value)}
-                      rows={3}
-                    />
-                    <Button onClick={addNote} disabled={!newNote.trim() || isSubmittingNote} size="sm">
-                      {isSubmittingNote && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      Add Note
-                    </Button>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-4">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button className="flex-1">
-                          <Calendar className="mr-2 h-4 w-4" />
-                          Schedule Meeting
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Schedule Meeting</DialogTitle>
-                          <DialogDescription>
-                            Schedule a meeting with {selectedRequest.student?.full_name}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4">
-                          <p className="text-sm text-muted-foreground">
-                            Meeting scheduling UI would go here with calendar integration.
-                          </p>
-                        </div>
-                        <DialogFooter>
-                          <Button variant="outline">Cancel</Button>
-                          <Button>Send Invite</Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </div>
-              </>
-            )}
-          </SheetContent>
-        </Sheet>
       </div>
     </SidebarLayout>
   );
