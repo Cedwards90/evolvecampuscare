@@ -224,3 +224,67 @@ export function useRemoveStudentAssignment() {
     },
   });
 }
+
+interface BulkAssignStudentsParams {
+  studentIds: string[];
+  caseManagerId: string;
+  assignedBy: string;
+}
+
+export function useBulkAssignStudents() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({
+      studentIds,
+      caseManagerId,
+      assignedBy,
+    }: BulkAssignStudentsParams) => {
+      // Create assignment records for all students
+      const assignments = studentIds.map(studentId => ({
+        student_id: studentId,
+        case_manager_id: caseManagerId,
+        assigned_by: assignedBy,
+      }));
+
+      const { error: assignError } = await supabase
+        .from('student_assignments')
+        .upsert(assignments, { onConflict: 'student_id' });
+
+      if (assignError) throw assignError;
+
+      // Update all existing unresolved requests for these students
+      for (const studentId of studentIds) {
+        await supabase
+          .from('support_requests')
+          .update({ 
+            assigned_case_manager_id: caseManagerId,
+            status: 'in_progress',
+          })
+          .eq('student_id', studentId)
+          .in('status', ['submitted', 'in_progress', 'escalated']);
+      }
+
+      return { studentIds, caseManagerId };
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['student-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['unassigned-students'] });
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['case-managers'] });
+      queryClient.invalidateQueries({ queryKey: ['case-manager-stats'] });
+      toast({
+        title: 'Students assigned',
+        description: `${variables.studentIds.length} student(s) have been assigned to the case manager.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Bulk assignment failed',
+        description: error instanceof Error ? error.message : 'Failed to assign students',
+        variant: 'destructive',
+      });
+    },
+  });
+}

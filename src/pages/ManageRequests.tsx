@@ -1,16 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
 import { 
   Search, 
   Filter, 
   SortAsc, 
   SortDesc,
-  Calendar,
-  MessageSquare,
   AlertCircle,
-  TrendingUp,
-  Loader2
+  TrendingUp
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -20,10 +16,11 @@ import { CategoryBadge } from '@/components/CategoryBadge';
 import { AIBadge } from '@/components/AIBadge';
 import { TimeAgo } from '@/components/TimeAgo';
 import { EmptyState } from '@/components/EmptyState';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { RequestQuickActions } from '@/components/requests/RequestQuickActions';
+import { MyStudentsSection } from '@/components/casemanager/MyStudentsSection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -41,7 +38,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { mockRequests, mockAIInsights } from '@/lib/mock-data';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRequests } from '@/hooks/useRequests';
+import { useMyStudents } from '@/hooks/useMyStudents';
 import type { RequestStatus, RequestPriority } from '@/types/database';
 
 export default function ManageRequests() {
@@ -51,13 +50,16 @@ export default function ManageRequests() {
   const [sortField, setSortField] = useState<'created_at' | 'priority'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Filter requests for the logged-in case manager
-  const caseManagerRequests = mockRequests.filter(
-    r => r.assigned_case_manager_id === 'cm-user-1' || r.assigned_case_manager_id === null
-  );
-  
-  const filteredRequests = caseManagerRequests
+  // Fetch real data from Supabase
+  const { data: requests, isLoading: requestsLoading } = useRequests({
+    assignedCaseManagerId: user?.id,
+  });
+  const { data: myStudents, isLoading: studentsLoading } = useMyStudents(user?.id);
+
+  // Filter and sort requests
+  const filteredRequests = (requests || [])
     .filter((request) => {
       const matchesSearch = 
         request.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -77,13 +79,18 @@ export default function ManageRequests() {
       return sortOrder === 'desc' ? diff : -diff;
     });
 
-  // Get AI insights for this case manager
-  const insights = mockAIInsights.filter(i => i.case_manager_id === 'cm-user-1' && !i.is_dismissed);
-
   const priorityCount = {
-    emergency: caseManagerRequests.filter(r => r.priority === 'emergency' && r.status !== 'resolved').length,
-    high: caseManagerRequests.filter(r => r.priority === 'high' && r.status !== 'resolved').length,
+    emergency: (requests || []).filter(r => r.priority === 'emergency' && r.status !== 'resolved').length,
+    high: (requests || []).filter(r => r.priority === 'high' && r.status !== 'resolved').length,
   };
+
+  if (requestsLoading && studentsLoading) {
+    return (
+      <SidebarLayout>
+        <LoadingSpinner />
+      </SidebarLayout>
+    );
+  }
 
   return (
     <SidebarLayout>
@@ -93,44 +100,11 @@ export default function ManageRequests() {
           description="Review and respond to student support requests assigned to you"
         />
 
-        {/* AI Insights Section */}
-        {insights.length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-center gap-2">
-              <h2 className="font-display text-h3">AI Insights</h2>
-              <AIBadge />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {insights.slice(0, 3).map((insight) => (
-                <Card key={insight.id} className="border border-border/50">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center gap-2">
-                      {insight.insight_type === 'alert' && (
-                        <AlertCircle className="h-5 w-5 text-destructive" />
-                      )}
-                      {insight.insight_type === 'suggestion' && (
-                        <TrendingUp className="h-5 w-5 text-primary" />
-                      )}
-                      <CardTitle className="text-base">
-                        {(insight.content as any).title}
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {(insight.content as any).message}
-                    </p>
-                    {(insight.content as any).action && (
-                      <Button variant="outline" size="sm" className="mt-3">
-                        {(insight.content as any).action}
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* My Students Section */}
+        <MyStudentsSection 
+          students={myStudents || []} 
+          isLoading={studentsLoading} 
+        />
 
         {/* Priority Queue Alert */}
         {(priorityCount.emergency > 0 || priorityCount.high > 0) && (
@@ -209,7 +183,9 @@ export default function ManageRequests() {
         <section className="space-y-4">
           <h2 className="font-display text-h3">Request Queue</h2>
           
-          {filteredRequests.length === 0 ? (
+          {requestsLoading ? (
+            <LoadingSpinner />
+          ) : filteredRequests.length === 0 ? (
             <EmptyState
               icon={Filter}
               title="No requests found"
@@ -242,7 +218,12 @@ export default function ManageRequests() {
                               {request.student?.full_name?.split(' ').map(n => n[0]).join('')}
                             </span>
                           </div>
-                          <span className="font-medium">{request.student?.full_name}</span>
+                          <Link 
+                            to={`/students/${request.student_id}`}
+                            className="font-medium hover:underline"
+                          >
+                            {request.student?.full_name}
+                          </Link>
                         </div>
                       </TableCell>
                       <TableCell>

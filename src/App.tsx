@@ -22,6 +22,7 @@ import UserManagementPage from "./pages/admin/UserManagementPage";
 import RequestDetail from "./pages/RequestDetail";
 import RequestsList from "./pages/RequestsList";
 import CaseManagerDetail from "./pages/CaseManagerDetail";
+import StudentDetail from "./pages/StudentDetail";
 import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
 
@@ -124,6 +125,11 @@ function App() {
               <Route path="/case-managers/:id" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <CaseManagerDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="/students/:id" element={
+                <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                  <StudentDetail />
                 </ProtectedRoute>
               } />
                   
