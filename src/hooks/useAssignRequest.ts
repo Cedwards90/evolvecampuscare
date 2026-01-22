@@ -14,6 +14,28 @@ interface BulkAssignParams {
   userId: string;
 }
 
+async function sendAssignmentNotification(params: {
+  requestId: string;
+  caseManagerId: string;
+  requestTitle: string;
+  requestCategory: string;
+  requestPriority: string;
+  studentName: string;
+  isBulk?: boolean;
+  totalAssigned?: number;
+}) {
+  try {
+    const { error } = await supabase.functions.invoke('send-assignment-notification', {
+      body: params,
+    });
+    if (error) {
+      console.error('Failed to send assignment notification:', error);
+    }
+  } catch (err) {
+    console.error('Failed to send assignment notification:', err);
+  }
+}
+
 export function useAssignRequest() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -45,6 +67,32 @@ export function useAssignRequest() {
         });
 
       if (noteError) throw noteError;
+
+      // Send email notification if assigning (not unassigning)
+      if (caseManagerId) {
+        const { data: requestData } = await supabase
+          .from('support_requests')
+          .select(`
+            title,
+            category,
+            priority,
+            student:profiles!support_requests_student_id_fkey(full_name)
+          `)
+          .eq('id', requestId)
+          .single();
+
+        if (requestData) {
+          // Fire and forget - don't block on email
+          sendAssignmentNotification({
+            requestId,
+            caseManagerId,
+            requestTitle: requestData.title,
+            requestCategory: requestData.category,
+            requestPriority: requestData.priority,
+            studentName: (requestData.student as any)?.full_name || 'Unknown Student',
+          });
+        }
+      }
 
       return { requestId, caseManagerId };
     },
@@ -102,6 +150,32 @@ export function useBulkAssignRequests() {
         .insert(updates);
 
       if (noteError) throw noteError;
+
+      // Send email notification for bulk assignment
+      // Get the first request details for the notification
+      const { data: firstRequest } = await supabase
+        .from('support_requests')
+        .select(`
+          title,
+          category,
+          priority,
+          student:profiles!support_requests_student_id_fkey(full_name)
+        `)
+        .eq('id', requestIds[0])
+        .single();
+
+      if (firstRequest) {
+        sendAssignmentNotification({
+          requestId: requestIds[0],
+          caseManagerId,
+          requestTitle: firstRequest.title,
+          requestCategory: firstRequest.category,
+          requestPriority: firstRequest.priority,
+          studentName: (firstRequest.student as any)?.full_name || 'Unknown Student',
+          isBulk: true,
+          totalAssigned: requestIds.length,
+        });
+      }
 
       return { requestIds, caseManagerId };
     },

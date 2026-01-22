@@ -1,1 +1,4 @@
 project_id = "kxhykddsllizazoqxevu"
+
+[functions.send-assignment-notification]
+verify_jwt = false
