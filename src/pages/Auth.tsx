@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Eye, EyeOff, Loader2, Mail } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { AuthLayout } from '@/components/layouts/AuthLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,35 +45,36 @@ export default function Auth() {
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMFAVerification, setShowMFAVerification] = useState(false);
   const [showMFAEnrollment, setShowMFAEnrollment] = useState(false);
   const { user, role, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { requiresVerification, isEnrolled, checkMFAStatus } = useMFA();
+  const { isEnrolled, isLoading: mfaLoading, checkMFAStatus } = useMFA();
+  const isLoading = isSubmitting || mfaLoading;
   
   // Validate invitation token if present
   const { data: invitation } = useValidateInvitation(inviteToken);
 
   useEffect(() => {
-    if (user) {
-      // Check if user needs MFA verification
-      if (requiresVerification) {
-        setShowMFAVerification(true);
-        return;
-      }
-      
-      // Check if privileged user needs MFA enrollment
+    // If MFA screens are showing, don't navigate
+    if (showMFAVerification || showMFAEnrollment) {
+      return;
+    }
+    
+    if (user && role) {
+      // Check if privileged user needs MFA enrollment (first time setup)
       const isPrivilegedRole = role === 'admin' || role === 'case_manager';
-      if (isPrivilegedRole && !isEnrolled) {
+      if (isPrivilegedRole && !isEnrolled && !isLoading) {
         setShowMFAEnrollment(true);
         return;
       }
       
+      // If we get here, user is fully authenticated
       navigate('/dashboard', { replace: true });
     }
-  }, [user, role, requiresVerification, isEnrolled, navigate]);
+  }, [user, role, isEnrolled, isLoading, showMFAVerification, showMFAEnrollment, navigate]);
 
   // Handle invitation token - switch to signup and pre-fill email
   useEffect(() => {
@@ -101,7 +103,7 @@ export default function Auth() {
   });
 
   const onLogin = async (data: LoginFormData) => {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const { error } = await signIn(data.email, data.password);
       if (error) {
@@ -112,15 +114,35 @@ export default function Auth() {
             ? 'Invalid email or password. Please try again.'
             : error.message,
         });
-      } else {
-        toast({
-          title: 'Welcome back!',
-          description: 'You have successfully signed in.',
-        });
-        
-        // Refresh MFA status and let the useEffect handle navigation
-        await checkMFAStatus();
+        return;
       }
+      
+      toast({
+        title: 'Welcome back!',
+        description: 'You have successfully signed in.',
+      });
+      
+      // Wait a moment for session to be established
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Check MFA status DIRECTLY (not relying on hook state which may be stale)
+      const { data: factorsData } = await supabase.auth.mfa.listFactors();
+      const verifiedFactors = factorsData?.totp.filter(f => f.status === 'verified') || [];
+      
+      if (verifiedFactors.length > 0) {
+        // User has MFA enrolled - check if verification needed
+        const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        
+        if (aalData && aalData.currentLevel !== aalData.nextLevel) {
+          // MFA verification required - show the prompt
+          setShowMFAVerification(true);
+          return;
+        }
+      }
+      
+      // Also update the hook state for consistency
+      await checkMFAStatus();
+      
     } catch (err) {
       toast({
         variant: 'destructive',
@@ -128,12 +150,12 @@ export default function Auth() {
         description: 'An unexpected error occurred. Please try again.',
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const onSignup = async (data: SignupFormData) => {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const { error } = await signUp(data.email, data.password, data.fullName);
       if (error) {
@@ -160,7 +182,7 @@ export default function Auth() {
         description: 'An unexpected error occurred. Please try again.',
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
