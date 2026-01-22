@@ -12,6 +12,7 @@ import {
   Eye
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
+import { UserManagement } from '@/components/admin/UserManagement';
 import { PageHeader } from '@/components/PageHeader';
 import { StatsCard } from '@/components/StatsCard';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -435,6 +436,9 @@ export default function AdminDashboard() {
             </Table>
           </Card>
         </section>
+
+        {/* User Management Section */}
+        <UserManagement />
 
         {/* Reassign Dialog */}
         <Dialog open={reassignDialogOpen} onOpenChange={setReassignDialogOpen}>
