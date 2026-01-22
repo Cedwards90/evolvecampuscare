@@ -33,6 +33,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useStudentDetail } from '@/hooks/useStudentDetail';
+import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -129,10 +130,16 @@ export default function StudentDetail() {
                       Send Message
                     </Link>
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Schedule Meeting
-                  </Button>
+                  <ScheduleMeetingDialog
+                    studentId={id!}
+                    studentName={student.profile?.full_name || 'Student'}
+                    trigger={
+                      <Button variant="outline" size="sm">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Schedule Meeting
+                      </Button>
+                    }
+                  />
                 </div>
               </div>
 

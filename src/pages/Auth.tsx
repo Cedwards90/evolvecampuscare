@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthLayout } from '@/components/layouts/AuthLayout';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useValidateInvitation } from '@/hooks/useInvitations';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -36,6 +37,7 @@ type SignupFormData = z.infer<typeof signupSchema>;
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get('invite');
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -43,12 +45,23 @@ export default function Auth() {
   const { user, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Validate invitation token if present
+  const { data: invitation } = useValidateInvitation(inviteToken);
 
   useEffect(() => {
     if (user) {
       navigate('/dashboard', { replace: true });
     }
   }, [user, navigate]);
+
+  // Handle invitation token - switch to signup and pre-fill email
+  useEffect(() => {
+    if (invitation) {
+      setActiveTab('signup');
+      signupForm.setValue('email', invitation.email);
+    }
+  }, [invitation]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -147,14 +160,35 @@ export default function Auth() {
   return (
     <AuthLayout>
       <Card className="border-border/50">
+        {/* Invitation Banner */}
+        {invitation && (
+          <div className="mx-6 mt-6 p-4 bg-primary/10 rounded-lg border border-primary/20">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <Mail className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">
+                  You've been invited!
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Join as a <span className="capitalize font-medium text-primary">{invitation.invited_role.replace('_', ' ')}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <CardHeader className="text-center">
           <CardTitle className="font-display text-h2">
-            {activeTab === 'login' ? 'Welcome Back' : 'Create Account'}
+            {invitation ? 'Complete Your Registration' : activeTab === 'login' ? 'Welcome Back' : 'Create Account'}
           </CardTitle>
           <CardDescription>
-            {activeTab === 'login' 
-              ? 'Sign in to access your CampusCare dashboard'
-              : 'Join CampusCare to get the support you need'
+            {invitation
+              ? 'Create your account to accept the invitation'
+              : activeTab === 'login' 
+                ? 'Sign in to access your CampusCare dashboard'
+                : 'Join CampusCare to get the support you need'
             }
           </CardDescription>
         </CardHeader>
@@ -235,9 +269,16 @@ export default function Auth() {
                     id="signup-email"
                     type="email"
                     placeholder="you@university.edu"
+                    disabled={!!invitation}
+                    className={invitation ? 'bg-muted' : ''}
                     {...signupForm.register('email')}
                     aria-invalid={!!signupForm.formState.errors.email}
                   />
+                  {invitation && (
+                    <p className="text-xs text-muted-foreground">
+                      This email is linked to your invitation and cannot be changed.
+                    </p>
+                  )}
                   {signupForm.formState.errors.email && (
                     <p className="text-sm text-destructive">{signupForm.formState.errors.email.message}</p>
                   )}
