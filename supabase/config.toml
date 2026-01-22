@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.weekly-case-manager-summary]
 verify_jwt = false
+
+[functions.send-user-invitation]
+verify_jwt = false
+
+[functions.create-calendar-event]
+verify_jwt = false

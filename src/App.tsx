@@ -88,12 +88,17 @@ function App() {
                   } />
                   
                   {/* Admin routes */}
-                  <Route path="/admin-monitoring-reassigning-requests" element={
-                    <ProtectedRoute allowedRoles={['admin']}>
-                      <AdminDashboard />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/admin/users" element={
+            <Route path="/admin-monitoring-reassigning-requests" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/analytics" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AnalyticsDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/users" element={
                     <ProtectedRoute allowedRoles={['admin']}>
                       <UserManagementPage />
                     </ProtectedRoute>

@@ -12,11 +12,13 @@ import {
   Calendar,
   Loader2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  BarChart3,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
+import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -153,10 +155,21 @@ export default function UserManagementPage() {
   return (
     <SidebarLayout>
       <div className="space-y-6">
-        <PageHeader
-          title="User Management"
-          description="Manage users and their roles across the platform"
-        />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <PageHeader
+            title="User Management"
+            description="Manage users and their roles across the platform"
+          />
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link to="/admin/analytics">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Analytics
+              </Link>
+            </Button>
+            <InviteUserDialog />
+          </div>
+        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
