@@ -12,7 +12,7 @@ import {
   Loader2,
   Eye
 } from 'lucide-react';
-import { AppLayout } from '@/components/layouts/AppLayout';
+import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
 import { PriorityBadge } from '@/components/PriorityBadge';
@@ -126,8 +126,8 @@ export default function ManageRequests() {
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-12">
+    <SidebarLayout>
+      <div className="space-y-6">
         <PageHeader
           title="Manage Student Requests"
           description="Review and respond to student support requests assigned to you"
@@ -453,6 +453,6 @@ export default function ManageRequests() {
           </SheetContent>
         </Sheet>
       </div>
-    </AppLayout>
+    </SidebarLayout>
   );
 }

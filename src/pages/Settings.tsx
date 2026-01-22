@@ -5,7 +5,7 @@ import * as z from 'zod';
 import { Loader2, User, Bell, Globe, Palette } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { AppLayout } from '@/components/layouts/AppLayout';
+import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,8 +63,8 @@ export default function Settings() {
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-12">
+    <SidebarLayout>
+      <div className="space-y-6 max-w-4xl">
         <PageHeader
           title={t('nav.settings')}
           description="Manage your account settings and preferences"
@@ -279,6 +279,6 @@ export default function Settings() {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
+    </SidebarLayout>
   );
 }

@@ -11,7 +11,7 @@ import {
   Loader2,
   Eye
 } from 'lucide-react';
-import { AppLayout } from '@/components/layouts/AppLayout';
+import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { StatsCard } from '@/components/StatsCard';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -133,8 +133,8 @@ export default function AdminDashboard() {
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-12">
+    <SidebarLayout>
+      <div className="space-y-6">
         <PageHeader
           title="Admin Dashboard"
           description="Monitor system performance and manage request assignments"
@@ -540,6 +540,6 @@ export default function AdminDashboard() {
           </SheetContent>
         </Sheet>
       </div>
-    </AppLayout>
+    </SidebarLayout>
   );
 }

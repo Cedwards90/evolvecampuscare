@@ -20,7 +20,7 @@ import {
   RefreshCw,
   Loader2
 } from 'lucide-react';
-import { AppLayout } from '@/components/layouts/AppLayout';
+import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PriorityBadge } from '@/components/PriorityBadge';
@@ -210,8 +210,8 @@ export default function OfflineDraft() {
   const unsyncedCount = drafts.filter(d => !d.synced).length;
 
   return (
-    <AppLayout>
-      <div className="space-y-12">
+    <SidebarLayout>
+      <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <PageHeader
             title="Offline Drafts"
@@ -460,6 +460,6 @@ export default function OfflineDraft() {
           </section>
         </div>
       </div>
-    </AppLayout>
+    </SidebarLayout>
   );
 }

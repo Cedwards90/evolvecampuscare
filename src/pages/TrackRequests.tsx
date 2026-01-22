@@ -11,7 +11,7 @@ import {
   Video,
   MapPin
 } from 'lucide-react';
-import { AppLayout } from '@/components/layouts/AppLayout';
+import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { RequestCard } from '@/components/RequestCard';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -71,8 +71,8 @@ export default function TrackRequests() {
   const studentAppointments = mockAppointments.filter(a => a.student_id === 'student-user-1' && a.status === 'scheduled');
 
   return (
-    <AppLayout>
-      <div className="space-y-12">
+    <SidebarLayout>
+      <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <PageHeader
             title="Track Your Requests"
@@ -329,6 +329,6 @@ export default function TrackRequests() {
           )}
         </section>
       </div>
-    </AppLayout>
+    </SidebarLayout>
   );
 }
