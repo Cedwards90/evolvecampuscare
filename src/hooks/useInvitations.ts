@@ -93,8 +93,8 @@ export function useSendInvitation() {
 
       if (insertError) throw insertError;
 
-      // Build the invitation URL
-      const inviteUrl = `${window.location.origin}/auth?tab=signup&invite=${token}`;
+      // Build the invitation URL - always use published URL
+      const inviteUrl = `https://evolvecampuscare.lovable.app/auth?tab=signup&invite=${token}`;
 
       // Call edge function to send invitation email
       let emailSent = true;
