@@ -54,6 +54,7 @@ const requestSchema = z.object({
   description: z.string().min(20, 'Please provide more details (at least 20 characters)').max(2000, 'Description must be less than 2000 characters'),
   priority: z.enum(['low', 'medium', 'high', 'emergency']),
   isEmergency: z.boolean(),
+  requestedAmount: z.number().min(0).optional(),
 });
 
 type RequestFormData = z.infer<typeof requestSchema>;
@@ -73,6 +74,7 @@ export default function SubmitRequest() {
       description: '',
       priority: 'medium',
       isEmergency: false,
+      requestedAmount: undefined,
     },
   });
 
@@ -113,6 +115,7 @@ export default function SubmitRequest() {
         isEmergency: data.isEmergency,
         userId: user.id,
         studentName: profile?.full_name || 'Unknown Student',
+        requestedAmount: data.category === 'financial' ? data.requestedAmount : undefined,
       });
       
       toast({
@@ -257,6 +260,28 @@ export default function SubmitRequest() {
                   </RadioGroup>
                 </div>
 
+                {/* Requested Amount - Only for Financial category */}
+                {watchCategory === 'financial' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="requestedAmount">Requested Amount (USD)</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="requestedAmount"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        className="pl-9"
+                        {...form.register('requestedAmount', { valueAsNumber: true })}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Enter the dollar amount you are requesting for financial assistance
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between rounded-lg border border-destructive/50 bg-destructive/5 p-4">
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="h-5 w-5 text-destructive" />
@@ -330,6 +355,14 @@ export default function SubmitRequest() {
                       {watchIsEmergency ? 'Yes' : 'No'}
                     </span>
                   </div>
+                  {watchCategory === 'financial' && form.watch('requestedAmount') && (
+                    <div className="flex items-center justify-between py-2 border-b">
+                      <span className="text-muted-foreground">Requested Amount</span>
+                      <span className="font-semibold text-primary">
+                        ${form.watch('requestedAmount')?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
                   <div className="py-2 border-b">
                     <span className="text-muted-foreground">Title</span>
                     <p className="mt-1 font-medium">{form.watch('title')}</p>

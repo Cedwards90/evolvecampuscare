@@ -105,6 +105,39 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          link: string | null
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          link?: string | null
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          link?: string | null
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       offline_drafts: {
         Row: {
           created_at: string
@@ -326,6 +359,7 @@ export type Database = {
       }
       support_requests: {
         Row: {
+          approved_amount: number | null
           assigned_case_manager_id: string | null
           category: Database["public"]["Enums"]["request_category"]
           created_at: string
@@ -334,6 +368,7 @@ export type Database = {
           id: string
           is_emergency: boolean | null
           priority: Database["public"]["Enums"]["request_priority"]
+          requested_amount: number | null
           resolved_at: string | null
           status: Database["public"]["Enums"]["request_status"]
           student_id: string
@@ -341,6 +376,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approved_amount?: number | null
           assigned_case_manager_id?: string | null
           category: Database["public"]["Enums"]["request_category"]
           created_at?: string
@@ -349,6 +385,7 @@ export type Database = {
           id?: string
           is_emergency?: boolean | null
           priority?: Database["public"]["Enums"]["request_priority"]
+          requested_amount?: number | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           student_id: string
@@ -356,6 +393,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approved_amount?: number | null
           assigned_case_manager_id?: string | null
           category?: Database["public"]["Enums"]["request_category"]
           created_at?: string
@@ -364,6 +402,7 @@ export type Database = {
           id?: string
           is_emergency?: boolean | null
           priority?: Database["public"]["Enums"]["request_priority"]
+          requested_amount?: number | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           student_id?: string

@@ -10,6 +10,7 @@ interface SubmitRequestParams {
   isEmergency: boolean;
   userId: string;
   studentName: string;
+  requestedAmount?: number;
 }
 
 export function useSubmitRequest() {
@@ -24,6 +25,7 @@ export function useSubmitRequest() {
       isEmergency,
       userId,
       studentName,
+      requestedAmount,
     }: SubmitRequestParams) => {
       // Check if student has an assigned case manager
       const { data: assignment } = await supabase
@@ -46,6 +48,7 @@ export function useSubmitRequest() {
           is_emergency: isEmergency,
           status: hasAssignedCM ? 'in_progress' : 'submitted',
           assigned_case_manager_id: hasAssignedCM || null,
+          requested_amount: requestedAmount || null,
         })
         .select()
         .single();

@@ -318,7 +318,11 @@ export default function AdminDashboard() {
                           className={isOverloaded ? '[&>div]:bg-destructive' : ''}
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Students</span>
+                          <p className="font-semibold">{cm.assigned_students || 0}</p>
+                        </div>
                         <div>
                           <span className="text-muted-foreground">Emergency</span>
                           <p className="font-semibold text-destructive">{cm.emergency_requests}</p>

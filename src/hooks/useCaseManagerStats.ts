@@ -176,10 +176,17 @@ export function useCaseManagers() {
             .eq('is_emergency', true)
             .not('status', 'in', '("resolved","cancelled")');
 
+          // Count assigned students
+          const { count: studentCount } = await supabase
+            .from('student_assignments')
+            .select('*', { count: 'exact', head: true })
+            .eq('case_manager_id', profile.user_id);
+
           return {
             ...profile,
             active_requests: activeCount || 0,
             emergency_requests: emergencyCount || 0,
+            assigned_students: studentCount || 0,
           };
         })
       );

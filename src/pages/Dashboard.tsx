@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -9,6 +10,7 @@ import { SummaryCard } from '@/components/dashboard/SummaryCard';
 import { StatsSummaryBar } from '@/components/dashboard/StatsSummaryBar';
 import { RequestCard } from '@/components/RequestCard';
 import { AIBadge } from '@/components/AIBadge';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -29,64 +31,106 @@ import {
   Target
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { mockRequests, mockCaseManagers, mockAIInsights, getDashboardStats, mockAnalytics } from '@/lib/mock-data';
-
-// Generate chart data from analytics
-const generateChartData = () => {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return months.map((name, index) => ({
-    name,
-    value: Math.floor(Math.random() * 50000) + 20000,
-  }));
-};
-
-const chartData = generateChartData();
-
-// Sparkline data
-const sparklineData1 = [12, 19, 3, 5, 2, 3, 15, 20, 25, 22, 30, 28];
-const sparklineData2 = [5, 10, 15, 8, 12, 18, 20, 25, 22, 28, 32, 35];
-const sparklineData3 = [20, 15, 25, 22, 18, 30, 28, 35, 32, 40, 38, 45];
+import { useRequests } from '@/hooks/useRequests';
+import { useCaseManagers } from '@/hooks/useCaseManagerStats';
+import { format, subDays } from 'date-fns';
 
 export default function Dashboard() {
   const { role, user, profile } = useAuth();
   
-  // Get stats based on role
-  const stats = getDashboardStats(role || 'student', user?.id);
+  // Fetch real data from Supabase
+  const { data: allRequests = [], isLoading: requestsLoading } = useRequests({});
+  const { data: caseManagers = [], isLoading: cmLoading } = useCaseManagers();
   
   // Filter requests based on role
-  const recentRequests = role === 'student'
-    ? mockRequests.filter(r => r.student_id === 'student-user-1').slice(0, 3)
-    : role === 'case_manager'
-    ? mockRequests.filter(r => r.assigned_case_manager_id === 'cm-user-1').slice(0, 5)
-    : mockRequests.slice(0, 5);
+  const requests = useMemo(() => {
+    if (role === 'student') {
+      return allRequests.filter(r => r.student_id === user?.id);
+    } else if (role === 'case_manager') {
+      return allRequests.filter(r => r.assigned_case_manager_id === user?.id);
+    }
+    return allRequests;
+  }, [allRequests, role, user?.id]);
+  
+  // Calculate stats from real data
+  const stats = useMemo(() => ({
+    totalRequests: requests.length,
+    pendingRequests: requests.filter(r => r.status === 'submitted' || r.status === 'in_progress').length,
+    resolvedRequests: requests.filter(r => r.status === 'resolved').length,
+    emergencyRequests: requests.filter(r => r.is_emergency && r.status !== 'resolved' && r.status !== 'cancelled').length,
+    escalatedRequests: requests.filter(r => r.status === 'escalated').length,
+  }), [requests]);
 
-  // Get relevant AI insights for case managers
-  const insights = mockAIInsights.filter(i => i.case_manager_id === 'cm-user-1').slice(0, 2);
+  // Recent requests
+  const recentRequests = useMemo(() => {
+    const sorted = [...requests].sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    return role === 'case_manager' 
+      ? sorted.filter(r => r.priority === 'emergency' || r.priority === 'high').slice(0, 5)
+      : sorted.slice(0, 3);
+  }, [requests, role]);
+
+  // Generate chart data from real requests (last 12 months)
+  const chartData = useMemo(() => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    
+    return months.map((name, index) => {
+      const monthRequests = requests.filter(r => {
+        const date = new Date(r.created_at);
+        return date.getMonth() === index && date.getFullYear() === now.getFullYear();
+      });
+      return { name, value: monthRequests.length };
+    });
+  }, [requests]);
+
+  // Sparkline data based on last 12 weeks
+  const sparklineData = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const weekStart = subDays(new Date(), (11 - i) * 7);
+      const weekEnd = subDays(new Date(), (10 - i) * 7);
+      return requests.filter(r => {
+        const date = new Date(r.created_at);
+        return date >= weekStart && date < weekEnd;
+      }).length;
+    });
+  }, [requests]);
 
   // Summary items for the side card
-  const summaryItems = [
+  const summaryItems = useMemo(() => [
     {
       icon: <FileText className="h-4 w-4 text-primary" />,
       title: 'Academic Advising',
       subtitle: 'Support',
-      value: `${mockRequests.filter(r => r.category === 'academic').length}`,
+      value: `${requests.filter(r => r.category === 'academic').length}`,
       href: '/requests?category=academic',
     },
     {
       icon: <Users className="h-4 w-4 text-primary" />,
       title: 'Mental Health',
       subtitle: 'Counseling',
-      value: `${mockRequests.filter(r => r.category === 'mental_health').length}`,
+      value: `${requests.filter(r => r.category === 'mental_health').length}`,
       href: '/requests?category=mental_health',
     },
     {
       icon: <Briefcase className="h-4 w-4 text-primary" />,
       title: 'Financial Aid',
       subtitle: 'Assistance',
-      value: `${mockRequests.filter(r => r.category === 'financial').length}`,
+      value: `${requests.filter(r => r.category === 'financial').length}`,
       href: '/requests?category=financial',
     },
-  ];
+  ], [requests]);
+
+  if (requestsLoading) {
+    return (
+      <SidebarLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <LoadingSpinner size="lg" />
+        </div>
+      </SidebarLayout>
+    );
+  }
 
   return (
     <SidebarLayout>
@@ -109,7 +153,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm">
               <Calendar className="mr-2 h-4 w-4" />
-              Jan 1 - Dec 31, 2026
+              {format(new Date(), 'yyyy')}
             </Button>
             <Button variant="outline" size="sm">
               Filter
@@ -122,7 +166,7 @@ export default function Dashboard() {
           <FractionStatsCard
             title="Total Requests"
             current={stats.totalRequests}
-            total={stats.totalRequests + 10}
+            total={Math.max(stats.totalRequests + 10, 50)}
             icon={DollarSign}
             color="blue"
             href="/requests"
@@ -130,7 +174,7 @@ export default function Dashboard() {
           <FractionStatsCard
             title="In Progress"
             current={stats.pendingRequests}
-            total={stats.totalRequests}
+            total={stats.totalRequests || 1}
             icon={Target}
             color="green"
             href="/requests?status=in_progress"
@@ -138,7 +182,7 @@ export default function Dashboard() {
           <FractionStatsCard
             title="Resolved"
             current={stats.resolvedRequests}
-            total={stats.totalRequests}
+            total={stats.totalRequests || 1}
             icon={CheckCircle}
             color="green"
             href="/requests?status=resolved"
@@ -190,30 +234,30 @@ export default function Dashboard() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <SparklineCard
             title="Tasks Completed"
-            subtitle={`${stats.resolvedRequests}/35 completed`}
+            subtitle={`${stats.resolvedRequests}/${stats.totalRequests || 1} completed`}
             current={stats.resolvedRequests}
-            total={35}
-            data={sparklineData1}
+            total={stats.totalRequests || 1}
+            data={sparklineData}
             trend={{ value: 28, isPositive: true }}
             icon={Star}
             color="blue"
           />
           <SparklineCard
             title="New Requests"
-            subtitle="0/20 tasks"
-            current={5}
-            total={20}
-            data={sparklineData2}
+            subtitle={`${stats.pendingRequests} pending`}
+            current={stats.pendingRequests}
+            total={stats.totalRequests || 1}
+            data={sparklineData}
             trend={{ value: 34, isPositive: true }}
             icon={FileText}
             color="green"
           />
           <SparklineCard
             title="Cases Closed"
-            subtitle="20/30 project"
-            current={20}
-            total={30}
-            data={sparklineData3}
+            subtitle={`${stats.resolvedRequests} resolved`}
+            current={stats.resolvedRequests}
+            total={stats.totalRequests || 1}
+            data={sparklineData}
             trend={{ value: 42, isPositive: true }}
             icon={CheckCircle}
             color="red"
@@ -286,9 +330,16 @@ export default function Dashboard() {
                 </Button>
               </div>
               <div className="grid gap-4">
-                {recentRequests.map((request) => (
-                  <RequestCard key={request.id} request={request} />
-                ))}
+                {recentRequests.length > 0 ? (
+                  recentRequests.map((request) => (
+                    <RequestCard key={request.id} request={request} />
+                  ))
+                ) : (
+                  <Card className="border border-border/50 p-8 text-center">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground">No requests yet. Submit your first request to get started.</p>
+                  </Card>
+                )}
               </div>
             </section>
           </>
@@ -303,36 +354,35 @@ export default function Dashboard() {
                 <AIBadge />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                {insights.map((insight) => (
-                  <Card key={insight.id} className="border border-border/50">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-2">
-                        {insight.insight_type === 'alert' && (
-                          <AlertCircle className="h-5 w-5 text-destructive" />
-                        )}
-                        {insight.insight_type === 'suggestion' && (
-                          <TrendingUp className="h-5 w-5 text-primary" />
-                        )}
-                        {insight.insight_type === 'weekly_summary' && (
-                          <BarChart3 className="h-5 w-5 text-primary" />
-                        )}
-                        <CardTitle className="text-base">
-                          {(insight.content as any).title}
-                        </CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        {(insight.content as any).message}
-                      </p>
-                      {(insight.content as any).action && (
-                        <Button variant="outline" size="sm" className="mt-4">
-                          {(insight.content as any).action}
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                <Card className="border border-border/50">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-destructive" />
+                      <CardTitle className="text-base">Priority Cases</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      You have {stats.emergencyRequests} emergency and {stats.escalatedRequests} escalated cases that require immediate attention.
+                    </p>
+                    <Button variant="outline" size="sm" className="mt-4" asChild>
+                      <Link to="/case-manager-managing-student-requests">View Priority Queue</Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+                <Card className="border border-border/50">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                      <CardTitle className="text-base">Weekly Summary</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      You've resolved {stats.resolvedRequests} requests. Keep up the great work!
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
             </section>
 
@@ -348,9 +398,16 @@ export default function Dashboard() {
                 </Button>
               </div>
               <div className="grid gap-4">
-                {recentRequests.filter(r => r.priority === 'emergency' || r.priority === 'high').map((request) => (
-                  <RequestCard key={request.id} request={request} showStudent />
-                ))}
+                {recentRequests.length > 0 ? (
+                  recentRequests.map((request) => (
+                    <RequestCard key={request.id} request={request} showStudent />
+                  ))
+                ) : (
+                  <Card className="border border-border/50 p-8 text-center">
+                    <CheckCircle className="h-12 w-12 mx-auto text-green-500/50 mb-4" />
+                    <p className="text-muted-foreground">No high-priority cases. Great job!</p>
+                  </Card>
+                )}
               </div>
             </section>
           </>
@@ -362,28 +419,37 @@ export default function Dashboard() {
             <section className="space-y-4">
               <h2 className="font-display text-lg font-semibold">Case Manager Workloads</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {mockCaseManagers.slice(0, 3).map((cm) => (
-                  <Card key={cm.id} className="border border-border/50">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">{cm.full_name}</CardTitle>
-                      <CardDescription>{cm.email}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Active Requests</span>
-                        <span className="font-semibold">{cm.active_requests}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm mt-1">
-                        <span className="text-muted-foreground">Emergency Cases</span>
-                        <span className="font-semibold text-destructive">{cm.emergency_requests}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm mt-1">
-                        <span className="text-muted-foreground">Avg Response</span>
-                        <span className="font-semibold">{cm.avg_response_time}h</span>
-                      </div>
-                    </CardContent>
+                {cmLoading ? (
+                  <LoadingSpinner />
+                ) : caseManagers.length > 0 ? (
+                  caseManagers.slice(0, 3).map((cm) => (
+                    <Card key={cm.user_id} className="border border-border/50">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base">{cm.full_name || 'Unknown'}</CardTitle>
+                        <CardDescription>{cm.email}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Active Requests</span>
+                          <span className="font-semibold">{cm.active_requests}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm mt-1">
+                          <span className="text-muted-foreground">Assigned Students</span>
+                          <span className="font-semibold">{cm.assigned_students || 0}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm mt-1">
+                          <span className="text-muted-foreground">Emergency Cases</span>
+                          <span className="font-semibold text-destructive">{cm.emergency_requests}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <Card className="border border-border/50 p-8 text-center col-span-3">
+                    <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground">No case managers registered yet.</p>
                   </Card>
-                ))}
+                )}
               </div>
             </section>
 
@@ -399,9 +465,15 @@ export default function Dashboard() {
                 </Button>
               </div>
               <div className="grid gap-4">
-                {mockRequests.filter(r => r.status === 'escalated' || !r.assigned_case_manager_id).slice(0, 3).map((request) => (
+                {allRequests.filter(r => r.status === 'escalated' || !r.assigned_case_manager_id).slice(0, 3).map((request) => (
                   <RequestCard key={request.id} request={request} showStudent />
                 ))}
+                {allRequests.filter(r => r.status === 'escalated' || !r.assigned_case_manager_id).length === 0 && (
+                  <Card className="border border-border/50 p-8 text-center">
+                    <CheckCircle className="h-12 w-12 mx-auto text-green-500/50 mb-4" />
+                    <p className="text-muted-foreground">All requests are assigned and on track.</p>
+                  </Card>
+                )}
               </div>
             </section>
           </>
