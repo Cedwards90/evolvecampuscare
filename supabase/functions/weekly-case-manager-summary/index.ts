@@ -4,23 +4,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-// Allowed origins for CORS
-const ALLOWED_ORIGINS = [
-  'https://evolvecampuscare.lovable.app',
-  'https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app',
-];
-
-function getCorsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.some(o => origin.startsWith(o.replace('https://', '')))
-    ? origin
-    : ALLOWED_ORIGINS[0];
-  
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Credentials": "true",
-  };
-}
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 function sanitizeError(error: unknown, context: string): string {
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -62,6 +49,51 @@ function validateCronSecret(providedSecret: string | null): boolean {
   if (!providedSecret) return false;
   
   return timingSafeEqual(providedSecret, cronSecret);
+}
+
+interface NotificationSettings {
+  email_enabled: boolean;
+  in_app_enabled: boolean;
+  types: {
+    new_request: boolean;
+    status_change: boolean;
+    assignment: boolean;
+    invitation: boolean;
+    weekly_summary: boolean;
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+async function getNotificationSettings(supabase: any): Promise<NotificationSettings> {
+  const defaultSettings: NotificationSettings = {
+    email_enabled: true,
+    in_app_enabled: true,
+    types: {
+      new_request: true,
+      status_change: true,
+      assignment: true,
+      invitation: true,
+      weekly_summary: true,
+    },
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'notifications')
+      .single();
+
+    if (error || !data?.value) {
+      console.log('Using default notification settings');
+      return defaultSettings;
+    }
+
+    return data.value as NotificationSettings;
+  } catch (err) {
+    console.error('Error fetching notification settings:', err);
+    return defaultSettings;
+  }
 }
 
 interface CaseManagerStats {
@@ -126,9 +158,6 @@ async function generateAIInsights(stats: CaseManagerStats): Promise<string[]> {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  const origin = req.headers.get("Origin");
-  const corsHeaders = getCorsHeaders(origin);
-
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -189,6 +218,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+    // ========== CHECK NOTIFICATION SETTINGS ==========
+    const settings = await getNotificationSettings(supabase);
+    
+    if (!settings.email_enabled || !settings.types.weekly_summary) {
+      console.log('Weekly summary notifications disabled via site settings');
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: 'disabled_by_settings' }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    // ================================================
+
     console.log("Starting weekly case manager summary generation...");
 
     const { data: caseManagerRoles, error: rolesError } = await supabase
@@ -243,17 +284,17 @@ const handler = async (req: Request): Promise<Response> => {
       const allRequests = requests || [];
 
       const activeRequests = allRequests.filter(
-        (r) => !["resolved", "cancelled"].includes(r.status)
+        (r: { status: string }) => !["resolved", "cancelled"].includes(r.status)
       );
       const resolvedThisWeek = allRequests.filter(
-        (r) => r.status === "resolved" && r.resolved_at && new Date(r.resolved_at) >= oneWeekAgo
+        (r: { status: string; resolved_at: string | null }) => r.status === "resolved" && r.resolved_at && new Date(r.resolved_at) >= oneWeekAgo
       );
-      const emergencyRequests = activeRequests.filter((r) => r.is_emergency);
-      const escalatedRequests = activeRequests.filter((r) => r.status === "escalated");
+      const emergencyRequests = activeRequests.filter((r: { is_emergency: boolean }) => r.is_emergency);
+      const escalatedRequests = activeRequests.filter((r: { status: string }) => r.status === "escalated");
 
       const agingRequests = activeRequests
-        .filter((r) => new Date(r.updated_at) < sevenDaysAgo)
-        .map((r) => ({
+        .filter((r: { updated_at: string }) => new Date(r.updated_at) < sevenDaysAgo)
+        .map((r: { id: string; title: string; updated_at: string }) => ({
           id: r.id,
           title: r.title,
           daysSinceUpdate: Math.floor(
@@ -263,7 +304,7 @@ const handler = async (req: Request): Promise<Response> => {
         .slice(0, 5);
 
       const categoryBreakdown: Record<string, number> = {};
-      activeRequests.forEach((r) => {
+      activeRequests.forEach((r: { category: string }) => {
         categoryBreakdown[r.category] = (categoryBreakdown[r.category] || 0) + 1;
       });
 
@@ -288,7 +329,7 @@ const handler = async (req: Request): Promise<Response> => {
             <table style="width: 100%; border-collapse: collapse;">
               ${agingRequests
                 .map(
-                  (r) => `
+                  (r: { title: string; daysSinceUpdate: number }) => `
                 <tr style="border-bottom: 1px solid #e5e7eb;">
                   <td style="padding: 8px 0; color: #374151; font-size: 14px;">${r.title}</td>
                   <td style="padding: 8px 0; color: #ef4444; font-size: 14px; text-align: right;">${r.daysSinceUpdate} days</td>
@@ -422,7 +463,7 @@ const handler = async (req: Request): Promise<Response> => {
     const safeMessage = sanitizeError(error, "weekly-case-manager-summary");
     return new Response(
       JSON.stringify({ error: safeMessage }),
-      { status: 500, headers: { "Content-Type": "application/json", ...getCorsHeaders(req.headers.get("Origin")) } }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };

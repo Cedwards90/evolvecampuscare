@@ -4,23 +4,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-// Allowed origins for CORS
-const ALLOWED_ORIGINS = [
-  'https://evolvecampuscare.lovable.app',
-  'https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app',
-];
-
-function getCorsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.some(o => origin.startsWith(o.replace('https://', '')))
-    ? origin
-    : ALLOWED_ORIGINS[0];
-  
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Credentials": "true",
-  };
-}
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 function sanitizeError(error: unknown, context: string): string {
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -46,12 +33,54 @@ interface AssignmentNotificationRequest {
   totalAssigned?: number;
 }
 
+interface NotificationSettings {
+  email_enabled: boolean;
+  in_app_enabled: boolean;
+  types: {
+    new_request: boolean;
+    status_change: boolean;
+    assignment: boolean;
+    invitation: boolean;
+    weekly_summary: boolean;
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+async function getNotificationSettings(supabase: any): Promise<NotificationSettings> {
+  const defaultSettings: NotificationSettings = {
+    email_enabled: true,
+    in_app_enabled: true,
+    types: {
+      new_request: true,
+      status_change: true,
+      assignment: true,
+      invitation: true,
+      weekly_summary: true,
+    },
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'notifications')
+      .single();
+
+    if (error || !data?.value) {
+      console.log('Using default notification settings');
+      return defaultSettings;
+    }
+
+    return data.value as NotificationSettings;
+  } catch (err) {
+    console.error('Error fetching notification settings:', err);
+    return defaultSettings;
+  }
+}
+
 // Privileged roles that require MFA verification
 const PRIVILEGED_ROLES = ['admin', 'case_manager'];
 
-/**
- * Verify MFA (AAL2) for privileged roles
- */
 // deno-lint-ignore no-explicit-any
 async function verifyMFAForPrivilegedRole(authClient: any, userRole: string): Promise<{ verified: boolean; error?: string }> {
   if (!PRIVILEGED_ROLES.includes(userRole)) {
@@ -87,9 +116,6 @@ async function verifyMFAForPrivilegedRole(authClient: any, userRole: string): Pr
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  const origin = req.headers.get("Origin");
-  const corsHeaders = getCorsHeaders(origin);
-
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -148,7 +174,6 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // ========== MFA ENFORCEMENT FOR PRIVILEGED ROLES ==========
-    // Admin role must have completed MFA verification (AAL2)
     const mfaResult = await verifyMFAForPrivilegedRole(authClient, roleData.role);
     if (!mfaResult.verified) {
       console.warn(`MFA verification failed for ${roleData.role}: ${mfaResult.error}`);
@@ -161,6 +186,18 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
     // ==========================================================
+
+    // ========== CHECK NOTIFICATION SETTINGS ==========
+    const settings = await getNotificationSettings(supabase);
+    
+    if (!settings.email_enabled || !settings.types.assignment) {
+      console.log('Assignment notifications disabled via site settings');
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: 'disabled_by_settings' }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    // ================================================
 
     const { 
       requestId, 
@@ -307,7 +344,7 @@ const handler = async (req: Request): Promise<Response> => {
     const safeMessage = sanitizeError(error, "send-assignment-notification");
     return new Response(
       JSON.stringify({ error: safeMessage }),
-      { status: 500, headers: { "Content-Type": "application/json", ...getCorsHeaders(req.headers.get("Origin")) } }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };

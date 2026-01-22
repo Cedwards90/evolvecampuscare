@@ -4,23 +4,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-// Allowed origins for CORS
-const ALLOWED_ORIGINS = [
-  'https://evolvecampuscare.lovable.app',
-  'https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app',
-];
-
-function getCorsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.some(o => origin.startsWith(o.replace('https://', '')))
-    ? origin
-    : ALLOWED_ORIGINS[0];
-  
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Credentials": "true",
-  };
-}
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 function sanitizeError(error: unknown, context: string): string {
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -44,6 +31,52 @@ interface NewRequestNotification {
   studentName: string;
 }
 
+interface NotificationSettings {
+  email_enabled: boolean;
+  in_app_enabled: boolean;
+  types: {
+    new_request: boolean;
+    status_change: boolean;
+    assignment: boolean;
+    invitation: boolean;
+    weekly_summary: boolean;
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+async function getNotificationSettings(supabase: any): Promise<NotificationSettings> {
+  const defaultSettings: NotificationSettings = {
+    email_enabled: true,
+    in_app_enabled: true,
+    types: {
+      new_request: true,
+      status_change: true,
+      assignment: true,
+      invitation: true,
+      weekly_summary: true,
+    },
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'notifications')
+      .single();
+
+    if (error || !data?.value) {
+      console.log('Using default notification settings');
+      return defaultSettings;
+    }
+
+    return data.value as NotificationSettings;
+  } catch (err) {
+    console.error('Error fetching notification settings:', err);
+    return defaultSettings;
+  }
+}
+
+// deno-lint-ignore no-explicit-any
 async function createInAppNotification(
   supabase: any,
   userId: string,
@@ -75,9 +108,6 @@ async function createInAppNotification(
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  const origin = req.headers.get("Origin");
-  const corsHeaders = getCorsHeaders(origin);
-
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -119,6 +149,18 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Authenticated user:", userId);
 
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    // ========== CHECK NOTIFICATION SETTINGS ==========
+    const settings = await getNotificationSettings(supabase);
+    
+    if (!settings.types.new_request) {
+      console.log('New request notifications disabled via site settings');
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: 'disabled_by_settings' }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    // ================================================
 
     const {
       requestId,
@@ -178,14 +220,14 @@ const handler = async (req: Request): Promise<Response> => {
           .eq("role", "admin");
 
         if (adminRoles && adminRoles.length > 0) {
-          const adminUserIds = adminRoles.map((r) => r.user_id);
+          const adminUserIds = adminRoles.map((r: { user_id: string }) => r.user_id);
           const { data: adminProfiles } = await supabase
             .from("profiles")
             .select("email, user_id")
             .in("user_id", adminUserIds);
 
           if (adminProfiles) {
-            const adminEmails = adminProfiles.map((p) => p.email);
+            const adminEmails = adminProfiles.map((p: { email: string }) => p.email);
             recipientEmails = [...new Set([...recipientEmails, ...adminEmails])];
             recipientUserIds = [...new Set([...recipientUserIds, ...adminUserIds])];
           }
@@ -215,7 +257,7 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      const adminUserIds = adminRoles.map((r) => r.user_id);
+      const adminUserIds = adminRoles.map((r: { user_id: string }) => r.user_id);
       const { data: adminProfiles, error: profilesError } = await supabase
         .from("profiles")
         .select("email, full_name, user_id")
@@ -234,134 +276,142 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      recipientEmails = adminProfiles.map((p) => p.email);
-      recipientUserIds = adminProfiles.map((p) => p.user_id);
+      recipientEmails = adminProfiles.map((p: { email: string }) => p.email);
+      recipientUserIds = adminProfiles.map((p: { user_id: string }) => p.user_id);
     }
 
-    // Create in-app notifications for all recipients
-    const notificationTitle = isEmergency
-      ? `🚨 Emergency Request: ${requestTitle}`
-      : `New Request: ${requestTitle}`;
-    
-    const notificationMessage = `${studentName || 'A student'} submitted a ${priority} priority ${category.replace(/_/g, ' ')} request.`;
-    const notificationLink = `/requests/${requestId}`;
+    // Create in-app notifications for all recipients (if enabled)
+    if (settings.in_app_enabled && settings.types.new_request) {
+      const notificationTitle = isEmergency
+        ? `🚨 Emergency Request: ${requestTitle}`
+        : `New Request: ${requestTitle}`;
+      
+      const notificationMessage = `${studentName || 'A student'} submitted a ${priority} priority ${category.replace(/_/g, ' ')} request.`;
+      const notificationLink = `/requests/${requestId}`;
 
-    console.log(`Creating in-app notifications for ${recipientUserIds.length} user(s)`);
-    
-    for (const recipientUserId of recipientUserIds) {
-      await createInAppNotification(
-        supabase,
-        recipientUserId,
-        notificationTitle,
-        notificationMessage,
-        isEmergency ? 'emergency' : 'new_request',
-        notificationLink
-      );
+      console.log(`Creating in-app notifications for ${recipientUserIds.length} user(s)`);
+      
+      for (const recipientUserId of recipientUserIds) {
+        await createInAppNotification(
+          supabase,
+          recipientUserId,
+          notificationTitle,
+          notificationMessage,
+          isEmergency ? 'emergency' : 'new_request',
+          notificationLink
+        );
+      }
     }
 
-    const categoryDisplay = category.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    const priorityDisplay = priority.charAt(0).toUpperCase() + priority.slice(1);
+    // Send email notifications (if enabled)
+    if (settings.email_enabled && settings.types.new_request) {
+      const categoryDisplay = category.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+      const priorityDisplay = priority.charAt(0).toUpperCase() + priority.slice(1);
 
-    const priorityColors: Record<string, string> = {
-      low: "#22c55e",
-      medium: "#f59e0b",
-      high: "#f97316",
-      emergency: "#ef4444",
-    };
-    const priorityColor = priorityColors[priority] || "#6b7280";
+      const priorityColors: Record<string, string> = {
+        low: "#22c55e",
+        medium: "#f59e0b",
+        high: "#f97316",
+        emergency: "#ef4444",
+      };
+      const priorityColor = priorityColors[priority] || "#6b7280";
 
-    const greeting = recipientType === "case_manager" && caseManagerName
-      ? `<p style="color: #374151; font-size: 16px; margin-bottom: 16px;">Hello ${caseManagerName},</p>`
-      : "";
-    
-    const contextMessage = recipientType === "case_manager"
-      ? `<p style="color: #374151; font-size: 16px; margin-bottom: 24px;">One of your assigned students has submitted a new support request that requires your attention.</p>`
-      : `<p style="color: #374151; font-size: 16px; margin-bottom: 24px;">A new support request has been submitted and requires assignment.</p>`;
+      const greeting = recipientType === "case_manager" && caseManagerName
+        ? `<p style="color: #374151; font-size: 16px; margin-bottom: 16px;">Hello ${caseManagerName},</p>`
+        : "";
+      
+      const contextMessage = recipientType === "case_manager"
+        ? `<p style="color: #374151; font-size: 16px; margin-bottom: 24px;">One of your assigned students has submitted a new support request that requires your attention.</p>`
+        : `<p style="color: #374151; font-size: 16px; margin-bottom: 24px;">A new support request has been submitted and requires assignment.</p>`;
 
-    const emergencyBanner = isEmergency
-      ? `
-        <div style="background-color: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-          <p style="color: #dc2626; font-weight: bold; margin: 0; font-size: 16px;">
-            🚨 EMERGENCY REQUEST - Immediate Attention Required
-          </p>
-        </div>
-      `
-      : "";
+      const emergencyBanner = isEmergency
+        ? `
+          <div style="background-color: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+            <p style="color: #dc2626; font-weight: bold; margin: 0; font-size: 16px;">
+              🚨 EMERGENCY REQUEST - Immediate Attention Required
+            </p>
+          </div>
+        `
+        : "";
 
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>New Support Request</title>
-        </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; padding: 40px 20px;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
-            <div style="background-color: #054D3B; padding: 24px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">New Support Request</h1>
-            </div>
-            
-            <div style="padding: 32px;">
-              ${emergencyBanner}
-              ${greeting}
-              ${contextMessage}
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>New Support Request</title>
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; padding: 40px 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+              <div style="background-color: #054D3B; padding: 24px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">New Support Request</h1>
+              </div>
               
-              <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-                <h2 style="color: #1f2937; font-size: 18px; margin: 0 0 16px 0;">${requestTitle}</h2>
+              <div style="padding: 32px;">
+                ${emergencyBanner}
+                ${greeting}
+                ${contextMessage}
                 
-                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
-                  <span style="background-color: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 500;">
-                    ${categoryDisplay}
-                  </span>
-                  <span style="background-color: ${priorityColor}20; color: ${priorityColor}; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 500;">
-                    ${priorityDisplay} Priority
-                  </span>
+                <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                  <h2 style="color: #1f2937; font-size: 18px; margin: 0 0 16px 0;">${requestTitle}</h2>
+                  
+                  <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                    <span style="background-color: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 500;">
+                      ${categoryDisplay}
+                    </span>
+                    <span style="background-color: ${priorityColor}20; color: ${priorityColor}; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 500;">
+                      ${priorityDisplay} Priority
+                    </span>
+                  </div>
+                  
+                  <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                    <strong>Submitted by:</strong> ${studentName || "Student"}
+                  </p>
                 </div>
                 
-                <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                  <strong>Submitted by:</strong> ${studentName || "Student"}
-                </p>
+                <div style="text-align: center;">
+                  <a href="https://evolvecampuscare.lovable.app/requests/${requestId}" 
+                     style="display: inline-block; background-color: #054D3B; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+                    View Request
+                  </a>
+                </div>
               </div>
               
-              <div style="text-align: center;">
-                <a href="https://evolvecampuscare.lovable.app/requests/${requestId}" 
-                   style="display: inline-block; background-color: #054D3B; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
-                  View Request
-                </a>
+              <div style="background-color: #f9fafb; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
+                <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                  This is an automated notification from Evolve Foundation Support Portal
+                </p>
               </div>
             </div>
-            
-            <div style="background-color: #f9fafb; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
-              <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                This is an automated notification from Evolve Foundation Support Portal
-              </p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
+          </body>
+        </html>
+      `;
 
-    const subject = isEmergency
-      ? `🚨 [EMERGENCY] New Support Request: ${requestTitle}`
-      : `[${priorityDisplay}] New Support Request: ${requestTitle}`;
+      const subject = isEmergency
+        ? `🚨 [EMERGENCY] New Support Request: ${requestTitle}`
+        : `[${priorityDisplay}] New Support Request: ${requestTitle}`;
 
-    console.log(`Sending email notification to ${recipientEmails.length} recipient(s)`);
+      console.log(`Sending email notification to ${recipientEmails.length} recipient(s)`);
 
-    const emailResponse = await resend.emails.send({
-      from: "Evolve Foundation <noreply@evolvefoundation.us>",
-      to: recipientEmails,
-      subject,
-      html: emailHtml,
-    });
+      await resend.emails.send({
+        from: "Evolve Foundation <noreply@evolvefoundation.us>",
+        to: recipientEmails,
+        subject,
+        html: emailHtml,
+      });
 
-    console.log("Email sent successfully");
+      console.log("Email sent successfully");
+    } else {
+      console.log("Email notifications disabled via site settings");
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         recipientType,
         recipientCount: recipientEmails.length,
-        inAppNotificationsCreated: recipientUserIds.length,
+        inAppNotificationsCreated: settings.in_app_enabled ? recipientUserIds.length : 0,
+        emailSent: settings.email_enabled,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
@@ -369,7 +419,7 @@ const handler = async (req: Request): Promise<Response> => {
     const safeMessage = sanitizeError(error, "notify-new-request");
     return new Response(
       JSON.stringify({ error: safeMessage }),
-      { status: 500, headers: { "Content-Type": "application/json", ...getCorsHeaders(req.headers.get("Origin")) } }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };
