@@ -30,6 +30,7 @@ function sanitizeError(error: unknown, context: string): string {
     const msg = error.message.toLowerCase();
     if (msg.includes('not found')) return 'Resource not found';
     if (msg.includes('permission') || msg.includes('forbidden')) return 'Access denied';
+    if (msg.includes('mfa') || msg.includes('aal2')) return 'Multi-factor authentication required';
   }
   return `An error occurred. Reference: ${requestId}`;
 }
@@ -42,6 +43,46 @@ interface CalendarEventRequest {
   description?: string;
   startTime: string;
   durationMinutes: number;
+}
+
+// Privileged roles that require MFA verification
+const PRIVILEGED_ROLES = ['admin', 'case_manager'];
+
+/**
+ * Verify MFA (AAL2) for privileged roles
+ */
+// deno-lint-ignore no-explicit-any
+async function verifyMFAForPrivilegedRole(authClient: any, userRole: string): Promise<{ verified: boolean; error?: string }> {
+  if (!PRIVILEGED_ROLES.includes(userRole)) {
+    return { verified: true };
+  }
+
+  try {
+    const { data: aalData, error: aalError } = await authClient.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aalError) {
+      console.error('Error checking MFA status:', aalError);
+      return { verified: false, error: 'Failed to verify MFA status' };
+    }
+
+    const { data: factorsData } = await authClient.auth.mfa.listFactors();
+    // deno-lint-ignore no-explicit-any
+    const verifiedFactors = factorsData?.totp?.filter((f: any) => f.status === 'verified') || [];
+    
+    if (verifiedFactors.length === 0) {
+      console.warn(`Privileged user (${userRole}) has no MFA factors enrolled`);
+      return { verified: false, error: 'MFA enrollment required for privileged roles' };
+    }
+
+    if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
+      console.warn(`Privileged user (${userRole}) requires MFA verification`);
+      return { verified: false, error: 'MFA verification required' };
+    }
+
+    return { verified: true };
+  } catch (err) {
+    console.error('MFA verification error:', err);
+    return { verified: false, error: 'MFA verification failed' };
+  }
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -111,8 +152,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     const isAdmin = roleData?.role === "admin";
     const isCaseManager = userId === caseManagerId;
+    const isStudent = userId === studentId;
 
-    if (!isAdmin && !isCaseManager) {
+    if (!isAdmin && !isCaseManager && !isStudent) {
       console.error("User lacks permission to create calendar events");
       return new Response(
         JSON.stringify({ error: "Forbidden" }),
@@ -120,7 +162,25 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Creating calendar event for appointment:", appointmentId);
+    // ========== MFA ENFORCEMENT FOR PRIVILEGED ROLES ==========
+    // Admin and case_manager roles must have completed MFA verification (AAL2)
+    // Students are not required to have MFA
+    if (roleData?.role && PRIVILEGED_ROLES.includes(roleData.role)) {
+      const mfaResult = await verifyMFAForPrivilegedRole(authClient, roleData.role);
+      if (!mfaResult.verified) {
+        console.warn(`MFA verification failed for ${roleData.role}: ${mfaResult.error}`);
+        return new Response(
+          JSON.stringify({ 
+            error: mfaResult.error || 'MFA verification required',
+            code: 'MFA_REQUIRED'
+          }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    }
+    // ==========================================================
+
+    console.log("Creating calendar event for appointment (MFA verified for privileged roles):", appointmentId);
 
     // Fetch participant profiles
     const { data: profiles, error: profilesError } = await supabase
@@ -162,7 +222,7 @@ const handler = async (req: Request): Promise<Response> => {
     const formattedEndTime = endDate.toLocaleTimeString("en-US", timeOptions);
 
     // Build email HTML
-    const buildEmailHtml = (recipientName: string, isStudent: boolean) => `
+    const buildEmailHtml = (recipientName: string, isStudentRecipient: boolean) => `
       <!DOCTYPE html>
       <html>
         <head>
@@ -180,7 +240,7 @@ const handler = async (req: Request): Promise<Response> => {
                 Hello ${recipientName},
               </p>
               <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-                A meeting has been scheduled ${isStudent ? "with your case manager" : "with your student"}.
+                A meeting has been scheduled ${isStudentRecipient ? "with your case manager" : "with your student"}.
               </p>
               
               <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 24px 0;">
@@ -197,8 +257,8 @@ const handler = async (req: Request): Promise<Response> => {
                 </div>
                 
                 <div style="margin-bottom: 12px;">
-                  <p style="color: #6b7280; font-size: 14px; margin: 0 0 4px 0;">👤 ${isStudent ? "Case Manager" : "Student"}</p>
-                  <p style="color: #1f2937; font-size: 16px; margin: 0; font-weight: 500;">${isStudent ? caseManager.full_name : student.full_name}</p>
+                  <p style="color: #6b7280; font-size: 14px; margin: 0 0 4px 0;">👤 ${isStudentRecipient ? "Case Manager" : "Student"}</p>
+                  <p style="color: #1f2937; font-size: 16px; margin: 0; font-weight: 500;">${isStudentRecipient ? caseManager.full_name : student.full_name}</p>
                 </div>
                 
                 ${description ? `

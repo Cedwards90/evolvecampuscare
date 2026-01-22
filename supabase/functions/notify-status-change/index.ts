@@ -30,6 +30,7 @@ function sanitizeError(error: unknown, context: string): string {
     const msg = error.message.toLowerCase();
     if (msg.includes('not found')) return 'Resource not found';
     if (msg.includes('permission') || msg.includes('forbidden')) return 'Access denied';
+    if (msg.includes('mfa') || msg.includes('aal2')) return 'Multi-factor authentication required';
   }
   return `An error occurred. Reference: ${requestId}`;
 }
@@ -79,6 +80,46 @@ const statusConfig: Record<string, {
     message: "Your request has been escalated for urgent attention. A senior team member will be reviewing your case shortly.",
   },
 };
+
+// Privileged roles that require MFA verification
+const PRIVILEGED_ROLES = ['admin', 'case_manager'];
+
+/**
+ * Verify MFA (AAL2) for privileged roles
+ */
+// deno-lint-ignore no-explicit-any
+async function verifyMFAForPrivilegedRole(authClient: any, userRole: string): Promise<{ verified: boolean; error?: string }> {
+  if (!PRIVILEGED_ROLES.includes(userRole)) {
+    return { verified: true };
+  }
+
+  try {
+    const { data: aalData, error: aalError } = await authClient.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aalError) {
+      console.error('Error checking MFA status:', aalError);
+      return { verified: false, error: 'Failed to verify MFA status' };
+    }
+
+    const { data: factorsData } = await authClient.auth.mfa.listFactors();
+    // deno-lint-ignore no-explicit-any
+    const verifiedFactors = factorsData?.totp?.filter((f: any) => f.status === 'verified') || [];
+    
+    if (verifiedFactors.length === 0) {
+      console.warn(`Privileged user (${userRole}) has no MFA factors enrolled`);
+      return { verified: false, error: 'MFA enrollment required for privileged roles' };
+    }
+
+    if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
+      console.warn(`Privileged user (${userRole}) requires MFA verification`);
+      return { verified: false, error: 'MFA verification required' };
+    }
+
+    return { verified: true };
+  } catch (err) {
+    console.error('MFA verification error:', err);
+    return { verified: false, error: 'MFA verification failed' };
+  }
+}
 
 const handler = async (req: Request): Promise<Response> => {
   const origin = req.headers.get("Origin");
@@ -141,6 +182,21 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // ========== MFA ENFORCEMENT FOR PRIVILEGED ROLES ==========
+    // Admin and case_manager roles must have completed MFA verification (AAL2)
+    const mfaResult = await verifyMFAForPrivilegedRole(authClient, roleData.role);
+    if (!mfaResult.verified) {
+      console.warn(`MFA verification failed for ${roleData.role}: ${mfaResult.error}`);
+      return new Response(
+        JSON.stringify({ 
+          error: mfaResult.error || 'MFA verification required',
+          code: 'MFA_REQUIRED'
+        }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    // ==========================================================
+
     const {
       requestId,
       studentId,
@@ -150,7 +206,7 @@ const handler = async (req: Request): Promise<Response> => {
       note,
     }: StatusChangeNotification = await req.json();
 
-    console.log("Notifying student of status change:", { requestId, previousStatus, newStatus });
+    console.log("Notifying student of status change (MFA verified):", { requestId, previousStatus, newStatus });
 
     const config = statusConfig[newStatus];
     if (!config) {
