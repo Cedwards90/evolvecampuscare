@@ -32,6 +32,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Use the provided appUrl or fallback to the preview URL
     const baseUrl = appUrl || "https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app";
     const signupUrl = `${baseUrl}/auth?tab=signup&invite=${token}`;
+    
+    console.log("Generated signup URL:", signupUrl);
 
     // Format role for display
     const roleDisplay = role.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
