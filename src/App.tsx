@@ -19,6 +19,7 @@ import OfflineDraft from "./pages/OfflineDraft";
 import ManageRequests from "./pages/ManageRequests";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
+import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
 import RequestDetail from "./pages/RequestDetail";
 import RequestsList from "./pages/RequestsList";
 import CaseManagerDetail from "./pages/CaseManagerDetail";
