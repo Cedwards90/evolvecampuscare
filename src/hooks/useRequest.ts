@@ -93,21 +93,52 @@ export function useApproveRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ requestId, userId }: { requestId: string; userId: string }) => {
+    mutationFn: async ({ 
+      requestId, 
+      userId,
+      approvedAmount 
+    }: { 
+      requestId: string; 
+      userId: string;
+      approvedAmount?: number;
+    }) => {
       // Fetch request details first
       const { data: requestData } = await supabase
         .from('support_requests')
-        .select('student_id, title')
+        .select('student_id, title, requested_amount')
         .eq('id', requestId)
         .single();
 
-      // Update status to in_progress
+      // Update status to in_progress with optional approved amount
+      const updateData: Record<string, unknown> = { 
+        status: 'in_progress' as RequestStatus 
+      };
+      
+      if (approvedAmount !== undefined) {
+        updateData.approved_amount = approvedAmount;
+      }
+
       const { error: updateError } = await supabase
         .from('support_requests')
-        .update({ status: 'in_progress' as RequestStatus })
+        .update(updateData)
         .eq('id', requestId);
 
       if (updateError) throw updateError;
+
+      // Build approval note
+      let note = 'Request has been approved and is now being processed.';
+      if (approvedAmount !== undefined && requestData?.requested_amount) {
+        const formattedRequested = requestData.requested_amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        const formattedApproved = approvedAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        if (approvedAmount === requestData.requested_amount) {
+          note = `Request approved for the full amount of ${formattedApproved}.`;
+        } else {
+          note = `Request approved for ${formattedApproved} (requested: ${formattedRequested}).`;
+        }
+      } else if (approvedAmount !== undefined) {
+        const formattedApproved = approvedAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        note = `Request approved for ${formattedApproved}.`;
+      }
 
       // Add approval note
       const { error: noteError } = await supabase
@@ -117,7 +148,7 @@ export function useApproveRequest() {
           user_id: userId,
           previous_status: 'submitted',
           new_status: 'in_progress',
-          note: 'Request has been approved and is now being processed.',
+          note,
           is_internal: false,
         });
 

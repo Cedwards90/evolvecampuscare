@@ -4,7 +4,8 @@ import {
   XCircle, 
   AlertTriangle, 
   CheckCheck,
-  Loader2
+  Loader2,
+  DollarSign
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +20,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { 
   useApproveRequest, 
@@ -32,19 +35,24 @@ interface RequestActionsProps {
   requestId: string;
   userId: string;
   currentStatus: RequestStatus;
+  requestedAmount?: number | null;
   onActionComplete?: () => void;
 }
 
 type DialogType = 'approve' | 'deny' | 'resolve' | 'escalate' | null;
+type ApprovalType = 'full' | 'custom' | 'none';
 
 export function RequestActions({ 
   requestId, 
   userId, 
   currentStatus,
+  requestedAmount,
   onActionComplete 
 }: RequestActionsProps) {
   const [dialogType, setDialogType] = useState<DialogType>(null);
   const [reason, setReason] = useState('');
+  const [approvalType, setApprovalType] = useState<ApprovalType>('full');
+  const [customAmount, setCustomAmount] = useState('');
   const { toast } = useToast();
 
   const approveRequest = useApproveRequest();
@@ -60,12 +68,36 @@ export function RequestActions({
 
   const handleApprove = async () => {
     try {
-      await approveRequest.mutateAsync({ requestId, userId });
+      let approvedAmount: number | undefined;
+      
+      if (requestedAmount) {
+        if (approvalType === 'full') {
+          approvedAmount = requestedAmount;
+        } else if (approvalType === 'custom') {
+          const parsed = parseFloat(customAmount);
+          if (isNaN(parsed) || parsed < 0) {
+            toast({
+              title: 'Invalid Amount',
+              description: 'Please enter a valid dollar amount.',
+              variant: 'destructive',
+            });
+            return;
+          }
+          approvedAmount = parsed;
+        }
+        // If 'none', approvedAmount remains undefined
+      }
+
+      await approveRequest.mutateAsync({ requestId, userId, approvedAmount });
       toast({
         title: 'Request Approved',
-        description: 'The request has been approved and is now in progress.',
+        description: approvedAmount 
+          ? `Request approved for $${approvedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}.`
+          : 'The request has been approved and is now in progress.',
       });
       setDialogType(null);
+      setApprovalType('full');
+      setCustomAmount('');
       onActionComplete?.();
     } catch (error) {
       toast({
@@ -153,6 +185,8 @@ export function RequestActions({
   const closeDialog = () => {
     setDialogType(null);
     setReason('');
+    setApprovalType('full');
+    setCustomAmount('');
   };
 
   // Determine which actions are available based on current status
@@ -214,7 +248,7 @@ export function RequestActions({
 
       {/* Approve Dialog */}
       <AlertDialog open={dialogType === 'approve'} onOpenChange={(open) => !open && closeDialog()}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Approve Request</AlertDialogTitle>
             <AlertDialogDescription>
@@ -222,6 +256,64 @@ export function RequestActions({
               The student will be notified that their request is being handled.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          
+          {requestedAmount && requestedAmount > 0 && (
+            <div className="space-y-4 py-2">
+              <div className="rounded-lg border bg-muted/50 p-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <DollarSign className="h-4 w-4" />
+                  <span>Requested Amount:</span>
+                  <span className="font-semibold text-foreground">
+                    ${requestedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <Label>Approval Amount</Label>
+                <RadioGroup 
+                  value={approvalType} 
+                  onValueChange={(v) => setApprovalType(v as ApprovalType)}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-3">
+                    <RadioGroupItem value="full" id="full" />
+                    <Label htmlFor="full" className="font-normal cursor-pointer">
+                      Approve full amount (${requestedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })})
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <RadioGroupItem value="custom" id="custom" />
+                    <Label htmlFor="custom" className="font-normal cursor-pointer">
+                      Approve different amount
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <RadioGroupItem value="none" id="none" />
+                    <Label htmlFor="none" className="font-normal cursor-pointer">
+                      Approve without specifying amount
+                    </Label>
+                  </div>
+                </RadioGroup>
+                
+                {approvalType === 'custom' && (
+                  <div className="relative ml-6">
+                    <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleApprove} disabled={isLoading}>

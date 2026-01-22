@@ -39,6 +39,8 @@ export interface SupportRequest {
   is_emergency: boolean;
   escalated_at: string | null;
   resolved_at: string | null;
+  requested_amount: number | null;
+  approved_amount: number | null;
   created_at: string;
   updated_at: string;
   // Joined data

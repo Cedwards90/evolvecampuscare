@@ -121,6 +121,28 @@ export default function RequestDetail() {
               <CardContent>
                 <p className="text-foreground whitespace-pre-wrap">{request.description}</p>
                 
+                {/* Monetary amounts for financial requests */}
+                {request.category === 'financial' && (request.requested_amount || request.approved_amount) && (
+                  <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+                    {request.requested_amount && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Requested Amount</span>
+                        <span className="font-semibold">
+                          ${request.requested_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
+                    {request.approved_amount !== null && request.approved_amount !== undefined && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Approved Amount</span>
+                        <span className="font-semibold text-green-600 dark:text-green-400">
+                          ${request.approved_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 {request.escalated_at && (
                   <div className="mt-4 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800">
                     <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
@@ -161,6 +183,7 @@ export default function RequestDetail() {
                     requestId={request.id}
                     userId={user!.id}
                     currentStatus={request.status}
+                    requestedAmount={request.requested_amount}
                   />
                 </CardContent>
               </Card>

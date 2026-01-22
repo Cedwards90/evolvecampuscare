@@ -12,9 +12,7 @@ import {
   LogOut,
   Menu,
   ChevronRight,
-  ChevronDown,
   Globe,
-  Bell,
   Search,
   HelpCircle,
   Shield,
@@ -25,6 +23,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useOffline } from '@/contexts/OfflineContext';
 import { useUnreadCount } from '@/hooks/useMessages';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
+import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -306,12 +305,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           </DropdownMenu>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-4 w-4" />
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
-              3
-            </span>
-          </Button>
+          <NotificationsDropdown />
 
           {/* User menu */}
           <DropdownMenu>
