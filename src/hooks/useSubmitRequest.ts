@@ -55,7 +55,22 @@ export function useSubmitRequest() {
 
       if (error) throw error;
 
-      // If auto-assigned, create an internal note
+      // Always notify about the new request (notifies admins and/or assigned case manager)
+      supabase.functions.invoke('notify-new-request', {
+        body: {
+          requestId: data.id,
+          requestTitle: title,
+          category,
+          priority,
+          isEmergency,
+          studentId: userId,
+          studentName,
+        },
+      }).catch((err) => {
+        console.error('Failed to send new request notification:', err);
+      });
+
+      // If auto-assigned, create an internal note and send assignment notification
       if (hasAssignedCM) {
         supabase.from('request_updates').insert({
           request_id: data.id,
@@ -68,7 +83,7 @@ export function useSubmitRequest() {
           if (noteError) console.error('Failed to create assignment note:', noteError);
         });
 
-        // Notify the assigned case manager
+        // Also send assignment notification to the case manager
         supabase.functions.invoke('send-assignment-notification', {
           body: {
             requestId: data.id,
@@ -81,21 +96,6 @@ export function useSubmitRequest() {
           },
         }).catch((err) => {
           console.error('Failed to send case manager notification:', err);
-        });
-      } else {
-        // Notify admins of new unassigned request
-        supabase.functions.invoke('notify-new-request', {
-          body: {
-            requestId: data.id,
-            requestTitle: title,
-            category,
-            priority,
-            isEmergency,
-            studentId: userId,
-            studentName,
-          },
-        }).catch((err) => {
-          console.error('Failed to send admin notification:', err);
         });
       }
 

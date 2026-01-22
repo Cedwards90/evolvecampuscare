@@ -109,14 +109,14 @@ function App() {
                     </ProtectedRoute>
                   } />
                   
-                  {/* Staff routes (case_manager + admin) */}
+                  {/* Messages - All authenticated users */}
                   <Route path="/messages" element={
-                    <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                    <ProtectedRoute>
                       <Messages />
                     </ProtectedRoute>
                   } />
                   <Route path="/messages/:userId" element={
-                    <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                    <ProtectedRoute>
                       <Messages />
                     </ProtectedRoute>
                   } />

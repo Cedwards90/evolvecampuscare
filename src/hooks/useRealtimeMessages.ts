@@ -10,8 +10,8 @@ export function useRealtimeMessages() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Only enable for staff members (case managers and admins)
-    if (!user?.id || (role !== 'case_manager' && role !== 'admin')) {
+    // Enable for all authenticated users
+    if (!user?.id) {
       return;
     }
 

@@ -189,9 +189,52 @@ export function useStaffMembers() {
   const { user, role } = useAuth();
 
   return useQuery({
-    queryKey: ['staff-members'],
+    queryKey: ['staff-members', role, user?.id],
     queryFn: async (): Promise<Profile[]> => {
-      // Fetch all case managers and admins
+      if (!user?.id) return [];
+
+      // Students can only message their assigned case manager and admins
+      if (role === 'student') {
+        // Get assigned case manager
+        const { data: assignment } = await supabase
+          .from('student_assignments')
+          .select('case_manager_id')
+          .eq('student_id', user.id)
+          .maybeSingle();
+
+        const recipients: string[] = [];
+
+        // Add assigned case manager if exists
+        if (assignment?.case_manager_id) {
+          recipients.push(assignment.case_manager_id);
+        }
+
+        // Also get all admins
+        const { data: adminRoles } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'admin');
+
+        if (adminRoles) {
+          adminRoles.forEach((r) => {
+            if (!recipients.includes(r.user_id)) {
+              recipients.push(r.user_id);
+            }
+          });
+        }
+
+        if (recipients.length === 0) return [];
+
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .in('user_id', recipients);
+
+        if (error) throw error;
+        return (profiles || []) as Profile[];
+      }
+
+      // Case managers and admins can message all staff
       const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role')
@@ -211,6 +254,6 @@ export function useStaffMembers() {
 
       return (profiles || []) as Profile[];
     },
-    enabled: role === 'case_manager' || role === 'admin',
+    enabled: !!user?.id,
   });
 }
