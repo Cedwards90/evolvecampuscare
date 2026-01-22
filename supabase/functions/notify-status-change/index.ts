@@ -191,7 +191,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending status change notification to:", studentProfile.email);
 
     const emailResponse = await resend.emails.send({
-      from: "Student Support Portal <onboarding@resend.dev>",
+      from: "CampusCare <noreply@evolvefoundation.us>",
       to: [studentProfile.email],
       subject: config.subject,
       html: emailHtml,

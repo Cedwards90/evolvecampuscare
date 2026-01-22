@@ -158,7 +158,7 @@ const handler = async (req: Request): Promise<Response> => {
       `;
 
     const emailResponse = await resend.emails.send({
-      from: "Support System <onboarding@resend.dev>",
+      from: "CampusCare <noreply@evolvefoundation.us>",
       to: [caseManager.email],
       subject,
       html: emailContent,

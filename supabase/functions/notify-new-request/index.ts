@@ -249,7 +249,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending notification to:", recipientEmails);
 
     const emailResponse = await resend.emails.send({
-      from: "CampusCare <onboarding@resend.dev>",
+      from: "CampusCare <noreply@evolvefoundation.us>",
       to: recipientEmails,
       subject,
       html: emailHtml,

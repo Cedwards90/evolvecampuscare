@@ -120,7 +120,7 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: "CampusCare <onboarding@resend.dev>",
+      from: "CampusCare <noreply@evolvefoundation.us>",
       to: [email],
       subject: `${inviterName} invited you to join CampusCare as a ${roleDisplay}`,
       html: emailHtml,
