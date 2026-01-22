@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
-import { Users, FileText, Calendar, Clock, ArrowRight } from 'lucide-react';
+import { Users, FileText, Calendar, Clock, ArrowRight, UserPlus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/EmptyState';
+import { InviteStudentDialog } from '@/components/casemanager/InviteStudentDialog';
 import type { MyStudent } from '@/hooks/useMyStudents';
 
 interface MyStudentsSectionProps {
@@ -65,6 +66,14 @@ export function MyStudentsSection({ students, isLoading }: MyStudentsSectionProp
             {students.length}
           </Badge>
         </div>
+        <InviteStudentDialog
+          trigger={
+            <Button variant="outline" size="sm">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite Student
+            </Button>
+          }
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
