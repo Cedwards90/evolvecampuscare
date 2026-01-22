@@ -16,6 +16,7 @@ import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { AssignCaseManagerDialog } from '@/components/admin/AssignCaseManagerDialog';
 import { StudentAssignmentsTable } from '@/components/admin/StudentAssignmentsTable';
+import { NotificationSettings } from '@/components/admin/NotificationSettings';
 import { PageHeader } from '@/components/PageHeader';
 import { StatsCard } from '@/components/StatsCard';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -637,6 +638,12 @@ export default function AdminDashboard() {
               <StudentAssignmentsTable />
             </CardContent>
           </Card>
+        </section>
+
+        {/* System Settings Section */}
+        <section className="space-y-4">
+          <h2 className="font-display text-h3">System Settings</h2>
+          <NotificationSettings />
         </section>
 
         {/* User Management Section */}

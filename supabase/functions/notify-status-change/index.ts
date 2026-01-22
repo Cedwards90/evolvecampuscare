@@ -31,6 +31,50 @@ interface StatusChangeNotification {
   note?: string;
 }
 
+interface NotificationSettings {
+  email_enabled: boolean;
+  in_app_enabled: boolean;
+  types: {
+    new_request: boolean;
+    status_change: boolean;
+    assignment: boolean;
+    invitation: boolean;
+    weekly_summary: boolean;
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+async function getNotificationSettings(supabase: any): Promise<NotificationSettings> {
+  const defaultSettings: NotificationSettings = {
+    email_enabled: true,
+    in_app_enabled: true,
+    types: {
+      new_request: true,
+      status_change: true,
+      assignment: true,
+      invitation: true,
+      weekly_summary: true,
+    },
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'notifications')
+      .single();
+
+    if (error || !data?.value) {
+      return defaultSettings;
+    }
+
+    return data.value as NotificationSettings;
+  } catch (err) {
+    console.error('Error fetching notification settings:', err);
+    return defaultSettings;
+  }
+}
+
 const statusConfig: Record<string, { 
   subject: string; 
   headline: string; 
@@ -191,6 +235,18 @@ const handler = async (req: Request): Promise<Response> => {
     }: StatusChangeNotification = await req.json();
 
     console.log("Notifying student of status change (MFA verified):", { requestId, previousStatus, newStatus });
+
+    // ========== CHECK NOTIFICATION SETTINGS ==========
+    const settings = await getNotificationSettings(supabase);
+    
+    if (!settings.email_enabled || !settings.types.status_change) {
+      console.log('Status change notifications disabled via site settings');
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: 'disabled_by_settings' }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    // ================================================
 
     const config = statusConfig[newStatus];
     if (!config) {
