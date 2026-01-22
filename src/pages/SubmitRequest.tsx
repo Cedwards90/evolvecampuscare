@@ -16,7 +16,7 @@ import {
   AlertTriangle,
   Loader2
 } from 'lucide-react';
-import { AppLayout } from '@/components/layouts/AppLayout';
+import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -105,7 +105,7 @@ export default function SubmitRequest() {
   };
 
   return (
-    <AppLayout>
+    <SidebarLayout>
       <div className="space-y-12 max-w-3xl mx-auto">
         <PageHeader
           title="Submit a Support Request"
@@ -341,6 +341,6 @@ export default function SubmitRequest() {
           </div>
         </form>
       </div>
-    </AppLayout>
+    </SidebarLayout>
   );
 }

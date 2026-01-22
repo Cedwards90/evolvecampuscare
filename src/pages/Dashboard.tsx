@@ -1,7 +1,12 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { AppLayout } from '@/components/layouts/AppLayout';
+import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
-import { StatsCard } from '@/components/StatsCard';
+import { FractionStatsCard } from '@/components/dashboard/FractionStatsCard';
+import { PercentageStatsCard } from '@/components/dashboard/PercentageStatsCard';
+import { AreaChartCard } from '@/components/dashboard/AreaChartCard';
+import { SparklineCard } from '@/components/dashboard/SparklineCard';
+import { SummaryCard } from '@/components/dashboard/SummaryCard';
+import { StatsSummaryBar } from '@/components/dashboard/StatsSummaryBar';
 import { RequestCard } from '@/components/RequestCard';
 import { AIBadge } from '@/components/AIBadge';
 import { Button } from '@/components/ui/button';
@@ -16,10 +21,31 @@ import {
   Users,
   BarChart3,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Star,
+  Briefcase,
+  Calendar,
+  DollarSign,
+  Target
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { mockRequests, mockCaseManagers, mockAIInsights, getDashboardStats } from '@/lib/mock-data';
+import { mockRequests, mockCaseManagers, mockAIInsights, getDashboardStats, mockAnalytics } from '@/lib/mock-data';
+
+// Generate chart data from analytics
+const generateChartData = () => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return months.map((name, index) => ({
+    name,
+    value: Math.floor(Math.random() * 50000) + 20000,
+  }));
+};
+
+const chartData = generateChartData();
+
+// Sparkline data
+const sparklineData1 = [12, 19, 3, 5, 2, 3, 15, 20, 25, 22, 30, 28];
+const sparklineData2 = [5, 10, 15, 8, 12, 18, 20, 25, 22, 28, 32, 35];
+const sparklineData3 = [20, 15, 25, 22, 18, 30, 28, 35, 32, 40, 38, 45];
 
 export default function Dashboard() {
   const { role, user, profile } = useAuth();
@@ -37,58 +63,164 @@ export default function Dashboard() {
   // Get relevant AI insights for case managers
   const insights = mockAIInsights.filter(i => i.case_manager_id === 'cm-user-1').slice(0, 2);
 
-  return (
-    <AppLayout>
-      <div className="space-y-12">
-        {/* Header */}
-        <PageHeader
-          title={`Welcome back, ${profile?.full_name?.split(' ')[0] || 'User'}`}
-          description={
-            role === 'student' 
-              ? "Here's an overview of your support requests"
-              : role === 'case_manager'
-              ? "Here's your current caseload overview"
-              : "System overview and monitoring"
-          }
-        />
+  // Summary items for the side card
+  const summaryItems = [
+    {
+      icon: <FileText className="h-4 w-4 text-primary" />,
+      title: 'Academic Advising',
+      subtitle: 'Support',
+      value: '$1200',
+    },
+    {
+      icon: <Users className="h-4 w-4 text-primary" />,
+      title: 'Mental Health',
+      subtitle: 'Counseling',
+      value: '$1450',
+    },
+    {
+      icon: <Briefcase className="h-4 w-4 text-primary" />,
+      title: 'Financial Aid',
+      subtitle: 'Assistance',
+      value: '$1250',
+    },
+  ];
 
-        {/* Stats Grid */}
-        <section className="space-y-4">
-          <h2 className="font-display text-h3">Overview</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatsCard
-              title="Total Requests"
-              value={stats.totalRequests}
-              icon={FileText}
-              trend={{ value: 12, isPositive: true }}
+  return (
+    <SidebarLayout>
+      <div className="space-y-6">
+        {/* Header with Breadcrumb */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-bold">
+              Welcome back, {profile?.full_name?.split(' ')[0] || 'User'}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {role === 'student' 
+                ? "Here's an overview of your support requests"
+                : role === 'case_manager'
+                ? "Here's your current caseload overview"
+                : "System overview and monitoring"
+              }
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm">
+              <Calendar className="mr-2 h-4 w-4" />
+              Jan 1 - Dec 31, 2026
+            </Button>
+            <Button variant="outline" size="sm">
+              Filter
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats Grid - Fraction Style */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <FractionStatsCard
+            title="Total Requests"
+            current={stats.totalRequests}
+            total={stats.totalRequests + 10}
+            icon={DollarSign}
+            subtitle="Requests Submitted"
+            progressColor="blue"
+          />
+          <FractionStatsCard
+            title="In Progress"
+            current={stats.pendingRequests}
+            total={stats.totalRequests}
+            icon={Target}
+            subtitle="Active Cases"
+            progressColor="green"
+          />
+          <FractionStatsCard
+            title="Resolved"
+            current={stats.resolvedRequests}
+            total={stats.totalRequests}
+            icon={CheckCircle}
+            subtitle="Completed"
+            progressColor="green"
+          />
+          <PercentageStatsCard
+            title="Resolution Rate"
+            percentage={stats.totalRequests > 0 ? (stats.resolvedRequests / stats.totalRequests) * 100 : 0}
+            subtitle="Resolution Rate"
+            trend={{ value: 46, isPositive: true }}
+            icon={TrendingUp}
+            progressColor="gradient"
+          />
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Area Chart - Takes 2 columns */}
+          <div className="lg:col-span-2 space-y-6">
+            <AreaChartCard
+              title="Request Activity"
+              data={chartData}
+              className="border border-border/50 shadow-sm"
             />
-            <StatsCard
-              title="Pending"
-              value={stats.pendingRequests}
-              icon={Clock}
-              description="Awaiting response"
-            />
-            <StatsCard
-              title="Resolved"
-              value={stats.resolvedRequests}
-              icon={CheckCircle}
-              trend={{ value: 8, isPositive: true }}
-            />
-            <StatsCard
-              title={role === 'admin' ? 'Escalated' : 'Emergency'}
-              value={role === 'admin' ? stats.escalatedRequests : stats.emergencyRequests}
-              icon={AlertTriangle}
-              description={role === 'admin' ? 'Requires attention' : 'High priority'}
+
+            {/* Summary Bar */}
+            <StatsSummaryBar
+              items={[
+                { label: 'Pending', value: stats.pendingRequests, color: 'blue' },
+                { label: 'Resolved', value: stats.resolvedRequests, color: 'green' },
+                { label: 'Escalated', value: stats.escalatedRequests, color: 'orange' },
+                { label: 'Emergency', value: stats.emergencyRequests, color: 'red' },
+              ]}
             />
           </div>
-        </section>
+
+          {/* Summary Card - Takes 1 column */}
+          <SummaryCard
+            title="Request Summary"
+            totalValue={30569}
+            totalLabel="Total Resolved"
+            trendValue={12}
+            items={summaryItems}
+          />
+        </div>
+
+        {/* Sparkline Cards */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <SparklineCard
+            title="Tasks Completed"
+            subtitle={`${stats.resolvedRequests}/35 completed`}
+            current={stats.resolvedRequests}
+            total={35}
+            data={sparklineData1}
+            trend={{ value: 28, isPositive: true }}
+            icon={Star}
+            color="blue"
+          />
+          <SparklineCard
+            title="New Requests"
+            subtitle="0/20 tasks"
+            current={5}
+            total={20}
+            data={sparklineData2}
+            trend={{ value: 34, isPositive: true }}
+            icon={FileText}
+            color="green"
+          />
+          <SparklineCard
+            title="Cases Closed"
+            subtitle="20/30 project"
+            current={20}
+            total={30}
+            data={sparklineData3}
+            trend={{ value: 42, isPositive: true }}
+            icon={CheckCircle}
+            color="red"
+          />
+        </div>
 
         {/* Role-specific content */}
         {role === 'student' && (
           <>
             {/* Quick Actions */}
             <section className="space-y-4">
-              <h2 className="font-display text-h3">Quick Actions</h2>
+              <h2 className="font-display text-lg font-semibold">Quick Actions</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer">
                   <Link to="/student-submitting-a-support-request">
@@ -140,7 +272,7 @@ export default function Dashboard() {
             {/* Recent Requests */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="font-display text-h3">Recent Requests</h2>
+                <h2 className="font-display text-lg font-semibold">Recent Requests</h2>
                 <Button variant="outline" size="sm" asChild>
                   <Link to="/student-tracking-request-status-scheduling-meeting">
                     View All
@@ -162,7 +294,7 @@ export default function Dashboard() {
             {/* AI Insights */}
             <section className="space-y-4">
               <div className="flex items-center gap-2">
-                <h2 className="font-display text-h3">AI Insights</h2>
+                <h2 className="font-display text-lg font-semibold">AI Insights</h2>
                 <AIBadge />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
@@ -202,7 +334,7 @@ export default function Dashboard() {
             {/* Priority Queue */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="font-display text-h3">Priority Queue</h2>
+                <h2 className="font-display text-lg font-semibold">Priority Queue</h2>
                 <Button variant="outline" size="sm" asChild>
                   <Link to="/case-manager-managing-student-requests">
                     View All
@@ -223,7 +355,7 @@ export default function Dashboard() {
           <>
             {/* Case Manager Workloads */}
             <section className="space-y-4">
-              <h2 className="font-display text-h3">Case Manager Workloads</h2>
+              <h2 className="font-display text-lg font-semibold">Case Manager Workloads</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {mockCaseManagers.slice(0, 3).map((cm) => (
                   <Card key={cm.id} className="border border-border/50">
@@ -253,7 +385,7 @@ export default function Dashboard() {
             {/* Escalated Requests */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="font-display text-h3">Escalated & Unassigned</h2>
+                <h2 className="font-display text-lg font-semibold">Escalated & Unassigned</h2>
                 <Button variant="outline" size="sm" asChild>
                   <Link to="/admin-monitoring-reassigning-requests">
                     View All
@@ -270,6 +402,6 @@ export default function Dashboard() {
           </>
         )}
       </div>
-    </AppLayout>
+    </SidebarLayout>
   );
 }
