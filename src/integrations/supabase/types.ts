@@ -294,6 +294,36 @@ export type Database = {
           },
         ]
       }
+      student_assignments: {
+        Row: {
+          assigned_by: string | null
+          case_manager_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          case_manager_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          case_manager_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       support_requests: {
         Row: {
           assigned_case_manager_id: string | null

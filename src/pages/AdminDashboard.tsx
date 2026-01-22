@@ -9,11 +9,13 @@ import {
   RefreshCw,
   UserCog,
   MessageSquare,
-  CheckSquare
+  CheckSquare,
+  UserCheck
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { AssignCaseManagerDialog } from '@/components/admin/AssignCaseManagerDialog';
+import { StudentAssignmentsTable } from '@/components/admin/StudentAssignmentsTable';
 import { PageHeader } from '@/components/PageHeader';
 import { StatsCard } from '@/components/StatsCard';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -618,6 +620,19 @@ export default function AdminDashboard() {
               </Table>
             </Card>
           )}
+        </section>
+
+        {/* Student Assignments Section */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <UserCheck className="h-5 w-5 text-primary" />
+            <h2 className="font-display text-h3">Student Assignments</h2>
+          </div>
+          <Card className="border border-border/50">
+            <CardContent className="pt-6">
+              <StudentAssignmentsTable />
+            </CardContent>
+          </Card>
         </section>
 
         {/* User Management Section */}
