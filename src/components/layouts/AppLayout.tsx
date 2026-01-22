@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  GraduationCap, 
   LayoutDashboard, 
   FileText, 
   Clock, 
@@ -74,12 +73,13 @@ export function AppLayout({ children }: AppLayoutProps) {
       <header className="sticky top-0 z-50 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-4">
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <GraduationCap className="h-6 w-6 text-primary" />
-              <span className="font-display text-lg font-semibold hidden sm:inline">Evolve Foundation</span>
-            </Link>
-          </div>
+          <Link to="/dashboard" className="flex items-center gap-2">
+            <img 
+              src="https://www.evolvefoundation.us/lovable-uploads/evolve-logo.webp" 
+              alt="Evolve Foundation" 
+              className="h-8 w-auto"
+            />
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">

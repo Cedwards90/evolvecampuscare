@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { 
-  GraduationCap, 
   FileText, 
   Clock, 
   Users, 
@@ -54,10 +53,11 @@ export default function Landing() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-primary" />
-            <span className="font-display text-lg font-semibold">Evolve Foundation</span>
-          </div>
+          <img 
+            src="https://www.evolvefoundation.us/lovable-uploads/evolve-logo.webp" 
+            alt="Evolve Foundation" 
+            className="h-8 w-auto"
+          />
           <div className="flex items-center gap-4">
             {user ? (
               <Button asChild>
@@ -181,10 +181,11 @@ export default function Landing() {
       <footer className="border-t border-border/40 py-8">
         <div className="container">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div className="flex items-center gap-2">
-              <GraduationCap className="h-5 w-5 text-primary" />
-              <span className="font-display font-semibold">Evolve Foundation</span>
-            </div>
+            <img 
+              src="https://www.evolvefoundation.us/lovable-uploads/evolve-logo.webp" 
+              alt="Evolve Foundation" 
+              className="h-6 w-auto"
+            />
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Evolve Foundation. All rights reserved.
             </p>

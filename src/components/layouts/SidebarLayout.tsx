@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  GraduationCap, 
   LayoutDashboard, 
   FileText, 
   Clock, 
@@ -105,13 +104,12 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
         )}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center gap-3 border-b border-border/40 px-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <GraduationCap className="h-5 w-5 text-primary-foreground" />
-          </div>
-          {!sidebarCollapsed && (
-            <span className="font-display text-lg font-bold">Evolve</span>
-          )}
+        <div className="flex h-16 items-center justify-center border-b border-border/40 px-4">
+          <img 
+            src="https://www.evolvefoundation.us/lovable-uploads/evolve-logo.webp" 
+            alt="Evolve Foundation" 
+            className={cn("w-auto transition-all", sidebarCollapsed ? "h-7" : "h-8")}
+          />
         </div>
 
         {/* Navigation Label */}
@@ -207,11 +205,12 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
         )}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center gap-3 border-b border-border/40 px-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <GraduationCap className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="font-display text-lg font-bold">Evolve</span>
+        <div className="flex h-16 items-center justify-center border-b border-border/40 px-4">
+          <img 
+            src="https://www.evolvefoundation.us/lovable-uploads/evolve-logo.webp" 
+            alt="Evolve Foundation" 
+            className="h-8 w-auto"
+          />
         </div>
 
         {/* Navigation */}
