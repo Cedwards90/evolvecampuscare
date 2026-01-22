@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, User, Bell, Globe, Palette } from 'lucide-react';
+import { Loader2, User, Bell, Globe, Palette, Shield, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -20,7 +21,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useMFA } from '@/hooks/useMFA';
+import { MFAEnrollment } from '@/components/auth/MFAEnrollment';
 
 const profileSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -31,7 +45,7 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 export default function Settings() {
-  const { profile, user } = useAuth();
+  const { profile, user, role } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -41,6 +55,10 @@ export default function Settings() {
     appointments: true,
     emergencyAlerts: true,
   });
+  const [showMFAEnrollment, setShowMFAEnrollment] = useState(false);
+  const { isEnrolled, factors, unenroll, checkMFAStatus, isLoading: mfaLoading } = useMFA();
+  
+  const isPrivilegedRole = role === 'admin' || role === 'case_manager';
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -62,6 +80,25 @@ export default function Settings() {
     setIsLoading(false);
   };
 
+  const handleDisableMFA = async () => {
+    const verifiedFactor = factors.find(f => f.status === 'verified');
+    if (verifiedFactor) {
+      const { error } = await unenroll(verifiedFactor.id);
+      if (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to disable MFA',
+          description: 'Please try again later.',
+        });
+      } else {
+        toast({
+          title: 'MFA Disabled',
+          description: 'Two-factor authentication has been disabled.',
+        });
+      }
+    }
+  };
+
   return (
     <SidebarLayout>
       <div className="space-y-6 max-w-4xl">
@@ -71,10 +108,14 @@ export default function Settings() {
         />
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 max-w-xl">
+          <TabsList className="grid w-full grid-cols-5 max-w-2xl">
             <TabsTrigger value="profile" className="gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
+            </TabsTrigger>
+            <TabsTrigger value="security" className="gap-2">
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">Security</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="h-4 w-4" />
@@ -145,6 +186,104 @@ export default function Settings() {
                 </form>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="security" className="space-y-6">
+            {showMFAEnrollment ? (
+              <MFAEnrollment
+                onEnrollmentComplete={() => {
+                  setShowMFAEnrollment(false);
+                  checkMFAStatus();
+                }}
+                onSkip={() => setShowMFAEnrollment(false)}
+              />
+            ) : (
+              <Card className="border border-border/50">
+                <CardHeader>
+                  <CardTitle className="font-display">Two-Factor Authentication</CardTitle>
+                  <CardDescription>
+                    Add an extra layer of security to your account
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {isPrivilegedRole && !isEnrolled && (
+                    <Alert>
+                      <Shield className="h-4 w-4" />
+                      <AlertDescription>
+                        As an {role === 'admin' ? 'administrator' : 'case manager'}, we strongly recommend enabling two-factor authentication for enhanced security.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">MFA Status</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {isEnrolled 
+                          ? 'Two-factor authentication is enabled'
+                          : 'Two-factor authentication is not enabled'
+                        }
+                      </p>
+                    </div>
+                    {mfaLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : isEnrolled ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-success">Enabled</span>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Disable
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Disable Two-Factor Authentication?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will remove the extra security layer from your account. 
+                                {isPrivilegedRole && ' As a privileged user, this is not recommended.'}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDisableMFA}>
+                                Disable MFA
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    ) : (
+                      <Button onClick={() => setShowMFAEnrollment(true)}>
+                        Enable MFA
+                      </Button>
+                    )}
+                  </div>
+
+                  {isEnrolled && (
+                    <div className="pt-4 border-t">
+                      <h4 className="text-sm font-medium mb-2">Enrolled Devices</h4>
+                      <div className="space-y-2">
+                        {factors.filter(f => f.status === 'verified').map(factor => (
+                          <div key={factor.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <Shield className="h-5 w-5 text-primary" />
+                              <div>
+                                <p className="text-sm font-medium">{factor.friendly_name || 'Authenticator App'}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Added {new Date(factor.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="notifications" className="space-y-6">

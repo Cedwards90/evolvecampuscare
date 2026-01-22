@@ -67,43 +67,37 @@ export function useSendInvitation() {
 
   return useMutation({
     mutationFn: async (params: SendInvitationParams): Promise<InvitationResult> => {
-      // Generate a secure token
-      const token = crypto.randomUUID() + '-' + crypto.randomUUID();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
-
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      // Insert invitation
-      const { data: invitation, error: insertError } = await supabase
-        .from('user_invitations')
-        .insert({
+      // Call edge function to generate secure token and create invitation
+      const { data: tokenResponse, error: tokenError } = await supabase.functions.invoke('generate-invitation-token', {
+        body: {
           email: params.email,
-          invited_role: params.role,
-          invited_by: user.id,
-          token,
-          expires_at: expiresAt.toISOString(),
-          auto_assign_case_manager: params.autoAssignCaseManager || null,
-          notes: params.notes || null,
-        })
-        .select()
-        .single();
+          role: params.role,
+          notes: params.notes,
+          autoAssignCaseManager: params.autoAssignCaseManager,
+        },
+      });
 
-      if (insertError) throw insertError;
+      if (tokenError) {
+        console.error('Token generation error:', tokenError);
+        throw new Error('Failed to generate invitation token');
+      }
 
-      // Build the invitation URL - always use published URL
-      const inviteUrl = `https://evolvecampuscare.lovable.app/auth?tab=signup&invite=${token}`;
+      if (tokenResponse?.error) {
+        throw new Error(tokenResponse.error);
+      }
+
+      const { invitation, inviteUrl, token } = tokenResponse;
 
       // Call edge function to send invitation email
       let emailSent = true;
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data: emailResponse, error: emailError } = await supabase.functions.invoke('send-user-invitation', {
         body: {
           email: params.email,
           role: params.role,
           token,
-          inviterName: user.user_metadata?.full_name || user.email,
+          inviterName: user?.user_metadata?.full_name || user?.email || 'Admin',
           notes: params.notes,
           appUrl: window.location.origin,
         },
