@@ -4,11 +4,35 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// Allowed origins for CORS
+const ALLOWED_ORIGINS = [
+  'https://evolvecampuscare.lovable.app',
+  'https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app',
+];
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.some(o => origin.startsWith(o.replace('https://', '')))
+    ? origin
+    : ALLOWED_ORIGINS[0];
+  
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
+
+function sanitizeError(error: unknown, context: string): string {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  console.error(`[${context}][${requestId}]`, error);
+  
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('not found')) return 'Resource not found';
+    if (msg.includes('permission') || msg.includes('forbidden')) return 'Access denied';
+  }
+  return `An error occurred. Reference: ${requestId}`;
+}
 
 interface StatusChangeNotification {
   requestId: string;
@@ -29,7 +53,7 @@ const statusConfig: Record<string, {
   in_progress: {
     subject: "Good news! Your request is being processed",
     headline: "Your Request Has Been Approved",
-    color: "#22c55e",
+    color: "#059669",
     icon: "✅",
     message: "Great news! Your support request has been reviewed and approved. A case manager is now actively working on it.",
   },
@@ -43,7 +67,7 @@ const statusConfig: Record<string, {
   resolved: {
     subject: "Your request has been resolved! 🎉",
     headline: "Request Resolved",
-    color: "#22c55e",
+    color: "#059669",
     icon: "🎉",
     message: "Your support request has been successfully resolved. We hope we were able to help!",
   },
@@ -57,7 +81,9 @@ const statusConfig: Record<string, {
 };
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
+  const origin = req.headers.get("Origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -68,7 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
-      throw new Error("Missing Supabase environment variables");
+      throw new Error("Configuration error");
     }
 
     // Verify authentication
@@ -81,7 +107,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create client with user's auth token to verify
     const authClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -99,7 +124,6 @@ const handler = async (req: Request): Promise<Response> => {
     const userId = user.id;
     console.log("Authenticated user:", userId);
 
-    // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     // Verify user has admin or case_manager role (only staff can change status)
@@ -126,23 +150,14 @@ const handler = async (req: Request): Promise<Response> => {
       note,
     }: StatusChangeNotification = await req.json();
 
-    console.log("Notifying student of status change:", {
-      requestId,
-      studentId,
-      previousStatus,
-      newStatus,
-    });
+    console.log("Notifying student of status change:", { requestId, previousStatus, newStatus });
 
-    // Get status configuration
     const config = statusConfig[newStatus];
     if (!config) {
       console.log("No email template for status:", newStatus);
       return new Response(
         JSON.stringify({ success: true, message: "No email template for this status" }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
@@ -155,10 +170,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (profileError || !studentProfile?.email) {
       console.error("Error fetching student profile:", profileError);
-      throw new Error("Could not find student email");
+      throw new Error("Recipient not found");
     }
 
-    // Build note section if provided
     const noteSection = note
       ? `
         <div style="background-color: #f3f4f6; border-left: 4px solid ${config.color}; padding: 16px; margin: 24px 0; border-radius: 0 8px 8px 0;">
@@ -170,7 +184,6 @@ const handler = async (req: Request): Promise<Response> => {
       `
       : "";
 
-    // Build resolution survey for resolved status
     const surveySection = newStatus === "resolved"
       ? `
         <div style="background-color: #ecfdf5; border-radius: 8px; padding: 20px; margin-top: 24px; text-align: center;">
@@ -217,7 +230,7 @@ const handler = async (req: Request): Promise<Response> => {
               
               <div style="text-align: center; margin-top: 32px;">
                 <a href="https://evolvecampuscare.lovable.app/requests/${requestId}" 
-                   style="display: inline-block; background-color: #3B82F6; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+                   style="display: inline-block; background-color: #054D3B; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
                   View Request Details
                 </a>
               </div>
@@ -225,7 +238,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <div style="background-color: #f9fafb; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                This is an automated notification from Student Support Portal
+                This is an automated notification from Evolve Foundation Support Portal
               </p>
             </div>
           </div>
@@ -233,33 +246,26 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    console.log("Sending status change notification to:", studentProfile.email);
+    console.log("Sending status change notification");
 
-    const emailResponse = await resend.emails.send({
-      from: "CampusCare <noreply@evolvefoundation.us>",
+    await resend.emails.send({
+      from: "Evolve Foundation <noreply@evolvefoundation.us>",
       to: [studentProfile.email],
       subject: config.subject,
       html: emailHtml,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    console.log("Email sent successfully");
 
     return new Response(
-      JSON.stringify({ success: true, emailResponse }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      JSON.stringify({ success: true }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error in notify-status-change function:", errorMessage);
+    const safeMessage = sanitizeError(error, "notify-status-change");
     return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      JSON.stringify({ error: safeMessage }),
+      { status: 500, headers: { "Content-Type": "application/json", ...getCorsHeaders(req.headers.get("Origin")) } }
     );
   }
 };

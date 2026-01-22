@@ -4,14 +4,65 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// Allowed origins for CORS
+const ALLOWED_ORIGINS = [
+  'https://evolvecampuscare.lovable.app',
+  'https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app',
+];
 
-// Shared secret for scheduled/cron invocations
-const CRON_SECRET = Deno.env.get("CRON_SECRET");
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.some(o => origin.startsWith(o.replace('https://', '')))
+    ? origin
+    : ALLOWED_ORIGINS[0];
+  
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
+
+function sanitizeError(error: unknown, context: string): string {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  console.error(`[${context}][${requestId}]`, error);
+  
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('not found')) return 'Resource not found';
+    if (msg.includes('permission') || msg.includes('forbidden')) return 'Access denied';
+  }
+  return `An error occurred. Reference: ${requestId}`;
+}
+
+// Constant-time string comparison to prevent timing attacks
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  
+  const aBytes = new TextEncoder().encode(a);
+  const bBytes = new TextEncoder().encode(b);
+  
+  let result = 0;
+  for (let i = 0; i < aBytes.length; i++) {
+    result |= aBytes[i] ^ bBytes[i];
+  }
+  
+  return result === 0;
+}
+
+// Validate CRON_SECRET with strength requirements
+function validateCronSecret(providedSecret: string | null): boolean {
+  const cronSecret = Deno.env.get('CRON_SECRET');
+  
+  // Secret must be configured and at least 32 characters
+  if (!cronSecret || cronSecret.length < 32) {
+    console.error('CRON_SECRET not configured or too weak (must be 32+ characters)');
+    return false;
+  }
+  
+  if (!providedSecret) return false;
+  
+  return timingSafeEqual(providedSecret, cronSecret);
+}
 
 interface CaseManagerStats {
   email: string;
@@ -27,7 +78,6 @@ interface CaseManagerStats {
 async function generateAIInsights(stats: CaseManagerStats): Promise<string[]> {
   const insights: string[] = [];
 
-  // Generate insights based on stats
   if (stats.agingRequests.length > 0) {
     insights.push(
       `⚠️ You have ${stats.agingRequests.length} request(s) that haven't been updated in over 7 days. Consider reviewing these to ensure students receive timely support.`
@@ -56,7 +106,6 @@ async function generateAIInsights(stats: CaseManagerStats): Promise<string[]> {
     );
   }
 
-  // Category-based insight
   const topCategory = Object.entries(stats.categoryBreakdown).sort(
     (a, b) => b[1] - a[1]
   )[0];
@@ -67,18 +116,19 @@ async function generateAIInsights(stats: CaseManagerStats): Promise<string[]> {
     );
   }
 
-  // Default insight if none generated
   if (insights.length === 0) {
     insights.push(
       "✨ Your caseload looks manageable this week. Great job staying on top of your requests!"
     );
   }
 
-  return insights.slice(0, 3); // Return max 3 insights
+  return insights.slice(0, 3);
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
+  const origin = req.headers.get("Origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -89,7 +139,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
-      throw new Error("Missing Supabase environment variables");
+      throw new Error("Configuration error");
     }
 
     // Check for cron secret (for scheduled invocations) or user auth
@@ -99,9 +149,9 @@ const handler = async (req: Request): Promise<Response> => {
     let isAuthorized = false;
     let userId: string | null = null;
 
-    // Method 1: Cron secret for scheduled jobs
-    if (CRON_SECRET && cronSecretHeader === CRON_SECRET) {
-      console.log("Authorized via cron secret");
+    // Method 1: Cron secret for scheduled jobs (with strong validation)
+    if (validateCronSecret(cronSecretHeader)) {
+      console.log("Authorized via cron mechanism");
       isAuthorized = true;
     }
     // Method 2: User authentication (admin only)
@@ -115,7 +165,6 @@ const handler = async (req: Request): Promise<Response> => {
       if (!authError && user) {
         userId = user.id;
         
-        // Create service role client to check role
         const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
         const { data: roleData } = await supabaseAdmin
           .from("user_roles")
@@ -124,7 +173,7 @@ const handler = async (req: Request): Promise<Response> => {
           .single();
 
         if (roleData?.role === "admin") {
-          console.log("Authorized via admin user:", userId);
+          console.log("Authorized via admin user");
           isAuthorized = true;
         }
       }
@@ -138,12 +187,10 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     console.log("Starting weekly case manager summary generation...");
 
-    // Get all case managers
     const { data: caseManagerRoles, error: rolesError } = await supabase
       .from("user_roles")
       .select("user_id")
@@ -151,17 +198,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (rolesError) {
       console.error("Error fetching case manager roles:", rolesError);
-      throw rolesError;
+      throw new Error("Failed to retrieve case manager data");
     }
 
     if (!caseManagerRoles || caseManagerRoles.length === 0) {
       console.log("No case managers found");
       return new Response(
         JSON.stringify({ success: true, message: "No case managers to notify" }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
@@ -175,7 +219,6 @@ const handler = async (req: Request): Promise<Response> => {
     const emailsSent: string[] = [];
 
     for (const role of caseManagerRoles) {
-      // Get case manager profile
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("email, full_name")
@@ -183,24 +226,22 @@ const handler = async (req: Request): Promise<Response> => {
         .single();
 
       if (profileError || !profile?.email) {
-        console.error("Error fetching profile for:", role.user_id);
+        console.error("Error fetching profile for user");
         continue;
       }
 
-      // Get all requests assigned to this case manager
       const { data: requests, error: requestsError } = await supabase
         .from("support_requests")
         .select("id, title, status, category, priority, is_emergency, updated_at, created_at, resolved_at")
         .eq("assigned_case_manager_id", role.user_id);
 
       if (requestsError) {
-        console.error("Error fetching requests for:", role.user_id);
+        console.error("Error fetching requests");
         continue;
       }
 
       const allRequests = requests || [];
 
-      // Calculate stats
       const activeRequests = allRequests.filter(
         (r) => !["resolved", "cancelled"].includes(r.status)
       );
@@ -210,7 +251,6 @@ const handler = async (req: Request): Promise<Response> => {
       const emergencyRequests = activeRequests.filter((r) => r.is_emergency);
       const escalatedRequests = activeRequests.filter((r) => r.status === "escalated");
 
-      // Find aging requests (not updated in 7+ days)
       const agingRequests = activeRequests
         .filter((r) => new Date(r.updated_at) < sevenDaysAgo)
         .map((r) => ({
@@ -220,9 +260,8 @@ const handler = async (req: Request): Promise<Response> => {
             (Date.now() - new Date(r.updated_at).getTime()) / (1000 * 60 * 60 * 24)
           ),
         }))
-        .slice(0, 5); // Top 5 aging
+        .slice(0, 5);
 
-      // Category breakdown
       const categoryBreakdown: Record<string, number> = {};
       activeRequests.forEach((r) => {
         categoryBreakdown[r.category] = (categoryBreakdown[r.category] || 0) + 1;
@@ -239,10 +278,8 @@ const handler = async (req: Request): Promise<Response> => {
         categoryBreakdown,
       };
 
-      // Generate AI insights
       const insights = await generateAIInsights(stats);
 
-      // Build aging requests section
       const agingSection =
         agingRequests.length > 0
           ? `
@@ -264,15 +301,13 @@ const handler = async (req: Request): Promise<Response> => {
         `
           : "";
 
-      // Build insights section
       const insightsSection = `
-        <div style="background-color: #eff6ff; border-radius: 8px; padding: 20px; margin-top: 24px;">
-          <h3 style="color: #1e40af; font-size: 16px; margin: 0 0 16px 0;">💡 AI-Powered Insights</h3>
-          ${insights.map((insight) => `<p style="color: #1e3a8a; font-size: 14px; margin: 0 0 12px 0; line-height: 1.5;">${insight}</p>`).join("")}
+        <div style="background-color: #ecfdf5; border-radius: 8px; padding: 20px; margin-top: 24px;">
+          <h3 style="color: #065f46; font-size: 16px; margin: 0 0 16px 0;">💡 AI-Powered Insights</h3>
+          ${insights.map((insight) => `<p style="color: #047857; font-size: 14px; margin: 0 0 12px 0; line-height: 1.5;">${insight}</p>`).join("")}
         </div>
       `;
 
-      // Build category breakdown
       const categorySection =
         Object.keys(categoryBreakdown).length > 0
           ? `
@@ -282,7 +317,7 @@ const handler = async (req: Request): Promise<Response> => {
               ${Object.entries(categoryBreakdown)
                 .map(
                   ([cat, count]) => `
-                <span style="background-color: #e0e7ff; color: #4338ca; padding: 4px 12px; border-radius: 9999px; font-size: 14px;">
+                <span style="background-color: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 9999px; font-size: 14px;">
                   ${cat.replace(/_/g, " ")}: ${count}
                 </span>
               `
@@ -310,9 +345,9 @@ const handler = async (req: Request): Promise<Response> => {
           </head>
           <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; padding: 40px 20px;">
             <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
-              <div style="background-color: #3B82F6; padding: 24px; text-align: center;">
+              <div style="background-color: #054D3B; padding: 24px; text-align: center;">
                 <h1 style="color: #ffffff; margin: 0; font-size: 24px;">📊 Weekly Caseload Summary</h1>
-                <p style="color: #bfdbfe; margin: 8px 0 0 0; font-size: 14px;">Week of ${weekLabel}</p>
+                <p style="color: #d1fae5; margin: 8px 0 0 0; font-size: 14px;">Week of ${weekLabel}</p>
               </div>
               
               <div style="padding: 32px;">
@@ -324,7 +359,6 @@ const handler = async (req: Request): Promise<Response> => {
                   Here's your weekly summary of support requests and performance insights.
                 </p>
                 
-                <!-- Stats Grid -->
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
                   <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; text-align: center;">
                     <p style="color: #6b7280; font-size: 12px; margin: 0;">Active Requests</p>
@@ -350,7 +384,7 @@ const handler = async (req: Request): Promise<Response> => {
                 
                 <div style="text-align: center; margin-top: 32px;">
                   <a href="https://evolvecampuscare.lovable.app/case-manager-managing-student-requests" 
-                     style="display: inline-block; background-color: #3B82F6; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+                     style="display: inline-block; background-color: #054D3B; color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
                     View Dashboard
                   </a>
                 </div>
@@ -358,7 +392,7 @@ const handler = async (req: Request): Promise<Response> => {
               
               <div style="background-color: #f9fafb; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
                 <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                  This is your weekly summary from Student Support Portal
+                  This is your weekly summary from Evolve Foundation Support Portal
                 </p>
               </div>
             </div>
@@ -366,11 +400,10 @@ const handler = async (req: Request): Promise<Response> => {
         </html>
       `;
 
-      // Send email
-      console.log("Sending weekly summary to:", profile.email);
+      console.log("Sending weekly summary to case manager");
 
       await resend.emails.send({
-        from: "CampusCare <noreply@evolvefoundation.us>",
+        from: "Evolve Foundation <noreply@evolvefoundation.us>",
         to: [profile.email],
         subject: `📊 Your Weekly Caseload Summary - Week of ${weekLabel}`,
         html: emailHtml,
@@ -379,24 +412,17 @@ const handler = async (req: Request): Promise<Response> => {
       emailsSent.push(profile.email);
     }
 
-    console.log("Weekly summaries sent to:", emailsSent);
+    console.log(`Weekly summaries sent: ${emailsSent.length}`);
 
     return new Response(
-      JSON.stringify({ success: true, emailsSent }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      JSON.stringify({ success: true, count: emailsSent.length }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error in weekly-case-manager-summary function:", errorMessage);
+    const safeMessage = sanitizeError(error, "weekly-case-manager-summary");
     return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      JSON.stringify({ error: safeMessage }),
+      { status: 500, headers: { "Content-Type": "application/json", ...getCorsHeaders(req.headers.get("Origin")) } }
     );
   }
 };

@@ -4,11 +4,35 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// Allowed origins for CORS
+const ALLOWED_ORIGINS = [
+  'https://evolvecampuscare.lovable.app',
+  'https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app',
+];
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.some(o => origin.startsWith(o.replace('https://', '')))
+    ? origin
+    : ALLOWED_ORIGINS[0];
+  
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
+
+function sanitizeError(error: unknown, context: string): string {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  console.error(`[${context}][${requestId}]`, error);
+  
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('not found')) return 'Resource not found';
+    if (msg.includes('permission') || msg.includes('forbidden')) return 'Access denied';
+  }
+  return `An error occurred. Reference: ${requestId}`;
+}
 
 interface InvitationRequest {
   email: string;
@@ -20,6 +44,9 @@ interface InvitationRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("Origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -30,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
-      throw new Error("Missing Supabase environment variables");
+      throw new Error("Configuration error");
     }
 
     // Verify authentication
@@ -43,7 +70,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create client with user's auth token to verify
     const authClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -61,7 +87,6 @@ const handler = async (req: Request): Promise<Response> => {
     const userId = user.id;
     console.log("Authenticated user:", userId);
 
-    // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     // Verify user has permission to send invitations (admin or case_manager)
@@ -79,7 +104,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { email, role, token: inviteToken, inviterName, notes, appUrl }: InvitationRequest = await req.json();
+    const { email, role, token: inviteToken, inviterName, notes }: InvitationRequest = await req.json();
 
     // Authorization rules:
     // - Admins can invite any role
@@ -87,7 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (roleData.role === "case_manager" && role !== "student") {
       console.error("Case manager attempted to invite non-student role");
       return new Response(
-        JSON.stringify({ error: "Forbidden: Case managers can only invite students" }),
+        JSON.stringify({ error: "Forbidden" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -100,36 +125,30 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Sending invitation to:", email, "as", role);
+    console.log("Sending invitation");
 
-    // Always use the published URL for invitation emails
     const baseUrl = "https://evolvecampuscare.lovable.app";
     const signupUrl = `${baseUrl}/auth?tab=signup&invite=${inviteToken}`;
-    
-    console.log("Generated signup URL:", signupUrl);
 
-    // Format role for display
     const roleDisplay = role.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-    // Role-specific messaging
     const roleMessages: Record<string, { color: string; description: string }> = {
       student: {
-        color: "#3B82F6",
+        color: "#054D3B",
         description: "As a student, you can submit support requests, track their status, and schedule meetings with your case manager.",
       },
       case_manager: {
-        color: "#22C55E",
+        color: "#059669",
         description: "As a case manager, you'll help students navigate their support needs, manage requests, and provide guidance.",
       },
       admin: {
-        color: "#8B5CF6",
+        color: "#7c3aed",
         description: "As an administrator, you'll have full access to manage users, monitor workloads, and oversee the entire support system.",
       },
     };
 
     const roleInfo = roleMessages[role] || roleMessages.student;
 
-    // Build personalized note section
     const noteSection = notes
       ? `
         <div style="background-color: #f9fafb; border-left: 4px solid ${roleInfo.color}; padding: 16px; margin: 24px 0; border-radius: 0 8px 8px 0;">
@@ -144,14 +163,14 @@ const handler = async (req: Request): Promise<Response> => {
       <html>
         <head>
           <meta charset="utf-8">
-          <title>You're Invited to CampusCare</title>
+          <title>You're Invited to Evolve Foundation</title>
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; padding: 40px 20px; margin: 0;">
           <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
             <div style="background: linear-gradient(135deg, ${roleInfo.color} 0%, ${roleInfo.color}dd 100%); padding: 32px; text-align: center;">
               <h1 style="color: #ffffff; margin: 0; font-size: 28px;">You're Invited! 🎉</h1>
               <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">
-                Join CampusCare as a ${roleDisplay}
+                Join Evolve Foundation as a ${roleDisplay}
               </p>
             </div>
             
@@ -160,7 +179,7 @@ const handler = async (req: Request): Promise<Response> => {
                 Hello,
               </p>
               <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-                <strong>${inviterName}</strong> has invited you to join CampusCare, our student support platform.
+                <strong>${inviterName}</strong> has invited you to join the Evolve Foundation student support platform.
               </p>
               
               ${noteSection}
@@ -186,7 +205,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <div style="background-color: #f9fafb; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                CampusCare - Student Support Portal
+                Evolve Foundation - Student Support Portal
               </p>
             </div>
           </div>
@@ -194,31 +213,24 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    const emailResponse = await resend.emails.send({
-      from: "CampusCare <noreply@evolvefoundation.us>",
+    await resend.emails.send({
+      from: "Evolve Foundation <noreply@evolvefoundation.us>",
       to: [email],
-      subject: `${inviterName} invited you to join CampusCare as a ${roleDisplay}`,
+      subject: `${inviterName} invited you to join Evolve Foundation as a ${roleDisplay}`,
       html: emailHtml,
     });
 
-    console.log("Invitation email sent successfully:", emailResponse);
+    console.log("Invitation email sent successfully");
 
     return new Response(
-      JSON.stringify({ success: true, emailResponse }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      JSON.stringify({ success: true }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error in send-user-invitation function:", errorMessage);
+    const safeMessage = sanitizeError(error, "send-user-invitation");
     return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      JSON.stringify({ error: safeMessage }),
+      { status: 500, headers: { "Content-Type": "application/json", ...getCorsHeaders(req.headers.get("Origin")) } }
     );
   }
 };

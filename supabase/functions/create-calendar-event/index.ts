@@ -4,11 +4,35 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// Allowed origins for CORS
+const ALLOWED_ORIGINS = [
+  'https://evolvecampuscare.lovable.app',
+  'https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app',
+];
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.some(o => origin.startsWith(o.replace('https://', '')))
+    ? origin
+    : ALLOWED_ORIGINS[0];
+  
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
+
+function sanitizeError(error: unknown, context: string): string {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  console.error(`[${context}][${requestId}]`, error);
+  
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('not found')) return 'Resource not found';
+    if (msg.includes('permission') || msg.includes('forbidden')) return 'Access denied';
+  }
+  return `An error occurred. Reference: ${requestId}`;
+}
 
 interface CalendarEventRequest {
   appointmentId: string;
@@ -21,6 +45,9 @@ interface CalendarEventRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("Origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -31,7 +58,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
-      throw new Error("Missing Supabase environment variables");
+      throw new Error("Configuration error");
     }
 
     // Verify authentication
@@ -103,19 +130,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (profilesError) {
       console.error("Error fetching profiles:", profilesError);
-      throw profilesError;
+      throw new Error("Failed to fetch participant information");
     }
 
     const student = profiles?.find((p) => p.user_id === studentId);
     const caseManager = profiles?.find((p) => p.user_id === caseManagerId);
 
     if (!student || !caseManager) {
-      throw new Error("Could not find participant profiles");
+      throw new Error("Participant information not found");
     }
 
     // Note: Google Calendar integration requires OAuth setup
-    // For now, we generate a placeholder message and send email notifications
-    // In production, integrate with Google Calendar API to create actual events
     const meetingNote = "Please coordinate the meeting link separately (e.g., Zoom, Google Meet, or in-person).";
 
     // Format date/time for email
@@ -146,7 +171,7 @@ const handler = async (req: Request): Promise<Response> => {
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; padding: 40px 20px; margin: 0;">
           <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
-            <div style="background-color: #3B82F6; padding: 24px; text-align: center;">
+            <div style="background-color: #054D3B; padding: 24px; text-align: center;">
               <h1 style="color: #ffffff; margin: 0; font-size: 24px;">📅 Meeting Scheduled</h1>
             </div>
             
@@ -192,7 +217,7 @@ const handler = async (req: Request): Promise<Response> => {
               
               <div style="text-align: center; margin: 32px 0;">
                 <a href="https://evolvecampuscare.lovable.app/dashboard" 
-                   style="display: inline-block; background-color: #3B82F6; color: #ffffff; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+                   style="display: inline-block; background-color: #054D3B; color: #ffffff; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
                   View in Portal
                 </a>
               </div>
@@ -204,7 +229,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <div style="background-color: #f9fafb; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                CampusCare - Student Support Portal
+                Evolve Foundation - Student Support Portal
               </p>
             </div>
           </div>
@@ -215,13 +240,13 @@ const handler = async (req: Request): Promise<Response> => {
     // Send emails to both participants
     const emailPromises = [
       resend.emails.send({
-        from: "CampusCare <noreply@evolvefoundation.us>",
+        from: "Evolve Foundation <noreply@evolvefoundation.us>",
         to: [student.email],
         subject: `Meeting Scheduled: ${title}`,
         html: buildEmailHtml(student.full_name || "Student", true),
       }),
       resend.emails.send({
-        from: "CampusCare <noreply@evolvefoundation.us>",
+        from: "Evolve Foundation <noreply@evolvefoundation.us>",
         to: [caseManager.email],
         subject: `Meeting Scheduled: ${title}`,
         html: buildEmailHtml(caseManager.full_name || "Case Manager", false),
@@ -229,13 +254,13 @@ const handler = async (req: Request): Promise<Response> => {
     ];
 
     const emailResults = await Promise.allSettled(emailPromises);
-    console.log("Email results:", emailResults);
+    console.log("Email results:", emailResults.map(r => r.status));
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        meetingLink: null, // No fake link - requires manual coordination
-        message: "Meeting scheduled and notifications sent. Please coordinate meeting link separately."
+        meetingLink: null,
+        message: "Meeting scheduled and notifications sent."
       }),
       {
         status: 200,
@@ -243,13 +268,12 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error in create-calendar-event function:", errorMessage);
+    const safeMessage = sanitizeError(error, "create-calendar-event");
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: safeMessage }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...getCorsHeaders(req.headers.get("Origin")) },
       }
     );
   }
