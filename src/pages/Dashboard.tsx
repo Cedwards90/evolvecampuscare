@@ -69,19 +69,22 @@ export default function Dashboard() {
       icon: <FileText className="h-4 w-4 text-primary" />,
       title: 'Academic Advising',
       subtitle: 'Support',
-      value: '$1200',
+      value: `${mockRequests.filter(r => r.category === 'academic').length}`,
+      href: '/requests?category=academic',
     },
     {
       icon: <Users className="h-4 w-4 text-primary" />,
       title: 'Mental Health',
       subtitle: 'Counseling',
-      value: '$1450',
+      value: `${mockRequests.filter(r => r.category === 'mental_health').length}`,
+      href: '/requests?category=mental_health',
     },
     {
       icon: <Briefcase className="h-4 w-4 text-primary" />,
       title: 'Financial Aid',
       subtitle: 'Assistance',
-      value: '$1250',
+      value: `${mockRequests.filter(r => r.category === 'financial').length}`,
+      href: '/requests?category=financial',
     },
   ];
 
@@ -122,6 +125,7 @@ export default function Dashboard() {
             total={stats.totalRequests + 10}
             icon={DollarSign}
             color="blue"
+            href="/requests"
           />
           <FractionStatsCard
             title="In Progress"
@@ -129,6 +133,7 @@ export default function Dashboard() {
             total={stats.totalRequests}
             icon={Target}
             color="green"
+            href="/requests?status=in_progress"
           />
           <FractionStatsCard
             title="Resolved"
@@ -136,6 +141,7 @@ export default function Dashboard() {
             total={stats.totalRequests}
             icon={CheckCircle}
             color="green"
+            href="/requests?status=resolved"
           />
           <PercentageStatsCard
             title="Resolution Rate"
@@ -160,10 +166,10 @@ export default function Dashboard() {
             {/* Summary Bar */}
             <StatsSummaryBar
               items={[
-                { label: 'Pending', value: stats.pendingRequests, color: 'blue' },
-                { label: 'Resolved', value: stats.resolvedRequests, color: 'green' },
-                { label: 'Escalated', value: stats.escalatedRequests, color: 'orange' },
-                { label: 'Emergency', value: stats.emergencyRequests, color: 'red' },
+                { label: 'Pending', value: stats.pendingRequests, color: 'blue', href: '/requests?status=submitted' },
+                { label: 'Resolved', value: stats.resolvedRequests, color: 'green', href: '/requests?status=resolved' },
+                { label: 'Escalated', value: stats.escalatedRequests, color: 'orange', href: '/requests?status=escalated' },
+                { label: 'Emergency', value: stats.emergencyRequests, color: 'red', href: '/requests?is_emergency=true' },
               ]}
             />
           </div>
@@ -171,10 +177,12 @@ export default function Dashboard() {
           {/* Summary Card - Takes 1 column */}
           <SummaryCard
             title="Request Summary"
-            totalValue={30569}
+            totalValue={stats.resolvedRequests}
             totalLabel="Total Resolved"
             trendValue={12}
             items={summaryItems}
+            headerHref="/requests?status=resolved"
+            footerHref="/requests"
           />
         </div>
 

@@ -20,6 +20,8 @@ import ManageRequests from "./pages/ManageRequests";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import RequestDetail from "./pages/RequestDetail";
+import RequestsList from "./pages/RequestsList";
+import CaseManagerDetail from "./pages/CaseManagerDetail";
 import NotFound from "./pages/NotFound";
 
 // Create query client outside component to ensure stable reference
@@ -96,11 +98,21 @@ function App() {
                   } />
                   
                   {/* Shared routes */}
-                  <Route path="/requests/:id" element={
-                    <ProtectedRoute>
-                      <RequestDetail />
-                    </ProtectedRoute>
-                  } />
+              <Route path="/requests/:id" element={
+                <ProtectedRoute>
+                  <RequestDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="/requests" element={
+                <ProtectedRoute>
+                  <RequestsList />
+                </ProtectedRoute>
+              } />
+              <Route path="/case-managers/:id" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <CaseManagerDetail />
+                </ProtectedRoute>
+              } />
                   
                   {/* Catch-all route */}
                   <Route path="*" element={<NotFound />} />
