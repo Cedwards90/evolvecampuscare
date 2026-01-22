@@ -121,7 +121,10 @@ export function MFAEnrollment({ onEnrollmentComplete, onSkip }: MFAEnrollmentPro
         </div>
         <CardTitle>Set Up Two-Factor Authentication</CardTitle>
         <CardDescription>
-          Add an extra layer of security to your account by enabling MFA.
+          {onSkip 
+            ? 'Add an extra layer of security to your account by enabling MFA.'
+            : 'Two-factor authentication is required for your role to ensure account security.'
+          }
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

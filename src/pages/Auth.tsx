@@ -217,7 +217,8 @@ export default function Auth() {
     );
   }
 
-  // Handle MFA enrollment for privileged users
+  // Handle MFA enrollment for privileged users (admin/case_manager)
+  // MFA is REQUIRED for privileged roles - no skip option provided
   if (showMFAEnrollment) {
     return (
       <AuthLayout>
@@ -226,16 +227,7 @@ export default function Auth() {
             setShowMFAEnrollment(false);
             navigate('/dashboard', { replace: true });
           }}
-          onSkip={() => {
-            // Allow skipping but remind them it's required
-            toast({
-              title: 'MFA Recommended',
-              description: 'For enhanced security, please enable MFA in your settings.',
-              variant: 'default',
-            });
-            setShowMFAEnrollment(false);
-            navigate('/dashboard', { replace: true });
-          }}
+          // No onSkip callback - MFA is mandatory for privileged roles
         />
       </AuthLayout>
     );
