@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { useTheme } from 'next-themes';
 import { Loader2, User, Bell, Globe, Palette, Shield, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -47,6 +48,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 export default function Settings() {
   const { profile, user, role } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [notifications, setNotifications] = useState({
@@ -398,7 +400,7 @@ export default function Settings() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label>Theme</Label>
-                    <Select defaultValue="system">
+                    <Select value={theme} onValueChange={setTheme}>
                       <SelectTrigger className="max-w-xs">
                         <SelectValue placeholder="Select theme" />
                       </SelectTrigger>

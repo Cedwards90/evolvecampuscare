@@ -11,8 +11,10 @@ import { StatsSummaryBar } from '@/components/dashboard/StatsSummaryBar';
 import { RequestCard } from '@/components/RequestCard';
 import { AIBadge } from '@/components/AIBadge';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   FileText, 
   Clock, 
@@ -28,19 +30,24 @@ import {
   Briefcase,
   Calendar,
   DollarSign,
-  Target
+  Target,
+  MessageSquare,
+  UserCircle
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useRequests } from '@/hooks/useRequests';
 import { useCaseManagers } from '@/hooks/useCaseManagerStats';
+import { useMyAssignment } from '@/hooks/useMyAssignment';
 import { format, subDays } from 'date-fns';
 
 export default function Dashboard() {
   const { role, user, profile } = useAuth();
+  const navigate = useNavigate();
   
   // Fetch real data from Supabase
   const { data: allRequests = [], isLoading: requestsLoading } = useRequests({});
   const { data: caseManagers = [], isLoading: cmLoading } = useCaseManagers();
+  const { data: myAssignment, isLoading: assignmentLoading } = useMyAssignment();
   
   // Filter requests based on role
   const requests = useMemo(() => {
@@ -267,6 +274,51 @@ export default function Dashboard() {
         {/* Role-specific content */}
         {role === 'student' && (
           <>
+            {/* Your Case Manager Card */}
+            <section className="space-y-4">
+              <h2 className="font-display text-lg font-semibold">Your Case Manager</h2>
+              {assignmentLoading ? (
+                <Card className="border border-border/50 p-6">
+                  <LoadingSpinner size="sm" />
+                </Card>
+              ) : myAssignment ? (
+                <Card className="border border-border/50">
+                  <CardContent className="flex items-center gap-4 p-6">
+                    <Avatar className="h-14 w-14">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+                        {myAssignment.case_manager.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'CM'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h3 className="font-display font-semibold">{myAssignment.case_manager.full_name || 'Your Case Manager'}</h3>
+                      <p className="text-sm text-muted-foreground">{myAssignment.case_manager.email}</p>
+                      {myAssignment.case_manager.phone && (
+                        <p className="text-sm text-muted-foreground">{myAssignment.case_manager.phone}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <ScheduleMeetingDialog
+                        studentId={user?.id || ''}
+                        studentName={profile?.full_name || 'Student'}
+                        trigger={
+                          <Button variant="outline" size="sm">
+                            <Calendar className="mr-2 h-4 w-4" />
+                            Schedule Meeting
+                          </Button>
+                        }
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="border border-border/50 p-6 text-center">
+                  <UserCircle className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">You haven't been assigned a case manager yet.</p>
+                  <p className="text-sm text-muted-foreground mt-1">Submit a request and an admin will assign you a case manager.</p>
+                </Card>
+              )}
+            </section>
+
             {/* Quick Actions */}
             <section className="space-y-4">
               <h2 className="font-display text-lg font-semibold">Quick Actions</h2>
@@ -365,8 +417,13 @@ export default function Dashboard() {
                     <p className="text-sm text-muted-foreground">
                       You have {stats.emergencyRequests} emergency and {stats.escalatedRequests} escalated cases that require immediate attention.
                     </p>
-                    <Button variant="outline" size="sm" className="mt-4" asChild>
-                      <Link to="/case-manager-managing-student-requests">View Priority Queue</Link>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-4"
+                      onClick={() => navigate('/case-manager-managing-student-requests?priority=emergency')}
+                    >
+                      View Emergency Cases
                     </Button>
                   </CardContent>
                 </Card>
