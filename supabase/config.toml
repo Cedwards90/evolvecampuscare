@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.create-calendar-event]
 verify_jwt = false
+
+[functions.generate-invitation-token]
+verify_jwt = false

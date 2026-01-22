@@ -13,6 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useValidateInvitation } from '@/hooks/useInvitations';
+import { useMFA } from '@/hooks/useMFA';
+import { MFAVerification } from '@/components/auth/MFAVerification';
+import { MFAEnrollment } from '@/components/auth/MFAEnrollment';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -42,18 +45,34 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { user, signIn, signUp } = useAuth();
+  const [showMFAVerification, setShowMFAVerification] = useState(false);
+  const [showMFAEnrollment, setShowMFAEnrollment] = useState(false);
+  const { user, role, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { requiresVerification, isEnrolled, checkMFAStatus } = useMFA();
   
   // Validate invitation token if present
   const { data: invitation } = useValidateInvitation(inviteToken);
 
   useEffect(() => {
     if (user) {
+      // Check if user needs MFA verification
+      if (requiresVerification) {
+        setShowMFAVerification(true);
+        return;
+      }
+      
+      // Check if privileged user needs MFA enrollment
+      const isPrivilegedRole = role === 'admin' || role === 'case_manager';
+      if (isPrivilegedRole && !isEnrolled) {
+        setShowMFAEnrollment(true);
+        return;
+      }
+      
       navigate('/dashboard', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, role, requiresVerification, isEnrolled, navigate]);
 
   // Handle invitation token - switch to signup and pre-fill email
   useEffect(() => {
@@ -98,7 +117,9 @@ export default function Auth() {
           title: 'Welcome back!',
           description: 'You have successfully signed in.',
         });
-        navigate('/dashboard', { replace: true });
+        
+        // Refresh MFA status and let the useEffect handle navigation
+        await checkMFAStatus();
       }
     } catch (err) {
       toast({
@@ -156,6 +177,47 @@ export default function Auth() {
   const passwordStrength = getPasswordStrength(signupForm.watch('password') || '');
   const strengthLabels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
   const strengthColors = ['bg-destructive', 'bg-destructive', 'bg-warning', 'bg-success', 'bg-success'];
+
+  // Handle MFA verification screen
+  if (showMFAVerification) {
+    return (
+      <AuthLayout>
+        <MFAVerification
+          onVerificationComplete={() => {
+            setShowMFAVerification(false);
+            navigate('/dashboard', { replace: true });
+          }}
+          onCancel={() => {
+            setShowMFAVerification(false);
+          }}
+        />
+      </AuthLayout>
+    );
+  }
+
+  // Handle MFA enrollment for privileged users
+  if (showMFAEnrollment) {
+    return (
+      <AuthLayout>
+        <MFAEnrollment
+          onEnrollmentComplete={() => {
+            setShowMFAEnrollment(false);
+            navigate('/dashboard', { replace: true });
+          }}
+          onSkip={() => {
+            // Allow skipping but remind them it's required
+            toast({
+              title: 'MFA Recommended',
+              description: 'For enhanced security, please enable MFA in your settings.',
+              variant: 'default',
+            });
+            setShowMFAEnrollment(false);
+            navigate('/dashboard', { replace: true });
+          }}
+        />
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout>
