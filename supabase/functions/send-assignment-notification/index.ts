@@ -1,13 +1,38 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "resend";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { Resend } from "npm:resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Allowed origins for CORS
+const ALLOWED_ORIGINS = [
+  'https://evolvecampuscare.lovable.app',
+  'https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app',
+];
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.some(o => origin.startsWith(o.replace('https://', '')))
+    ? origin
+    : ALLOWED_ORIGINS[0];
+  
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
+
+function sanitizeError(error: unknown, context: string): string {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  console.error(`[${context}][${requestId}]`, error);
+  
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('not found')) return 'Resource not found';
+    if (msg.includes('permission') || msg.includes('forbidden')) return 'Access denied';
+  }
+  return `An error occurred. Reference: ${requestId}`;
+}
 
 interface AssignmentNotificationRequest {
   requestId: string;
@@ -21,6 +46,9 @@ interface AssignmentNotificationRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("Origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -31,7 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
-      throw new Error("Missing Supabase configuration");
+      throw new Error("Configuration error");
     }
 
     // Verify authentication
@@ -44,7 +72,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create client with user's auth token to verify
     const authClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -62,7 +89,6 @@ const handler = async (req: Request): Promise<Response> => {
     const userId = user.id;
     console.log("Authenticated user:", userId);
 
-    // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify user has admin role (only admins can assign requests)
@@ -91,7 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
       totalAssigned 
     }: AssignmentNotificationRequest = await req.json();
 
-    console.log("Processing assignment notification:", { requestId, caseManagerId, requestTitle });
+    console.log("Processing assignment notification");
 
     // Fetch case manager's email from profiles
     const { data: caseManager, error: profileError } = await supabase
@@ -102,10 +128,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (profileError || !caseManager) {
       console.error("Profile error:", profileError);
-      throw new Error("Case manager profile not found");
+      throw new Error("Recipient not found");
     }
-
-    console.log("Sending email to:", caseManager.email);
 
     const priorityColor: Record<string, string> = {
       low: "#22c55e",
@@ -129,97 +153,105 @@ const handler = async (req: Request): Promise<Response> => {
     const emailContent = isBulk
       ? `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #1f2937; margin-bottom: 16px;">New Support Requests Assigned</h2>
-          
-          <p style="color: #4b5563;">Hello ${caseManager.full_name || "Case Manager"},</p>
-          
-          <p style="color: #4b5563;">${totalAssigned} new support request(s) have been assigned to you via bulk assignment.</p>
-          
-          <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin: 16px 0; border: 1px solid #e5e7eb;">
-            <p style="margin: 0; color: #1f2937;"><strong>Most Recent:</strong> ${requestTitle}</p>
-            <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px;">
-              Category: ${categoryLabels[requestCategory] || requestCategory} • 
-              Priority: <span style="color: ${priorityColor[requestPriority] || '#6b7280'}">${requestPriority.toUpperCase()}</span>
-            </p>
+          <div style="background-color: #054D3B; padding: 24px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h2 style="color: #ffffff; margin: 0;">New Support Requests Assigned</h2>
           </div>
           
-          <p style="color: #4b5563;">Please log in to the support portal to review and respond to these requests.</p>
-          
-          <div style="margin-top: 24px;">
-            <a href="https://evolvecampuscare.lovable.app/case-manager-managing-student-requests" 
-               style="background: #3B82F6; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">
-              View My Requests
-            </a>
+          <div style="background: #ffffff; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+            <p style="color: #4b5563;">Hello ${caseManager.full_name || "Case Manager"},</p>
+            
+            <p style="color: #4b5563;">${totalAssigned} new support request(s) have been assigned to you via bulk assignment.</p>
+            
+            <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin: 16px 0; border: 1px solid #e5e7eb;">
+              <p style="margin: 0; color: #1f2937;"><strong>Most Recent:</strong> ${requestTitle}</p>
+              <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px;">
+                Category: ${categoryLabels[requestCategory] || requestCategory} • 
+                Priority: <span style="color: ${priorityColor[requestPriority] || '#6b7280'}">${requestPriority.toUpperCase()}</span>
+              </p>
+            </div>
+            
+            <p style="color: #4b5563;">Please log in to the support portal to review and respond to these requests.</p>
+            
+            <div style="margin-top: 24px; text-align: center;">
+              <a href="https://evolvecampuscare.lovable.app/case-manager-managing-student-requests" 
+                 style="background: #054D3B; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">
+                View My Requests
+              </a>
+            </div>
           </div>
           
-          <p style="color: #9ca3af; font-size: 12px; margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 16px;">
-            This is an automated notification from the Student Support System.
+          <p style="color: #9ca3af; font-size: 12px; margin-top: 16px; text-align: center;">
+            This is an automated notification from Evolve Foundation Support Portal.
           </p>
         </div>
       `
       : `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #1f2937; margin-bottom: 16px;">New Support Request Assigned</h2>
-          
-          <p style="color: #4b5563;">Hello ${caseManager.full_name || "Case Manager"},</p>
-          
-          <p style="color: #4b5563;">A new support request has been assigned to you:</p>
-          
-          <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin: 16px 0; border: 1px solid #e5e7eb;">
-            <h3 style="margin: 0 0 12px 0; color: #1f2937;">${requestTitle}</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 8px 0; color: #6b7280; width: 100px;">Student:</td>
-                <td style="padding: 8px 0; color: #1f2937;">${studentName || "Unknown Student"}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #6b7280;">Category:</td>
-                <td style="padding: 8px 0; color: #1f2937;">${categoryLabels[requestCategory] || requestCategory}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #6b7280;">Priority:</td>
-                <td style="padding: 8px 0;">
-                  <span style="background: ${priorityColor[requestPriority] || '#6b7280'}; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;">
-                    ${requestPriority.toUpperCase()}
-                  </span>
-                </td>
-              </tr>
-            </table>
+          <div style="background-color: #054D3B; padding: 24px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h2 style="color: #ffffff; margin: 0;">New Support Request Assigned</h2>
           </div>
           
-          <p style="color: #4b5563;">Please log in to the support portal to review and respond to this request.</p>
-          
-          <div style="margin-top: 24px;">
-            <a href="https://evolvecampuscare.lovable.app/requests/${requestId}" 
-               style="background: #3B82F6; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">
-              View Request
-            </a>
+          <div style="background: #ffffff; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+            <p style="color: #4b5563;">Hello ${caseManager.full_name || "Case Manager"},</p>
+            
+            <p style="color: #4b5563;">A new support request has been assigned to you:</p>
+            
+            <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin: 16px 0; border: 1px solid #e5e7eb;">
+              <h3 style="margin: 0 0 12px 0; color: #1f2937;">${requestTitle}</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; width: 100px;">Student:</td>
+                  <td style="padding: 8px 0; color: #1f2937;">${studentName || "Student"}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280;">Category:</td>
+                  <td style="padding: 8px 0; color: #1f2937;">${categoryLabels[requestCategory] || requestCategory}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280;">Priority:</td>
+                  <td style="padding: 8px 0;">
+                    <span style="background: ${priorityColor[requestPriority] || '#6b7280'}; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                      ${requestPriority.toUpperCase()}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </div>
+            
+            <p style="color: #4b5563;">Please log in to the support portal to review and respond to this request.</p>
+            
+            <div style="margin-top: 24px; text-align: center;">
+              <a href="https://evolvecampuscare.lovable.app/requests/${requestId}" 
+                 style="background: #054D3B; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">
+                View Request
+              </a>
+            </div>
           </div>
           
-          <p style="color: #9ca3af; font-size: 12px; margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 16px;">
-            This is an automated notification from the Student Support System.
+          <p style="color: #9ca3af; font-size: 12px; margin-top: 16px; text-align: center;">
+            This is an automated notification from Evolve Foundation Support Portal.
           </p>
         </div>
       `;
 
-    const emailResponse = await resend.emails.send({
-      from: "CampusCare <noreply@evolvefoundation.us>",
+    await resend.emails.send({
+      from: "Evolve Foundation <noreply@evolvefoundation.us>",
       to: [caseManager.email],
       subject,
       html: emailContent,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    console.log("Email sent successfully");
 
-    return new Response(JSON.stringify({ success: true, emailResponse }), {
+    return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-  } catch (error: any) {
-    console.error("Error sending assignment notification:", error);
+  } catch (error: unknown) {
+    const safeMessage = sanitizeError(error, "send-assignment-notification");
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      JSON.stringify({ error: safeMessage }),
+      { status: 500, headers: { "Content-Type": "application/json", ...getCorsHeaders(req.headers.get("Origin")) } }
     );
   }
 };
