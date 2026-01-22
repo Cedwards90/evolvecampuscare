@@ -25,7 +25,16 @@ export function useSubmitRequest() {
       userId,
       studentName,
     }: SubmitRequestParams) => {
-      // Insert request into database
+      // Check if student has an assigned case manager
+      const { data: assignment } = await supabase
+        .from('student_assignments')
+        .select('case_manager_id')
+        .eq('student_id', userId)
+        .maybeSingle();
+
+      const hasAssignedCM = assignment?.case_manager_id;
+
+      // Insert request into database with auto-assignment if student has a case manager
       const { data, error } = await supabase
         .from('support_requests')
         .insert({
@@ -35,27 +44,57 @@ export function useSubmitRequest() {
           description,
           priority,
           is_emergency: isEmergency,
-          status: 'submitted',
+          status: hasAssignedCM ? 'in_progress' : 'submitted',
+          assigned_case_manager_id: hasAssignedCM || null,
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Trigger admin notification (fire and forget)
-      supabase.functions.invoke('notify-new-request', {
-        body: {
-          requestId: data.id,
-          requestTitle: title,
-          category,
-          priority,
-          isEmergency,
-          studentId: userId,
-          studentName,
-        },
-      }).catch((err) => {
-        console.error('Failed to send admin notification:', err);
-      });
+      // If auto-assigned, create an internal note
+      if (hasAssignedCM) {
+        supabase.from('request_updates').insert({
+          request_id: data.id,
+          user_id: userId,
+          note: 'Request automatically assigned based on student-case manager assignment.',
+          is_internal: true,
+          new_status: 'in_progress',
+          previous_status: 'submitted',
+        }).then(({ error: noteError }) => {
+          if (noteError) console.error('Failed to create assignment note:', noteError);
+        });
+
+        // Notify the assigned case manager
+        supabase.functions.invoke('send-assignment-notification', {
+          body: {
+            requestId: data.id,
+            caseManagerId: hasAssignedCM,
+            requestTitle: title,
+            requestCategory: category,
+            requestPriority: priority,
+            studentName,
+            isAutoAssigned: true,
+          },
+        }).catch((err) => {
+          console.error('Failed to send case manager notification:', err);
+        });
+      } else {
+        // Notify admins of new unassigned request
+        supabase.functions.invoke('notify-new-request', {
+          body: {
+            requestId: data.id,
+            requestTitle: title,
+            category,
+            priority,
+            isEmergency,
+            studentId: userId,
+            studentName,
+          },
+        }).catch((err) => {
+          console.error('Failed to send admin notification:', err);
+        });
+      }
 
       return data;
     },
