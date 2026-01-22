@@ -45,12 +45,18 @@ export function ComposeMessage({
   const [content, setContent] = useState('');
   const { toast } = useToast();
 
+  const { data: staffMembers, isLoading: loadingStaff } = useStaffMembers();
+  const sendMessage = useSendMessage();
+  
+  // Wait until staff members are loaded before syncing recipient
+  const isReady = !loadingStaff && staffMembers !== undefined;
+
   // Sync recipientId when defaultRecipientId becomes available (async loading)
   useEffect(() => {
-    if (defaultRecipientId && !recipientId) {
+    if (defaultRecipientId && isReady) {
       setRecipientId(defaultRecipientId);
     }
-  }, [defaultRecipientId]);
+  }, [defaultRecipientId, isReady]);
 
   // Sync subject when defaultSubject becomes available
   useEffect(() => {
@@ -59,8 +65,6 @@ export function ComposeMessage({
     }
   }, [defaultSubject]);
 
-  const { data: staffMembers, isLoading: loadingStaff } = useStaffMembers();
-  const sendMessage = useSendMessage();
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
