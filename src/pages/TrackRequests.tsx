@@ -47,13 +47,14 @@ import {
 } from '@/components/ui/sheet';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { mockRequests, mockAppointments } from '@/lib/mock-data';
+import type { SupportRequest } from '@/types/database';
 import type { RequestStatus, RequestCategory } from '@/types/database';
 
 export default function TrackRequests() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<RequestCategory | 'all'>('all');
-  const [selectedRequest, setSelectedRequest] = useState<typeof mockRequests[0] | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
   // Filter requests for the logged-in student

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Factor } from '@supabase/supabase-js';
 
 interface MFAState {
@@ -11,6 +12,7 @@ interface MFAState {
 }
 
 export function useMFA() {
+  const { session } = useAuth();
   const [state, setState] = useState<MFAState>({
     isEnrolled: false,
     isVerified: false,
@@ -20,6 +22,12 @@ export function useMFA() {
   });
 
   const checkMFAStatus = useCallback(async () => {
+    // Guard: Don't check MFA if no session exists
+    if (!session) {
+      setState(prev => ({ ...prev, isLoading: false }));
+      return;
+    }
+
     try {
       const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
       
@@ -47,7 +55,7 @@ export function useMFA() {
       console.error('Error checking MFA status:', error);
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     checkMFAStatus();
