@@ -95,7 +95,7 @@ export function ComposeMessage({
         <DialogHeader>
           <DialogTitle>New Message</DialogTitle>
           <DialogDescription>
-            Send a private message to another staff member
+            Send a private message to your case manager or support staff
           </DialogDescription>
         </DialogHeader>
 
