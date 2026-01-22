@@ -125,39 +125,55 @@ export function useApproveRequest() {
       // Fetch request details first
       const { data: requestData } = await supabase
         .from('support_requests')
-        .select('student_id, title, requested_amount')
+        .select('student_id, title, requested_amount, status')
         .eq('id', requestId)
         .single();
 
-      // Update status to in_progress with optional approved amount
-      const updateData: Record<string, unknown> = { 
-        status: 'in_progress' as RequestStatus 
-      };
-      
-      if (approvedAmount !== undefined) {
-        updateData.approved_amount = approvedAmount;
+      const previousStatus = requestData?.status || 'submitted';
+      const isAlreadyInProgress = previousStatus === 'in_progress';
+
+      // Only update status if not already in_progress, otherwise just update approved_amount if provided
+      if (!isAlreadyInProgress) {
+        const updateData: Record<string, unknown> = { 
+          status: 'in_progress' as RequestStatus 
+        };
+        
+        if (approvedAmount !== undefined) {
+          updateData.approved_amount = approvedAmount;
+        }
+
+        const { error: updateError } = await supabase
+          .from('support_requests')
+          .update(updateData)
+          .eq('id', requestId);
+
+        if (updateError) throw updateError;
+      } else if (approvedAmount !== undefined) {
+        // Just update the approved amount for already in_progress requests
+        const { error: updateError } = await supabase
+          .from('support_requests')
+          .update({ approved_amount: approvedAmount })
+          .eq('id', requestId);
+
+        if (updateError) throw updateError;
       }
 
-      const { error: updateError } = await supabase
-        .from('support_requests')
-        .update(updateData)
-        .eq('id', requestId);
-
-      if (updateError) throw updateError;
-
       // Build approval note
-      let note = 'Request has been approved and is now being processed.';
+      let note = isAlreadyInProgress 
+        ? 'Request has been confirmed and is being actively processed.'
+        : 'Request has been approved and is now being processed.';
+      
       if (approvedAmount !== undefined && requestData?.requested_amount) {
         const formattedRequested = requestData.requested_amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
         const formattedApproved = approvedAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
         if (approvedAmount === requestData.requested_amount) {
-          note = `Request approved for the full amount of ${formattedApproved}.`;
+          note = `Request ${isAlreadyInProgress ? 'confirmed' : 'approved'} for the full amount of ${formattedApproved}.`;
         } else {
-          note = `Request approved for ${formattedApproved} (requested: ${formattedRequested}).`;
+          note = `Request ${isAlreadyInProgress ? 'confirmed' : 'approved'} for ${formattedApproved} (requested: ${formattedRequested}).`;
         }
       } else if (approvedAmount !== undefined) {
         const formattedApproved = approvedAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-        note = `Request approved for ${formattedApproved}.`;
+        note = `Request ${isAlreadyInProgress ? 'confirmed' : 'approved'} for ${formattedApproved}.`;
       }
 
       // Add approval note
@@ -166,7 +182,7 @@ export function useApproveRequest() {
         .insert({
           request_id: requestId,
           user_id: userId,
-          previous_status: 'submitted',
+          previous_status: previousStatus,
           new_status: 'in_progress',
           note,
           is_internal: false,
@@ -180,15 +196,15 @@ export function useApproveRequest() {
           requestId,
           studentId: requestData.student_id,
           requestTitle: requestData.title,
-          previousStatus: 'submitted',
+          previousStatus,
           newStatus: 'in_progress',
         });
 
         // Create in-app notification for student
         createInAppNotification({
           userId: requestData.student_id,
-          title: '✅ Request Approved',
-          message: `Your request "${requestData.title}" has been approved and is now being processed.`,
+          title: isAlreadyInProgress ? '✅ Request Confirmed' : '✅ Request Approved',
+          message: `Your request "${requestData.title}" has been ${isAlreadyInProgress ? 'confirmed' : 'approved'} and is being processed.`,
           type: 'status_update',
           link: `/requests/${requestId}`,
         });
@@ -217,9 +233,11 @@ export function useDenyRequest() {
       // Fetch request details first
       const { data: requestData } = await supabase
         .from('support_requests')
-        .select('student_id, title')
+        .select('student_id, title, status')
         .eq('id', requestId)
         .single();
+
+      const previousStatus = requestData?.status || 'submitted';
 
       // Update status to cancelled
       const { error: updateError } = await supabase
@@ -235,7 +253,7 @@ export function useDenyRequest() {
         .insert({
           request_id: requestId,
           user_id: userId,
-          previous_status: 'submitted',
+          previous_status: previousStatus,
           new_status: 'cancelled',
           note: `Request denied: ${reason}`,
           is_internal: false,
@@ -249,7 +267,7 @@ export function useDenyRequest() {
           requestId,
           studentId: requestData.student_id,
           requestTitle: requestData.title,
-          previousStatus: 'submitted',
+          previousStatus,
           newStatus: 'cancelled',
           note: reason,
         });
