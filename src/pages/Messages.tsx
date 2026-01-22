@@ -8,10 +8,19 @@ import { MessageThread } from '@/components/messages/MessageThread';
 import { ComposeMessage } from '@/components/messages/ComposeMessage';
 import { useConversations } from '@/hooks/useMessages';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useMyAssignment } from '@/hooks/useMyAssignment';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Messages() {
   const { userId } = useParams<{ userId?: string }>();
   const { conversations, isLoading } = useConversations();
+  const { role } = useAuth();
+  const { data: myAssignment } = useMyAssignment();
+
+  // Auto-populate recipient for students
+  const defaultRecipientId = role === 'student' 
+    ? myAssignment?.case_manager_id 
+    : undefined;
 
   return (
     <SidebarLayout>
@@ -19,9 +28,11 @@ export default function Messages() {
         <div className="flex items-center justify-between">
           <PageHeader
             title="Messages"
-            description="Private communication with other staff members"
+            description={role === 'student' 
+              ? "Private communication with your case manager" 
+              : "Private communication with staff and students"}
           />
-          <ComposeMessage />
+          <ComposeMessage defaultRecipientId={defaultRecipientId} />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
