@@ -24,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOffline } from '@/contexts/OfflineContext';
 import { useUnreadCount } from '@/hooks/useMessages';
+import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -76,6 +77,9 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const { isOnline } = useOffline();
   const location = useLocation();
   const { data: unreadCount } = useUnreadCount();
+  
+  // Enable real-time message notifications for staff
+  useRealtimeMessages();
 
   const filteredNavItems = navItems.filter(item => role && item.roles.includes(role)).map(item => {
     if (item.href === '/messages' && unreadCount && unreadCount > 0) {
