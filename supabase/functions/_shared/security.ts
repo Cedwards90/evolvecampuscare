@@ -146,8 +146,8 @@ export type PrivilegedRole = typeof PRIVILEGED_ROLES[number];
 export interface MFAVerificationResult {
   verified: boolean;
   error?: string;
-  currentLevel?: string;
-  nextLevel?: string;
+  currentLevel?: string | null;
+  nextLevel?: string | null;
 }
 
 /**
@@ -224,7 +224,7 @@ export async function verifyMFAForPrivilegedRole(
     }
 
     // User has AAL2 or higher
-    if (currentLevel === 'aal2' || currentLevel === 'aal3') {
+    if (currentLevel === 'aal2') {
       return { verified: true, currentLevel, nextLevel };
     }
 
