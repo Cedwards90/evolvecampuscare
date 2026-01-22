@@ -56,6 +56,7 @@ const navItems: NavItem[] = [
   { label: 'Offline Drafts', href: '/student-creating-offline-draft-request', icon: WifiOff, roles: ['student'] },
   { label: 'Manage Requests', href: '/case-manager-managing-student-requests', icon: Users, roles: ['case_manager'] },
   { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin'] },
+  { label: 'User Management', href: '/admin/users', icon: Shield, roles: ['admin'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin'] },
 ];
 

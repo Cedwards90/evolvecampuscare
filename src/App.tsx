@@ -18,6 +18,8 @@ import TrackRequests from "./pages/TrackRequests";
 import OfflineDraft from "./pages/OfflineDraft";
 import ManageRequests from "./pages/ManageRequests";
 import AdminDashboard from "./pages/AdminDashboard";
+import UserManagementPage from "./pages/admin/UserManagementPage";
+import RequestDetail from "./pages/RequestDetail";
 import NotFound from "./pages/NotFound";
 
 // Create query client outside component to ensure stable reference
@@ -85,6 +87,18 @@ function App() {
                   <Route path="/admin-monitoring-reassigning-requests" element={
                     <ProtectedRoute allowedRoles={['admin']}>
                       <AdminDashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin/users" element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <UserManagementPage />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Shared routes */}
+                  <Route path="/requests/:id" element={
+                    <ProtectedRoute>
+                      <RequestDetail />
                     </ProtectedRoute>
                   } />
                   
