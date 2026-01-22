@@ -56,7 +56,7 @@ export default function Landing() {
         <div className="container flex h-14 items-center justify-between">
           <div className="flex items-center gap-2">
             <GraduationCap className="h-6 w-6 text-primary" />
-            <span className="font-display text-lg font-semibold">CampusCare</span>
+            <span className="font-display text-lg font-semibold">Evolve Foundation</span>
           </div>
           <div className="flex items-center gap-4">
             {user ? (
@@ -96,7 +96,7 @@ export default function Landing() {
               </span>
             </h1>
             <p className="mt-6 text-lg text-muted-foreground md:text-xl max-w-2xl leading-relaxed">
-              CampusCare connects students with the support they need. Submit requests, track progress, 
+              Evolve Foundation connects students with the support they need. Submit requests, track progress, 
               and schedule meetings with dedicated case managers—all in one place.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
@@ -132,7 +132,7 @@ export default function Landing() {
             Everything You Need
           </h2>
           <p className="mt-4 text-muted-foreground">
-            CampusCare provides comprehensive tools for students, case managers, and administrators.
+            Evolve Foundation provides comprehensive tools for students, case managers, and administrators.
           </p>
         </div>
 
@@ -162,7 +162,7 @@ export default function Landing() {
             Ready to Get Started?
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Join thousands of students who have simplified their support experience with CampusCare.
+            Join thousands of students who have simplified their support experience with Evolve Foundation.
           </p>
           {!user && (
             <div className="mt-8">
@@ -183,10 +183,10 @@ export default function Landing() {
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <div className="flex items-center gap-2">
               <GraduationCap className="h-5 w-5 text-primary" />
-              <span className="font-display font-semibold">CampusCare</span>
+              <span className="font-display font-semibold">Evolve Foundation</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} CampusCare. All rights reserved.
+              © {new Date().getFullYear()} Evolve Foundation. All rights reserved.
             </p>
           </div>
         </div>

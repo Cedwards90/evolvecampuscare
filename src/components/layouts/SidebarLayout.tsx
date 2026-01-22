@@ -110,7 +110,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
             <GraduationCap className="h-5 w-5 text-primary-foreground" />
           </div>
           {!sidebarCollapsed && (
-            <span className="font-display text-lg font-bold">CampusCare</span>
+            <span className="font-display text-lg font-bold">Evolve</span>
           )}
         </div>
 
@@ -211,7 +211,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <GraduationCap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-display text-lg font-bold">CampusCare</span>
+          <span className="font-display text-lg font-bold">Evolve</span>
         </div>
 
         {/* Navigation */}
