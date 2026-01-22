@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +44,20 @@ export function ComposeMessage({
   const [subject, setSubject] = useState(defaultSubject || '');
   const [content, setContent] = useState('');
   const { toast } = useToast();
+
+  // Sync recipientId when defaultRecipientId becomes available (async loading)
+  useEffect(() => {
+    if (defaultRecipientId && !recipientId) {
+      setRecipientId(defaultRecipientId);
+    }
+  }, [defaultRecipientId]);
+
+  // Sync subject when defaultSubject becomes available
+  useEffect(() => {
+    if (defaultSubject && !subject) {
+      setSubject(defaultSubject);
+    }
+  }, [defaultSubject]);
 
   const { data: staffMembers, isLoading: loadingStaff } = useStaffMembers();
   const sendMessage = useSendMessage();
