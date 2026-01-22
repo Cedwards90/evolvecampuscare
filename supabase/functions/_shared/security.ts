@@ -1,4 +1,7 @@
 // Shared security utilities for edge functions
+// deno-lint-ignore-file no-explicit-any
+
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 // Allowed origins for CORS - restrict to known domains
 const ALLOWED_ORIGINS = [
@@ -62,6 +65,9 @@ export function sanitizeError(error: unknown, context: string): string {
     if (message.includes('rate limit') || message.includes('too many')) {
       return 'Too many requests. Please wait and try again';
     }
+    if (message.includes('mfa') || message.includes('aal2')) {
+      return 'Multi-factor authentication required';
+    }
   }
 
   // Generic fallback - don't reveal internal details
@@ -123,6 +129,134 @@ export function createErrorResponse(
     JSON.stringify({ error: safeMessage }),
     {
       status: statusCode,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    }
+  );
+}
+
+/**
+ * Privileged roles that require MFA (AAL2) verification
+ */
+export const PRIVILEGED_ROLES = ['admin', 'case_manager'] as const;
+export type PrivilegedRole = typeof PRIVILEGED_ROLES[number];
+
+/**
+ * Result of MFA verification check
+ */
+export interface MFAVerificationResult {
+  verified: boolean;
+  error?: string;
+  currentLevel?: string;
+  nextLevel?: string;
+}
+
+/**
+ * Verify that a privileged user has completed MFA (AAL2) authentication.
+ * This provides server-side enforcement of MFA for admin and case_manager roles.
+ * 
+ * @param authClient - Supabase client authenticated with user's token
+ * @param userRole - The user's role (admin, case_manager, student)
+ * @returns MFAVerificationResult indicating whether MFA is verified
+ */
+export async function verifyMFAForPrivilegedRole(
+  authClient: SupabaseClient,
+  userRole: string
+): Promise<MFAVerificationResult> {
+  // Students don't require MFA
+  if (!PRIVILEGED_ROLES.includes(userRole as PrivilegedRole)) {
+    return { verified: true };
+  }
+
+  try {
+    // Check the user's Authenticator Assurance Level (AAL)
+    const { data: aalData, error: aalError } = await authClient.auth.mfa.getAuthenticatorAssuranceLevel();
+
+    if (aalError) {
+      console.error('Error checking MFA status:', aalError);
+      return { 
+        verified: false, 
+        error: 'Failed to verify MFA status' 
+      };
+    }
+
+    if (!aalData) {
+      return { 
+        verified: false, 
+        error: 'MFA status not available' 
+      };
+    }
+
+    const { currentLevel, nextLevel } = aalData;
+
+    // Check if user has enrolled MFA factors
+    const { data: factorsData, error: factorsError } = await authClient.auth.mfa.listFactors();
+    
+    if (factorsError) {
+      console.error('Error listing MFA factors:', factorsError);
+      return { 
+        verified: false, 
+        error: 'Failed to check MFA enrollment' 
+      };
+    }
+
+    const verifiedFactors = factorsData?.totp?.filter((f: any) => f.status === 'verified') || [];
+    
+    // If no MFA factors enrolled, require enrollment
+    if (verifiedFactors.length === 0) {
+      console.warn(`Privileged user (${userRole}) has no MFA factors enrolled`);
+      return {
+        verified: false,
+        error: 'MFA enrollment required for privileged roles',
+        currentLevel,
+        nextLevel,
+      };
+    }
+
+    // If MFA is enrolled but not verified in current session (AAL1 when AAL2 is required)
+    if (currentLevel === 'aal1' && nextLevel === 'aal2') {
+      console.warn(`Privileged user (${userRole}) requires MFA verification (current: ${currentLevel}, next: ${nextLevel})`);
+      return {
+        verified: false,
+        error: 'MFA verification required',
+        currentLevel,
+        nextLevel,
+      };
+    }
+
+    // User has AAL2 or higher
+    if (currentLevel === 'aal2' || currentLevel === 'aal3') {
+      return { verified: true, currentLevel, nextLevel };
+    }
+
+    // Fallback - if we can't determine AAL but MFA is enrolled, allow with warning
+    console.warn(`Could not determine AAL for privileged user (${userRole}), but MFA is enrolled`);
+    return { verified: true, currentLevel, nextLevel };
+
+  } catch (err) {
+    console.error('MFA verification error:', err);
+    return { 
+      verified: false, 
+      error: 'MFA verification failed' 
+    };
+  }
+}
+
+/**
+ * Create a standardized MFA required response
+ */
+export function createMFARequiredResponse(
+  result: MFAVerificationResult,
+  corsHeaders: Record<string, string>
+): Response {
+  return new Response(
+    JSON.stringify({
+      error: result.error || 'MFA verification required',
+      code: 'MFA_REQUIRED',
+      currentLevel: result.currentLevel,
+      nextLevel: result.nextLevel,
+    }),
+    {
+      status: 403,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     }
   );
