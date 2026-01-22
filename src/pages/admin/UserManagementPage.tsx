@@ -14,14 +14,17 @@ import {
   ChevronLeft,
   ChevronRight,
   BarChart3,
+  Send,
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
+import { PendingInvitationsSection } from '@/components/admin/PendingInvitationsSection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { usePendingInvitations } from '@/hooks/useInvitations';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -84,6 +87,7 @@ export default function UserManagementPage() {
   
   const { toast } = useToast();
   const { data: users, isLoading } = useUsers();
+  const { data: pendingInvitations } = usePendingInvitations();
   const updateRole = useUpdateUserRole();
 
   // Filter and paginate users
@@ -109,15 +113,16 @@ export default function UserManagementPage() {
 
   // Stats
   const stats = useMemo(() => {
-    if (!users) return { total: 0, students: 0, caseManagers: 0, admins: 0 };
+    if (!users) return { total: 0, students: 0, caseManagers: 0, admins: 0, pendingInvites: 0 };
     
     return {
       total: users.length,
       students: users.filter(u => u.role === 'student').length,
       caseManagers: users.filter(u => u.role === 'case_manager').length,
       admins: users.filter(u => u.role === 'admin').length,
+      pendingInvites: pendingInvitations?.length || 0,
     };
-  }, [users]);
+  }, [users, pendingInvitations]);
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
@@ -172,7 +177,7 @@ export default function UserManagementPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Total Users</CardDescription>
@@ -221,7 +226,22 @@ export default function UserManagementPage() {
               </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Pending Invites</CardDescription>
+              <CardTitle className="text-3xl">{stats.pendingInvites}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Send className="h-4 w-4" />
+                Awaiting acceptance
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Pending Invitations Section */}
+        <PendingInvitationsSection />
 
         {/* Filters */}
         <Card>
