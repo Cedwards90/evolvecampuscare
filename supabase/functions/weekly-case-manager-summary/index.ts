@@ -10,6 +10,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Shared secret for scheduled/cron invocations
+const CRON_SECRET = Deno.env.get("CRON_SECRET");
+
 interface CaseManagerStats {
   email: string;
   fullName: string;
@@ -82,12 +85,60 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
       throw new Error("Missing Supabase environment variables");
     }
 
+    // Check for cron secret (for scheduled invocations) or user auth
+    const authHeader = req.headers.get("Authorization");
+    const cronSecretHeader = req.headers.get("X-Cron-Secret");
+    
+    let isAuthorized = false;
+    let userId: string | null = null;
+
+    // Method 1: Cron secret for scheduled jobs
+    if (CRON_SECRET && cronSecretHeader === CRON_SECRET) {
+      console.log("Authorized via cron secret");
+      isAuthorized = true;
+    }
+    // Method 2: User authentication (admin only)
+    else if (authHeader?.startsWith("Bearer ")) {
+      const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+
+      const { data: { user }, error: authError } = await authClient.auth.getUser();
+
+      if (!authError && user) {
+        userId = user.id;
+        
+        // Create service role client to check role
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+        const { data: roleData } = await supabaseAdmin
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userId)
+          .single();
+
+        if (roleData?.role === "admin") {
+          console.log("Authorized via admin user:", userId);
+          isAuthorized = true;
+        }
+      }
+    }
+
+    if (!isAuthorized) {
+      console.error("Unauthorized access attempt");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     console.log("Starting weekly case manager summary generation...");

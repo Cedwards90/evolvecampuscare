@@ -27,12 +27,42 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
       throw new Error("Missing Supabase environment variables");
     }
 
+    // Verify authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      console.error("Missing or invalid authorization header");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Create client with user's auth token to verify
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
+
+    if (authError || !user) {
+      console.error("Authentication failed:", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const userId = user.id;
+    console.log("Authenticated user:", userId);
+
+    // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     const {
@@ -44,6 +74,24 @@ const handler = async (req: Request): Promise<Response> => {
       startTime,
       durationMinutes,
     }: CalendarEventRequest = await req.json();
+
+    // Verify user is either the case manager creating the meeting or an admin
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .single();
+
+    const isAdmin = roleData?.role === "admin";
+    const isCaseManager = userId === caseManagerId;
+
+    if (!isAdmin && !isCaseManager) {
+      console.error("User lacks permission to create calendar events");
+      return new Response(
+        JSON.stringify({ error: "Forbidden" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     console.log("Creating calendar event for appointment:", appointmentId);
 
@@ -65,10 +113,10 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Could not find participant profiles");
     }
 
-    // Generate a simple meeting link (in production, this would integrate with Google Calendar API)
-    // For now, we'll create a placeholder and send notification emails
-    const meetingId = crypto.randomUUID().slice(0, 8);
-    const meetingLink = `https://meet.google.com/${meetingId}`;
+    // Note: Google Calendar integration requires OAuth setup
+    // For now, we generate a placeholder message and send email notifications
+    // In production, integrate with Google Calendar API to create actual events
+    const meetingNote = "Please coordinate the meeting link separately (e.g., Zoom, Google Meet, or in-person).";
 
     // Format date/time for email
     const startDate = new Date(startTime);
@@ -136,10 +184,16 @@ const handler = async (req: Request): Promise<Response> => {
                 ` : ""}
               </div>
               
+              <div style="background-color: #fef3c7; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                <p style="color: #92400e; font-size: 14px; margin: 0;">
+                  <strong>Note:</strong> ${meetingNote}
+                </p>
+              </div>
+              
               <div style="text-align: center; margin: 32px 0;">
-                <a href="${meetingLink}" 
+                <a href="https://evolvecampuscare.lovable.app/dashboard" 
                    style="display: inline-block; background-color: #3B82F6; color: #ffffff; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
-                  Join Meeting
+                  View in Portal
                 </a>
               </div>
               
@@ -161,13 +215,13 @@ const handler = async (req: Request): Promise<Response> => {
     // Send emails to both participants
     const emailPromises = [
       resend.emails.send({
-        from: "CampusCare <onboarding@resend.dev>",
+        from: "CampusCare <noreply@evolvefoundation.us>",
         to: [student.email],
         subject: `Meeting Scheduled: ${title}`,
         html: buildEmailHtml(student.full_name || "Student", true),
       }),
       resend.emails.send({
-        from: "CampusCare <onboarding@resend.dev>",
+        from: "CampusCare <noreply@evolvefoundation.us>",
         to: [caseManager.email],
         subject: `Meeting Scheduled: ${title}`,
         html: buildEmailHtml(caseManager.full_name || "Case Manager", false),
@@ -180,8 +234,8 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        meetingLink,
-        message: "Calendar event created and notifications sent"
+        meetingLink: null, // No fake link - requires manual coordination
+        message: "Meeting scheduled and notifications sent. Please coordinate meeting link separately."
       }),
       {
         status: 200,
