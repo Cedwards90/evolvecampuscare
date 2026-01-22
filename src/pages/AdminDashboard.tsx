@@ -1,20 +1,19 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { 
   Search, 
-  Filter, 
   Users, 
   AlertTriangle,
   ArrowUpRight,
   RefreshCw,
   UserCog,
-  Loader2,
-  Eye,
-  MessageSquare
+  MessageSquare,
+  CheckSquare
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { UserManagement } from '@/components/admin/UserManagement';
+import { AssignCaseManagerDialog } from '@/components/admin/AssignCaseManagerDialog';
 import { PageHeader } from '@/components/PageHeader';
 import { StatsCard } from '@/components/StatsCard';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -22,6 +21,7 @@ import { PriorityBadge } from '@/components/PriorityBadge';
 import { CategoryBadge } from '@/components/CategoryBadge';
 import { TimeAgo } from '@/components/TimeAgo';
 import { EmptyState } from '@/components/EmptyState';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { RequestQuickActions } from '@/components/requests/RequestQuickActions';
 import { ComposeMessage } from '@/components/messages/ComposeMessage';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -46,19 +47,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import { useRequests } from '@/hooks/useRequests';
+import { useCaseManagers } from '@/hooks/useCaseManagerStats';
 import { 
   BarChart, 
   Bar, 
@@ -72,68 +67,114 @@ import {
   Cell,
   Legend
 } from 'recharts';
-import { mockRequests, mockCaseManagers, mockAnalytics, getDashboardStats } from '@/lib/mock-data';
-import type { RequestStatus } from '@/types/database';
+import type { RequestStatus, SupportRequest } from '@/types/database';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--warning))', 'hsl(var(--destructive))', 'hsl(var(--success))', 'hsl(var(--muted))'];
 
 export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all');
-  const [selectedRequest, setSelectedRequest] = useState<typeof mockRequests[0] | null>(null);
-  const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
-  const [selectedCaseManager, setSelectedCaseManager] = useState<string>('');
-  const [isReassigning, setIsReassigning] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [bulkAssignDialogOpen, setBulkAssignDialogOpen] = useState(false);
+  const [selectedRequestIds, setSelectedRequestIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
-  const stats = getDashboardStats('admin');
+  // Fetch real data
+  const { data: requests = [], isLoading: requestsLoading } = useRequests({});
+  const { data: caseManagers = [], isLoading: caseManagersLoading } = useCaseManagers();
+
+  // Calculate stats from real data
+  const stats = useMemo(() => ({
+    totalRequests: requests.length,
+    pendingRequests: requests.filter(r => r.status === 'submitted' || r.status === 'in_progress').length,
+    escalatedRequests: requests.filter(r => r.status === 'escalated').length,
+    emergencyRequests: requests.filter(r => r.is_emergency).length,
+  }), [requests]);
   
   // Filter escalated or unassigned requests
-  const criticalRequests = mockRequests.filter(
-    r => r.status === 'escalated' || !r.assigned_case_manager_id
+  const criticalRequests = useMemo(() => 
+    requests.filter(r => r.status === 'escalated' || !r.assigned_case_manager_id),
+    [requests]
   );
 
-  const filteredRequests = mockRequests.filter((request) => {
-    const matchesSearch = 
-      request.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.student?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredRequests = useMemo(() => 
+    requests.filter((request) => {
+      const matchesSearch = 
+        request.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        request.student?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    }),
+    [requests, searchQuery, statusFilter]
+  );
 
-  // Chart data
-  const statusData = [
-    { name: 'Submitted', value: mockRequests.filter(r => r.status === 'submitted').length },
-    { name: 'In Progress', value: mockRequests.filter(r => r.status === 'in_progress').length },
-    { name: 'Escalated', value: mockRequests.filter(r => r.status === 'escalated').length },
-    { name: 'Resolved', value: mockRequests.filter(r => r.status === 'resolved').length },
-    { name: 'Cancelled', value: mockRequests.filter(r => r.status === 'cancelled').length },
-  ];
+  // Get unassigned requests for bulk assignment
+  const unassignedRequests = useMemo(() => 
+    requests.filter(r => !r.assigned_case_manager_id && r.status === 'submitted'),
+    [requests]
+  );
 
-  const weeklyData = mockAnalytics
-    .filter(a => a.metric === 'requests_submitted')
-    .slice(-7)
-    .map(a => ({
-      date: format(new Date(a.date), 'EEE'),
-      requests: a.value,
-    }));
+  // Chart data from real requests
+  const statusData = useMemo(() => [
+    { name: 'Submitted', value: requests.filter(r => r.status === 'submitted').length },
+    { name: 'In Progress', value: requests.filter(r => r.status === 'in_progress').length },
+    { name: 'Escalated', value: requests.filter(r => r.status === 'escalated').length },
+    { name: 'Resolved', value: requests.filter(r => r.status === 'resolved').length },
+    { name: 'Cancelled', value: requests.filter(r => r.status === 'cancelled').length },
+  ], [requests]);
 
-  const reassignRequest = async () => {
-    if (!selectedRequest || !selectedCaseManager) return;
-    setIsReassigning(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const caseManager = mockCaseManagers.find(cm => cm.id === selectedCaseManager);
-    toast({
-      title: 'Request reassigned',
-      description: `Request has been assigned to ${caseManager?.full_name}.`,
+  // Generate weekly data from real requests
+  const weeklyData = useMemo(() => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - i));
+      return date;
     });
-    
-    setIsReassigning(false);
-    setReassignDialogOpen(false);
-    setSelectedRequest(null);
-    setSelectedCaseManager('');
+
+    return last7Days.map(date => ({
+      date: format(date, 'EEE'),
+      requests: requests.filter(r => {
+        const requestDate = new Date(r.created_at);
+        return requestDate.toDateString() === date.toDateString();
+      }).length,
+    }));
+  }, [requests]);
+
+  const handleSelectRequest = (requestId: string, checked: boolean) => {
+    const newSet = new Set(selectedRequestIds);
+    if (checked) {
+      newSet.add(requestId);
+    } else {
+      newSet.delete(requestId);
+    }
+    setSelectedRequestIds(newSet);
   };
+
+  const handleSelectAllUnassigned = (checked: boolean) => {
+    if (checked) {
+      setSelectedRequestIds(new Set(unassignedRequests.map(r => r.id)));
+    } else {
+      setSelectedRequestIds(new Set());
+    }
+  };
+
+  const selectedRequests = useMemo(() => 
+    requests.filter(r => selectedRequestIds.has(r.id)),
+    [requests, selectedRequestIds]
+  );
+
+  const isLoading = requestsLoading || caseManagersLoading;
+
+  if (isLoading) {
+    return (
+      <SidebarLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <LoadingSpinner size="lg" />
+        </div>
+      </SidebarLayout>
+    );
+  }
 
   return (
     <SidebarLayout>
@@ -223,7 +264,7 @@ export default function AdminDashboard() {
                         paddingAngle={2}
                         dataKey="value"
                       >
-                        {statusData.map((entry, index) => (
+                        {statusData.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
@@ -240,99 +281,125 @@ export default function AdminDashboard() {
         {/* Case Manager Workloads */}
         <section className="space-y-4">
           <h2 className="font-display text-h3">Case Manager Workloads</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {mockCaseManagers.map((cm) => {
-              const maxLoad = 20;
-              const loadPercentage = (cm.active_requests / maxLoad) * 100;
-              const isOverloaded = loadPercentage > 80;
-              
-              return (
-                <Card key={cm.id} className="border border-border/50">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">{cm.full_name}</CardTitle>
-                      {isOverloaded && (
-                        <Badge variant="destructive" className="text-xs">High Load</Badge>
-                      )}
-                    </div>
-                    <CardDescription>{cm.email}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Active Requests</span>
-                        <span className="font-medium">{cm.active_requests}/{maxLoad}</span>
-                      </div>
-                      <Progress 
-                        value={loadPercentage} 
-                        className={isOverloaded ? '[&>div]:bg-destructive' : ''}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Emergency</span>
-                        <p className="font-semibold text-destructive">{cm.emergency_requests}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Avg Response</span>
-                        <p className="font-semibold">{cm.avg_response_time}h</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1" asChild>
-                        <Link to={`/case-managers/${cm.id}`}>View Details</Link>
-                      </Button>
-                      <ComposeMessage
-                        trigger={
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MessageSquare className="h-4 w-4" />
-                          </Button>
-                        }
-                        defaultRecipientId={cm.id}
-                        defaultSubject={`Quick message`}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Escalated & Unassigned Requests */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-h3">Escalated & Unassigned</h2>
-            <Badge variant="outline" className="text-destructive border-destructive">
-              {criticalRequests.length} requiring attention
-            </Badge>
-          </div>
-          
-          {criticalRequests.length === 0 ? (
+          {caseManagers.length === 0 ? (
             <EmptyState
-              icon={AlertTriangle}
-              title="All clear!"
-              description="No escalated or unassigned requests at this time."
+              icon={Users}
+              title="No Case Managers"
+              description="No case managers have been assigned yet."
             />
           ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {caseManagers.map((cm) => {
+                const maxLoad = 20;
+                const loadPercentage = (cm.active_requests / maxLoad) * 100;
+                const isOverloaded = loadPercentage > 80;
+                
+                return (
+                  <Card key={cm.user_id} className="border border-border/50">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">{cm.full_name || 'Unknown'}</CardTitle>
+                        {isOverloaded && (
+                          <Badge variant="destructive" className="text-xs">High Load</Badge>
+                        )}
+                      </div>
+                      <CardDescription>{cm.email}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span>Active Requests</span>
+                          <span className="font-medium">{cm.active_requests}/{maxLoad}</span>
+                        </div>
+                        <Progress 
+                          value={loadPercentage} 
+                          className={isOverloaded ? '[&>div]:bg-destructive' : ''}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Emergency</span>
+                          <p className="font-semibold text-destructive">{cm.emergency_requests}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Status</span>
+                          <p className="font-semibold">
+                            {isOverloaded ? 'High Load' : loadPercentage > 50 ? 'Moderate' : 'Available'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" className="flex-1" asChild>
+                          <Link to={`/case-managers/${cm.user_id}`}>View Details</Link>
+                        </Button>
+                        <ComposeMessage
+                          trigger={
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MessageSquare className="h-4 w-4" />
+                            </Button>
+                          }
+                          defaultRecipientId={cm.user_id}
+                          defaultSubject={`Quick message`}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Bulk Assignment Panel for Unassigned Requests */}
+        {unassignedRequests.length > 0 && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-h3">Unassigned Requests</h2>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {selectedRequestIds.size} selected
+                </span>
+                <Button
+                  variant="default"
+                  size="sm"
+                  disabled={selectedRequestIds.size === 0}
+                  onClick={() => setBulkAssignDialogOpen(true)}
+                >
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                  Bulk Assign
+                </Button>
+              </div>
+            </div>
+            
             <Card className="border border-border/50">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={selectedRequestIds.size === unassignedRequests.length && unassignedRequests.length > 0}
+                        onCheckedChange={(checked) => handleSelectAllUnassigned(checked as boolean)}
+                      />
+                    </TableHead>
                     <TableHead>Student</TableHead>
                     <TableHead>Request</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Assigned To</TableHead>
+                    <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {criticalRequests.map((request) => (
+                  {unassignedRequests.map((request) => (
                     <TableRow key={request.id} className={request.is_emergency ? 'bg-destructive/5' : undefined}>
                       <TableCell>
-                        <span className="font-medium">{request.student?.full_name}</span>
+                        <Checkbox
+                          checked={selectedRequestIds.has(request.id)}
+                          onCheckedChange={(checked) => handleSelectRequest(request.id, checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-medium">{request.student?.full_name || 'Unknown'}</span>
                       </TableCell>
                       <TableCell>
                         <Link to={`/requests/${request.id}`} className="hover:underline">
@@ -346,7 +413,75 @@ export default function AdminDashboard() {
                         <PriorityBadge priority={request.priority} />
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={request.status} />
+                        <TimeAgo date={request.created_at} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <RequestQuickActions request={request} />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => {
+                                  setSelectedRequest(request);
+                                  setAssignDialogOpen(true);
+                                }}
+                              >
+                                <UserCog className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Assign</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </section>
+        )}
+
+        {/* Escalated Requests */}
+        {criticalRequests.filter(r => r.status === 'escalated').length > 0 && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-h3">Escalated Requests</h2>
+              <Badge variant="outline" className="text-destructive border-destructive">
+                {criticalRequests.filter(r => r.status === 'escalated').length} requiring attention
+              </Badge>
+            </div>
+            
+            <Card className="border border-border/50">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Request</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Assigned To</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {criticalRequests.filter(r => r.status === 'escalated').map((request) => (
+                    <TableRow key={request.id} className={request.is_emergency ? 'bg-destructive/5' : undefined}>
+                      <TableCell>
+                        <span className="font-medium">{request.student?.full_name || 'Unknown'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Link to={`/requests/${request.id}`} className="hover:underline">
+                          <p className="font-medium truncate max-w-[200px]">{request.title}</p>
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <CategoryBadge category={request.category} />
+                      </TableCell>
+                      <TableCell>
+                        <PriorityBadge priority={request.priority} />
                       </TableCell>
                       <TableCell>
                         {request.case_manager?.full_name || (
@@ -364,7 +499,7 @@ export default function AdminDashboard() {
                                 className="h-8 w-8"
                                 onClick={() => {
                                   setSelectedRequest(request);
-                                  setReassignDialogOpen(true);
+                                  setAssignDialogOpen(true);
                                 }}
                               >
                                 <UserCog className="h-4 w-4" />
@@ -379,8 +514,8 @@ export default function AdminDashboard() {
                 </TableBody>
               </Table>
             </Card>
-          )}
-        </section>
+          </section>
+        )}
 
         {/* All Requests Table */}
         <section className="space-y-4">
@@ -411,6 +546,14 @@ export default function AdminDashboard() {
             </Select>
           </div>
 
+          {filteredRequests.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title="No requests found"
+              description={searchQuery || statusFilter !== 'all' ? 'Try adjusting your search or filters.' : 'No support requests have been submitted yet.'}
+            />
+          ) : (
+            <Card className="border border-border/50">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -427,7 +570,7 @@ export default function AdminDashboard() {
                   {filteredRequests.slice(0, 10).map((request) => (
                     <TableRow key={request.id}>
                       <TableCell className="font-medium">
-                        {request.student?.full_name}
+                        {request.student?.full_name || 'Unknown'}
                       </TableCell>
                       <TableCell>
                         <Link to={`/requests/${request.id}`} className="hover:underline">
@@ -459,7 +602,7 @@ export default function AdminDashboard() {
                                 className="h-8 w-8"
                                 onClick={() => {
                                   setSelectedRequest(request);
-                                  setReassignDialogOpen(true);
+                                  setAssignDialogOpen(true);
                                 }}
                               >
                                 <UserCog className="h-4 w-4" />
@@ -473,64 +616,34 @@ export default function AdminDashboard() {
                   ))}
                 </TableBody>
               </Table>
+            </Card>
+          )}
         </section>
 
         {/* User Management Section */}
         <UserManagement />
 
-        {/* Reassign Dialog */}
-        <Dialog open={reassignDialogOpen} onOpenChange={setReassignDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="font-display">Reassign Request</DialogTitle>
-              <DialogDescription>
-                Select a case manager to assign this request to.
-              </DialogDescription>
-            </DialogHeader>
-            
-            {selectedRequest && (
-              <div className="py-4 space-y-4">
-                <div className="p-3 rounded-lg border bg-muted/30">
-                  <p className="font-medium">{selectedRequest.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    From: {selectedRequest.student?.full_name}
-                  </p>
-                </div>
+        {/* Single Assignment Dialog */}
+        <AssignCaseManagerDialog
+          open={assignDialogOpen}
+          onOpenChange={setAssignDialogOpen}
+          request={selectedRequest}
+          onAssigned={() => {
+            setSelectedRequest(null);
+            setAssignDialogOpen(false);
+          }}
+        />
 
-                <div className="space-y-2">
-                  <Label>Assign to Case Manager</Label>
-                  <Select value={selectedCaseManager} onValueChange={setSelectedCaseManager}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select case manager" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mockCaseManagers.map((cm) => (
-                        <SelectItem key={cm.id} value={cm.id}>
-                          <div className="flex items-center justify-between w-full">
-                            <span>{cm.full_name}</span>
-                            <span className="text-xs text-muted-foreground ml-2">
-                              ({cm.active_requests} active)
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setReassignDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={reassignRequest} disabled={!selectedCaseManager || isReassigning}>
-                {isReassigning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Reassign
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Bulk Assignment Dialog */}
+        <AssignCaseManagerDialog
+          open={bulkAssignDialogOpen}
+          onOpenChange={setBulkAssignDialogOpen}
+          requests={selectedRequests}
+          onAssigned={() => {
+            setSelectedRequestIds(new Set());
+            setBulkAssignDialogOpen(false);
+          }}
+        />
       </div>
     </SidebarLayout>
   );
