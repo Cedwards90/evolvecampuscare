@@ -29,8 +29,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending invitation to:", email, "as", role);
 
-    // Use the provided appUrl or fallback to the preview URL
-    const baseUrl = appUrl || "https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app";
+    // Always use the published URL for invitation emails
+    const baseUrl = "https://evolvecampuscare.lovable.app";
     const signupUrl = `${baseUrl}/auth?tab=signup&invite=${token}`;
     
     console.log("Generated signup URL:", signupUrl);
