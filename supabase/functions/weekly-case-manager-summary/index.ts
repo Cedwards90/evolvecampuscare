@@ -319,7 +319,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Sending weekly summary to:", profile.email);
 
       await resend.emails.send({
-        from: "Student Support Portal <onboarding@resend.dev>",
+        from: "CampusCare <noreply@evolvefoundation.us>",
         to: [profile.email],
         subject: `📊 Your Weekly Caseload Summary - Week of ${weekLabel}`,
         html: emailHtml,
