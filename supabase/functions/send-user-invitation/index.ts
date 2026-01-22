@@ -25,13 +25,86 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, role, token, inviterName, notes, appUrl }: InvitationRequest = await req.json();
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+      throw new Error("Missing Supabase environment variables");
+    }
+
+    // Verify authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      console.error("Missing or invalid authorization header");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Create client with user's auth token to verify
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
+
+    if (authError || !user) {
+      console.error("Authentication failed:", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const userId = user.id;
+    console.log("Authenticated user:", userId);
+
+    // Create service role client for database operations
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    // Verify user has permission to send invitations (admin or case_manager)
+    const { data: roleData, error: roleError } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .single();
+
+    if (roleError || !roleData) {
+      console.error("User role not found");
+      return new Response(
+        JSON.stringify({ error: "Forbidden" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const { email, role, token: inviteToken, inviterName, notes, appUrl }: InvitationRequest = await req.json();
+
+    // Authorization rules:
+    // - Admins can invite any role
+    // - Case managers can only invite students
+    if (roleData.role === "case_manager" && role !== "student") {
+      console.error("Case manager attempted to invite non-student role");
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Case managers can only invite students" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (!["admin", "case_manager"].includes(roleData.role)) {
+      console.error("User lacks permission to send invitations");
+      return new Response(
+        JSON.stringify({ error: "Forbidden" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     console.log("Sending invitation to:", email, "as", role);
 
     // Always use the published URL for invitation emails
     const baseUrl = "https://evolvecampuscare.lovable.app";
-    const signupUrl = `${baseUrl}/auth?tab=signup&invite=${token}`;
+    const signupUrl = `${baseUrl}/auth?tab=signup&invite=${inviteToken}`;
     
     console.log("Generated signup URL:", signupUrl);
 
