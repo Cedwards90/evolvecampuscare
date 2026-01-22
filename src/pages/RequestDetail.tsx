@@ -171,22 +171,39 @@ export default function RequestDetail() {
 
             {/* Actions Card - Only for staff */}
             {canTakeActions && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Actions</CardTitle>
-                  <CardDescription>
-                    Take action on this request
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <RequestActions
-                    requestId={request.id}
-                    userId={user!.id}
-                    currentStatus={request.status}
-                    requestedAmount={request.requested_amount}
-                  />
-                </CardContent>
-              </Card>
+              <>
+                {/* Show actions if request is actionable */}
+                {(request.status === 'submitted' || request.status === 'in_progress' || request.status === 'escalated') ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Actions</CardTitle>
+                      <CardDescription>
+                        Take action on this request
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <RequestActions
+                        requestId={request.id}
+                        userId={user!.id}
+                        currentStatus={request.status}
+                        requestedAmount={request.requested_amount}
+                      />
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="py-6">
+                      <p className="text-muted-foreground text-center">
+                        {request.status === 'resolved' 
+                          ? 'This request has been resolved. No further actions available.'
+                          : request.status === 'cancelled'
+                          ? 'This request was denied/cancelled. No further actions available.'
+                          : 'No actions available for this request status.'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
 
             {/* Reply Card */}

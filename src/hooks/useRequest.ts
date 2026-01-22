@@ -89,6 +89,26 @@ async function sendStatusChangeNotification(params: {
   }
 }
 
+async function createInAppNotification(params: {
+  userId: string;
+  title: string;
+  message: string;
+  type: string;
+  link: string;
+}) {
+  try {
+    await supabase.from('notifications').insert({
+      user_id: params.userId,
+      title: params.title,
+      message: params.message,
+      type: params.type,
+      link: params.link,
+    });
+  } catch (error) {
+    console.error('Failed to create in-app notification:', error);
+  }
+}
+
 export function useApproveRequest() {
   const queryClient = useQueryClient();
 
@@ -154,7 +174,7 @@ export function useApproveRequest() {
 
       if (noteError) throw noteError;
 
-      // Send notification to student
+      // Send email notification to student
       if (requestData) {
         sendStatusChangeNotification({
           requestId,
@@ -162,6 +182,15 @@ export function useApproveRequest() {
           requestTitle: requestData.title,
           previousStatus: 'submitted',
           newStatus: 'in_progress',
+        });
+
+        // Create in-app notification for student
+        createInAppNotification({
+          userId: requestData.student_id,
+          title: '✅ Request Approved',
+          message: `Your request "${requestData.title}" has been approved and is now being processed.`,
+          type: 'status_update',
+          link: `/requests/${requestId}`,
         });
       }
     },
@@ -214,7 +243,7 @@ export function useDenyRequest() {
 
       if (noteError) throw noteError;
 
-      // Send notification to student
+      // Send email notification to student
       if (requestData) {
         sendStatusChangeNotification({
           requestId,
@@ -223,6 +252,15 @@ export function useDenyRequest() {
           previousStatus: 'submitted',
           newStatus: 'cancelled',
           note: reason,
+        });
+
+        // Create in-app notification for student
+        createInAppNotification({
+          userId: requestData.student_id,
+          title: '❌ Request Denied',
+          message: `Your request "${requestData.title}" has been denied. Reason: ${reason}`,
+          type: 'status_update',
+          link: `/requests/${requestId}`,
         });
       }
     },
@@ -270,7 +308,7 @@ export function useResolveRequest() {
 
       if (noteError) throw noteError;
 
-      // Send notification to student
+      // Send email notification to student
       if (requestData) {
         sendStatusChangeNotification({
           requestId,
@@ -278,6 +316,15 @@ export function useResolveRequest() {
           requestTitle: requestData.title,
           previousStatus,
           newStatus: 'resolved',
+        });
+
+        // Create in-app notification for student
+        createInAppNotification({
+          userId: requestData.student_id,
+          title: '🎉 Request Resolved',
+          message: `Your request "${requestData.title}" has been resolved.`,
+          type: 'status_update',
+          link: `/requests/${requestId}`,
         });
       }
     },
@@ -331,7 +378,7 @@ export function useEscalateRequest() {
 
       if (noteError) throw noteError;
 
-      // Send notification to student
+      // Send email notification to student
       if (requestData) {
         sendStatusChangeNotification({
           requestId,
@@ -340,6 +387,15 @@ export function useEscalateRequest() {
           previousStatus: 'in_progress',
           newStatus: 'escalated',
           note: reason,
+        });
+
+        // Create in-app notification for student
+        createInAppNotification({
+          userId: requestData.student_id,
+          title: '⚠️ Request Escalated',
+          message: `Your request "${requestData.title}" has been escalated for further review.`,
+          type: 'status_update',
+          link: `/requests/${requestId}`,
         });
       }
     },
