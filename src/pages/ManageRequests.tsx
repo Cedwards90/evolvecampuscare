@@ -1,12 +1,13 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Search, 
   Filter, 
   SortAsc, 
   SortDesc,
   AlertCircle,
-  TrendingUp
+  TrendingUp,
+  X
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -44,6 +45,7 @@ import { useMyStudents } from '@/hooks/useMyStudents';
 import type { RequestStatus, RequestPriority } from '@/types/database';
 
 export default function ManageRequests() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<RequestPriority | 'all'>('all');
@@ -52,11 +54,26 @@ export default function ManageRequests() {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Read priority filter from URL query params
+  useEffect(() => {
+    const priorityParam = searchParams.get('priority');
+    if (priorityParam && ['emergency', 'high', 'medium', 'low'].includes(priorityParam)) {
+      setPriorityFilter(priorityParam as RequestPriority);
+    }
+  }, [searchParams]);
+
   // Fetch real data from Supabase
   const { data: requests, isLoading: requestsLoading } = useRequests({
     assignedCaseManagerId: user?.id,
   });
   const { data: myStudents, isLoading: studentsLoading } = useMyStudents(user?.id);
+
+  // Clear filter and URL params
+  const clearPriorityFilter = () => {
+    setPriorityFilter('all');
+    searchParams.delete('priority');
+    setSearchParams(searchParams);
+  };
 
   // Filter and sort requests
   const filteredRequests = (requests || [])
@@ -127,6 +144,22 @@ export default function ManageRequests() {
               </Button>
             </CardContent>
           </Card>
+        )}
+
+        {/* Active Filter Indicator */}
+        {priorityFilter !== 'all' && (
+          <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+            <span className="text-sm text-muted-foreground">Filtered by:</span>
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+              {priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1)} Priority
+              <button 
+                onClick={clearPriorityFilter}
+                className="ml-1 hover:bg-primary/20 rounded-full p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          </div>
         )}
 
         {/* Filters */}

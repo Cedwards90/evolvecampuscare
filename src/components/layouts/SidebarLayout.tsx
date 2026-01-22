@@ -64,7 +64,7 @@ const navItems: NavItem[] = [
 ];
 
 const bottomNavItems: NavItem[] = [
-  { label: 'Help Center', href: '#', icon: HelpCircle, roles: ['student', 'case_manager', 'admin'] },
+  { label: 'Help Center', href: '/support', icon: HelpCircle, roles: ['student', 'case_manager', 'admin'] },
 ];
 
 export function SidebarLayout({ children }: SidebarLayoutProps) {
@@ -181,8 +181,8 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
               <p className="mt-1 text-xs text-muted-foreground">
                 Get help and support for any academic or personal issues.
               </p>
-              <Button size="sm" className="mt-3 w-full">
-                Get Started
+              <Button size="sm" className="mt-3 w-full" asChild>
+                <Link to="/support">Get Started</Link>
               </Button>
             </div>
           )}

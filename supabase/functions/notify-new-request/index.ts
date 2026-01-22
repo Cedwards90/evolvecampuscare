@@ -44,6 +44,36 @@ interface NewRequestNotification {
   studentName: string;
 }
 
+async function createInAppNotification(
+  supabase: any,
+  userId: string,
+  title: string,
+  message: string,
+  type: string,
+  link: string
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        title,
+        message,
+        type,
+        link,
+        is_read: false,
+      });
+
+    if (error) {
+      console.error('Failed to create in-app notification:', error);
+    } else {
+      console.log('In-app notification created for user:', userId);
+    }
+  } catch (err) {
+    console.error('Error creating in-app notification:', err);
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   const origin = req.headers.get("Origin");
   const corsHeaders = getCorsHeaders(origin);
@@ -119,6 +149,7 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     let recipientEmails: string[] = [];
+    let recipientUserIds: string[] = [];
     let recipientType: "case_manager" | "admins" = "admins";
     let caseManagerName: string | null = null;
 
@@ -133,6 +164,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (!cmError && cmProfile) {
         recipientEmails = [cmProfile.email];
+        recipientUserIds = [assignment.case_manager_id];
         caseManagerName = cmProfile.full_name;
         recipientType = "case_manager";
       }
@@ -149,12 +181,13 @@ const handler = async (req: Request): Promise<Response> => {
           const adminUserIds = adminRoles.map((r) => r.user_id);
           const { data: adminProfiles } = await supabase
             .from("profiles")
-            .select("email")
+            .select("email, user_id")
             .in("user_id", adminUserIds);
 
           if (adminProfiles) {
             const adminEmails = adminProfiles.map((p) => p.email);
             recipientEmails = [...new Set([...recipientEmails, ...adminEmails])];
+            recipientUserIds = [...new Set([...recipientUserIds, ...adminUserIds])];
           }
         }
       }
@@ -185,7 +218,7 @@ const handler = async (req: Request): Promise<Response> => {
       const adminUserIds = adminRoles.map((r) => r.user_id);
       const { data: adminProfiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("email, full_name")
+        .select("email, full_name, user_id")
         .in("user_id", adminUserIds);
 
       if (profilesError) {
@@ -202,6 +235,28 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       recipientEmails = adminProfiles.map((p) => p.email);
+      recipientUserIds = adminProfiles.map((p) => p.user_id);
+    }
+
+    // Create in-app notifications for all recipients
+    const notificationTitle = isEmergency
+      ? `🚨 Emergency Request: ${requestTitle}`
+      : `New Request: ${requestTitle}`;
+    
+    const notificationMessage = `${studentName || 'A student'} submitted a ${priority} priority ${category.replace(/_/g, ' ')} request.`;
+    const notificationLink = `/requests/${requestId}`;
+
+    console.log(`Creating in-app notifications for ${recipientUserIds.length} user(s)`);
+    
+    for (const recipientUserId of recipientUserIds) {
+      await createInAppNotification(
+        supabase,
+        recipientUserId,
+        notificationTitle,
+        notificationMessage,
+        isEmergency ? 'emergency' : 'new_request',
+        notificationLink
+      );
     }
 
     const categoryDisplay = category.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -290,7 +345,7 @@ const handler = async (req: Request): Promise<Response> => {
       ? `🚨 [EMERGENCY] New Support Request: ${requestTitle}`
       : `[${priorityDisplay}] New Support Request: ${requestTitle}`;
 
-    console.log(`Sending notification to ${recipientEmails.length} recipient(s)`);
+    console.log(`Sending email notification to ${recipientEmails.length} recipient(s)`);
 
     const emailResponse = await resend.emails.send({
       from: "Evolve Foundation <noreply@evolvefoundation.us>",
@@ -306,6 +361,7 @@ const handler = async (req: Request): Promise<Response> => {
         success: true, 
         recipientType,
         recipientCount: recipientEmails.length,
+        inAppNotificationsCreated: recipientUserIds.length,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
