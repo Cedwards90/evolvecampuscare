@@ -17,11 +17,13 @@ import {
   Bell,
   Search,
   HelpCircle,
-  Shield
+  Shield,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOffline } from '@/contexts/OfflineContext';
+import { useUnreadCount } from '@/hooks/useMessages';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -47,6 +49,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   roles: AppRole[];
   children?: NavItem[];
+  badge?: number;
 }
 
 const navItems: NavItem[] = [
@@ -55,6 +58,7 @@ const navItems: NavItem[] = [
   { label: 'Track Requests', href: '/student-tracking-request-status-scheduling-meeting', icon: Clock, roles: ['student'] },
   { label: 'Offline Drafts', href: '/student-creating-offline-draft-request', icon: WifiOff, roles: ['student'] },
   { label: 'Manage Requests', href: '/case-manager-managing-student-requests', icon: Users, roles: ['case_manager'] },
+  { label: 'Messages', href: '/messages', icon: MessageSquare, roles: ['case_manager', 'admin'] },
   { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin'] },
   { label: 'User Management', href: '/admin/users', icon: Shield, roles: ['admin'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin'] },
@@ -71,8 +75,14 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const { language, setLanguage } = useLanguage();
   const { isOnline } = useOffline();
   const location = useLocation();
+  const { data: unreadCount } = useUnreadCount();
 
-  const filteredNavItems = navItems.filter(item => role && item.roles.includes(role));
+  const filteredNavItems = navItems.filter(item => role && item.roles.includes(role)).map(item => {
+    if (item.href === '/messages' && unreadCount && unreadCount > 0) {
+      return { ...item, badge: unreadCount };
+    }
+    return item;
+  });
   const filteredBottomNavItems = bottomNavItems.filter(item => role && item.roles.includes(role));
 
   const getInitials = (name: string | null) => {
@@ -128,7 +138,12 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                   {!sidebarCollapsed && (
                     <>
                       <span className="flex-1">{item.label}</span>
-                      <ChevronRight className="h-4 w-4 opacity-50" />
+                      {item.badge && item.badge > 0 && (
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                          {item.badge > 9 ? '9+' : item.badge}
+                        </span>
+                      )}
+                      {!item.badge && <ChevronRight className="h-4 w-4 opacity-50" />}
                     </>
                   )}
                 </Link>
