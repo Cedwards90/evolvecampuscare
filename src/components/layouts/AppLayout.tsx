@@ -77,7 +77,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <div className="flex items-center gap-4">
             <Link to="/dashboard" className="flex items-center gap-2">
               <GraduationCap className="h-6 w-6 text-primary" />
-              <span className="font-display text-lg font-semibold hidden sm:inline">CampusCare</span>
+              <span className="font-display text-lg font-semibold hidden sm:inline">Evolve Foundation</span>
             </Link>
           </div>
 
@@ -203,7 +203,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Footer */}
       <footer className="border-t border-border/40 py-4">
         <div className="container text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} CampusCare. All rights reserved.
+          © {new Date().getFullYear()} Evolve Foundation. All rights reserved.
         </div>
       </footer>
     </div>
