@@ -105,6 +105,7 @@ export function useSendInvitation() {
           token,
           inviterName: user.user_metadata?.full_name || user.email,
           notes: params.notes,
+          appUrl: window.location.origin,
         },
       });
 

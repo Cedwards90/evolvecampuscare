@@ -16,6 +16,7 @@ interface InvitationRequest {
   token: string;
   inviterName: string;
   notes?: string;
+  appUrl?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -24,14 +25,13 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, role, token, inviterName, notes }: InvitationRequest = await req.json();
+    const { email, role, token, inviterName, notes, appUrl }: InvitationRequest = await req.json();
 
     console.log("Sending invitation to:", email, "as", role);
 
-    // Get the app URL from environment or use default
-    const appUrl = Deno.env.get("SUPABASE_URL")?.replace('.supabase.co', '') || 
-      "https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app";
-    const signupUrl = `${appUrl}/auth?tab=signup&invite=${token}`;
+    // Use the provided appUrl or fallback to the preview URL
+    const baseUrl = appUrl || "https://id-preview--566d8616-fbe5-4c84-8ac9-0bfd7fde3b97.lovable.app";
+    const signupUrl = `${baseUrl}/auth?tab=signup&invite=${token}`;
 
     // Format role for display
     const roleDisplay = role.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
