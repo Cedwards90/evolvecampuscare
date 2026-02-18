@@ -266,9 +266,13 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
           {/* Breadcrumb */}
           <div className="hidden sm:flex items-center gap-2 text-sm">
-            <span className="font-semibold">Dashboard</span>
-            <span className="text-muted-foreground">/</span>
-            <span className="text-muted-foreground">Home</span>
+            <span className="font-semibold">
+              {(() => {
+                const allNavItems = [...navItems, ...bottomNavItems];
+                const match = allNavItems.find(item => location.pathname === item.href);
+                return match?.label || 'Dashboard';
+              })()}
+            </span>
           </div>
 
           {/* Spacer */}

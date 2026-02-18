@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useTheme } from 'next-themes';
-import { Loader2, User, Bell, Globe, Palette, Shield, Trash2 } from 'lucide-react';
+import { Loader2, User, Bell, Globe, Palette, Shield, Trash2, AlertTriangle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
@@ -40,10 +42,90 @@ import { MFAEnrollment } from '@/components/auth/MFAEnrollment';
 const profileSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email'),
-  phone: z.string().optional(),
+  phone: z.string()
+    .optional()
+    .refine((val) => !val || /^\+?[\d\s\-()]{7,20}$/.test(val), {
+      message: 'Please enter a valid phone number',
+    }),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
+
+function AccountDeletionCard() {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [confirmText, setConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-own-account');
+      if (error) throw error;
+      
+      toast({ title: 'Account deleted', description: 'Your account has been permanently deleted.' });
+      await signOut();
+      navigate('/', { replace: true });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Deletion failed', description: err.message || 'Please try again later.' });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <Card className="border border-destructive/50">
+      <CardHeader>
+        <CardTitle className="font-display text-destructive flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5" />
+          Danger Zone
+        </CardTitle>
+        <CardDescription>
+          Permanently delete your account and all associated data. This action cannot be undone.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete My Account
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete your account, all your support requests, messages, and personal data. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-2 py-2">
+              <Label htmlFor="confirm-delete">Type <span className="font-mono font-bold">DELETE</span> to confirm</Label>
+              <Input
+                id="confirm-delete"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder="DELETE"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={confirmText !== 'DELETE' || isDeleting}
+                onClick={handleDeleteAccount}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Delete My Account
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Settings() {
   const { profile, user, role } = useAuth();
@@ -176,9 +258,14 @@ export default function Settings() {
                     <Input
                       id="phone"
                       type="tel"
+                      inputMode="tel"
                       placeholder="+1 (555) 000-0000"
                       {...form.register('phone')}
+                      aria-invalid={!!form.formState.errors.phone}
                     />
+                    {form.formState.errors.phone && (
+                      <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
+                    )}
                   </div>
 
                   <Button type="submit" disabled={isLoading}>
@@ -188,6 +275,9 @@ export default function Settings() {
                 </form>
               </CardContent>
             </Card>
+
+            {/* Danger Zone - Account Deletion */}
+            <AccountDeletionCard />
           </TabsContent>
 
           <TabsContent value="security" className="space-y-6">
