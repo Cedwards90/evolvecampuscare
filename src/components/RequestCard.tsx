@@ -30,7 +30,7 @@ export function RequestCard({
     if (onClick) {
       onClick();
     } else {
-      navigate(`/request/${request.id}`);
+      navigate(`/requests/${request.id}`);
     }
   };
 
