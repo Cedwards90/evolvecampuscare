@@ -82,7 +82,7 @@ export default function SubmitRequest() {
   const watchPriority = form.watch('priority');
   const watchIsEmergency = form.watch('isEmergency');
 
-  const nextStep = () => {
+  const nextStep = async () => {
     if (step === 1 && !watchCategory) {
       toast({
         variant: 'destructive',
@@ -90,6 +90,10 @@ export default function SubmitRequest() {
         description: 'Choose the type of support you need.',
       });
       return;
+    }
+    if (step === 2) {
+      const valid = await form.trigger(['title', 'description']);
+      if (!valid) return;
     }
     setStep(step + 1);
   };
@@ -393,9 +397,9 @@ export default function SubmitRequest() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button type="submit" disabled={submitRequest.isPending}>
+              <Button type="submit" disabled={submitRequest.isPending} size="lg" className="px-8">
                 {submitRequest.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Submit Request
+                ✓ Submit My Request
               </Button>
             )}
           </div>

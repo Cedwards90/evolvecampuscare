@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Eye, EyeOff, Loader2, Mail } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, Check, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthLayout } from '@/components/layouts/AuthLayout';
@@ -31,6 +32,7 @@ const signupSchema = z.object({
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number'),
   confirmPassword: z.string(),
+  termsAccepted: z.literal(true, { errorMap: () => ({ message: 'You must accept the Terms of Service and Privacy Policy' }) }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
@@ -99,6 +101,7 @@ export default function Auth() {
       email: '',
       password: '',
       confirmPassword: '',
+      termsAccepted: false as any,
     },
   });
 
@@ -171,7 +174,7 @@ export default function Auth() {
       } else {
         toast({
           title: 'Account created!',
-          description: 'Welcome to CampusCare. You can now access your dashboard.',
+          description: 'Welcome! You can now access your dashboard.',
         });
         navigate('/dashboard', { replace: true });
       }
@@ -263,8 +266,8 @@ export default function Auth() {
             {invitation
               ? 'Create your account to accept the invitation'
               : activeTab === 'login' 
-                ? 'Sign in to access your CampusCare dashboard'
-                : 'Join CampusCare to get the support you need'
+                ? 'Sign in to access your dashboard'
+                : 'Join Evolve to get the support you need'
             }
           </CardDescription>
         </CardHeader>
@@ -380,26 +383,24 @@ export default function Auth() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
-                  {signupForm.watch('password') && (
-                    <div className="space-y-1">
-                      <div className="flex gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <div
-                            key={i}
-                            className={`h-1 flex-1 rounded-full ${
-                              i < passwordStrength ? strengthColors[passwordStrength - 1] : 'bg-muted'
-                            }`}
-                          />
-                        ))}
+                  {/* Password Requirements Checklist */}
+                  <div className="space-y-1.5 mt-2">
+                    {[
+                      { label: 'At least 8 characters', met: (signupForm.watch('password') || '').length >= 8 },
+                      { label: 'One uppercase letter', met: /[A-Z]/.test(signupForm.watch('password') || '') },
+                      { label: 'One lowercase letter', met: /[a-z]/.test(signupForm.watch('password') || '') },
+                      { label: 'One number', met: /[0-9]/.test(signupForm.watch('password') || '') },
+                    ].map((req) => (
+                      <div key={req.label} className="flex items-center gap-2 text-xs">
+                        {req.met ? (
+                          <Check className="h-3.5 w-3.5 text-success" />
+                        ) : (
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                        <span className={req.met ? 'text-success' : 'text-muted-foreground'}>{req.label}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Password strength: {strengthLabels[passwordStrength - 1] || 'Too weak'}
-                      </p>
-                    </div>
-                  )}
-                  {signupForm.formState.errors.password && (
-                    <p className="text-sm text-destructive">{signupForm.formState.errors.password.message}</p>
-                  )}
+                    ))}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -424,6 +425,27 @@ export default function Auth() {
                   </div>
                   {signupForm.formState.errors.confirmPassword && (
                     <p className="text-sm text-destructive">{signupForm.formState.errors.confirmPassword.message}</p>
+                  )}
+                </div>
+
+                {/* Terms of Service Checkbox */}
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <Checkbox
+                      id="terms"
+                      checked={signupForm.watch('termsAccepted')}
+                      onCheckedChange={(checked) => signupForm.setValue('termsAccepted', checked === true ? true : false as any, { shouldValidate: true })}
+                      aria-invalid={!!signupForm.formState.errors.termsAccepted}
+                    />
+                    <label htmlFor="terms" className="text-sm leading-tight cursor-pointer">
+                      I agree to the{' '}
+                      <a href="#" className="text-primary underline hover:no-underline">Terms of Service</a>
+                      {' '}and{' '}
+                      <a href="#" className="text-primary underline hover:no-underline">Privacy Policy</a>
+                    </label>
+                  </div>
+                  {signupForm.formState.errors.termsAccepted && (
+                    <p className="text-sm text-destructive">{signupForm.formState.errors.termsAccepted.message}</p>
                   )}
                 </div>
 

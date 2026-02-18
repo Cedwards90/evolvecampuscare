@@ -6,10 +6,9 @@ import {
   Filter, 
   Calendar, 
   Clock, 
-  ArrowRight,
   Plus,
   Video,
-  MapPin
+  Loader2
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -17,8 +16,8 @@ import { RequestCard } from '@/components/RequestCard';
 import { StatusBadge } from '@/components/StatusBadge';
 import { PriorityBadge } from '@/components/PriorityBadge';
 import { CategoryBadge } from '@/components/CategoryBadge';
-import { TimeAgo } from '@/components/TimeAgo';
 import { EmptyState } from '@/components/EmptyState';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,14 +29,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -45,31 +36,34 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { mockRequests, mockAppointments } from '@/lib/mock-data';
-import type { SupportRequest } from '@/types/database';
-import type { RequestStatus, RequestCategory } from '@/types/database';
+import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
+import { useRequests } from '@/hooks/useRequests';
+import { useMyAppointments } from '@/hooks/useMyAppointments';
+import { useAuth } from '@/contexts/AuthContext';
+import type { SupportRequest, RequestStatus, RequestCategory } from '@/types/database';
 
 export default function TrackRequests() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<RequestCategory | 'all'>('all');
-  const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const { user } = useAuth();
 
-  // Filter requests for the logged-in student
-  const studentRequests = mockRequests.filter(r => r.student_id === 'student-user-1');
-  
-  const filteredRequests = studentRequests.filter((request) => {
-    const matchesSearch = request.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
-    const matchesCategory = categoryFilter === 'all' || request.category === categoryFilter;
-    return matchesSearch && matchesStatus && matchesCategory;
+  const { data: requests = [], isLoading: requestsLoading } = useRequests({
+    studentId: user?.id,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+    category: categoryFilter !== 'all' ? categoryFilter : undefined,
+    search: searchQuery || undefined,
   });
 
-  // Get appointments for this student
-  const studentAppointments = mockAppointments.filter(a => a.student_id === 'student-user-1' && a.status === 'scheduled');
+  const { data: appointments = [], isLoading: appointmentsLoading } = useMyAppointments();
+
+  if (requestsLoading) {
+    return (
+      <SidebarLayout>
+        <LoadingSpinner />
+      </SidebarLayout>
+    );
+  }
 
   return (
     <SidebarLayout>
@@ -88,16 +82,16 @@ export default function TrackRequests() {
         </div>
 
         {/* Upcoming Appointments */}
-        {studentAppointments.length > 0 && (
+        {appointments.length > 0 && (
           <section className="space-y-4">
             <h2 className="font-display text-h3">Upcoming Appointments</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {studentAppointments.slice(0, 3).map((apt) => (
+              {appointments.slice(0, 3).map((apt) => (
                 <Card key={apt.id} className="border border-border/50">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">{apt.title}</CardTitle>
                     <CardDescription>
-                      with {apt.case_manager?.full_name}
+                      with {(apt as any).case_manager?.full_name || 'Case Manager'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -172,16 +166,17 @@ export default function TrackRequests() {
         <section className="space-y-4">
           <h2 className="font-display text-h3">Your Requests</h2>
           
-          {filteredRequests.length === 0 ? (
+          {requests.length === 0 ? (
             <EmptyState
               icon={Filter}
               title="No requests found"
-              description={studentRequests.length === 0 
-                ? "You haven't submitted any support requests yet."
-                : "No requests match your current filters."
+              description={
+                !searchQuery && statusFilter === 'all' && categoryFilter === 'all'
+                  ? "You haven't submitted any support requests yet."
+                  : "No requests match your current filters."
               }
               action={
-                studentRequests.length === 0 ? (
+                !searchQuery && statusFilter === 'all' && categoryFilter === 'all' ? (
                   <Button asChild>
                     <Link to="/student-submitting-a-support-request">
                       <Plus className="mr-2 h-4 w-4" />
@@ -193,18 +188,18 @@ export default function TrackRequests() {
             />
           ) : (
             <div className="grid gap-4">
-              {filteredRequests.map((request) => (
+              {requests.map((request) => (
                 <Sheet key={request.id}>
                   <SheetTrigger asChild>
                     <div className="cursor-pointer">
-                      <RequestCard request={request} onClick={() => setSelectedRequest(request)} />
+                      <RequestCard request={request} />
                     </div>
                   </SheetTrigger>
                   <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
                     <SheetHeader>
                       <SheetTitle className="font-display">{request.title}</SheetTitle>
                       <SheetDescription>
-                        Request ID: {request.id}
+                        Request ID: {request.id.slice(0, 8)}...
                       </SheetDescription>
                     </SheetHeader>
                     <div className="mt-6 space-y-6">
@@ -285,42 +280,19 @@ export default function TrackRequests() {
                         </div>
                       )}
 
-                      {/* Schedule Meeting Button */}
-                      {request.case_manager && request.status !== 'resolved' && request.status !== 'cancelled' && (
-                        <Dialog>
-                          <DialogTrigger asChild>
+                      {/* Schedule Meeting Button - uses real ScheduleMeetingDialog */}
+                      {request.assigned_case_manager_id && request.status !== 'resolved' && request.status !== 'cancelled' && (
+                        <ScheduleMeetingDialog
+                          studentId={user?.id || ''}
+                          studentName={request.case_manager?.full_name || 'Case Manager'}
+                          requestId={request.id}
+                          trigger={
                             <Button className="w-full">
                               <Calendar className="mr-2 h-4 w-4" />
                               Schedule Meeting
                             </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle className="font-display">Schedule a Meeting</DialogTitle>
-                              <DialogDescription>
-                                Select a date to see available time slots with {request.case_manager.full_name}
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="flex justify-center py-4">
-                              <CalendarComponent
-                                mode="single"
-                                selected={selectedDate}
-                                onSelect={setSelectedDate}
-                                disabled={(date) => date < new Date() || date.getDay() === 0 || date.getDay() === 6}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <p className="text-sm font-medium">Available Times</p>
-                              <div className="grid grid-cols-3 gap-2">
-                                {['9:00 AM', '10:00 AM', '11:00 AM', '2:00 PM', '3:00 PM', '4:00 PM'].map((time) => (
-                                  <Button key={time} variant="outline" size="sm">
-                                    {time}
-                                  </Button>
-                                ))}
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                          }
+                        />
                       )}
                     </div>
                   </SheetContent>
