@@ -4,11 +4,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
-import { 
-  GraduationCap, 
-  DollarSign, 
-  Heart, 
-  Home, 
+import {
+  GraduationCap,
+  DollarSign,
+  Heart,
+  Home,
   HelpCircle,
   Save,
   Send,
@@ -18,11 +18,10 @@ import {
   Cloud,
   CloudOff,
   RefreshCw,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
-import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PriorityBadge } from '@/components/PriorityBadge';
 import { CategoryBadge } from '@/components/CategoryBadge';
 import { EmptyState } from '@/components/EmptyState';
@@ -30,7 +29,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -48,8 +47,9 @@ import {
 import { useOffline } from '@/contexts/OfflineContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { mockOfflineDrafts } from '@/lib/mock-data';
+import { useOfflineDrafts, type Draft, type DraftFormData } from '@/hooks/useOfflineDrafts';
 import type { RequestCategory, RequestPriority } from '@/types/database';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 const categories: { value: RequestCategory; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { value: 'academic', label: 'Academic', icon: GraduationCap },
@@ -74,24 +74,20 @@ const draftSchema = z.object({
   isEmergency: z.boolean(),
 });
 
-type DraftFormData = z.infer<typeof draftSchema>;
-
-interface Draft {
-  id: string;
-  draft_data: DraftFormData;
-  synced: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 export default function OfflineDraft() {
-  const [drafts, setDrafts] = useState<Draft[]>(mockOfflineDrafts as Draft[]);
   const [editingDraft, setEditingDraft] = useState<Draft | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const { isOnline, isServiceWorkerReady } = useOffline();
+  const { isOnline } = useOffline();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const {
+    drafts,
+    isLoading,
+    saveDraft,
+    deleteDraft,
+    syncDrafts,
+    submitDraft,
+  } = useOfflineDrafts();
 
   const form = useForm<DraftFormData>({
     resolver: zodResolver(draftSchema),
@@ -118,7 +114,7 @@ export default function OfflineDraft() {
     }
   }, [editingDraft, form]);
 
-  const saveDraft = async () => {
+  const handleSaveDraft = async () => {
     const data = form.getValues();
     if (!data.title || data.title.length < 5) {
       toast({
@@ -129,71 +125,59 @@ export default function OfflineDraft() {
       return;
     }
 
-    setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    if (editingDraft) {
-      setDrafts(drafts.map(d => 
-        d.id === editingDraft.id 
-          ? { ...d, draft_data: data, updated_at: new Date().toISOString(), synced: false }
-          : d
-      ));
-    } else {
-      const newDraft: Draft = {
-        id: `draft-${Date.now()}`,
-        draft_data: data,
-        synced: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setDrafts([newDraft, ...drafts]);
-    }
-
-    toast({
-      title: 'Draft saved',
-      description: isOnline ? 'Your draft has been saved.' : 'Your draft has been saved locally and will sync when online.',
-    });
-
-    setEditingDraft(null);
-    form.reset();
-    setIsSaving(false);
+    saveDraft.mutate(
+      { id: editingDraft?.id, data },
+      {
+        onSuccess: () => {
+          toast({
+            title: 'Draft saved',
+            description: isOnline
+              ? 'Your draft has been saved.'
+              : 'Your draft has been saved locally and will sync when online.',
+          });
+          setEditingDraft(null);
+          form.reset();
+        },
+        onError: () => {
+          toast({ variant: 'destructive', title: 'Error', description: 'Failed to save draft.' });
+        },
+      }
+    );
   };
 
-  const deleteDraft = (draftId: string) => {
-    setDrafts(drafts.filter(d => d.id !== draftId));
-    if (editingDraft?.id === draftId) {
-      setEditingDraft(null);
-      form.reset();
-    }
-    toast({
-      title: 'Draft deleted',
-      description: 'The draft has been removed.',
+  const handleDeleteDraft = (draftId: string) => {
+    deleteDraft.mutate(draftId, {
+      onSuccess: () => {
+        if (editingDraft?.id === draftId) {
+          setEditingDraft(null);
+          form.reset();
+        }
+        toast({ title: 'Draft deleted', description: 'The draft has been removed.' });
+      },
     });
   };
 
-  const syncDrafts = async () => {
+  const handleSyncDrafts = () => {
     if (!isOnline) {
       toast({
         variant: 'destructive',
         title: 'Cannot sync',
-        description: 'You are currently offline. Please connect to the internet to sync.',
+        description: 'You are currently offline.',
       });
       return;
     }
 
-    setIsSyncing(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setDrafts(drafts.map(d => ({ ...d, synced: true })));
-    
-    toast({
-      title: 'Drafts synced',
-      description: `${drafts.filter(d => !d.synced).length} drafts have been synced.`,
+    syncDrafts.mutate(undefined, {
+      onSuccess: (count) => {
+        toast({
+          title: 'Drafts synced',
+          description: `${count} draft(s) have been synced.`,
+        });
+      },
     });
-    setIsSyncing(false);
   };
 
-  const submitDraft = async (draft: Draft) => {
+  const handleSubmitDraft = (draft: Draft) => {
     if (!isOnline) {
       toast({
         variant: 'destructive',
@@ -203,11 +187,33 @@ export default function OfflineDraft() {
       return;
     }
 
-    // Navigate to submit page with pre-filled data (in a real app)
-    navigate('/student-submitting-a-support-request');
+    submitDraft.mutate(draft, {
+      onSuccess: () => {
+        toast({
+          title: 'Request submitted!',
+          description: 'Your request has been submitted successfully.',
+        });
+        navigate('/student-tracking-request-status-scheduling-meeting');
+      },
+      onError: () => {
+        toast({
+          variant: 'destructive',
+          title: 'Submission failed',
+          description: 'Could not submit request. Please try again.',
+        });
+      },
+    });
   };
 
-  const unsyncedCount = drafts.filter(d => !d.synced).length;
+  const unsyncedCount = drafts.filter((d) => !d.synced).length;
+
+  if (isLoading) {
+    return (
+      <SidebarLayout>
+        <LoadingSpinner />
+      </SidebarLayout>
+    );
+  }
 
   return (
     <SidebarLayout>
@@ -230,8 +236,14 @@ export default function OfflineDraft() {
               </Badge>
             )}
             {unsyncedCount > 0 && (
-              <Button variant="outline" size="sm" onClick={syncDrafts} disabled={!isOnline || isSyncing}>
-                {isSyncing ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSyncDrafts}
+                disabled={!isOnline || syncDrafts.isPending}
+                aria-label={`Sync ${unsyncedCount} unsynced drafts`}
+              >
+                {syncDrafts.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <RefreshCw className="mr-2 h-4 w-4" />
@@ -336,8 +348,8 @@ export default function OfflineDraft() {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-4">
-                  <Button onClick={saveDraft} disabled={isSaving} className="flex-1">
-                    {isSaving ? (
+                  <Button onClick={handleSaveDraft} disabled={saveDraft.isPending} className="flex-1">
+                    {saveDraft.isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <Save className="mr-2 h-4 w-4" />
@@ -363,7 +375,7 @@ export default function OfflineDraft() {
           {/* Saved Drafts */}
           <section className="space-y-4">
             <h2 className="font-display text-h3">Saved Drafts</h2>
-            
+
             {drafts.length === 0 ? (
               <EmptyState
                 icon={CloudOff}
@@ -373,8 +385,8 @@ export default function OfflineDraft() {
             ) : (
               <div className="space-y-4">
                 {drafts.map((draft) => (
-                  <Card 
-                    key={draft.id} 
+                  <Card
+                    key={draft.id}
                     className={cn(
                       'border border-border/50 transition-colors',
                       editingDraft?.id === draft.id && 'border-primary'
@@ -417,22 +429,32 @@ export default function OfflineDraft() {
                           size="sm"
                           onClick={() => setEditingDraft(draft)}
                           className="flex-1"
+                          aria-label={`Edit draft: ${draft.draft_data.title}`}
                         >
                           Edit
                         </Button>
                         <Button
                           variant="default"
                           size="sm"
-                          onClick={() => submitDraft(draft)}
-                          disabled={!isOnline}
+                          onClick={() => handleSubmitDraft(draft)}
+                          disabled={!isOnline || submitDraft.isPending}
                           className="flex-1"
+                          aria-label={`Submit draft: ${draft.draft_data.title}`}
                         >
-                          <Send className="mr-2 h-4 w-4" />
+                          {submitDraft.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="mr-2 h-4 w-4" />
+                          )}
                           Submit
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Delete draft: ${draft.draft_data.title}`}
+                            >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </AlertDialogTrigger>
@@ -445,7 +467,7 @@ export default function OfflineDraft() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteDraft(draft.id)}>
+                              <AlertDialogAction onClick={() => handleDeleteDraft(draft.id)}>
                                 Delete
                               </AlertDialogAction>
                             </AlertDialogFooter>
