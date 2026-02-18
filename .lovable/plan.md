@@ -1,108 +1,39 @@
 
 
-## Plan: Fix Offline Drafts, Submission Flow, and UX Polish
+## Fix: Request Detail 404 and Minor Remaining Issues
 
-### Overview
-The submit request flow and track requests page are already using real database queries. The main remaining issue is the **Offline Drafts page** which still uses mock data and fake sync/submit logic. This plan also addresses the draft-to-request sync path and minor UX improvements.
+### Root Cause
 
----
-
-### 1. Rewrite Offline Drafts Page to Use Real Storage (Critical)
-
-**Problem:** `src/pages/OfflineDraft.tsx` imports `mockOfflineDrafts` and stores drafts only in component state. Saving, syncing, and submitting are all fake (just `setTimeout` delays). New users see pre-populated demo drafts.
-
-**Fix:** Rewrite the page to use a dual-storage approach:
-- **Online:** Read/write drafts to the `offline_drafts` database table (already exists with RLS)
-- **Offline:** Fall back to IndexedDB using the existing `src/lib/offlineStorage.ts` utilities
-
-**File:** `src/pages/OfflineDraft.tsx`
-
-Changes:
-- Remove the `mockOfflineDrafts` import entirely
-- Create a custom hook `useOfflineDrafts` (inline or separate file) that:
-  - When online: queries `offline_drafts` table filtered by `user_id = auth.uid()` and `synced = false`
-  - When offline: reads from IndexedDB via `getDraftsOffline()`
-- **Save Draft:** Write to IndexedDB immediately (works offline), and if online also upsert to `offline_drafts` table
-- **Sync Drafts:** For each unsynced IndexedDB draft, upsert to `offline_drafts` table and mark as synced
-- **Submit Draft:** Convert draft to a real support request using the existing `useSubmitRequest` hook, then delete the draft from both IndexedDB and the database table
-- **Delete Draft:** Remove from both IndexedDB and database table
-
----
-
-### 2. Create useOfflineDrafts Hook (New File)
-
-**File:** `src/hooks/useOfflineDrafts.ts`
-
-This hook will:
-- Query the `offline_drafts` table for the current user's unsynced drafts
-- Provide mutations for save, delete, and sync operations
-- Integrate with IndexedDB for offline-first capability
-- Invalidate queries on success
+There is a **one-character typo** in `src/components/RequestCard.tsx` line 33:
 
 ```text
-Hook API:
-- drafts: Draft[]         (from DB when online, IndexedDB when offline)
-- isLoading: boolean
-- saveDraft(data)          -> writes to IndexedDB + DB
-- deleteDraft(id)          -> removes from IndexedDB + DB
-- syncDrafts()             -> pushes IndexedDB drafts to DB
-- submitDraft(draft)       -> calls useSubmitRequest, then deletes draft
+Current:  navigate(`/request/${request.id}`)
+Correct:  navigate(`/requests/${request.id}`)
 ```
 
----
+The route defined in `App.tsx` is `/requests/:id` (plural), but `RequestCard` navigates to `/request/:id` (singular). This causes every request card clicked from the **Dashboard** (where no custom `onClick` is passed) to hit the catch-all 404 route.
 
-### 3. Fix Draft Submit to Create Real Request (Critical)
+On the **TrackRequests** page, this bug is masked because `RequestCard` is wrapped inside a `SheetTrigger` which intercepts clicks before the default `handleClick` fires.
 
-**Problem:** The current `submitDraft` function just navigates to `/student-submitting-a-support-request` without creating a request or passing data. The draft is never converted.
+### Changes Required
 
-**Fix:** In the rewritten `OfflineDraft.tsx`:
-- When "Submit" is clicked on a draft, call `useSubmitRequest.mutateAsync()` with the draft data
-- On success: delete the draft from IndexedDB and the `offline_drafts` table
-- Show a success toast: "Your request has been submitted!"
-- Redirect to `/student-tracking-request-status-scheduling-meeting`
+**File: `src/components/RequestCard.tsx`** -- Fix the navigation path (line 33)
+- Change `/request/${request.id}` to `/requests/${request.id}`
+- This is the only change needed; the `RequestDetail` page, `useRequest` hook, and route definition are all already correct
 
----
+### Already Working (No Changes Needed)
 
-### 4. Verify Submit Request Flow (Already Working)
+1. **Offline drafts persistence** -- The `useOfflineDrafts` hook already implements dual-storage (IndexedDB + database). Drafts are saved to IndexedDB immediately on save (works offline) and synced to the database when online. On reload, drafts are fetched from the database (online) or IndexedDB (offline).
 
-**Current state:** `src/pages/SubmitRequest.tsx` already:
-- Has per-step validation (step 1: category, step 2: title/description)
-- Calls `submitRequest.mutateAsync()` which writes to `support_requests` table
-- Shows toast on success: "Request submitted successfully!"
-- Redirects to the tracking page
-- Invalidates the `['requests']` query cache
+2. **Seed data removal** -- `TrackRequests.tsx` queries `support_requests` filtered by `student_id: user?.id`. New users see "You haven't submitted any support requests yet." No mock data imports remain.
 
-**No changes needed** -- the submission flow is already correct. The earlier confusion may have been due to testing with mock data on the tracking page (now fixed).
+3. **Meeting scheduling** -- `ScheduleMeetingDialog` is already integrated into `TrackRequests.tsx` (line 285). It provides date/time selection, duration picker, confirmation button, and creates both a database appointment and a calendar event via Edge Function. Once the 404 is fixed, the full request detail page (which also shows case manager info) will be accessible, completing the scheduling verification path.
 
----
+### Summary
 
-### 5. Minor UX Improvements
+| File | Change | Lines |
+|------|--------|-------|
+| `src/components/RequestCard.tsx` | Fix `/request/` to `/requests/` | Line 33 |
 
-**5a. Accessible labels for draft action buttons**
-- Add `aria-label` attributes to the Edit, Submit, and Delete buttons in the drafts list
-- Add `aria-label` to the Sync button
-
-**5b. Offline status already global**
-- The `OfflineIndicator` component is already rendered in `SidebarLayout.tsx` and shows when `!isOnline`
-- The `OfflineProvider` wraps the app in `main.tsx`
-- No changes needed
-
-**5c. Phone validation already implemented**
-- Regex validation `/^\+?[\d\s\-()]{7,20}$/` was already added to Settings.tsx
-- No changes needed
-
----
-
-### Summary of Files to Create/Modify
-
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/hooks/useOfflineDrafts.ts` | Create | Hook for dual-storage draft management |
-| `src/pages/OfflineDraft.tsx` | Rewrite | Remove mock data, use real storage and submit |
-
-### What Will NOT Change (Already Fixed)
-- `src/pages/TrackRequests.tsx` -- already uses real database queries
-- `src/pages/SubmitRequest.tsx` -- already has validation, toast, and redirect
-- `src/pages/Settings.tsx` -- already has phone validation
-- `src/components/layouts/SidebarLayout.tsx` -- already has offline indicator
+This is a single-line fix that unblocks the entire request detail flow.
 
