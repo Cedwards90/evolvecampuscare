@@ -32,8 +32,11 @@ import { cn } from '@/lib/utils';
 
 const notificationIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   request_created: FileText,
+  new_request: FileText,
+  unassigned_request: UserPlus,
   request_assigned: UserPlus,
   status_change: AlertTriangle,
+  emergency: AlertTriangle,
   message: MessageSquare,
   appointment: Calendar,
   default: Bell,

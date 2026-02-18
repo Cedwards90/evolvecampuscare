@@ -187,6 +187,40 @@ export default function AdminDashboard() {
           description="Monitor system performance and manage request assignments"
         />
 
+        {/* Unassigned Requests Alert Banner */}
+        {unassignedRequests.length > 0 && (
+          <div
+            className={`flex items-center justify-between rounded-lg border p-4 ${
+              unassignedRequests.some(r => r.is_emergency)
+                ? 'border-destructive/50 bg-destructive/5'
+                : 'border-warning/50 bg-warning/5'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <AlertTriangle className={`h-5 w-5 shrink-0 ${
+                unassignedRequests.some(r => r.is_emergency) ? 'text-destructive' : 'text-warning'
+              }`} />
+              <div>
+                <p className="font-medium text-sm">
+                  {unassignedRequests.length} request{unassignedRequests.length !== 1 ? 's' : ''} awaiting case manager assignment
+                </p>
+                {unassignedRequests.some(r => r.is_emergency) && (
+                  <p className="text-xs text-destructive mt-0.5">Includes emergency requests requiring immediate attention</p>
+                )}
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant={unassignedRequests.some(r => r.is_emergency) ? 'destructive' : 'default'}
+              onClick={() => {
+                document.getElementById('unassigned-requests-section')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              Review & Assign
+            </Button>
+          </div>
+        )}
+
         {/* Stats Overview */}
         <section className="space-y-4">
           <h2 className="font-display text-h3">System Overview</h2>
@@ -359,7 +393,7 @@ export default function AdminDashboard() {
 
         {/* Bulk Assignment Panel for Unassigned Requests */}
         {unassignedRequests.length > 0 && (
-          <section className="space-y-4">
+          <section id="unassigned-requests-section" className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-h3">Unassigned Requests</h2>
               <div className="flex items-center gap-2">

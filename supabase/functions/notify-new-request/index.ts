@@ -282,14 +282,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Create in-app notifications for all recipients (if enabled)
     if (settings.in_app_enabled && settings.types.new_request) {
+      const isUnassigned = recipientType === "admins";
+      const notificationType = isEmergency
+        ? 'emergency'
+        : isUnassigned
+          ? 'unassigned_request'
+          : 'new_request';
+
       const notificationTitle = isEmergency
         ? `🚨 Emergency Request: ${requestTitle}`
-        : `New Request: ${requestTitle}`;
+        : isUnassigned
+          ? `Unassigned Request: ${requestTitle}`
+          : `New Request: ${requestTitle}`;
       
-      const notificationMessage = `${studentName || 'A student'} submitted a ${priority} priority ${category.replace(/_/g, ' ')} request.`;
+      const assignmentPrompt = isUnassigned ? ' Please assign a case manager.' : '';
+      const notificationMessage = `${studentName || 'A student'} submitted a ${priority} priority ${category.replace(/_/g, ' ')} request.${assignmentPrompt}`;
       const notificationLink = `/requests/${requestId}`;
 
-      console.log(`Creating in-app notifications for ${recipientUserIds.length} user(s)`);
+      console.log(`Creating in-app notifications for ${recipientUserIds.length} user(s), type: ${notificationType}`);
       
       for (const recipientUserId of recipientUserIds) {
         await createInAppNotification(
@@ -297,7 +307,7 @@ const handler = async (req: Request): Promise<Response> => {
           recipientUserId,
           notificationTitle,
           notificationMessage,
-          isEmergency ? 'emergency' : 'new_request',
+          notificationType,
           notificationLink
         );
       }
