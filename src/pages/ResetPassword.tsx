@@ -1,39 +1,95 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Lock, Check, X, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Lock, Check, X, Eye, EyeOff, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthLayout } from '@/components/layouts/AuthLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
+type Step = 'loading' | 'invalid' | 'mfa' | 'password';
+
 export default function ResetPassword() {
+  const [step, setStep] = useState<Step>('loading');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRecovery, setIsRecovery] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaError, setMfaError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Listen for the PASSWORD_RECOVERY event from the hash fragment
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
       if (event === 'PASSWORD_RECOVERY') {
-        setIsRecovery(true);
+        await checkMFAAndProceed();
       }
     });
 
     // Also check hash for type=recovery
     const hash = window.location.hash;
     if (hash.includes('type=recovery')) {
-      setIsRecovery(true);
+      // Small delay to let Supabase process the token
+      setTimeout(() => checkMFAAndProceed(), 500);
+    } else {
+      setStep('invalid');
     }
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const checkMFAAndProceed = async () => {
+    try {
+      const { data, error } = await supabase.auth.mfa.listFactors();
+      if (error) throw error;
+
+      const verifiedFactor = data.totp.find(f => f.status === 'verified');
+      if (verifiedFactor) {
+        setMfaFactorId(verifiedFactor.id);
+        setStep('mfa');
+      } else {
+        setStep('password');
+      }
+    } catch (err) {
+      console.error('Error checking MFA:', err);
+      // If we can't check MFA, proceed to password step anyway
+      setStep('password');
+    }
+  };
+
+  const handleMFAVerify = async () => {
+    if (mfaCode.length !== 6 || !mfaFactorId) return;
+
+    setIsSubmitting(true);
+    setMfaError(null);
+
+    try {
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId: mfaFactorId,
+      });
+      if (challengeError) throw challengeError;
+
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: mfaFactorId,
+        challengeId: challengeData.id,
+        code: mfaCode,
+      });
+      if (verifyError) throw verifyError;
+
+      setStep('password');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Invalid code. Please try again.';
+      setMfaError(msg);
+      setMfaCode('');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const requirements = [
     { label: 'At least 8 characters', met: password.length >= 8 },
@@ -78,7 +134,19 @@ export default function ResetPassword() {
     }
   };
 
-  if (!isRecovery) {
+  if (step === 'loading') {
+    return (
+      <AuthLayout>
+        <Card className="border-border/50">
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </AuthLayout>
+    );
+  }
+
+  if (step === 'invalid') {
     return (
       <AuthLayout>
         <Card className="border-border/50">
@@ -98,6 +166,69 @@ export default function ResetPassword() {
     );
   }
 
+  if (step === 'mfa') {
+    return (
+      <AuthLayout>
+        <Card className="border-border/50">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <Shield className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="font-display text-h2">Verify Your Identity</CardTitle>
+            <CardDescription>
+              Enter the 6-digit code from your authenticator app to continue with the password reset.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {mfaError && (
+              <Alert variant="destructive">
+                <AlertDescription>{mfaError}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="mfa-code">Authentication Code</Label>
+              <Input
+                id="mfa-code"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                placeholder="000000"
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && mfaCode.length === 6) handleMFAVerify();
+                }}
+                className="text-center text-2xl tracking-widest font-mono"
+                autoFocus
+              />
+            </div>
+
+            <Button
+              onClick={handleMFAVerify}
+              disabled={isSubmitting || mfaCode.length !== 6}
+              className="w-full"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                'Verify & Continue'
+              )}
+            </Button>
+
+            <p className="text-xs text-center text-muted-foreground">
+              Open your authenticator app (Google Authenticator, Authy, etc.) to view your code.
+            </p>
+          </CardContent>
+        </Card>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout>
       <Card className="border-border/50">
@@ -106,9 +237,7 @@ export default function ResetPassword() {
             <Lock className="h-6 w-6 text-primary" />
           </div>
           <CardTitle className="font-display text-h2">Set New Password</CardTitle>
-          <CardDescription>
-            Enter your new password below
-          </CardDescription>
+          <CardDescription>Enter your new password below</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
