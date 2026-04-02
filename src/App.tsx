@@ -12,6 +12,8 @@ import { ProtectedRoute } from "@/components/layouts/ProtectedRoute";
 
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import SubmitRequest from "./pages/SubmitRequest";
