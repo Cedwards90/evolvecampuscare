@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubmitRequest } from '@/hooks/useSubmitRequest';
 import { cn } from '@/lib/utils';
+import { ContextualFaqTips } from '@/components/requests/ContextualFaqTips';
 import type { RequestCategory, RequestPriority } from '@/types/database';
 
 const categories: { value: RequestCategory; label: string; icon: React.ComponentType<{ className?: string }>; description: string; examples: string[] }[] = [
@@ -210,6 +211,7 @@ export default function SubmitRequest() {
                   <HelpCircle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
                   Not sure which category fits? Choose <strong>"Other"</strong> and we'll route it to the right team.
                 </p>
+                <ContextualFaqTips selectedCategory={watchCategory} />
               </CardContent>
             </Card>
           )}
