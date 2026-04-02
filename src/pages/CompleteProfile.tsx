@@ -90,7 +90,8 @@ export default function CompleteProfile() {
           department: data.department || null,
           year_of_study: data.year_of_study || null,
           preferred_contact: data.preferred_contact,
-        })
+          organization_id: selectedOrgId || null,
+        } as any)
         .eq('user_id', user.id);
 
       if (error) throw error;
