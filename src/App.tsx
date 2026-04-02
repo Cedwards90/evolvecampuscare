@@ -12,6 +12,8 @@ import { ProtectedRoute } from "@/components/layouts/ProtectedRoute";
 
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import SubmitRequest from "./pages/SubmitRequest";
@@ -56,6 +58,8 @@ function App() {
                   {/* Public routes */}
                   <Route path="/" element={<Landing />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                   
                   {/* Protected routes - All authenticated users */}
                   <Route path="/dashboard" element={
