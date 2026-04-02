@@ -261,6 +261,21 @@ export function InviteUserDialog({ trigger }: InviteUserDialogProps) {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="organization">Organization (Optional)</Label>
+                <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select organization" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No organization</SelectItem>
+                    {(organizations || []).map(org => (
+                      <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="notes">Personal Note (Optional)</Label>
                 <Textarea
                   id="notes"
