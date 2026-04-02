@@ -149,6 +149,13 @@ function App() {
                 </ProtectedRoute>
               } />
 
+              {/* Student Folders */}
+              <Route path="/student-folders" element={
+                <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                  <StudentFolders />
+                </ProtectedRoute>
+              } />
+
               {/* Support Center */}
               <Route path="/support" element={
                 <ProtectedRoute>
