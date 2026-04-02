@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -11,6 +12,7 @@ import {
   MessageSquare,
   User
 } from 'lucide-react';
+import { StickyNote, PenLine } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -34,6 +36,10 @@ import {
 } from '@/components/ui/table';
 import { useStudentDetail } from '@/hooks/useStudentDetail';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
+import { useFileNotes } from '@/hooks/useFileNotes';
+import { Textarea } from '@/components/ui/textarea';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -183,6 +189,10 @@ export default function StudentDetail() {
               <Clock className="h-4 w-4" />
               Activity
             </TabsTrigger>
+            <TabsTrigger value="file" className="gap-2">
+              <StickyNote className="h-4 w-4" />
+              Student File
+            </TabsTrigger>
           </TabsList>
 
           {/* Requests Tab */}
@@ -328,8 +338,139 @@ export default function StudentDetail() {
               </Card>
             )}
           </TabsContent>
+
+          {/* Student File Tab */}
+          <TabsContent value="file" className="space-y-4">
+            <StudentFileTab studentId={id!} />
+          </TabsContent>
         </Tabs>
       </div>
     </SidebarLayout>
+  );
+}
+
+// ---- Student File Tab Component ----
+function StudentFileTab({ studentId }: { studentId: string }) {
+  const { notes, isLoading: notesLoading, addNote } = useFileNotes(studentId);
+  const [newNote, setNewNote] = useState('');
+  const [addingNote, setAddingNote] = useState(false);
+
+  const { data: intakeResponses = [], isLoading: intakeLoading } = useQuery({
+    queryKey: ['intake-responses-admin', studentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('intake_responses')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return;
+    setAddingNote(true);
+    try {
+      await addNote.mutateAsync({ content: newNote });
+      setNewNote('');
+    } finally {
+      setAddingNote(false);
+    }
+  };
+
+  const sectionLabels: Record<string, string> = {
+    about_you: 'About You',
+    daily_needs: 'Day-to-Day Needs',
+    wellbeing: 'Wellbeing',
+    goals: 'Goals',
+  };
+
+  const renderResponseValue = (key: string, value: any): string => {
+    if (Array.isArray(value)) return value.length ? value.join(', ') : 'None selected';
+    if (typeof value === 'number') return String(value);
+    return value || '—';
+  };
+
+  const formatKey = (key: string) => key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+  return (
+    <div className="space-y-4">
+      {/* Intake Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Intake Summary</CardTitle>
+          <CardDescription>
+            {intakeResponses.length > 0
+              ? 'Responses from the student wellness check-in'
+              : 'The student has not completed the intake survey yet.'}
+          </CardDescription>
+        </CardHeader>
+        {intakeResponses.length > 0 && (
+          <CardContent className="space-y-4">
+            {intakeResponses.map((section) => (
+              <div key={section.id} className="space-y-2">
+                <h4 className="font-medium text-sm text-primary">
+                  {sectionLabels[section.section] || section.section}
+                </h4>
+                <div className="grid gap-1 pl-3 border-l-2 border-primary/20">
+                  {Object.entries(section.responses as Record<string, any>).map(([key, value]) => (
+                    <div key={key} className="flex gap-2 text-sm">
+                      <span className="text-muted-foreground min-w-[140px]">{formatKey(key)}:</span>
+                      <span>{renderResponseValue(key, value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Progress Notes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <PenLine className="h-4 w-4" />
+            Progress Notes
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Add Note */}
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Add a progress note..."
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              className="min-h-[80px]"
+            />
+            <Button size="sm" onClick={handleAddNote} disabled={addingNote || !newNote.trim()}>
+              {addingNote ? 'Adding...' : 'Add Note'}
+            </Button>
+          </div>
+
+          {/* Notes Timeline */}
+          {notesLoading ? (
+            <p className="text-sm text-muted-foreground">Loading notes...</p>
+          ) : notes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No progress notes yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {notes.map((note) => (
+                <div key={note.id} className="border-l-2 border-muted pl-3 py-1">
+                  <p className="text-sm">{note.content}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
+                    {note.note_type !== 'general' && (
+                      <Badge variant="outline" className="ml-2 text-xs">{note.note_type}</Badge>
+                    )}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

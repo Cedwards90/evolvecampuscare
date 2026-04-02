@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useIntakeSurvey } from '@/hooks/useIntakeSurvey';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -48,6 +49,7 @@ export default function Dashboard() {
   const { data: allRequests = [], isLoading: requestsLoading } = useRequests({});
   const { data: caseManagers = [], isLoading: cmLoading } = useCaseManagers();
   const { data: myAssignment, isLoading: assignmentLoading } = useMyAssignment();
+  const { intakeCompleted } = useIntakeSurvey();
   
   // Filter requests based on role
   const requests = useMemo(() => {
@@ -142,6 +144,20 @@ export default function Dashboard() {
   return (
     <SidebarLayout>
       <div className="space-y-6">
+        {/* Intake Survey Reminder */}
+        {role === 'student' && !intakeCompleted && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="flex items-center justify-between p-4">
+              <div>
+                <p className="font-medium text-sm">Complete your wellness check-in</p>
+                <p className="text-xs text-muted-foreground">Help us understand how to best support you — it only takes a few minutes.</p>
+              </div>
+              <Button size="sm" asChild>
+                <Link to="/intake-survey">Get Started</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         {/* Header with Breadcrumb */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

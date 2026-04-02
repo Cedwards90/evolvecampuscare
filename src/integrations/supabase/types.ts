@@ -105,6 +105,57 @@ export type Database = {
           },
         ]
       }
+      file_notes: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          note_type: string
+          student_id: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          note_type?: string
+          student_id: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          note_type?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
+      intake_responses: {
+        Row: {
+          created_at: string
+          id: string
+          responses: Json
+          section: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          responses?: Json
+          section: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          responses?: Json
+          section?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -388,6 +439,30 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      student_files: {
+        Row: {
+          created_at: string
+          id: string
+          intake_completed_at: string | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          intake_completed_at?: string | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          intake_completed_at?: string | null
           student_id?: string
           updated_at?: string
         }
