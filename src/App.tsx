@@ -28,6 +28,7 @@ import StudentDetail from "./pages/StudentDetail";
 import Messages from "./pages/Messages";
 import SupportCenter from "./pages/SupportCenter";
 import CompleteProfile from "./pages/CompleteProfile";
+import IntakeSurvey from "./pages/IntakeSurvey";
 import NotFound from "./pages/NotFound";
 
 // Create query client outside component to ensure stable reference
