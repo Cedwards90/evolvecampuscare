@@ -154,7 +154,7 @@ serve(async (req: Request) => {
 
     // Parse request body
     const body: TokenRequest = await req.json();
-    const { email, role, notes, autoAssignCaseManager } = body;
+    const { email, role, notes, autoAssignCaseManager, organizationId } = body;
 
     if (!email || !role) {
       return new Response(
