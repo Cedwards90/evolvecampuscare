@@ -1,43 +1,23 @@
 
 
-## Plan: Forgot Password Flow
+## Fix: Password Reset Fails for MFA-Enabled Accounts
 
-### Overview
-Add a complete forgot password flow: a "Forgot Password?" link on the login form, a password reset request form, and a `/reset-password` page where users set a new password after clicking the email link.
+### Problem
+The auth logs show: **"AAL2 session is required to update email or password when MFA is enabled."** When the admin clicks the recovery link, Supabase creates an AAL1 session. But since the admin has MFA (TOTP) enrolled, `updateUser({ password })` requires AAL2. The reset password page doesn't prompt for a TOTP code before attempting the update.
+
+### Solution
+Add an MFA verification step to `ResetPassword.tsx`. After the recovery session is established, check if the user has MFA enrolled. If so, show a TOTP code input and verify it (elevating to AAL2) before allowing the password update.
 
 ### Changes
 
-#### 1. Add "Forgot Password?" Link to Login Form
-**File:** `src/pages/Auth.tsx`
-- Add a "Forgot Password?" link below the password field in the login tab
-- Clicking it navigates to `/forgot-password`
+**`src/pages/ResetPassword.tsx`**
+- After detecting the recovery session, check MFA factors via `supabase.auth.mfa.listFactors()`
+- If verified TOTP factors exist, show a 6-digit code input before the password form
+- Call `supabase.auth.mfa.challengeAndVerify()` to elevate to AAL2
+- Only then allow `supabase.auth.updateUser({ password })`
+- Flow: Recovery link → (if MFA) enter TOTP code → enter new password → done
 
-#### 2. Create Forgot Password Page
-**File:** `src/pages/ForgotPassword.tsx` (new)
-- Simple form with email input wrapped in `AuthLayout`
-- Calls `supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset-password' })`
-- Shows success message: "Check your email for a password reset link"
-- Link back to sign in
-
-#### 3. Create Reset Password Page
-**File:** `src/pages/ResetPassword.tsx` (new)
-- Public route using `AuthLayout`
-- On mount, detects `type=recovery` from the URL hash (Supabase redirects with this)
-- Shows new password + confirm password form with the same strength requirements as signup
-- Calls `supabase.auth.updateUser({ password })` to set the new password
-- On success, shows confirmation and redirects to `/auth`
-
-#### 4. Add Routes
-**File:** `src/App.tsx`
-- Add `/forgot-password` route (public) → `ForgotPassword`
-- Add `/reset-password` route (public) → `ResetPassword`
-
-### File Summary
-
-| File | Action |
+| File | Change |
 |------|--------|
-| `src/pages/Auth.tsx` | Add "Forgot Password?" link |
-| `src/pages/ForgotPassword.tsx` | Create |
-| `src/pages/ResetPassword.tsx` | Create |
-| `src/App.tsx` | Add 2 public routes |
+| `src/pages/ResetPassword.tsx` | Add MFA verification step before password update |
 
