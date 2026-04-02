@@ -8,7 +8,13 @@ import {
   Clock, 
   Plus,
   Video,
-  Loader2
+  Loader2,
+  Info,
+  Check,
+  UserPlus,
+  PlayCircle,
+  CalendarCheck,
+  CheckCircle2
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
