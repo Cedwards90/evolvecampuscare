@@ -29,13 +29,16 @@ function getInitials(name: string | null): string {
 export default function StudentFolders() {
   const { data: students, isLoading } = useStudentFolders();
   const [search, setSearch] = useState('');
+  const [orgFilter, setOrgFilter] = useState<string>('all');
+
+  // Get unique orgs for filter
+  const orgOptions = [...new Map((students || []).filter(s => s.organization_name).map(s => [s.organization_id, s.organization_name])).entries()];
 
   const filtered = (students || []).filter(s => {
     const q = search.toLowerCase();
-    return (
-      (s.full_name || '').toLowerCase().includes(q) ||
-      s.email.toLowerCase().includes(q)
-    );
+    const matchesSearch = (s.full_name || '').toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
+    const matchesOrg = orgFilter === 'all' || s.organization_id === orgFilter;
+    return matchesSearch && matchesOrg;
   });
 
   return (
