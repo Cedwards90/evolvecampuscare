@@ -224,6 +224,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          organization_id: string | null
           phone: string | null
           preferred_contact: string | null
           preferred_language: string | null
@@ -239,6 +240,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id?: string
+          organization_id?: string | null
           phone?: string | null
           preferred_contact?: string | null
           preferred_language?: string | null
@@ -254,6 +256,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          organization_id?: string | null
           phone?: string | null
           preferred_contact?: string | null
           preferred_language?: string | null
@@ -262,7 +265,15 @@ export type Database = {
           user_id?: string
           year_of_study?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "training_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       request_attachments: {
         Row: {
@@ -518,6 +529,39 @@ export type Database = {
           status?: Database["public"]["Enums"]["request_status"]
           student_id?: string
           title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      training_organizations: {
+        Row: {
+          contact_email: string | null
+          contact_name: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
           updated_at?: string
         }
         Relationships: []
