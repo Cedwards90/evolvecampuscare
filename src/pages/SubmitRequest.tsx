@@ -211,6 +211,7 @@ export default function SubmitRequest() {
                   <HelpCircle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
                   Not sure which category fits? Choose <strong>"Other"</strong> and we'll route it to the right team.
                 </p>
+                <ContextualFaqTips selectedCategory={watchCategory} />
               </CardContent>
             </Card>
           )}
