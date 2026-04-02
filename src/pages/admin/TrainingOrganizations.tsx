@@ -171,8 +171,8 @@ export default function TrainingOrganizations() {
                   <TableHead>Organization</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Members</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
+                   <TableHead>Status</TableHead>
+                   <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
