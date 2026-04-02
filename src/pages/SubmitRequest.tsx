@@ -33,12 +33,12 @@ import { useSubmitRequest } from '@/hooks/useSubmitRequest';
 import { cn } from '@/lib/utils';
 import type { RequestCategory, RequestPriority } from '@/types/database';
 
-const categories: { value: RequestCategory; label: string; icon: React.ComponentType<{ className?: string }>; description: string }[] = [
-  { value: 'academic', label: 'Academic', icon: GraduationCap, description: 'Course registration, grades, academic advising' },
-  { value: 'financial', label: 'Financial', icon: DollarSign, description: 'Financial aid, scholarships, tuition' },
-  { value: 'mental_health', label: 'Mental Health', icon: Heart, description: 'Counseling, wellness, support services' },
-  { value: 'housing', label: 'Housing', icon: Home, description: 'Dorms, housing assignments, maintenance' },
-  { value: 'other', label: 'Other', icon: HelpCircle, description: 'Parking, events, general inquiries' },
+const categories: { value: RequestCategory; label: string; icon: React.ComponentType<{ className?: string }>; description: string; examples: string[] }[] = [
+  { value: 'academic', label: 'Academic', icon: GraduationCap, description: 'Course registration, grades, academic advising', examples: ['Trouble enrolling in a required class', 'Appealing a grade or academic probation', 'Need to change your major or advisor'] },
+  { value: 'financial', label: 'Financial', icon: DollarSign, description: 'Financial aid, scholarships, tuition', examples: ['Unexpected bill you can\'t cover', 'Scholarship or grant application help', 'Emergency funds for books or supplies'] },
+  { value: 'mental_health', label: 'Mental Health', icon: Heart, description: 'Counseling, wellness, support services', examples: ['Feeling overwhelmed or anxious', 'Looking for a counselor referral', 'Need someone to talk to about stress'] },
+  { value: 'housing', label: 'Housing', icon: Home, description: 'Dorms, housing assignments, maintenance', examples: ['Roommate conflict or safety concern', 'Facing eviction or housing insecurity', 'Maintenance issue in your dorm'] },
+  { value: 'other', label: 'Other', icon: HelpCircle, description: 'General inquiries or anything that doesn\'t fit above', examples: ['Parking or transportation issues', 'Questions about campus services', 'Not sure where to start — we\'ll route it for you'] },
 ];
 
 const priorities: { value: RequestPriority; label: string; description: string }[] = [
