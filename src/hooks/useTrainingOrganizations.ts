@@ -73,3 +73,25 @@ export function useUpdateOrganization() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['training-organizations'] }),
   });
 }
+
+export function useBulkAssignOrganization() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ organizationId, userIds }: { organizationId: string; userIds: string[] }) => {
+      const results = await Promise.all(
+        userIds.map(userId =>
+          supabase
+            .from('profiles')
+            .update({ organization_id: organizationId })
+            .eq('user_id', userId)
+        )
+      );
+      const failed = results.find(r => r.error);
+      if (failed?.error) throw failed.error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-organizations'] });
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+    },
+  });
+}

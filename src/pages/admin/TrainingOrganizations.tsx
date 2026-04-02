@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { 
   Building2, Plus, Pencil, Users, Search, 
   GraduationCap, UserCheck, Shield, Loader2,
-  Mail, User
+  Mail, User, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -28,7 +28,7 @@ import {
   type TrainingOrganization 
 } from '@/hooks/useTrainingOrganizations';
 import { useUsers } from '@/hooks/useUsers';
-
+import { BulkAssignOrgDialog } from '@/components/admin/BulkAssignOrgDialog';
 export default function TrainingOrganizations() {
   const { data: orgs, isLoading } = useTrainingOrganizations();
   const { data: users } = useUsers();
@@ -40,6 +40,7 @@ export default function TrainingOrganizations() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<TrainingOrganization | null>(null);
   const [form, setForm] = useState({ name: '', description: '', contact_name: '', contact_email: '' });
+  const [bulkAssignOrg, setBulkAssignOrg] = useState<TrainingOrganization | null>(null);
 
   const filtered = (orgs || []).filter(o =>
     o.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -170,8 +171,8 @@ export default function TrainingOrganizations() {
                   <TableHead>Organization</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Members</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
+                   <TableHead>Status</TableHead>
+                   <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -222,13 +223,26 @@ export default function TrainingOrganizations() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={org.is_active ? 'default' : 'outline'}>
-                          {org.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1.5 px-2"
+                          onClick={() => toggleActive(org)}
+                          disabled={updateOrg.isPending}
+                        >
+                          {org.is_active ? (
+                            <><ToggleRight className="h-4 w-4 text-primary" /><span className="text-xs font-medium">Active</span></>
+                          ) : (
+                            <><ToggleLeft className="h-4 w-4 text-muted-foreground" /><span className="text-xs font-medium text-muted-foreground">Inactive</span></>
+                          )}
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(org)}>
+                          <Button variant="ghost" size="icon" onClick={() => setBulkAssignOrg(org)} title="Assign users">
+                            <Users className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(org)} title="Edit">
                             <Pencil className="h-4 w-4" />
                           </Button>
                         </div>
@@ -288,6 +302,14 @@ export default function TrainingOrganizations() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* Bulk Assign Dialog */}
+        {bulkAssignOrg && (
+          <BulkAssignOrgDialog
+            org={bulkAssignOrg}
+            open={!!bulkAssignOrg}
+            onOpenChange={(open) => { if (!open) setBulkAssignOrg(null); }}
+          />
+        )}
       </div>
     </SidebarLayout>
   );
