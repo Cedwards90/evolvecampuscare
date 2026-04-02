@@ -96,6 +96,7 @@ export default function UserManagementPage() {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
   const { data: users, isLoading } = useUsers();
+  const { data: organizations } = useTrainingOrganizations();
   const { data: pendingInvitations } = usePendingInvitations();
   const updateRole = useUpdateUserRole();
   const deleteUser = useDeleteUser();
