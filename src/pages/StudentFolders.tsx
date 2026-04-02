@@ -92,6 +92,7 @@ export default function StudentFolders() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
+                  <TableHead>Organization</TableHead>
                   <TableHead>Intake</TableHead>
                   <TableHead className="text-center">Requests</TableHead>
                   <TableHead className="text-center">Pending</TableHead>
