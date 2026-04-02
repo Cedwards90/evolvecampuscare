@@ -59,6 +59,20 @@ export default function StudentFolders() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          {orgOptions.length > 0 && (
+            <Select value={orgFilter} onValueChange={setOrgFilter}>
+              <SelectTrigger className="w-48">
+                <Building2 className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter by org" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Organizations</SelectItem>
+                {orgOptions.map(([id, name]) => (
+                  <SelectItem key={id} value={id!}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Badge variant="secondary" className="whitespace-nowrap">
             {filtered.length} student{filtered.length !== 1 ? 's' : ''}
           </Badge>
