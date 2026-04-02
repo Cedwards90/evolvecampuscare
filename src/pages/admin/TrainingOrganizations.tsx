@@ -48,14 +48,14 @@ export default function TrainingOrganizations() {
     (o.contact_name || '').toLowerCase().includes(search.toLowerCase())
   );
 
-  // Count members per org by role
+  // Count members per org using resolved organization_id (includes membership fallback)
   const getMemberCounts = (orgId: string) => {
     if (!users) return { students: 0, case_managers: 0, admins: 0 };
-    const orgUsers = users.filter((u: any) => u.organization_id === orgId);
+    const orgUsers = users.filter(u => u.organization_id === orgId);
     return {
-      students: orgUsers.filter((u: any) => u.role === 'student').length,
-      case_managers: orgUsers.filter((u: any) => u.role === 'case_manager').length,
-      admins: orgUsers.filter((u: any) => u.role === 'admin').length,
+      students: orgUsers.filter(u => u.role === 'student').length,
+      case_managers: orgUsers.filter(u => u.role === 'case_manager').length,
+      admins: orgUsers.filter(u => u.role === 'admin').length,
     };
   };
 

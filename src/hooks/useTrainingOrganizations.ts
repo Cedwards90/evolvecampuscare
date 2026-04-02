@@ -78,9 +78,19 @@ export function useBulkAssignOrganization() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ organizationId, userIds }: { organizationId: string; userIds: string[] }) => {
-      // For each user: close previous membership, update profile, create new membership
-      const results = await Promise.all(
+      await Promise.all(
         userIds.map(async (userId) => {
+          // Check if user already has an active membership in this org
+          const { data: existing } = await supabase
+            .from('organization_memberships')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('organization_id', organizationId)
+            .is('left_at', null)
+            .maybeSingle();
+
+          if (existing) return; // Already in this org, skip
+
           // Close any existing active membership for this user (any org)
           await supabase
             .from('organization_memberships')

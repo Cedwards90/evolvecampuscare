@@ -11,13 +11,14 @@ export interface UserWithRole {
   role: AppRole;
   created_at: string;
   organization_id: string | null;
+  organization_name: string | null;
 }
 
 export function useUsers() {
   return useQuery({
     queryKey: ['users-with-roles'],
     queryFn: async (): Promise<UserWithRole[]> => {
-      // Fetch profiles with their roles
+      // Fetch profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, user_id, email, full_name, avatar_url, created_at, organization_id')
@@ -32,13 +33,51 @@ export function useUsers() {
 
       if (rolesError) throw rolesError;
 
-      // Map roles to profiles
-      const roleMap = new Map(roles?.map(r => [r.user_id, r.role]) || []);
+      // Fetch active memberships with org names
+      const { data: memberships, error: memError } = await supabase
+        .from('organization_memberships')
+        .select('user_id, organization_id, training_organizations(name)')
+        .is('left_at', null);
 
-      return (profiles || []).map(profile => ({
-        ...profile,
-        role: (roleMap.get(profile.user_id) || 'student') as AppRole,
-      }));
+      if (memError) throw memError;
+
+      // Build lookup maps
+      const roleMap = new Map(roles?.map(r => [r.user_id, r.role]) || []);
+      const membershipMap = new Map(
+        (memberships || []).map((m: any) => [
+          m.user_id,
+          { organization_id: m.organization_id, organization_name: m.training_organizations?.name || null },
+        ])
+      );
+
+      // Fetch org names for profiles that have organization_id but no membership
+      const orgIds = new Set(
+        (profiles || [])
+          .map(p => p.organization_id)
+          .filter((id): id is string => !!id)
+      );
+      
+      let orgNameMap = new Map<string, string>();
+      if (orgIds.size > 0) {
+        const { data: orgs } = await supabase
+          .from('training_organizations')
+          .select('id, name')
+          .in('id', [...orgIds]);
+        orgNameMap = new Map((orgs || []).map(o => [o.id, o.name]));
+      }
+
+      return (profiles || []).map(profile => {
+        const membership = membershipMap.get(profile.user_id);
+        const orgId = profile.organization_id || membership?.organization_id || null;
+        const orgName = membership?.organization_name || (orgId ? orgNameMap.get(orgId) || null : null);
+
+        return {
+          ...profile,
+          organization_id: orgId,
+          organization_name: orgName,
+          role: (roleMap.get(profile.user_id) || 'student') as AppRole,
+        };
+      });
     },
   });
 }
