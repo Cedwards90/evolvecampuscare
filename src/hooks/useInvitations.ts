@@ -53,6 +53,7 @@ interface SendInvitationParams {
   role: AppRole;
   notes?: string;
   autoAssignCaseManager?: string;
+  organizationId?: string;
 }
 
 export interface InvitationResult {
@@ -74,6 +75,7 @@ export function useSendInvitation() {
           role: params.role,
           notes: params.notes,
           autoAssignCaseManager: params.autoAssignCaseManager,
+          organizationId: params.organizationId,
         },
       });
 

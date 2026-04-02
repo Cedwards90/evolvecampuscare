@@ -37,6 +37,7 @@ interface TokenRequest {
   role: string;
   notes?: string;
   autoAssignCaseManager?: string;
+  organizationId?: string;
 }
 
 // Privileged roles that require MFA verification
@@ -153,7 +154,7 @@ serve(async (req: Request) => {
 
     // Parse request body
     const body: TokenRequest = await req.json();
-    const { email, role, notes, autoAssignCaseManager } = body;
+    const { email, role, notes, autoAssignCaseManager, organizationId } = body;
 
     if (!email || !role) {
       return new Response(
@@ -199,6 +200,7 @@ serve(async (req: Request) => {
         expires_at: expiresAt.toISOString(),
         auto_assign_case_manager: autoAssignCaseManager || null,
         notes: notes || null,
+        organization_id: organizationId || null,
       })
       .select()
       .single();

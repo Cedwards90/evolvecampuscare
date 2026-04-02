@@ -78,20 +78,34 @@ export function useBulkAssignOrganization() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ organizationId, userIds }: { organizationId: string; userIds: string[] }) => {
+      // For each user: close previous membership, update profile, create new membership
       const results = await Promise.all(
-        userIds.map(userId =>
-          supabase
+        userIds.map(async (userId) => {
+          // Close any existing active membership for this user (any org)
+          await supabase
+            .from('organization_memberships')
+            .update({ left_at: new Date().toISOString() })
+            .eq('user_id', userId)
+            .is('left_at', null);
+
+          // Update profile
+          const { error } = await supabase
             .from('profiles')
             .update({ organization_id: organizationId })
-            .eq('user_id', userId)
-        )
+            .eq('user_id', userId);
+          if (error) throw error;
+
+          // Create new membership record
+          await supabase
+            .from('organization_memberships')
+            .insert({ user_id: userId, organization_id: organizationId });
+        })
       );
-      const failed = results.find(r => r.error);
-      if (failed?.error) throw failed.error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['training-organizations'] });
       queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-members'] });
     },
   });
 }

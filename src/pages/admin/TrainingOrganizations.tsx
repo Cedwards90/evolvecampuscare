@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Building2, Plus, Pencil, Users, Search, 
   GraduationCap, UserCheck, Shield, Loader2,
@@ -183,7 +184,9 @@ export default function TrainingOrganizations() {
                     <TableRow key={org.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{org.name}</p>
+                          <Link to={`/admin/organizations/${org.id}`} className="font-medium hover:underline text-primary">
+                            {org.name}
+                          </Link>
                           {org.description && <p className="text-xs text-muted-foreground line-clamp-1">{org.description}</p>}
                         </div>
                       </TableCell>

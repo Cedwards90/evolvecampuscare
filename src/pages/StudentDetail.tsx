@@ -12,7 +12,7 @@ import {
   MessageSquare,
   User
 } from 'lucide-react';
-import { StickyNote, PenLine } from 'lucide-react';
+import { StickyNote, PenLine, Building2 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -40,6 +40,7 @@ import { useFileNotes } from '@/hooks/useFileNotes';
 import { Textarea } from '@/components/ui/textarea';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { OrgBadgeInline } from '@/components/OrgBadgeInline';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -329,8 +330,11 @@ export default function StudentDetail() {
                           )}
                           <p className="text-xs text-muted-foreground mt-1">
                             {formatDistanceToNow(new Date(update.created_at), { addSuffix: true })}
-                          </p>
-                        </div>
+                    </p>
+                    {student.profile?.organization_id && (
+                      <OrgBadgeInline orgId={student.profile.organization_id} />
+                    )}
+                  </div>
                       </div>
                     ))}
                   </div>

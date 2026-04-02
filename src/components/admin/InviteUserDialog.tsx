@@ -100,6 +100,7 @@ export function InviteUserDialog({ trigger }: InviteUserDialogProps) {
       email: data.email,
       role: data.role,
       notes: data.notes,
+      organizationId: selectedOrgId && selectedOrgId !== 'none' ? selectedOrgId : undefined,
     });
     
     setInviteResult({

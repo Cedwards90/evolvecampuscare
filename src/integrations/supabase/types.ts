@@ -216,6 +216,41 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_memberships: {
+        Row: {
+          created_at: string
+          id: string
+          joined_at: string
+          left_at: string | null
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_memberships_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "training_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -577,6 +612,7 @@ export type Database = {
           invited_by: string
           invited_role: Database["public"]["Enums"]["app_role"]
           notes: string | null
+          organization_id: string | null
           token: string
           updated_at: string | null
         }
@@ -590,6 +626,7 @@ export type Database = {
           invited_by: string
           invited_role: Database["public"]["Enums"]["app_role"]
           notes?: string | null
+          organization_id?: string | null
           token: string
           updated_at?: string | null
         }
@@ -603,10 +640,19 @@ export type Database = {
           invited_by?: string
           invited_role?: Database["public"]["Enums"]["app_role"]
           notes?: string | null
+          organization_id?: string | null
           token?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "training_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

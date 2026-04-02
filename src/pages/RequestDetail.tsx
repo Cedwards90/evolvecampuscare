@@ -26,6 +26,7 @@ import { PriorityBadge } from '@/components/PriorityBadge';
 import { CategoryBadge } from '@/components/CategoryBadge';
 import { useRequest } from '@/hooks/useRequest';
 import { useAuth } from '@/contexts/AuthContext';
+import { OrgBadgeInline } from '@/components/OrgBadgeInline';
 
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
@@ -267,6 +268,9 @@ export default function RequestDetail() {
                       {request.student?.full_name || 'Unknown Student'}
                     </p>
                     <p className="text-sm text-muted-foreground">Student</p>
+                    {(request.student as any)?.organization_id && (
+                      <OrgBadgeInline orgId={(request.student as any).organization_id} />
+                    )}
                   </div>
                 </div>
                 
