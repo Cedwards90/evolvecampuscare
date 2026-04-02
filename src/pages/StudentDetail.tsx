@@ -40,6 +40,7 @@ import { useFileNotes } from '@/hooks/useFileNotes';
 import { Textarea } from '@/components/ui/textarea';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { OrgBadgeInline } from '@/components/OrgBadgeInline';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
