@@ -194,13 +194,22 @@ export default function SubmitRequest() {
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                         <cat.icon className="h-5 w-5 text-primary" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <h3 className="font-semibold">{cat.label}</h3>
                         <p className="text-sm text-muted-foreground">{cat.description}</p>
+                        <ul className="mt-2 space-y-0.5">
+                          {cat.examples.map((ex, i) => (
+                            <li key={i} className="text-xs text-muted-foreground/70">• {ex}</li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
                   ))}
                 </div>
+                <p className="mt-4 text-sm text-muted-foreground text-center">
+                  <HelpCircle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+                  Not sure which category fits? Choose <strong>"Other"</strong> and we'll route it to the right team.
+                </p>
               </CardContent>
             </Card>
           )}

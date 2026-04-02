@@ -288,31 +288,60 @@ export default function SupportCenter() {
           </div>
         </section>
 
-        {/* Resources Section */}
+        {/* Self-Help Resources */}
         <section>
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <BookOpen className="h-5 w-5" />
-            Additional Resources
+            Self-Help Resources
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Before submitting a request, check if one of these resources can help right away.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { title: 'Academic Tutoring', desc: 'Free peer tutoring, writing labs, and study groups.', icon: BookOpen, href: '#' },
+              { title: 'Financial Aid Office', desc: 'Scholarship deadlines, FAFSA help, and payment plans.', icon: FileText, href: '#' },
+              { title: 'Counseling Services', desc: 'Confidential counseling, support groups, and wellness workshops.', icon: Users, href: '#' },
+              { title: 'Housing Office', desc: 'Room changes, maintenance requests, and housing contracts.', icon: Shield, href: '#' },
+            ].map((res) => (
+              <Card key={res.title} className="hover:border-primary/50 transition-colors">
+                <CardHeader className="pb-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <res.icon className="h-5 w-5 text-primary" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <CardTitle className="text-base">{res.title}</CardTitle>
+                  <CardDescription className="mt-1">{res.desc}</CardDescription>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* Additional Resources */}
+        <section>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            Crisis & External Resources
           </h2>
           <Card>
             <CardContent className="p-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <h4 className="font-medium">Campus Resources</h4>
+                  <h4 className="font-medium">National Hotlines</h4>
                   <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• Counseling & Psychological Services</li>
-                    <li>• Financial Aid Office</li>
-                    <li>• Student Housing Office</li>
-                    <li>• Academic Advising Center</li>
+                    <li>• <strong>988 Suicide & Crisis Lifeline</strong> — Call or text 988</li>
+                    <li>• <strong>Crisis Text Line</strong> — Text HOME to 741741</li>
+                    <li>• <strong>SAMHSA Helpline</strong> — 1-800-662-4357</li>
                   </ul>
                 </div>
                 <div className="space-y-2">
-                  <h4 className="font-medium">External Resources</h4>
+                  <h4 className="font-medium">Campus Quick Contacts</h4>
                   <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• National Crisis Hotline: 988</li>
-                    <li>• Crisis Text Line: Text HOME to 741741</li>
-                    <li>• SAMHSA Helpline: 1-800-662-4357</li>
-                    <li>• Evolve Foundation: evolvefoundation.us</li>
+                    <li>• Counseling & Psychological Services</li>
+                    <li>• Campus Security / Emergency</li>
+                    <li>• <a href="https://www.evolvefoundation.us" target="_blank" rel="noopener noreferrer" className="text-primary underline">Evolve Foundation</a></li>
                   </ul>
                 </div>
               </div>

@@ -70,7 +70,7 @@ export function useSubmitRequest() {
         console.error('Failed to send new request notification:', err);
       });
 
-      // If auto-assigned, create an internal note and send assignment notification
+      // If auto-assigned, create an internal note, send assignment notification, and send welcome message
       if (hasAssignedCM) {
         supabase.from('request_updates').insert({
           request_id: data.id,
@@ -96,6 +96,18 @@ export function useSubmitRequest() {
           },
         }).catch((err) => {
           console.error('Failed to send case manager notification:', err);
+        });
+
+        // Send automated welcome message so the student's message thread isn't empty
+        supabase.from('staff_messages').insert({
+          request_id: data.id,
+          sender_id: hasAssignedCM,
+          recipient_id: userId,
+          student_id: userId,
+          content: `Hi ${studentName.split(' ')[0] || 'there'}! Your request "${title}" has been received and assigned. You'll hear back within 24–48 hours. Feel free to message here if you have any questions in the meantime.`,
+          subject: `Re: ${title}`,
+        }).then(({ error: msgError }) => {
+          if (msgError) console.error('Failed to send welcome message:', msgError);
         });
       }
 

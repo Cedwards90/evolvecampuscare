@@ -241,11 +241,21 @@ export default function TrackRequests() {
             />
           ) : (
             <div className="grid gap-4">
+              {/* Unassigned banner */}
+              {requests.some(r => !r.assigned_case_manager_id && r.status === 'submitted') && (
+                <Alert className="border-primary/30 bg-primary/5">
+                  <Info className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-sm">
+                    Some of your requests are being reviewed. A case manager will be assigned shortly.
+                  </AlertDescription>
+                </Alert>
+              )}
               {requests.map((request) => (
                 <Sheet key={request.id}>
                   <SheetTrigger asChild>
                     <div className="cursor-pointer">
                       <RequestCard request={request} />
+                      <RequestTimeline request={request} />
                     </div>
                   </SheetTrigger>
                   <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
