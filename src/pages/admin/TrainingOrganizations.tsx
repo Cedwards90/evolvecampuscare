@@ -223,13 +223,26 @@ export default function TrainingOrganizations() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={org.is_active ? 'default' : 'outline'}>
-                          {org.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1.5 px-2"
+                          onClick={() => toggleActive(org)}
+                          disabled={updateOrg.isPending}
+                        >
+                          {org.is_active ? (
+                            <><ToggleRight className="h-4 w-4 text-primary" /><span className="text-xs font-medium">Active</span></>
+                          ) : (
+                            <><ToggleLeft className="h-4 w-4 text-muted-foreground" /><span className="text-xs font-medium text-muted-foreground">Inactive</span></>
+                          )}
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(org)}>
+                          <Button variant="ghost" size="icon" onClick={() => setBulkAssignOrg(org)} title="Assign users">
+                            <Users className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(org)} title="Edit">
                             <Pencil className="h-4 w-4" />
                           </Button>
                         </div>
