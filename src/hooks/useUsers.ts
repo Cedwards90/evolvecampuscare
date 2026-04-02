@@ -10,6 +10,7 @@ export interface UserWithRole {
   avatar_url: string | null;
   role: AppRole;
   created_at: string;
+  organization_id: string | null;
 }
 
 export function useUsers() {
