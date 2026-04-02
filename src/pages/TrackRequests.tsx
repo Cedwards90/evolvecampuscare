@@ -8,7 +8,13 @@ import {
   Clock, 
   Plus,
   Video,
-  Loader2
+  Loader2,
+  Info,
+  Check,
+  UserPlus,
+  PlayCircle,
+  CalendarCheck,
+  CheckCircle2
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -40,7 +46,54 @@ import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDi
 import { useRequests } from '@/hooks/useRequests';
 import { useMyAppointments } from '@/hooks/useMyAppointments';
 import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 import type { SupportRequest, RequestStatus, RequestCategory } from '@/types/database';
+
+const timelineSteps = [
+  { key: 'submitted', label: 'Submitted', icon: Check },
+  { key: 'assigned', label: 'Assigned', icon: UserPlus },
+  { key: 'in_progress', label: 'In Progress', icon: PlayCircle },
+  { key: 'resolved', label: 'Resolved', icon: CheckCircle2 },
+];
+
+function getActiveStep(request: SupportRequest) {
+  if (request.status === 'resolved' || request.status === 'cancelled') return 3;
+  if (request.status === 'in_progress' || request.status === 'escalated') return 2;
+  if (request.assigned_case_manager_id) return 1;
+  return 0;
+}
+
+function RequestTimeline({ request }: { request: SupportRequest }) {
+  const activeStep = getActiveStep(request);
+  return (
+    <div className="flex items-center gap-1 mt-3">
+      {timelineSteps.map((step, i) => {
+        const isComplete = i <= activeStep;
+        const isCurrent = i === activeStep;
+        return (
+          <div key={step.key} className="flex items-center gap-1 flex-1 last:flex-initial">
+            <div className="flex flex-col items-center gap-0.5">
+              <div className={cn(
+                'flex h-6 w-6 items-center justify-center rounded-full transition-colors',
+                isComplete ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
+                isCurrent && 'ring-2 ring-primary/30'
+              )}>
+                <step.icon className="h-3 w-3" />
+              </div>
+              <span className={cn('text-[10px] leading-tight text-center', isComplete ? 'text-foreground font-medium' : 'text-muted-foreground')}>
+                {step.label}
+              </span>
+            </div>
+            {i < timelineSteps.length - 1 && (
+              <div className={cn('h-0.5 flex-1 rounded-full', i < activeStep ? 'bg-primary' : 'bg-muted')} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function TrackRequests() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -188,11 +241,21 @@ export default function TrackRequests() {
             />
           ) : (
             <div className="grid gap-4">
+              {/* Unassigned banner */}
+              {requests.some(r => !r.assigned_case_manager_id && r.status === 'submitted') && (
+                <Alert className="border-primary/30 bg-primary/5">
+                  <Info className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-sm">
+                    Some of your requests are being reviewed. A case manager will be assigned shortly.
+                  </AlertDescription>
+                </Alert>
+              )}
               {requests.map((request) => (
                 <Sheet key={request.id}>
                   <SheetTrigger asChild>
                     <div className="cursor-pointer">
                       <RequestCard request={request} />
+                      <RequestTimeline request={request} />
                     </div>
                   </SheetTrigger>
                   <SheetContent className="w-full sm:max-w-lg overflow-y-auto">

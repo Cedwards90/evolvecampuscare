@@ -155,6 +155,34 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Privacy & Compliance Section */}
+      <section className="border-t border-border/40 bg-muted/20">
+        <div className="container py-12 md:py-20">
+          <div className="mx-auto max-w-3xl text-center mb-10">
+            <Shield className="h-8 w-8 text-primary mx-auto mb-3" />
+            <h2 className="font-display text-h2 md:text-3xl font-bold">Your Privacy Matters</h2>
+            <p className="mt-3 text-muted-foreground">
+              We take data protection seriously. Here's how we keep your information safe.
+            </p>
+          </div>
+          <div className="mx-auto max-w-4xl grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { title: 'Encrypted at Rest', desc: 'AES-256 encryption for all stored data' },
+              { title: 'Encrypted in Transit', desc: 'TLS 1.3 secures every connection' },
+              { title: 'MFA for Staff', desc: 'Multi-factor authentication required for all staff accounts' },
+              { title: 'Session Timeouts', desc: 'Automatic logout after 15 minutes of inactivity' },
+              { title: 'GDPR & CCPA', desc: 'Compliant with major data privacy regulations' },
+              { title: 'Access Controls', desc: 'Role-based permissions ensure data is seen only by those who need it' },
+            ].map((item) => (
+              <div key={item.title} className="rounded-lg border border-border/50 bg-card/50 p-4">
+                <h4 className="font-semibold text-sm">{item.title}</h4>
+                <p className="text-xs text-muted-foreground mt-1">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="container space-y-12 py-12 md:py-24">
         <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
