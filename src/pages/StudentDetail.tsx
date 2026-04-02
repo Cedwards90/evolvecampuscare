@@ -189,6 +189,10 @@ export default function StudentDetail() {
               <Clock className="h-4 w-4" />
               Activity
             </TabsTrigger>
+            <TabsTrigger value="file" className="gap-2">
+              <StickyNote className="h-4 w-4" />
+              Student File
+            </TabsTrigger>
           </TabsList>
 
           {/* Requests Tab */}
