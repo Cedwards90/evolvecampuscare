@@ -184,7 +184,9 @@ export default function TrainingOrganizations() {
                     <TableRow key={org.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{org.name}</p>
+                          <Link to={`/admin/organizations/${org.id}`} className="font-medium hover:underline text-primary">
+                            {org.name}
+                          </Link>
                           {org.description && <p className="text-xs text-muted-foreground line-clamp-1">{org.description}</p>}
                         </div>
                       </TableCell>
