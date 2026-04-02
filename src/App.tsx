@@ -24,6 +24,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
 import TrainingOrganizations from "./pages/admin/TrainingOrganizations";
+import OrganizationDetail from "./pages/admin/OrganizationDetail";
 import RequestDetail from "./pages/RequestDetail";
 import RequestsList from "./pages/RequestsList";
 import CaseManagerDetail from "./pages/CaseManagerDetail";
