@@ -116,6 +116,16 @@ export default function StudentFolders() {
                       </Link>
                     </TableCell>
                     <TableCell>
+                      {student.organization_name ? (
+                        <Badge variant="outline" className="gap-1 text-xs">
+                          <Building2 className="h-3 w-3" />
+                          {student.organization_name}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       {student.intake_completed ? (
                         <Badge variant="default" className="gap-1">
                           <CheckCircle className="h-3 w-3" />
