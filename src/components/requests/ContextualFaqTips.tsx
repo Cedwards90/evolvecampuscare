@@ -10,7 +10,7 @@ const categoryFaqs: Record<RequestCategory, { q: string; a: string }[]> = {
     { q: 'How quickly will I get a response?', a: 'Most academic requests are reviewed within 1-2 business days. Mark it as High priority if there\'s a deadline.' },
   ],
   financial: [
-    { q: 'Can I request emergency funds?', a: 'Yes — select High or Emergency priority and describe your financial need. You can also specify a dollar amount.' },
+    { q: 'Can I request emergency funds?', a: 'Yes -- select High or Emergency priority and describe your financial need. You can also specify a dollar amount.' },
     { q: 'What documents should I attach?', a: 'Bills, financial aid letters, or any documentation that supports your request.' },
   ],
   mental_health: [
