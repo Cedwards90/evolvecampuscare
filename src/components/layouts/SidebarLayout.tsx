@@ -16,7 +16,8 @@ import {
   HelpCircle,
   Shield,
   MessageSquare,
-  FolderOpen
+  FolderOpen,
+  Building2
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -62,6 +63,7 @@ const navItems: NavItem[] = [
   { label: 'Messages', href: '/messages', icon: MessageSquare, roles: ['student', 'case_manager', 'admin'] },
   { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin'] },
   { label: 'User Management', href: '/admin/users', icon: Shield, roles: ['admin'] },
+  { label: 'Organizations', href: '/admin/organizations', icon: Building2, roles: ['admin'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin'] },
 ];
 

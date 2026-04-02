@@ -17,6 +17,7 @@ import {
   Send,
   Trash2,
   AlertTriangle,
+  Building2,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
@@ -65,6 +66,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUsers, useUpdateUserRole, useDeleteUser } from '@/hooks/useUsers';
+import { useTrainingOrganizations } from '@/hooks/useTrainingOrganizations';
 import type { AppRole } from '@/types/database';
 
 const ITEMS_PER_PAGE = 10;
@@ -84,6 +86,7 @@ const roleColors: Record<AppRole, string> = {
 export default function UserManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<AppRole | 'all'>('all');
+  const [orgFilter, setOrgFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; currentRole: AppRole } | null>(null);
   const [newRole, setNewRole] = useState<AppRole | null>(null);
@@ -93,6 +96,7 @@ export default function UserManagementPage() {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
   const { data: users, isLoading } = useUsers();
+  const { data: organizations } = useTrainingOrganizations();
   const { data: pendingInvitations } = usePendingInvitations();
   const updateRole = useUpdateUserRole();
   const deleteUser = useDeleteUser();
@@ -107,10 +111,11 @@ export default function UserManagementPage() {
         user.email.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+      const matchesOrg = orgFilter === 'all' || user.organization_id === orgFilter;
       
-      return matchesSearch && matchesRole;
+      return matchesSearch && matchesRole && matchesOrg;
     });
-  }, [users, searchQuery, roleFilter]);
+  }, [users, searchQuery, roleFilter, orgFilter]);
 
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = filteredUsers.slice(
@@ -315,6 +320,26 @@ export default function UserManagementPage() {
                   <SelectItem value="admin">Administrators</SelectItem>
                 </SelectContent>
               </Select>
+              {organizations && organizations.length > 0 && (
+                <Select 
+                  value={orgFilter} 
+                  onValueChange={(value) => {
+                    setOrgFilter(value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:w-48">
+                    <Building2 className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Filter by org" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Organizations</SelectItem>
+                    {organizations.map(org => (
+                      <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Users Table */}
@@ -333,6 +358,7 @@ export default function UserManagementPage() {
                     <TableRow>
                       <TableHead>User</TableHead>
                       <TableHead>Email</TableHead>
+                      <TableHead>Organization</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Joined</TableHead>
                       <TableHead className="w-[70px]"></TableHead>
@@ -360,6 +386,16 @@ export default function UserManagementPage() {
                               <Mail className="h-4 w-4 text-muted-foreground" />
                               <span className="text-sm">{user.email}</span>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const org = organizations?.find(o => o.id === user.organization_id);
+                              return org ? (
+                                <Badge variant="outline" className="gap-1 text-xs">
+                                  <Building2 className="h-3 w-3" />{org.name}
+                                </Badge>
+                              ) : <span className="text-muted-foreground text-xs">—</span>;
+                            })()}
                           </TableCell>
                           <TableCell>
                             <Badge className={`gap-1 ${roleColors[user.role]}`}>

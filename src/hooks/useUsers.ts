@@ -10,6 +10,7 @@ export interface UserWithRole {
   avatar_url: string | null;
   role: AppRole;
   created_at: string;
+  organization_id: string | null;
 }
 
 export function useUsers() {
@@ -19,7 +20,7 @@ export function useUsers() {
       // Fetch profiles with their roles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, user_id, email, full_name, avatar_url, created_at')
+        .select('id, user_id, email, full_name, avatar_url, created_at, organization_id')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;

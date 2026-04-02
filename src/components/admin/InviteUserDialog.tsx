@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useSendInvitation } from '@/hooks/useInvitations';
+import { useActiveOrganizations } from '@/hooks/useTrainingOrganizations';
 import { useToast } from '@/hooks/use-toast';
 import type { AppRole } from '@/types/database';
 
@@ -77,7 +78,9 @@ const roleConfig: Record<AppRole, { label: string; icon: typeof Shield; descript
 export function InviteUserDialog({ trigger }: InviteUserDialogProps) {
   const [open, setOpen] = useState(false);
   const [inviteResult, setInviteResult] = useState<InviteResultState | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>('');
   const sendInvitation = useSendInvitation();
+  const { data: organizations } = useActiveOrganizations();
   const { toast } = useToast();
 
   const form = useForm<InviteFormData>({
@@ -255,6 +258,21 @@ export function InviteUserDialog({ trigger }: InviteUserDialogProps) {
                     {roleConfig[selectedRole]?.description}
                   </p>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="organization">Organization (Optional)</Label>
+                <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select organization" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No organization</SelectItem>
+                    {(organizations || []).map(org => (
+                      <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

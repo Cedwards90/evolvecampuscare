@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderOpen, Search, CheckCircle, Clock, FileText } from 'lucide-react';
+import { FolderOpen, Search, CheckCircle, Clock, FileText, Building2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -8,6 +8,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EmptyState } from '@/components/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -28,13 +29,16 @@ function getInitials(name: string | null): string {
 export default function StudentFolders() {
   const { data: students, isLoading } = useStudentFolders();
   const [search, setSearch] = useState('');
+  const [orgFilter, setOrgFilter] = useState<string>('all');
+
+  // Get unique orgs for filter
+  const orgOptions = [...new Map((students || []).filter(s => s.organization_name).map(s => [s.organization_id, s.organization_name])).entries()];
 
   const filtered = (students || []).filter(s => {
     const q = search.toLowerCase();
-    return (
-      (s.full_name || '').toLowerCase().includes(q) ||
-      s.email.toLowerCase().includes(q)
-    );
+    const matchesSearch = (s.full_name || '').toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
+    const matchesOrg = orgFilter === 'all' || s.organization_id === orgFilter;
+    return matchesSearch && matchesOrg;
   });
 
   return (
@@ -55,6 +59,20 @@ export default function StudentFolders() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          {orgOptions.length > 0 && (
+            <Select value={orgFilter} onValueChange={setOrgFilter}>
+              <SelectTrigger className="w-48">
+                <Building2 className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter by org" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Organizations</SelectItem>
+                {orgOptions.map(([id, name]) => (
+                  <SelectItem key={id} value={id!}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Badge variant="secondary" className="whitespace-nowrap">
             {filtered.length} student{filtered.length !== 1 ? 's' : ''}
           </Badge>
@@ -74,6 +92,7 @@ export default function StudentFolders() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
+                  <TableHead>Organization</TableHead>
                   <TableHead>Intake</TableHead>
                   <TableHead className="text-center">Requests</TableHead>
                   <TableHead className="text-center">Pending</TableHead>
@@ -95,6 +114,16 @@ export default function StudentFolders() {
                           <p className="text-xs text-muted-foreground">{student.email}</p>
                         </div>
                       </Link>
+                    </TableCell>
+                    <TableCell>
+                      {student.organization_name ? (
+                        <Badge variant="outline" className="gap-1 text-xs">
+                          <Building2 className="h-3 w-3" />
+                          {student.organization_name}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {student.intake_completed ? (
