@@ -40,6 +40,7 @@ export default function TrainingOrganizations() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<TrainingOrganization | null>(null);
   const [form, setForm] = useState({ name: '', description: '', contact_name: '', contact_email: '' });
+  const [bulkAssignOrg, setBulkAssignOrg] = useState<TrainingOrganization | null>(null);
 
   const filtered = (orgs || []).filter(o =>
     o.name.toLowerCase().includes(search.toLowerCase()) ||
