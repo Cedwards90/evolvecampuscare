@@ -16,6 +16,7 @@ export interface Profile {
   avatar_url: string | null;
   phone: string | null;
   preferred_language: string;
+  organization_id: string | null;
   created_at: string;
   updated_at: string;
 }
