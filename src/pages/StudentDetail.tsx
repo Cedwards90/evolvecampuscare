@@ -338,6 +338,11 @@ export default function StudentDetail() {
               </Card>
             )}
           </TabsContent>
+
+          {/* Student File Tab */}
+          <TabsContent value="file" className="space-y-4">
+            <StudentFileTab studentId={id!} />
+          </TabsContent>
         </Tabs>
       </div>
     </SidebarLayout>
