@@ -358,6 +358,7 @@ export default function UserManagementPage() {
                     <TableRow>
                       <TableHead>User</TableHead>
                       <TableHead>Email</TableHead>
+                      <TableHead>Organization</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Joined</TableHead>
                       <TableHead className="w-[70px]"></TableHead>
