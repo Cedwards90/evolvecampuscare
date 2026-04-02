@@ -388,6 +388,16 @@ export default function UserManagementPage() {
                             </div>
                           </TableCell>
                           <TableCell>
+                            {(() => {
+                              const org = organizations?.find(o => o.id === user.organization_id);
+                              return org ? (
+                                <Badge variant="outline" className="gap-1 text-xs">
+                                  <Building2 className="h-3 w-3" />{org.name}
+                                </Badge>
+                              ) : <span className="text-muted-foreground text-xs">—</span>;
+                            })()}
+                          </TableCell>
+                          <TableCell>
                             <Badge className={`gap-1 ${roleColors[user.role]}`}>
                               <RoleIcon className="h-3 w-3" />
                               <span className="capitalize">{user.role.replace('_', ' ')}</span>
