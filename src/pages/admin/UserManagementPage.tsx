@@ -111,8 +111,9 @@ export default function UserManagementPage() {
         user.email.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+      const matchesOrg = orgFilter === 'all' || user.organization_id === orgFilter;
       
-      return matchesSearch && matchesRole;
+      return matchesSearch && matchesRole && matchesOrg;
     });
   }, [users, searchQuery, roleFilter]);
 
