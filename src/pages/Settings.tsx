@@ -281,98 +281,113 @@ export default function Settings() {
           </TabsContent>
 
           <TabsContent value="security" className="space-y-6">
-            {showMFAEnrollment ? (
-              <MFAEnrollment
-                onEnrollmentComplete={() => {
-                  setShowMFAEnrollment(false);
-                  checkMFAStatus();
-                }}
-                onSkip={() => setShowMFAEnrollment(false)}
-              />
+            {isPrivilegedRole ? (
+              showMFAEnrollment ? (
+                <MFAEnrollment
+                  onEnrollmentComplete={() => {
+                    setShowMFAEnrollment(false);
+                    checkMFAStatus();
+                  }}
+                  onSkip={() => setShowMFAEnrollment(false)}
+                />
+              ) : (
+                <Card className="border border-border/50">
+                  <CardHeader>
+                    <CardTitle className="font-display">Two-Factor Authentication</CardTitle>
+                    <CardDescription>
+                      Add an extra layer of security to your account
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {!isEnrolled && (
+                      <Alert>
+                        <Shield className="h-4 w-4" />
+                        <AlertDescription>
+                          As an {role === 'admin' ? 'administrator' : 'case manager'}, we strongly recommend enabling two-factor authentication for enhanced security.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-base">MFA Status</Label>
+                        <p className="text-sm text-muted-foreground">
+                          {isEnrolled 
+                            ? 'Two-factor authentication is enabled'
+                            : 'Two-factor authentication is not enabled'
+                          }
+                        </p>
+                      </div>
+                      {mfaLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : isEnrolled ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-success">Enabled</span>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Disable
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Disable Two-Factor Authentication?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will remove the extra security layer from your account. As a privileged user, this is not recommended.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDisableMFA}>
+                                  Disable MFA
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      ) : (
+                        <Button onClick={() => setShowMFAEnrollment(true)}>
+                          Enable MFA
+                        </Button>
+                      )}
+                    </div>
+
+                    {isEnrolled && (
+                      <div className="pt-4 border-t">
+                        <h4 className="text-sm font-medium mb-2">Enrolled Devices</h4>
+                        <div className="space-y-2">
+                          {factors.filter(f => f.status === 'verified').map(factor => (
+                            <div key={factor.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <Shield className="h-5 w-5 text-primary" />
+                                <div>
+                                  <p className="text-sm font-medium">{factor.friendly_name || 'Authenticator App'}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Added {new Date(factor.created_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )
             ) : (
               <Card className="border border-border/50">
                 <CardHeader>
-                  <CardTitle className="font-display">Two-Factor Authentication</CardTitle>
+                  <CardTitle className="font-display">Security</CardTitle>
                   <CardDescription>
-                    Add an extra layer of security to your account
+                    Your account is secured with your email and password.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  {isPrivilegedRole && !isEnrolled && (
-                    <Alert>
-                      <Shield className="h-4 w-4" />
-                      <AlertDescription>
-                        As an {role === 'admin' ? 'administrator' : 'case manager'}, we strongly recommend enabling two-factor authentication for enhanced security.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-base">MFA Status</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {isEnrolled 
-                          ? 'Two-factor authentication is enabled'
-                          : 'Two-factor authentication is not enabled'
-                        }
-                      </p>
-                    </div>
-                    {mfaLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : isEnrolled ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-success">Enabled</span>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Disable
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Disable Two-Factor Authentication?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will remove the extra security layer from your account. 
-                                {isPrivilegedRole && ' As a privileged user, this is not recommended.'}
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleDisableMFA}>
-                                Disable MFA
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    ) : (
-                      <Button onClick={() => setShowMFAEnrollment(true)}>
-                        Enable MFA
-                      </Button>
-                    )}
-                  </div>
-
-                  {isEnrolled && (
-                    <div className="pt-4 border-t">
-                      <h4 className="text-sm font-medium mb-2">Enrolled Devices</h4>
-                      <div className="space-y-2">
-                        {factors.filter(f => f.status === 'verified').map(factor => (
-                          <div key={factor.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <Shield className="h-5 w-5 text-primary" />
-                              <div>
-                                <p className="text-sm font-medium">{factor.friendly_name || 'Authenticator App'}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Added {new Date(factor.created_at).toLocaleDateString()}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    If you need to change your password, use the "Forgot Password" option on the login page.
+                  </p>
                 </CardContent>
               </Card>
             )}
