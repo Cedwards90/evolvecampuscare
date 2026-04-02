@@ -320,6 +320,26 @@ export default function UserManagementPage() {
                   <SelectItem value="admin">Administrators</SelectItem>
                 </SelectContent>
               </Select>
+              {organizations && organizations.length > 0 && (
+                <Select 
+                  value={orgFilter} 
+                  onValueChange={(value) => {
+                    setOrgFilter(value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:w-48">
+                    <Building2 className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Filter by org" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Organizations</SelectItem>
+                    {organizations.map(org => (
+                      <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Users Table */}
