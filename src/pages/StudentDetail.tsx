@@ -329,8 +329,11 @@ export default function StudentDetail() {
                           )}
                           <p className="text-xs text-muted-foreground mt-1">
                             {formatDistanceToNow(new Date(update.created_at), { addSuffix: true })}
-                          </p>
-                        </div>
+                    </p>
+                    {student.profile?.organization_id && (
+                      <OrgBadgeInline orgId={student.profile.organization_id} />
+                    )}
+                  </div>
                       </div>
                     ))}
                   </div>
