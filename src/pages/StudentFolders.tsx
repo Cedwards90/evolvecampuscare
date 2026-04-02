@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderOpen, Search, CheckCircle, Clock, FileText } from 'lucide-react';
+import { FolderOpen, Search, CheckCircle, Clock, FileText, Building2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
