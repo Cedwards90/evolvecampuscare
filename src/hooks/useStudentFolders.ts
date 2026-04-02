@@ -86,6 +86,7 @@ export function useStudentFolders() {
         const lastReq = reqs.length > 0
           ? reqs.reduce((a, b) => (a.updated_at > b.updated_at ? a : b))
           : null;
+        const orgId = (p as any).organization_id;
 
         return {
           user_id: p.user_id,
@@ -95,6 +96,8 @@ export function useStudentFolders() {
           total_requests: reqs.length,
           pending_requests: reqs.filter(r => pendingStatuses.includes(r.status)).length,
           last_activity: lastReq?.updated_at || null,
+          organization_id: orgId || null,
+          organization_name: orgId ? orgMap.get(orgId) || null : null,
         };
       }).sort((a, b) => (b.last_activity || '').localeCompare(a.last_activity || ''));
     },
