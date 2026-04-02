@@ -1,43 +1,87 @@
 
 
-## Plan: UX Polish — Five Targeted Improvements
+## Plan: Enhanced Student FAQ with Categories, Search, and Contextual Help
 
-### 1. Enhanced Category Selection with Examples
-**File:** `src/pages/SubmitRequest.tsx`
+### Overview
+Transform the current flat FAQ list into a structured, searchable, category-organized knowledge base for students. Add a search bar with filtering, group FAQs by portal categories, expand content to cover all workflows, and add contextual FAQ tips inside the request submission page.
 
-The categories array already has a `description` field (e.g. "Course registration, grades, academic advising"). Currently these are shown as short descriptions. Expand each with 2-3 concrete example scenarios so students can confidently classify ambiguous issues. Also add a small "Not sure?" hint below the category grid pointing to "Other" as a catch-all.
-
-### 2. Visual Request Timeline on Track Requests Page
-**File:** `src/pages/TrackRequests.tsx`
-
-Currently the tracking page shows request cards with status/priority badges. Add a compact visual stepper/timeline beneath each request card showing the progression: Submitted → Assigned → In Progress → Meeting Scheduled → Resolved. Highlight the current step and grey out future steps. This reuses the status data already available on each request and the `appointments` query.
-
-### 3. Automated Welcome Message for New Conversations
-**File:** `src/hooks/useSubmitRequest.ts`
-
-After a request is successfully created and a case manager is auto-assigned, insert an automated `staff_messages` entry from the system (using the case manager's ID as sender) with a templated acknowledgement: "Your request has been received and assigned to [Case Manager Name]. You'll hear back within 24-48 hours." This ensures the Messages page is never empty for students who have an assigned case manager.
-
-**File:** `src/pages/TrackRequests.tsx` — Add a small info banner for unassigned requests: "Your request is being reviewed. A case manager will be assigned shortly."
-
-### 4. Privacy & Compliance Banner on Landing Page
-**File:** `src/pages/Landing.tsx`
-
-Expand the existing "Secure & Private" feature card into a dedicated "Your Privacy Matters" section near the footer. List specific compliance measures: GDPR/CCPA data rights, AES-256 encryption at rest, TLS 1.3 in transit, MFA for staff accounts, session timeouts, and a link to the privacy policy.
-
-### 5. Self-Help Resource Links in Support Center
+### 1. Restructure FAQ Data with Categories
 **File:** `src/pages/SupportCenter.tsx`
 
-Add a "Self-Help Resources" section above or alongside the FAQ with categorized external/internal resource links: academic tutoring centers, financial aid office hours, campus counseling services, housing office contacts. This helps students resolve routine questions without filing a request.
+Replace the flat `studentFaqs` array with a categorized structure:
 
----
+```text
+Categories:
+- Account & Profile (sign up, password reset, profile settings, notifications)
+- Submitting Requests (how to submit, categories explained, priorities, emergency, drafts)
+- Tracking & Scheduling (status tracking, timeline stages, scheduling meetings, editing requests)
+- Privacy & Security (data handling, who sees my info, password security)
+- Resources & Escalation (self-help links, what if FAQ doesn't help, escalation process)
+```
 
-### File Summary
+Each FAQ gets a `category` tag and optional `relatedLink` for deep-linking to the relevant page.
+
+### 2. Add Search Bar and Category Filter Tabs
+**File:** `src/pages/SupportCenter.tsx`
+
+- Add a search `Input` above the FAQ accordion with a `Search` icon and placeholder "Search for help..."
+- Add horizontal filter tabs/badges for each FAQ category (using existing `Badge` or `Button` components)
+- Client-side filtering: match search text against question + answer, filter by selected category
+- Show result count (e.g. "Showing 4 of 22 questions")
+- If no results, show "No matching questions" with a link to submit a request
+
+### 3. Expand Student FAQ Content (~20-25 questions)
+**File:** `src/pages/SupportCenter.tsx`
+
+Add FAQs covering all portal workflows:
+
+**Account & Profile** (4 questions)
+- How do I complete my profile / intake survey?
+- How do I reset my password?
+- How do I change my notification preferences?
+- Who can see my personal information?
+
+**Submitting Requests** (6 questions)
+- How do I submit a support request? (existing, enhanced with step list)
+- What do the categories mean? (Academic, Financial, Mental Health, Housing, Other — with examples)
+- What are the priority levels and how do they affect response time?
+- What qualifies as an emergency request? (existing)
+- Can I save a draft and submit later?
+- Can I attach files to my request?
+
+**Tracking & Scheduling** (5 questions)
+- How do I track my request status? (with timeline stages explained)
+- What do the status stages mean? (Submitted → Assigned → In Progress → Resolved)
+- How can I schedule a meeting with my case manager? (existing)
+- Can I edit my request after submitting? (existing)
+- How long does it take to get a response? (existing)
+
+**Privacy & Security** (3 questions)
+- Is my data secure?
+- Who can access my requests and messages?
+- How do I delete my account or request data removal?
+
+**Getting More Help** (3 questions)
+- What if I can't find the right category for my issue?
+- What happens if my request is escalated?
+- Where can I find campus resources without filing a request?
+
+### 4. Add "Still Need Help?" CTA
+**File:** `src/pages/SupportCenter.tsx`
+
+After the FAQ accordion, add a card with:
+- "Didn't find what you were looking for?"
+- Buttons: "Submit a Request" and "Contact Support"
+
+### 5. Add Contextual FAQ Tips to Request Submission Page
+**File:** `src/pages/SubmitRequest.tsx`
+
+Add a small collapsible "Need help?" section in the sidebar or below the category selector showing 2-3 context-relevant FAQs based on the currently selected category. Uses the `Collapsible` component already available.
+
+### Summary
 
 | File | Change |
 |------|--------|
-| `src/pages/SubmitRequest.tsx` | Richer category descriptions with examples, "Not sure?" hint |
-| `src/pages/TrackRequests.tsx` | Visual step-progress timeline per request, unassigned info banner |
-| `src/hooks/useSubmitRequest.ts` | Auto-send welcome message when case manager is assigned |
-| `src/pages/Landing.tsx` | Privacy & compliance details section |
-| `src/pages/SupportCenter.tsx` | Self-help resource links section |
+| `src/pages/SupportCenter.tsx` | Restructure FAQs into categories, add search bar + category filters, expand to ~22 student questions, add "Still Need Help?" CTA |
+| `src/pages/SubmitRequest.tsx` | Add contextual FAQ tips based on selected category |
 
