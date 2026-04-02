@@ -49,6 +49,7 @@ export default function Dashboard() {
   const { data: allRequests = [], isLoading: requestsLoading } = useRequests({});
   const { data: caseManagers = [], isLoading: cmLoading } = useCaseManagers();
   const { data: myAssignment, isLoading: assignmentLoading } = useMyAssignment();
+  const { intakeCompleted } = useIntakeSurvey();
   
   // Filter requests based on role
   const requests = useMemo(() => {
