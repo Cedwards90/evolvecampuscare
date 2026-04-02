@@ -31,6 +31,7 @@ import Messages from "./pages/Messages";
 import SupportCenter from "./pages/SupportCenter";
 import CompleteProfile from "./pages/CompleteProfile";
 import IntakeSurvey from "./pages/IntakeSurvey";
+import StudentFolders from "./pages/StudentFolders";
 import NotFound from "./pages/NotFound";
 
 // Create query client outside component to ensure stable reference
@@ -145,6 +146,13 @@ function App() {
               <Route path="/students/:id" element={
                 <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
                   <StudentDetail />
+                </ProtectedRoute>
+              } />
+
+              {/* Student Folders */}
+              <Route path="/student-folders" element={
+                <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                  <StudentFolders />
                 </ProtectedRoute>
               } />
 
