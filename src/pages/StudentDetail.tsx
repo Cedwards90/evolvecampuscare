@@ -350,7 +350,7 @@ export default function StudentDetail() {
 }
 
 // ---- Student File Tab Component ----
-function StudentFileTab({ studentId }: { studentId: string }) {
+function StudentFileTab({ studentId, requests }: { studentId: string; requests: import('@/types/database').SupportRequest[] }) {
   const { notes, isLoading: notesLoading, addNote } = useFileNotes(studentId);
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
