@@ -58,6 +58,8 @@ function App() {
                   {/* Public routes */}
                   <Route path="/" element={<Landing />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                   
                   {/* Protected routes - All authenticated users */}
                   <Route path="/dashboard" element={
