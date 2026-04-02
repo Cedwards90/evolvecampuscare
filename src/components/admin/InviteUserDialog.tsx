@@ -78,7 +78,9 @@ const roleConfig: Record<AppRole, { label: string; icon: typeof Shield; descript
 export function InviteUserDialog({ trigger }: InviteUserDialogProps) {
   const [open, setOpen] = useState(false);
   const [inviteResult, setInviteResult] = useState<InviteResultState | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>('');
   const sendInvitation = useSendInvitation();
+  const { data: organizations } = useActiveOrganizations();
   const { toast } = useToast();
 
   const form = useForm<InviteFormData>({
