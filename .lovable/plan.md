@@ -1,81 +1,39 @@
 
 
-## Plan: Training Organizations with Role Assignments
+## Plan: Bulk-Assign Users to Orgs + Toggle Org Status
 
 ### Overview
-Build a training organizations system where admins can manage partner orgs, assign students to them, AND assign staff roles (admin, case_manager) to orgs. This lets you track which staff belong to which partner organization, not just students.
+Add two features to the Training Organizations page:
+1. A "Bulk Assign" dialog that lets admins select multiple existing users and assign them to an organization in one action.
+2. A status toggle button directly in the table row (currently status can only be changed from the edit dialog's switch — make it more accessible).
 
-### 1. Database Migration
+### Changes
 
-**New table: `training_organizations`**
-```sql
-CREATE TABLE public.training_organizations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL UNIQUE,
-  description text,
-  contact_name text,
-  contact_email text,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
--- RLS: all authenticated can view, admins can manage
-```
+#### 1. Bulk Assign Users Hook
+**File:** `src/hooks/useTrainingOrganizations.ts`
+- Add `useBulkAssignOrganization` mutation that takes `{ organizationId, userIds }` and updates `profiles.organization_id` for all selected users in a loop (Supabase JS doesn't support `IN` filter on update, so iterate).
+- Invalidates both `training-organizations` and `users-with-roles` queries on success.
 
-**Add `organization_id` to `profiles` table**
-```sql
-ALTER TABLE public.profiles ADD COLUMN organization_id uuid
-  REFERENCES public.training_organizations(id);
-```
+#### 2. Bulk Assign Dialog Component
+**New file:** `src/components/admin/BulkAssignOrgDialog.tsx`
+- Receives the target org as a prop.
+- Fetches all users via `useUsers()`, shows them in a searchable checkbox list.
+- Users already in the org are pre-checked (disabled or removable).
+- Filter by role (student/case_manager/admin) and search by name/email.
+- "Assign Selected" button calls the bulk mutation.
+- Shows count of selected users and a loading state.
 
-This applies to ALL users (students, case managers, admins) — any role can be associated with an org.
-
-### 2. Admin: Training Organizations Page
-**New file: `src/pages/admin/TrainingOrganizations.tsx`**
-
-CRUD page showing:
-- Table of all orgs with name, description, contact info, active status
-- Member count per org (broken down by role: e.g. "12 students, 2 case managers, 1 admin")
-- Add/edit/deactivate orgs
-- Click an org row to see its members
-
-**New hook: `src/hooks/useTrainingOrganizations.ts`**
-
-### 3. Assign Any Role to an Org
-
-**InviteUserDialog** (`src/components/admin/InviteUserDialog.tsx`)
-- Add org dropdown for ALL invited roles (student, case_manager, admin)
-- When invitation is accepted, the org is set on their profile
-
-**UserManagementPage** (`src/pages/admin/UserManagementPage.tsx`)
-- Show org column for all users (not just students)
-- Allow admins to change a user's org assignment inline
-- Add org filter dropdown
-
-### 4. Student Onboarding
-**CompleteProfile** (`src/pages/CompleteProfile.tsx`)
-- Add org dropdown so students can self-select their org during onboarding
-
-### 5. Student Folders — Filter by Org
-**StudentFolders** (`src/pages/StudentFolders.tsx`) + hook
-- Add org filter dropdown and org badge on each student card
-
-### 6. Routes & Navigation
-- Add `/admin/organizations` route in `App.tsx`
-- Add "Organizations" link in admin sidebar (`SidebarLayout.tsx`)
+#### 3. Organizations Page Updates
+**File:** `src/pages/admin/TrainingOrganizations.tsx`
+- Add a "Users" icon button in each table row that opens the Bulk Assign dialog for that org.
+- Add a clickable status badge or toggle button directly in the Status column so admins can activate/deactivate without opening the edit dialog.
+- Wire up state for `bulkAssignOrg` (which org is being bulk-assigned).
 
 ### File Summary
 
 | File | Action |
 |------|--------|
-| Migration | Create `training_organizations`, add `organization_id` to `profiles` |
-| `src/pages/admin/TrainingOrganizations.tsx` | Create — admin CRUD for orgs with member breakdown by role |
-| `src/hooks/useTrainingOrganizations.ts` | Create — data hook |
-| `src/components/admin/InviteUserDialog.tsx` | Add org dropdown for all roles |
-| `src/pages/admin/UserManagementPage.tsx` | Add org column + filter for all users |
-| `src/pages/CompleteProfile.tsx` | Add org dropdown |
-| `src/pages/StudentFolders.tsx` | Add org filter + badge |
-| `src/hooks/useStudentFolders.ts` | Join org data |
-| `src/App.tsx` | Add route |
-| `src/components/layouts/SidebarLayout.tsx` | Add nav link |
+| `src/hooks/useTrainingOrganizations.ts` | Add `useBulkAssignOrganization` mutation |
+| `src/components/admin/BulkAssignOrgDialog.tsx` | Create — searchable user list with checkboxes, role filter |
+| `src/pages/admin/TrainingOrganizations.tsx` | Add bulk-assign button per row, inline status toggle |
 
