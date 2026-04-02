@@ -1,64 +1,120 @@
 
 
-## Plan: Improve Unassigned Request Notifications and Assignment Prompts
+## Plan: Sensitive Intake Survey for Student Files
 
-### Problem
-When a student submits a request without a pre-assigned case manager, the `notify-new-request` Edge Function already creates in-app notifications for admins. However:
-1. The notification message says "requires assignment" in the email but the in-app notification just says "submitted a request" -- it doesn't clearly prompt the admin to assign it
-2. The notification `type` is `'new_request'`, but the icon map in `NotificationsDropdown` doesn't include that key -- it falls through to a generic Bell icon
-3. The Admin Dashboard has an "Unassigned Requests" section, but it's buried below charts -- there's no prominent alert banner at the top when requests need assignment
-
-### Changes
+### Design Philosophy
+The intake form uses a **strengths-based, conversational tone** — framing questions around "how we can best support you" rather than clinical assessments. Questions use scale sliders and soft language to feel like a check-in, not an interrogation.
 
 ---
 
-### 1. Update In-App Notification for Unassigned Requests
+### 1. Database Migration
 
-**File:** `supabase/functions/notify-new-request/index.ts`
+Create two tables:
 
-When the request has no assigned case manager (the fallback path at line 239), update the in-app notification to:
-- Use type `'unassigned_request'` instead of `'new_request'`
-- Change the title to: "Unassigned Request: [title]"
-- Change the message to: "[Student name] submitted a [priority] [category] request. Please assign a case manager."
-- Keep the link as `/requests/[requestId]`
+**`student_files`** — auto-created on signup via trigger update
+```sql
+CREATE TABLE public.student_files (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL UNIQUE,
+  intake_completed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+-- RLS: students see own, case managers see assigned, admins see all
+```
 
-For emergency unassigned requests, the existing emergency type and messaging is fine but the message should also mention assignment is needed.
+**`intake_responses`** — stores each section's answers as JSONB
+```sql
+CREATE TABLE public.intake_responses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  section text NOT NULL,
+  responses jsonb NOT NULL DEFAULT '{}',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+-- RLS: same pattern as student_files
+```
+
+**`file_notes`** — case manager/admin progress notes
+```sql
+CREATE TABLE public.file_notes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  author_id uuid NOT NULL,
+  content text NOT NULL,
+  note_type text NOT NULL DEFAULT 'general',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+-- RLS: case managers (assigned) and admins can read/write; students can read own
+```
+
+Update `handle_new_user()` trigger to also insert into `student_files`.
 
 ---
 
-### 2. Add Notification Icon Mappings
+### 2. Intake Survey Page (`/intake-survey`) — 4 Gentle Steps
 
-**File:** `src/components/notifications/NotificationsDropdown.tsx`
+**Step 1 — "About You"** (warm-up, low sensitivity)
+- What best describes your current living situation? (On campus / Off campus with family / Off campus independently / Transitional/temporary)
+- Are you currently working? (Not working / Part-time / Full-time)
+- How would you describe your support network? (Strong / Some support / Limited / Prefer not to say)
 
-Add the missing notification type icons to the `notificationIcons` map:
-- `'new_request'` -> `FileText`
-- `'unassigned_request'` -> `UserPlus` (prompts assignment action)
-- `'emergency'` -> `AlertTriangle`
+**Step 2 — "Day-to-Day Needs"** (financial/basic needs, soft framing)
+- "How comfortable do you feel meeting your basic needs right now?" (5-point slider: Very comfortable → Struggling)
+- Check any that apply: Food security concerns / Transportation challenges / Childcare needs / Technology/internet access / None of these
+- "Is there anything making it harder to focus on your studies?" (optional free text)
 
-This ensures notifications render with meaningful icons instead of the default Bell.
+**Step 3 — "Your Wellbeing"** (mental health, normalized language)
+- "Over the past few weeks, how would you rate your overall stress level?" (5-point slider: Very low → Very high)
+- "How often do you feel you have someone to talk to when things get tough?" (Always / Sometimes / Rarely / Prefer not to say)
+- "Would you be interested in connecting with any of these resources?" (Counseling / Peer mentoring / Wellness workshops / Crisis support / Not right now)
 
----
+**Step 4 — "Your Goals"** (forward-looking, empowering)
+- "What's the main reason you're reaching out for support?" (Academic challenges / Financial hardship / Personal/emotional wellbeing / Housing concerns / Just exploring resources / Other)
+- "What does a successful semester look like for you?" (optional free text)
+- "Anything else you'd like us to know?" (optional free text)
 
-### 3. Add Prominent Alert Banner on Admin Dashboard
-
-**File:** `src/pages/AdminDashboard.tsx`
-
-Insert a dismissible alert card immediately after the PageHeader (before the Stats Overview section) that appears when `unassignedRequests.length > 0`:
-
-- Uses an amber/warning color scheme
-- Shows: "[N] request(s) awaiting case manager assignment"
-- Includes a "Review & Assign" button that scrolls to or links to the existing Unassigned Requests table section below
-- For emergency unassigned requests, use a red/destructive color scheme instead
-
-This surfaces the most critical action (assigning requests) at the very top of the admin view.
+Every step has a **"Prefer not to answer"** or **"Skip this section"** option. A small note at the top: *"This helps us understand how to best support you. All responses are confidential and you can skip any question."*
 
 ---
 
-### Summary of File Changes
+### 3. Onboarding Flow Update
 
-| File | Change |
+**`CompleteProfile.tsx`** — Change redirect from `/dashboard` to `/intake-survey` after profile save.
+
+**`IntakeSurvey.tsx`** — New page with:
+- Progress stepper (Step 1 of 4)
+- Each section saves to `intake_responses` independently
+- "Skip for Now" button on every step (goes to dashboard)
+- On final submit, marks `student_files.intake_completed_at`
+
+---
+
+### 4. Dashboard Banner
+
+**`Dashboard.tsx`** — Show a gentle reminder card if `intake_completed_at` is null: *"Complete your wellness check-in to help us support you better"* with a link to `/intake-survey`.
+
+---
+
+### 5. Student File View (Admin/Case Manager)
+
+**`StudentDetail.tsx`** — Add a "Student File" tab showing:
+- Intake summary (rendered from `intake_responses` in readable card format)
+- Progress notes timeline with "Add Note" form
+- Quick indicators (barriers flagged, resources requested)
+
+---
+
+### File Changes
+
+| File | Action |
 |------|--------|
-| `supabase/functions/notify-new-request/index.ts` | Use `unassigned_request` type with assignment-prompting message |
-| `src/components/notifications/NotificationsDropdown.tsx` | Add icon mappings for `new_request`, `unassigned_request`, `emergency` |
-| `src/pages/AdminDashboard.tsx` | Add prominent alert banner for unassigned requests at top of page |
+| SQL Migration | Create `student_files`, `intake_responses`, `file_notes` + RLS + trigger update |
+| `src/pages/IntakeSurvey.tsx` | Create — multi-step sensitive intake form |
+| `src/hooks/useIntakeSurvey.ts` | Create — save/load intake responses |
+| `src/hooks/useFileNotes.ts` | Create — CRUD for progress notes |
+| `src/pages/CompleteProfile.tsx` | Edit — redirect to `/intake-survey` |
+| `src/pages/Dashboard.tsx` | Edit — add intake reminder banner |
+| `src/pages/StudentDetail.tsx` | Edit — add Student File tab |
+| `src/App.tsx` | Edit — add `/intake-survey` route |
 
