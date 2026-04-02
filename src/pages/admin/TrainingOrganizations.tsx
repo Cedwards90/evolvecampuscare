@@ -302,6 +302,14 @@ export default function TrainingOrganizations() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* Bulk Assign Dialog */}
+        {bulkAssignOrg && (
+          <BulkAssignOrgDialog
+            org={bulkAssignOrg}
+            open={!!bulkAssignOrg}
+            onOpenChange={(open) => { if (!open) setBulkAssignOrg(null); }}
+          />
+        )}
       </div>
     </SidebarLayout>
   );
