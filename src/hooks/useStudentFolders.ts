@@ -10,6 +10,8 @@ export interface StudentFolder {
   total_requests: number;
   pending_requests: number;
   last_activity: string | null;
+  organization_id: string | null;
+  organization_name: string | null;
 }
 
 export function useStudentFolders() {
