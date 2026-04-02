@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubmitRequest } from '@/hooks/useSubmitRequest';
 import { cn } from '@/lib/utils';
+import { ContextualFaqTips } from '@/components/requests/ContextualFaqTips';
 import type { RequestCategory, RequestPriority } from '@/types/database';
 
 const categories: { value: RequestCategory; label: string; icon: React.ComponentType<{ className?: string }>; description: string; examples: string[] }[] = [
