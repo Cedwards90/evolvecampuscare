@@ -44,9 +44,20 @@ export function useStudentFolders() {
       // Step 2: Fetch profiles
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('user_id, full_name, email')
+        .select('user_id, full_name, email, organization_id')
         .in('user_id', studentIds);
       if (profileError) throw profileError;
+
+      // Step 2b: Fetch org names
+      const orgIds = [...new Set((profiles || []).map(p => (p as any).organization_id).filter(Boolean))];
+      let orgMap = new Map<string, string>();
+      if (orgIds.length > 0) {
+        const { data: orgs } = await supabase
+          .from('training_organizations')
+          .select('id, name')
+          .in('id', orgIds);
+        orgMap = new Map((orgs || []).map((o: any) => [o.id, o.name]));
+      }
 
       // Step 3: Fetch student_files for intake status
       const { data: files } = await supabase
