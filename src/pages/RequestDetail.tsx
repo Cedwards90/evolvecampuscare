@@ -26,6 +26,7 @@ import { PriorityBadge } from '@/components/PriorityBadge';
 import { CategoryBadge } from '@/components/CategoryBadge';
 import { useRequest } from '@/hooks/useRequest';
 import { useAuth } from '@/contexts/AuthContext';
+import { OrgBadgeInline } from '@/components/OrgBadgeInline';
 
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
