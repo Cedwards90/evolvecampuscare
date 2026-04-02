@@ -1,71 +1,45 @@
 
+Problem found
 
-## Plan: Retroactive Org Assignments + Organization Detail Page
+- The assignments are being written to `organization_memberships`, but many users still have `profiles.organization_id = null`.
+- Both broken areas depend on that profile field today:
+  - `TrainingOrganizations.tsx` computes “Members” by filtering `useUsers()` on `organization_id`
+  - `UserManagementPage.tsx` shows the org badge by looking up `user.organization_id`
+- The likely reason the profile field is not updating is the current `profiles` permissions: users can update their own profile, but admins do not currently have a policy to update other users’ profiles. That makes bulk-assign behave like a partial success.
 
-### Overview
-Two improvements: (1) make organization assignment carry through all workflows (invitations, signup triggers, and display across the site), and (2) add a dedicated Organization Detail page showing all past and present students per org.
+Implementation plan
 
-### 1. Retroactive Org Assignment via Invitations
+1. Fix the backend permission + existing data
+- Add an admin update policy for `profiles` so admins can set `organization_id` for other users.
+- Backfill `profiles.organization_id` from each user’s active `organization_memberships` row (`left_at IS NULL`) so already-assigned people appear correctly right away.
 
-**Database migration:**
-- Add `organization_id` column to `user_invitations` table (FK to `training_organizations`)
-- Create `organization_memberships` table to track past/present membership history
+2. Make user/org data more resilient
+- Update `useUsers.ts` to resolve each user’s current organization using active membership as a fallback when `profiles.organization_id` is missing.
+- Return `organization_name` directly from the hook so UI pages do not have to re-resolve it separately.
 
-**Update `handle_invited_signup()` trigger:**
-- When an invitation has `organization_id`, set it on the new user's profile during signup
+3. Fix member counts on the Organizations page
+- Update `TrainingOrganizations.tsx` so “Members” is based on active rows in `organization_memberships`, not only on `profiles.organization_id`.
+- Keep the role split by combining active memberships with `user_roles`.
 
-**Files:**
-- `src/hooks/useInvitations.ts` — add `organizationId` to `SendInvitationParams`, pass it to edge function
-- `src/components/admin/InviteUserDialog.tsx` — wire the existing org dropdown into the `onSubmit` so it's actually sent with the invitation
-- `supabase/functions/generate-invitation-token/index.ts` — accept and store `organizationId` on the invitation record
+4. Harden bulk assignment flow
+- Update `useBulkAssignOrganization()` so it verifies the profile update actually affected the user before inserting the new membership.
+- Prevent duplicate active memberships if the user is already in that org.
 
-### 2. Organization Detail Page
+5. Small UI wiring cleanup
+- Update `UserManagementPage.tsx` to render the org from the hook’s resolved `organization_name`.
+- Keep the existing filter behavior, but make it work with the repaired/resolved org data.
 
-**New file: `src/pages/admin/OrganizationDetail.tsx`**
-- Route: `/admin/organizations/:id`
-- Shows org info (name, description, contact, status)
-- Lists ALL members (past and present) using membership history
-- Tabs: Current Members, Past Members, Request Stats
-- Link from the org name in the Training Organizations table
+Files to update
 
-**New hook: `src/hooks/useOrganizationDetail.ts`**
-- Fetches org by ID, current and past members, and aggregate request stats
+- Migration: add admin profile update policy
+- Data repair step: sync `profiles.organization_id` from active memberships
+- `src/hooks/useUsers.ts`
+- `src/hooks/useTrainingOrganizations.ts`
+- `src/pages/admin/TrainingOrganizations.tsx`
+- `src/pages/admin/UserManagementPage.tsx`
 
-### 3. Track Past Membership
+Expected result
 
-**New table: `organization_memberships`**
-- Columns: `id`, `user_id`, `organization_id`, `joined_at`, `left_at`, `created_at`
-- RLS: admins full access, case managers + authenticated can view
-
-**Update bulk-assign flow** (`useTrainingOrganizations.ts`):
-- When assigning a user to an org, insert into `organization_memberships`
-- When changing orgs, set `left_at` on previous membership record
-
-### 4. Display Org Throughout the Site
-
-- `src/pages/StudentDetail.tsx` — show org badge on student profile header
-- `src/pages/RequestDetail.tsx` — show student's org in the request sidebar
-- `src/pages/ManageRequests.tsx` — add org column/filter to the requests table
-
-### 5. Routes & Navigation
-
-- `src/App.tsx` — add `/admin/organizations/:id` route
-- `src/pages/admin/TrainingOrganizations.tsx` — make org name a clickable link to the detail page
-
-### File Summary
-
-| File | Action |
-|------|--------|
-| Migration | Add `organization_id` to `user_invitations`, create `organization_memberships` table, update `handle_invited_signup()` |
-| `supabase/functions/generate-invitation-token/index.ts` | Accept + store `organizationId` |
-| `src/hooks/useInvitations.ts` | Add `organizationId` param |
-| `src/components/admin/InviteUserDialog.tsx` | Wire org selection into submission |
-| `src/pages/admin/OrganizationDetail.tsx` | Create — org detail with past/present members |
-| `src/hooks/useOrganizationDetail.ts` | Create — fetch org + members + stats |
-| `src/hooks/useTrainingOrganizations.ts` | Track membership history on assign |
-| `src/pages/StudentDetail.tsx` | Show org badge |
-| `src/pages/RequestDetail.tsx` | Show student org |
-| `src/pages/ManageRequests.tsx` | Add org column/filter |
-| `src/App.tsx` | Add org detail route |
-| `src/pages/admin/TrainingOrganizations.tsx` | Link org names to detail page |
-
+- After bulk-assigning users, the organization member count updates immediately.
+- The assigned organization appears next to each person in User Management.
+- Existing broken assignments are repaired, not just future ones.
