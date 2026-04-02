@@ -341,7 +341,7 @@ export default function StudentDetail() {
 
           {/* Student File Tab */}
           <TabsContent value="file" className="space-y-4">
-            <StudentFileTab studentId={id!} />
+            <StudentFileTab studentId={id!} requests={student.requests} />
           </TabsContent>
         </Tabs>
       </div>
