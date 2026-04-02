@@ -88,7 +88,7 @@ export default function IntakeSurvey() {
         setCurrentStep(currentStep + 1);
       } else {
         await completeIntake.mutateAsync();
-        toast({ title: 'Thank you!', description: 'Your responses have been saved. We're here for you.' });
+        toast({ title: 'Thank you!', description: 'Your responses have been saved. We are here for you.' });
         navigate('/dashboard');
       }
     } catch {
