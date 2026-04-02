@@ -66,6 +66,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUsers, useUpdateUserRole, useDeleteUser } from '@/hooks/useUsers';
+import { useTrainingOrganizations } from '@/hooks/useTrainingOrganizations';
 import type { AppRole } from '@/types/database';
 
 const ITEMS_PER_PAGE = 10;
