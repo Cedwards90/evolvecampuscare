@@ -115,6 +115,11 @@ function App() {
                       <UserManagementPage />
                     </ProtectedRoute>
                   } />
+            <Route path="/admin/organizations" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <TrainingOrganizations />
+              </ProtectedRoute>
+            } />
                   
                   {/* Messages - All authenticated users */}
                   <Route path="/messages" element={
