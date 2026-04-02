@@ -238,6 +238,21 @@ export default function CompleteProfile() {
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="organization">Training Organization</Label>
+              <Select onValueChange={setSelectedOrgId} value={selectedOrgId}>
+                <SelectTrigger>
+                  <Building2 className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Select your organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(organizations || []).map(org => (
+                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex gap-3 pt-4">
               <Button
                 type="button"
