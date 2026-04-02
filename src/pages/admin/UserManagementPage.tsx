@@ -86,6 +86,7 @@ const roleColors: Record<AppRole, string> = {
 export default function UserManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<AppRole | 'all'>('all');
+  const [orgFilter, setOrgFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; currentRole: AppRole } | null>(null);
   const [newRole, setNewRole] = useState<AppRole | null>(null);
