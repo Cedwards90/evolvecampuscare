@@ -200,6 +200,7 @@ serve(async (req: Request) => {
         expires_at: expiresAt.toISOString(),
         auto_assign_case_manager: autoAssignCaseManager || null,
         notes: notes || null,
+        organization_id: organizationId || null,
       })
       .select()
       .single();

@@ -75,6 +75,7 @@ export function useSendInvitation() {
           role: params.role,
           notes: params.notes,
           autoAssignCaseManager: params.autoAssignCaseManager,
+          organizationId: params.organizationId,
         },
       });
 
