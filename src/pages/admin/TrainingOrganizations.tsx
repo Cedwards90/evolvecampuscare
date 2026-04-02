@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { 
   Building2, Plus, Pencil, Users, Search, 
   GraduationCap, UserCheck, Shield, Loader2,
-  Mail, User
+  Mail, User, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
