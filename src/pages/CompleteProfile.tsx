@@ -99,7 +99,7 @@ export default function CompleteProfile() {
         description: 'Your profile has been updated successfully.',
       });
 
-      navigate('/dashboard');
+      navigate('/intake-survey');
     } catch (error) {
       toast({
         title: 'Error',

@@ -157,6 +157,11 @@ function App() {
                   <CompleteProfile />
                 </ProtectedRoute>
               } />
+              <Route path="/intake-survey" element={
+                <ProtectedRoute>
+                  <IntakeSurvey />
+                </ProtectedRoute>
+              } />
                   
                   {/* Catch-all route */}
                   <Route path="*" element={<NotFound />} />
