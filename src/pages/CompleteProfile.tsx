@@ -57,7 +57,9 @@ export default function CompleteProfile() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, profile, refreshProfile } = useAuth();
+  const { data: organizations } = useActiveOrganizations();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>('');
 
   const {
     register,
