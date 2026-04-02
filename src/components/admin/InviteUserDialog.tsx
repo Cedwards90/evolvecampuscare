@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useSendInvitation } from '@/hooks/useInvitations';
+import { useActiveOrganizations } from '@/hooks/useTrainingOrganizations';
 import { useToast } from '@/hooks/use-toast';
 import type { AppRole } from '@/types/database';
 
