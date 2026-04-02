@@ -37,6 +37,7 @@ interface TokenRequest {
   role: string;
   notes?: string;
   autoAssignCaseManager?: string;
+  organizationId?: string;
 }
 
 // Privileged roles that require MFA verification
