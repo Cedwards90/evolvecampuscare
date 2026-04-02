@@ -28,7 +28,7 @@ import {
   type TrainingOrganization 
 } from '@/hooks/useTrainingOrganizations';
 import { useUsers } from '@/hooks/useUsers';
-
+import { BulkAssignOrgDialog } from '@/components/admin/BulkAssignOrgDialog';
 export default function TrainingOrganizations() {
   const { data: orgs, isLoading } = useTrainingOrganizations();
   const { data: users } = useUsers();
