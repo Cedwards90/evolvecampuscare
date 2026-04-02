@@ -115,7 +115,7 @@ export default function UserManagementPage() {
       
       return matchesSearch && matchesRole && matchesOrg;
     });
-  }, [users, searchQuery, roleFilter]);
+  }, [users, searchQuery, roleFilter, orgFilter]);
 
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = filteredUsers.slice(
