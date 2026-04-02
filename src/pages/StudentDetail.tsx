@@ -427,6 +427,49 @@ function StudentFileTab({ studentId, requests }: { studentId: string; requests: 
         )}
       </Card>
 
+      {/* Request History in File */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Request History
+          </CardTitle>
+          <CardDescription>
+            All support requests submitted by this student.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {requests.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No requests submitted yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {requests.map((req) => (
+                <Link
+                  key={req.id}
+                  to={`/requests/${req.id}`}
+                  className="block border border-border/50 rounded-lg p-3 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{req.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{req.description}</p>
+                    </div>
+                    <StatusBadge status={req.status} />
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <CategoryBadge category={req.category} />
+                    <PriorityBadge priority={req.priority} />
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {formatDistanceToNow(new Date(req.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Progress Notes */}
       <Card>
         <CardHeader>
