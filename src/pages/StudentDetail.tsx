@@ -12,6 +12,7 @@ import {
   MessageSquare,
   User
 } from 'lucide-react';
+import { StickyNote, PenLine } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
