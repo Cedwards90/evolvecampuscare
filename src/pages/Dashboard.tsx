@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useIntakeSurvey } from '@/hooks/useIntakeSurvey';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLatestCheckIn } from '@/hooks/useStudentCheckIns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { FractionStatsCard } from '@/components/dashboard/FractionStatsCard';
