@@ -128,7 +128,7 @@ export default function OrganizationDetail() {
 
         {/* Tabs */}
         <Tabs defaultValue="current" className="space-y-4">
-          <TabsList>
+          <TabsList className="w-full overflow-x-auto justify-start">
             <TabsTrigger value="current" className="gap-2">
               <Users className="h-4 w-4" />Current Members ({currentMembers.length})
             </TabsTrigger>
