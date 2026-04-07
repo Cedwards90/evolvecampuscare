@@ -352,15 +352,15 @@ export default function UserManagementPage() {
                 No users found matching your criteria
               </div>
             ) : (
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>User</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Organization</TableHead>
+                      <TableHead className="hidden sm:table-cell">Email</TableHead>
+                      <TableHead className="hidden md:table-cell">Organization</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Joined</TableHead>
+                      <TableHead className="hidden lg:table-cell">Joined</TableHead>
                       <TableHead className="w-[70px]"></TableHead>
                     </TableRow>
                   </TableHeader>
