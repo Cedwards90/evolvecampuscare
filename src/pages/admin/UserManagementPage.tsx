@@ -400,7 +400,7 @@ export default function UserManagementPage() {
                               <span className="capitalize">{user.role.replace('_', ' ')}</span>
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden lg:table-cell">
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Calendar className="h-4 w-4" />
                               {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
