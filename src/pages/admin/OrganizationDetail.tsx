@@ -168,19 +168,21 @@ export default function OrganizationDetail() {
               <EmptyState icon={Users} title="No past members" description="No users have left this organization." />
             ) : (
               <Card>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Joined</TableHead>
-                      <TableHead>Left</TableHead>
+                      <TableHead className="hidden sm:table-cell">Joined</TableHead>
+                      <TableHead className="hidden sm:table-cell">Left</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {pastMembers.map(m => <MemberRow key={`${m.user_id}-${m.joined_at}`} member={m} showLeftAt />)}
                   </TableBody>
                 </Table>
+                </div>
               </Card>
             )}
           </TabsContent>
