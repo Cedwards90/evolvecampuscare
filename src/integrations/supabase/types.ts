@@ -490,6 +490,39 @@ export type Database = {
         }
         Relationships: []
       }
+      student_checkins: {
+        Row: {
+          additional_notes: string | null
+          blockers: string | null
+          created_at: string
+          id: string
+          mood_rating: number
+          progress_rating: number
+          student_id: string
+          wins: string | null
+        }
+        Insert: {
+          additional_notes?: string | null
+          blockers?: string | null
+          created_at?: string
+          id?: string
+          mood_rating: number
+          progress_rating: number
+          student_id: string
+          wins?: string | null
+        }
+        Update: {
+          additional_notes?: string | null
+          blockers?: string | null
+          created_at?: string
+          id?: string
+          mood_rating?: number
+          progress_rating?: number
+          student_id?: string
+          wins?: string | null
+        }
+        Relationships: []
+      }
       student_files: {
         Row: {
           created_at: string

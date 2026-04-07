@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useIntakeSurvey } from '@/hooks/useIntakeSurvey';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLatestCheckIn } from '@/hooks/useStudentCheckIns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { FractionStatsCard } from '@/components/dashboard/FractionStatsCard';
@@ -50,6 +51,15 @@ export default function Dashboard() {
   const { data: caseManagers = [], isLoading: cmLoading } = useCaseManagers();
   const { data: myAssignment, isLoading: assignmentLoading } = useMyAssignment();
   const { intakeCompleted } = useIntakeSurvey();
+  const { data: latestCheckIn } = useLatestCheckIn();
+  
+  // Show check-in banner if no check-in or last one > 21 days ago
+  const showCheckInBanner = useMemo(() => {
+    if (role !== 'student') return false;
+    if (!latestCheckIn) return true;
+    const daysSince = (Date.now() - new Date(latestCheckIn.created_at).getTime()) / (1000 * 60 * 60 * 24);
+    return daysSince >= 21;
+  }, [role, latestCheckIn]);
   
   // Filter requests based on role
   const requests = useMemo(() => {
@@ -144,6 +154,21 @@ export default function Dashboard() {
   return (
     <SidebarLayout>
       <div className="space-y-6">
+        {/* Check-In Banner */}
+        {showCheckInBanner && (
+          <Card className="border-accent/50 bg-accent/10">
+            <CardContent className="flex items-center justify-between p-4">
+              <div>
+                <p className="font-medium text-sm">📋 Time for your 3-week check-in!</p>
+                <p className="text-xs text-muted-foreground">Let us know how you're doing — it only takes a minute.</p>
+              </div>
+              <Button size="sm" asChild>
+                <Link to="/check-in">Complete Check-In</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Intake Survey Reminder */}
         {role === 'student' && !intakeCompleted && (
           <Card className="border-primary/30 bg-primary/5">

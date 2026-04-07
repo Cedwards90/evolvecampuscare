@@ -37,10 +37,12 @@ import {
 import { useStudentDetail } from '@/hooks/useStudentDetail';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
 import { useFileNotes } from '@/hooks/useFileNotes';
+import { useStudentCheckIns } from '@/hooks/useStudentCheckIns';
 import { Textarea } from '@/components/ui/textarea';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { OrgBadgeInline } from '@/components/OrgBadgeInline';
+import { Smile, Frown, Meh, TrendingUp as TrendUp, TrendingDown } from 'lucide-react';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -194,6 +196,10 @@ export default function StudentDetail() {
               <StickyNote className="h-4 w-4" />
               Student File
             </TabsTrigger>
+            <TabsTrigger value="checkins" className="gap-2">
+              <Smile className="h-4 w-4" />
+              Check-Ins
+            </TabsTrigger>
           </TabsList>
 
           {/* Requests Tab */}
@@ -346,6 +352,11 @@ export default function StudentDetail() {
           {/* Student File Tab */}
           <TabsContent value="file" className="space-y-4">
             <StudentFileTab studentId={id!} requests={student.requests} />
+          </TabsContent>
+
+          {/* Check-Ins Tab */}
+          <TabsContent value="checkins" className="space-y-4">
+            <StudentCheckInsTab studentId={id!} />
           </TabsContent>
         </Tabs>
       </div>
@@ -518,6 +529,70 @@ function StudentFileTab({ studentId, requests }: { studentId: string; requests: 
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// ---- Check-Ins Tab Component ----
+function StudentCheckInsTab({ studentId }: { studentId: string }) {
+  const { data: checkIns = [], isLoading } = useStudentCheckIns(studentId);
+
+  const moodEmojis = ['😔', '😕', '😐', '🙂', '😊'];
+  const progressLabels = ['Struggling', 'Behind', 'On Track', 'Progressing', 'Thriving'];
+
+  if (isLoading) return <LoadingSpinner />;
+
+  if (checkIns.length === 0) {
+    return (
+      <EmptyState
+        icon={Smile}
+        title="No check-ins yet"
+        description="This student hasn't completed any check-ins."
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {checkIns.map((checkIn) => (
+        <Card key={checkIn.id} className="border border-border/50">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">
+                {format(new Date(checkIn.created_at), 'PPP')}
+              </CardTitle>
+              <div className="flex items-center gap-3 text-sm">
+                <span title="Mood">
+                  {moodEmojis[checkIn.mood_rating - 1]} Mood: {checkIn.mood_rating}/5
+                </span>
+                <span title="Progress" className="text-muted-foreground">
+                  📈 {progressLabels[checkIn.progress_rating - 1]}
+                </span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {checkIn.wins && (
+              <div>
+                <p className="text-xs font-medium text-success">What's going well</p>
+                <p className="text-sm">{checkIn.wins}</p>
+              </div>
+            )}
+            {checkIn.blockers && (
+              <div>
+                <p className="text-xs font-medium text-destructive">Blockers</p>
+                <p className="text-sm">{checkIn.blockers}</p>
+              </div>
+            )}
+            {checkIn.additional_notes && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Additional notes</p>
+                <p className="text-sm">{checkIn.additional_notes}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }
