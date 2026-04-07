@@ -1,45 +1,43 @@
 
-Problem found
 
-- The assignments are being written to `organization_memberships`, but many users still have `profiles.organization_id = null`.
-- Both broken areas depend on that profile field today:
-  - `TrainingOrganizations.tsx` computes “Members” by filtering `useUsers()` on `organization_id`
-  - `UserManagementPage.tsx` shows the org badge by looking up `user.organization_id`
-- The likely reason the profile field is not updating is the current `profiles` permissions: users can update their own profile, but admins do not currently have a policy to update other users’ profiles. That makes bulk-assign behave like a partial success.
+## Plan: Mobile-Responsive Admin Pages
 
-Implementation plan
+### Problem
+The admin pages (Training Organizations, User Management, Organization Detail) use wide HTML tables that overflow on mobile screens. Tabs, filters, and pagination also don't adapt well to small viewports.
 
-1. Fix the backend permission + existing data
-- Add an admin update policy for `profiles` so admins can set `organization_id` for other users.
-- Backfill `profiles.organization_id` from each user’s active `organization_memberships` row (`left_at IS NULL`) so already-assigned people appear correctly right away.
+### Approach
+Wrap all tables in a horizontal scroll container and hide less-critical columns on small screens. Use responsive stacking for filters, pagination, and tab triggers.
 
-2. Make user/org data more resilient
-- Update `useUsers.ts` to resolve each user’s current organization using active membership as a fallback when `profiles.organization_id` is missing.
-- Return `organization_name` directly from the hook so UI pages do not have to re-resolve it separately.
+### Changes
 
-3. Fix member counts on the Organizations page
-- Update `TrainingOrganizations.tsx` so “Members” is based on active rows in `organization_memberships`, not only on `profiles.organization_id`.
-- Keep the role split by combining active memberships with `user_roles`.
+**1. `src/pages/admin/TrainingOrganizations.tsx`**
+- Wrap `<Table>` in `<div className="overflow-x-auto">` 
+- Hide "Contact" column on mobile (`hidden sm:table-cell`)
+- Hide "Members" column on mobile (`hidden md:table-cell`)
+- Stack header (title + "Add Organization" button) vertically on mobile — already done via `flex-col sm:flex-row`
 
-4. Harden bulk assignment flow
-- Update `useBulkAssignOrganization()` so it verifies the profile update actually affected the user before inserting the new membership.
-- Prevent duplicate active memberships if the user is already in that org.
+**2. `src/pages/admin/UserManagementPage.tsx`**
+- Wrap `<Table>` in `<div className="overflow-x-auto">`
+- Hide "Email" column on mobile (`hidden sm:table-cell`) — name cell already shows avatar
+- Hide "Organization" column on mobile (`hidden md:table-cell`)
+- Hide "Joined" column on mobile (`hidden lg:table-cell`)
+- Stack pagination text and buttons vertically on small screens (`flex-col sm:flex-row`)
 
-5. Small UI wiring cleanup
-- Update `UserManagementPage.tsx` to render the org from the hook’s resolved `organization_name`.
-- Keep the existing filter behavior, but make it work with the repaired/resolved org data.
+**3. `src/pages/admin/OrganizationDetail.tsx`**
+- Wrap both member tables in `<div className="overflow-x-auto">`
+- Make tabs list scrollable on mobile (`w-full overflow-x-auto`)
+- Stack the header card's stats grid below the org info on mobile (already uses `md:flex-row`, just ensure stats grid is `grid-cols-3` with smaller text on mobile)
 
-Files to update
+**4. `src/components/admin/BulkAssignOrgDialog.tsx`**
+- Dialog already uses `sm:max-w-lg` — add `max-h-[90vh]` to prevent overflow on short screens
+- Stack footer buttons vertically on very small screens (`flex-col sm:flex-row`)
 
-- Migration: add admin profile update policy
-- Data repair step: sync `profiles.organization_id` from active memberships
-- `src/hooks/useUsers.ts`
-- `src/hooks/useTrainingOrganizations.ts`
-- `src/pages/admin/TrainingOrganizations.tsx`
-- `src/pages/admin/UserManagementPage.tsx`
+### Summary
 
-Expected result
+| File | Change |
+|------|--------|
+| `src/pages/admin/TrainingOrganizations.tsx` | Scroll wrapper, hide columns on mobile |
+| `src/pages/admin/UserManagementPage.tsx` | Scroll wrapper, hide columns, responsive pagination |
+| `src/pages/admin/OrganizationDetail.tsx` | Scroll wrappers, scrollable tabs |
+| `src/components/admin/BulkAssignOrgDialog.tsx` | Constrain height, stack footer on mobile |
 
-- After bulk-assigning users, the organization member count updates immediately.
-- The assigned organization appears next to each person in User Management.
-- Existing broken assignments are repaired, not just future ones.
