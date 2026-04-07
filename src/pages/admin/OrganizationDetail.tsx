@@ -145,18 +145,20 @@ export default function OrganizationDetail() {
               <EmptyState icon={Users} title="No current members" description="No users are currently assigned to this organization." />
             ) : (
               <Card>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Joined</TableHead>
+                      <TableHead className="hidden sm:table-cell">Joined</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {currentMembers.map(m => <MemberRow key={`${m.user_id}-${m.joined_at}`} member={m} />)}
                   </TableBody>
                 </Table>
+                </div>
               </Card>
             )}
           </TabsContent>
