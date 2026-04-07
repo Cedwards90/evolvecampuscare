@@ -201,7 +201,7 @@ export default function TrainingOrganizations() {
                           <span className="text-muted-foreground text-sm">—</span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <div className="flex items-center gap-2 flex-wrap">
                           {totalMembers === 0 ? (
                             <span className="text-muted-foreground text-sm">No members</span>
