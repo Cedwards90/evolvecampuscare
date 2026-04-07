@@ -1,43 +1,75 @@
 
+## Plan: 3-Week Student Check-In System
 
-## Plan: Mobile-Responsive Admin Pages
+### Overview
+Create a recurring check-in survey that prompts students every 3 weeks to share their progress and wellbeing. Students get an in-app dashboard banner plus an email reminder. Responses are visible to students, their assigned case manager, and admins.
 
-### Problem
-The admin pages (Training Organizations, User Management, Organization Detail) use wide HTML tables that overflow on mobile screens. Tabs, filters, and pagination also don't adapt well to small viewports.
+### 1. Database Migration
 
-### Approach
-Wrap all tables in a horizontal scroll container and hide less-critical columns on small screens. Use responsive stacking for filters, pagination, and tab triggers.
+**New table: `student_checkins`**
+- `id` (uuid, PK)
+- `student_id` (uuid, NOT NULL)
+- `mood_rating` (integer 1-5) — how they're feeling
+- `progress_rating` (integer 1-5) — self-assessed progress
+- `blockers` (text, nullable) — anything holding them back
+- `wins` (text, nullable) — what's going well
+- `additional_notes` (text, nullable)
+- `created_at` (timestamptz, default now())
 
-### Changes
+**RLS policies:**
+- Students can INSERT their own + SELECT their own
+- Case managers can SELECT for assigned students (via `student_assignments`)
+- Admins can SELECT all
 
-**1. `src/pages/admin/TrainingOrganizations.tsx`**
-- Wrap `<Table>` in `<div className="overflow-x-auto">` 
-- Hide "Contact" column on mobile (`hidden sm:table-cell`)
-- Hide "Members" column on mobile (`hidden md:table-cell`)
-- Stack header (title + "Add Organization" button) vertically on mobile — already done via `flex-col sm:flex-row`
+### 2. Check-In Page — `src/pages/StudentCheckIn.tsx`
 
-**2. `src/pages/admin/UserManagementPage.tsx`**
-- Wrap `<Table>` in `<div className="overflow-x-auto">`
-- Hide "Email" column on mobile (`hidden sm:table-cell`) — name cell already shows avatar
-- Hide "Organization" column on mobile (`hidden md:table-cell`)
-- Hide "Joined" column on mobile (`hidden lg:table-cell`)
-- Stack pagination text and buttons vertically on small screens (`flex-col sm:flex-row`)
+Route: `/check-in`
 
-**3. `src/pages/admin/OrganizationDetail.tsx`**
-- Wrap both member tables in `<div className="overflow-x-auto">`
-- Make tabs list scrollable on mobile (`w-full overflow-x-auto`)
-- Stack the header card's stats grid below the org info on mobile (already uses `md:flex-row`, just ensure stats grid is `grid-cols-3` with smaller text on mobile)
+A short, friendly 1-page form with:
+- Mood slider (1-5 with emoji labels: 😔 → 😊)
+- Progress slider (1-5: "Struggling" → "Thriving")
+- "What's going well?" textarea
+- "Any blockers or challenges?" textarea
+- Optional additional notes
+- Submit button → inserts into `student_checkins`
 
-**4. `src/components/admin/BulkAssignOrgDialog.tsx`**
-- Dialog already uses `sm:max-w-lg` — add `max-h-[90vh]` to prevent overflow on short screens
-- Stack footer buttons vertically on very small screens (`flex-col sm:flex-row`)
+### 3. Dashboard Banner — `src/pages/Dashboard.tsx`
 
-### Summary
+For students only: query `student_checkins` for the latest entry. If none exists OR the latest is older than 21 days, show a prominent card:
+> "Time for your 3-week check-in! Let us know how you're doing."
+> [Complete Check-In] button → navigates to `/check-in`
 
-| File | Change |
+### 4. Email Reminder (Scheduled Edge Function)
+
+**New edge function: `supabase/functions/send-checkin-reminders/index.ts`**
+- Runs via pg_cron daily
+- Queries students whose latest check-in is older than 21 days (or who have never checked in, with account age > 21 days)
+- Sends a reminder email to each eligible student using the existing Resend integration
+- Skips students who already have a check-in within the last 21 days
+
+### 5. Check-In History in Student Detail — `src/pages/StudentDetail.tsx`
+
+Add a "Check-Ins" tab showing a timeline of past check-in responses with mood/progress indicators, so case managers and admins can track trends over time.
+
+### 6. Hook — `src/hooks/useStudentCheckIns.ts`
+
+- `useStudentCheckIns(studentId?)` — fetch check-ins for a student
+- `useSubmitCheckIn()` — mutation to submit a new check-in
+- `useLatestCheckIn()` — fetch only the most recent one (for dashboard banner logic)
+
+### 7. Routes & Navigation
+
+- `src/App.tsx` — add `/check-in` route (student only)
+- Sidebar: no permanent link needed; students reach it via the dashboard banner
+
+### File Summary
+
+| File | Action |
 |------|--------|
-| `src/pages/admin/TrainingOrganizations.tsx` | Scroll wrapper, hide columns on mobile |
-| `src/pages/admin/UserManagementPage.tsx` | Scroll wrapper, hide columns, responsive pagination |
-| `src/pages/admin/OrganizationDetail.tsx` | Scroll wrappers, scrollable tabs |
-| `src/components/admin/BulkAssignOrgDialog.tsx` | Constrain height, stack footer on mobile |
-
+| Migration | Create `student_checkins` table with RLS |
+| `src/pages/StudentCheckIn.tsx` | Create — check-in form |
+| `src/hooks/useStudentCheckIns.ts` | Create — data hooks |
+| `src/pages/Dashboard.tsx` | Add check-in banner for students |
+| `src/pages/StudentDetail.tsx` | Add check-in history tab |
+| `supabase/functions/send-checkin-reminders/index.ts` | Create — scheduled email reminders |
+| `src/App.tsx` | Add route |
