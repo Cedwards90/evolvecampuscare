@@ -191,7 +191,7 @@ export default function TrainingOrganizations() {
                           {org.description && <p className="text-xs text-muted-foreground line-clamp-1">{org.description}</p>}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         {org.contact_name ? (
                           <div className="text-sm">
                             <p>{org.contact_name}</p>
