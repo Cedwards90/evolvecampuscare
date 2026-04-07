@@ -51,6 +51,15 @@ export default function Dashboard() {
   const { data: caseManagers = [], isLoading: cmLoading } = useCaseManagers();
   const { data: myAssignment, isLoading: assignmentLoading } = useMyAssignment();
   const { intakeCompleted } = useIntakeSurvey();
+  const { data: latestCheckIn } = useLatestCheckIn();
+  
+  // Show check-in banner if no check-in or last one > 21 days ago
+  const showCheckInBanner = useMemo(() => {
+    if (role !== 'student') return false;
+    if (!latestCheckIn) return true;
+    const daysSince = (Date.now() - new Date(latestCheckIn.created_at).getTime()) / (1000 * 60 * 60 * 24);
+    return daysSince >= 21;
+  }, [role, latestCheckIn]);
   
   // Filter requests based on role
   const requests = useMemo(() => {
