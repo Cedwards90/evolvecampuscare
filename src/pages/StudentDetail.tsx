@@ -358,7 +358,6 @@ export default function StudentDetail() {
           <TabsContent value="checkins" className="space-y-4">
             <StudentCheckInsTab studentId={id!} />
           </TabsContent>
-          </TabsContent>
         </Tabs>
       </div>
     </SidebarLayout>
