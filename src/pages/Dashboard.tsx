@@ -154,6 +154,21 @@ export default function Dashboard() {
   return (
     <SidebarLayout>
       <div className="space-y-6">
+        {/* Check-In Banner */}
+        {showCheckInBanner && (
+          <Card className="border-accent/50 bg-accent/10">
+            <CardContent className="flex items-center justify-between p-4">
+              <div>
+                <p className="font-medium text-sm">📋 Time for your 3-week check-in!</p>
+                <p className="text-xs text-muted-foreground">Let us know how you're doing — it only takes a minute.</p>
+              </div>
+              <Button size="sm" asChild>
+                <Link to="/check-in">Complete Check-In</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Intake Survey Reminder */}
         {role === 'student' && !intakeCompleted && (
           <Card className="border-primary/30 bg-primary/5">
