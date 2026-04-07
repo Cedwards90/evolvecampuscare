@@ -353,6 +353,12 @@ export default function StudentDetail() {
           <TabsContent value="file" className="space-y-4">
             <StudentFileTab studentId={id!} requests={student.requests} />
           </TabsContent>
+
+          {/* Check-Ins Tab */}
+          <TabsContent value="checkins" className="space-y-4">
+            <StudentCheckInsTab studentId={id!} />
+          </TabsContent>
+          </TabsContent>
         </Tabs>
       </div>
     </SidebarLayout>

@@ -93,6 +93,11 @@ function App() {
                       <OfflineDraft />
                     </ProtectedRoute>
                   } />
+                  <Route path="/check-in" element={
+                    <ProtectedRoute allowedRoles={['student']}>
+                      <StudentCheckIn />
+                    </ProtectedRoute>
+                  } />
                   
                   {/* Case Manager routes */}
                   <Route path="/case-manager-managing-student-requests" element={
