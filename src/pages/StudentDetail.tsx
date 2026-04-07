@@ -37,10 +37,12 @@ import {
 import { useStudentDetail } from '@/hooks/useStudentDetail';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
 import { useFileNotes } from '@/hooks/useFileNotes';
+import { useStudentCheckIns } from '@/hooks/useStudentCheckIns';
 import { Textarea } from '@/components/ui/textarea';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { OrgBadgeInline } from '@/components/OrgBadgeInline';
+import { Smile, Frown, Meh, TrendingUp as TrendUp, TrendingDown } from 'lucide-react';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
