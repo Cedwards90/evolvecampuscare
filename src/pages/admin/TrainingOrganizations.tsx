@@ -166,12 +166,13 @@ export default function TrainingOrganizations() {
           </Card>
         ) : (
           <Card>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Organization</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Members</TableHead>
+                  <TableHead className="hidden sm:table-cell">Contact</TableHead>
+                  <TableHead className="hidden md:table-cell">Members</TableHead>
                    <TableHead>Status</TableHead>
                    <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
