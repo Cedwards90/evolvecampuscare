@@ -67,11 +67,11 @@ export default function OrganizationDetail() {
             {roleLabels[member.role] || member.role}
           </Badge>
         </TableCell>
-        <TableCell className="text-muted-foreground text-sm">
+        <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
           {format(new Date(member.joined_at), 'MMM d, yyyy')}
         </TableCell>
         {showLeftAt && (
-          <TableCell className="text-muted-foreground text-sm">
+          <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
             {member.left_at ? format(new Date(member.left_at), 'MMM d, yyyy') : '—'}
           </TableCell>
         )}

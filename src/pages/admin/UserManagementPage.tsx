@@ -462,7 +462,7 @@ export default function UserManagementPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
                 <p className="text-sm text-muted-foreground">
                   Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)} of {filteredUsers.length} users
                 </p>

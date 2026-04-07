@@ -141,7 +141,7 @@ export function BulkAssignOrgDialog({ org, open, onOpenChange }: BulkAssignOrgDi
           )}
         </ScrollArea>
 
-        <DialogFooter className="flex items-center justify-between sm:justify-between">
+        <DialogFooter className="flex flex-col sm:flex-row items-center justify-between sm:justify-between gap-2">
           <p className="text-sm text-muted-foreground">
             {newSelections.length} new user(s) selected
           </p>

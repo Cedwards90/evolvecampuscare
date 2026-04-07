@@ -256,6 +256,7 @@ export default function TrainingOrganizations() {
                 })}
               </TableBody>
             </Table>
+            </div>
           </Card>
         )}
 
