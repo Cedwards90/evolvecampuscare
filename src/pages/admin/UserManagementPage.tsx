@@ -381,13 +381,13 @@ export default function UserManagementPage() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             <div className="flex items-center gap-2">
                               <Mail className="h-4 w-4 text-muted-foreground" />
                               <span className="text-sm">{user.email}</span>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             {user.organization_name ? (
                               <Badge variant="outline" className="gap-1 text-xs">
                                 <Building2 className="h-3 w-3" />{user.organization_name}
