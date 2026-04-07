@@ -34,6 +34,7 @@ import SupportCenter from "./pages/SupportCenter";
 import CompleteProfile from "./pages/CompleteProfile";
 import IntakeSurvey from "./pages/IntakeSurvey";
 import StudentFolders from "./pages/StudentFolders";
+import StudentCheckIn from "./pages/StudentCheckIn";
 import NotFound from "./pages/NotFound";
 
 // Create query client outside component to ensure stable reference
