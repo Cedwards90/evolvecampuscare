@@ -166,12 +166,13 @@ export default function TrainingOrganizations() {
           </Card>
         ) : (
           <Card>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Organization</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Members</TableHead>
+                  <TableHead className="hidden sm:table-cell">Contact</TableHead>
+                  <TableHead className="hidden md:table-cell">Members</TableHead>
                    <TableHead>Status</TableHead>
                    <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
@@ -190,7 +191,7 @@ export default function TrainingOrganizations() {
                           {org.description && <p className="text-xs text-muted-foreground line-clamp-1">{org.description}</p>}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         {org.contact_name ? (
                           <div className="text-sm">
                             <p>{org.contact_name}</p>
@@ -200,7 +201,7 @@ export default function TrainingOrganizations() {
                           <span className="text-muted-foreground text-sm">—</span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <div className="flex items-center gap-2 flex-wrap">
                           {totalMembers === 0 ? (
                             <span className="text-muted-foreground text-sm">No members</span>
@@ -255,6 +256,7 @@ export default function TrainingOrganizations() {
                 })}
               </TableBody>
             </Table>
+            </div>
           </Card>
         )}
 

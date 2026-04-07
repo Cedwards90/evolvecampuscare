@@ -67,11 +67,11 @@ export default function OrganizationDetail() {
             {roleLabels[member.role] || member.role}
           </Badge>
         </TableCell>
-        <TableCell className="text-muted-foreground text-sm">
+        <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
           {format(new Date(member.joined_at), 'MMM d, yyyy')}
         </TableCell>
         {showLeftAt && (
-          <TableCell className="text-muted-foreground text-sm">
+          <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
             {member.left_at ? format(new Date(member.left_at), 'MMM d, yyyy') : '—'}
           </TableCell>
         )}
@@ -128,7 +128,7 @@ export default function OrganizationDetail() {
 
         {/* Tabs */}
         <Tabs defaultValue="current" className="space-y-4">
-          <TabsList>
+          <TabsList className="w-full overflow-x-auto justify-start">
             <TabsTrigger value="current" className="gap-2">
               <Users className="h-4 w-4" />Current Members ({currentMembers.length})
             </TabsTrigger>
@@ -145,18 +145,20 @@ export default function OrganizationDetail() {
               <EmptyState icon={Users} title="No current members" description="No users are currently assigned to this organization." />
             ) : (
               <Card>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Joined</TableHead>
+                      <TableHead className="hidden sm:table-cell">Joined</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {currentMembers.map(m => <MemberRow key={`${m.user_id}-${m.joined_at}`} member={m} />)}
                   </TableBody>
                 </Table>
+                </div>
               </Card>
             )}
           </TabsContent>
@@ -166,19 +168,21 @@ export default function OrganizationDetail() {
               <EmptyState icon={Users} title="No past members" description="No users have left this organization." />
             ) : (
               <Card>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Joined</TableHead>
-                      <TableHead>Left</TableHead>
+                      <TableHead className="hidden sm:table-cell">Joined</TableHead>
+                      <TableHead className="hidden sm:table-cell">Left</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {pastMembers.map(m => <MemberRow key={`${m.user_id}-${m.joined_at}`} member={m} showLeftAt />)}
                   </TableBody>
                 </Table>
+                </div>
               </Card>
             )}
           </TabsContent>

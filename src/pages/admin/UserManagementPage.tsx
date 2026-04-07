@@ -352,15 +352,15 @@ export default function UserManagementPage() {
                 No users found matching your criteria
               </div>
             ) : (
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>User</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Organization</TableHead>
+                      <TableHead className="hidden sm:table-cell">Email</TableHead>
+                      <TableHead className="hidden md:table-cell">Organization</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Joined</TableHead>
+                      <TableHead className="hidden lg:table-cell">Joined</TableHead>
                       <TableHead className="w-[70px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -381,13 +381,13 @@ export default function UserManagementPage() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             <div className="flex items-center gap-2">
                               <Mail className="h-4 w-4 text-muted-foreground" />
                               <span className="text-sm">{user.email}</span>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             {user.organization_name ? (
                               <Badge variant="outline" className="gap-1 text-xs">
                                 <Building2 className="h-3 w-3" />{user.organization_name}
@@ -400,7 +400,7 @@ export default function UserManagementPage() {
                               <span className="capitalize">{user.role.replace('_', ' ')}</span>
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden lg:table-cell">
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Calendar className="h-4 w-4" />
                               {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
@@ -462,7 +462,7 @@ export default function UserManagementPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
                 <p className="text-sm text-muted-foreground">
                   Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)} of {filteredUsers.length} users
                 </p>
