@@ -5,7 +5,8 @@ import {
   AlertTriangle, 
   CheckCheck,
   Loader2,
-  DollarSign
+  DollarSign,
+  Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +19,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -27,19 +43,25 @@ import {
   useApproveRequest, 
   useDenyRequest, 
   useResolveRequest, 
-  useEscalateRequest 
+  useEscalateRequest,
+  useEditRequest 
 } from '@/hooks/useRequest';
-import type { RequestStatus } from '@/types/database';
+import type { RequestStatus, RequestCategory, RequestPriority } from '@/types/database';
 
 interface RequestActionsProps {
   requestId: string;
   userId: string;
   currentStatus: RequestStatus;
   requestedAmount?: number | null;
+  requestTitle?: string;
+  requestDescription?: string;
+  requestCategory?: RequestCategory;
+  requestPriority?: RequestPriority;
+  studentId?: string;
   onActionComplete?: () => void;
 }
 
-type DialogType = 'approve' | 'deny' | 'resolve' | 'escalate' | null;
+type DialogType = 'approve' | 'deny' | 'resolve' | 'escalate' | 'edit' | null;
 type ApprovalType = 'full' | 'custom' | 'none';
 
 export function RequestActions({ 
@@ -47,24 +69,39 @@ export function RequestActions({
   userId, 
   currentStatus,
   requestedAmount,
+  requestTitle,
+  requestDescription,
+  requestCategory,
+  requestPriority,
+  studentId,
   onActionComplete 
 }: RequestActionsProps) {
   const [dialogType, setDialogType] = useState<DialogType>(null);
   const [reason, setReason] = useState('');
   const [approvalType, setApprovalType] = useState<ApprovalType>('full');
   const [customAmount, setCustomAmount] = useState('');
+  
+  // Edit form state
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editCategory, setEditCategory] = useState<RequestCategory>('other');
+  const [editPriority, setEditPriority] = useState<RequestPriority>('medium');
+  const [editAmount, setEditAmount] = useState('');
+  
   const { toast } = useToast();
 
   const approveRequest = useApproveRequest();
   const denyRequest = useDenyRequest();
   const resolveRequest = useResolveRequest();
   const escalateRequest = useEscalateRequest();
+  const editRequest = useEditRequest();
 
   const isLoading = 
     approveRequest.isPending || 
     denyRequest.isPending || 
     resolveRequest.isPending || 
-    escalateRequest.isPending;
+    escalateRequest.isPending ||
+    editRequest.isPending;
 
   const handleApprove = async () => {
     try {
@@ -189,16 +226,76 @@ export function RequestActions({
     setCustomAmount('');
   };
 
+  const openEditDialog = () => {
+    setEditTitle(requestTitle || '');
+    setEditDescription(requestDescription || '');
+    setEditCategory(requestCategory || 'other');
+    setEditPriority(requestPriority || 'medium');
+    setEditAmount(requestedAmount != null ? String(requestedAmount) : '');
+    setDialogType('edit');
+  };
+
+  const handleEdit = async () => {
+    try {
+      const parsedAmount = editAmount ? parseFloat(editAmount) : null;
+      if (editAmount && (isNaN(parsedAmount!) || parsedAmount! < 0)) {
+        toast({ title: 'Invalid Amount', description: 'Please enter a valid dollar amount.', variant: 'destructive' });
+        return;
+      }
+
+      await editRequest.mutateAsync({
+        requestId,
+        userId,
+        changes: {
+          title: editTitle,
+          description: editDescription,
+          category: editCategory,
+          priority: editPriority,
+          requested_amount: parsedAmount,
+        },
+        original: {
+          title: requestTitle || '',
+          description: requestDescription || '',
+          category: requestCategory || 'other',
+          priority: requestPriority || 'medium',
+          requested_amount: requestedAmount ?? null,
+          student_id: studentId || '',
+        },
+      });
+      toast({ title: 'Request Updated', description: 'The request details have been updated and the student has been notified.' });
+      setDialogType(null);
+      onActionComplete?.();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error?.message || 'Failed to update request. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Determine which actions are available based on current status
-  // Allow approve/deny for both submitted AND in_progress (for auto-started requests)
   const canApprove = currentStatus === 'submitted' || currentStatus === 'in_progress';
   const canDeny = currentStatus === 'submitted' || currentStatus === 'in_progress';
   const canResolve = currentStatus === 'in_progress' || currentStatus === 'escalated';
   const canEscalate = currentStatus === 'in_progress';
+  const canEdit = currentStatus === 'submitted' || currentStatus === 'in_progress';
 
   return (
     <>
       <div className="flex flex-wrap gap-2">
+        {canEdit && (
+          <Button
+            variant="outline"
+            onClick={openEditDialog}
+            disabled={isLoading}
+            className="gap-2"
+          >
+            <Pencil className="h-4 w-4" />
+            Edit Request
+          </Button>
+        )}
+
         {canApprove && (
           <Button 
             onClick={() => setDialogType('approve')}
@@ -420,6 +517,91 @@ export function RequestActions({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={dialogType === 'edit'} onOpenChange={(open) => !open && closeDialog()}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Request</DialogTitle>
+            <DialogDescription>
+              Modify the request details. The student will be notified of any changes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={4}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select value={editCategory} onValueChange={(v) => setEditCategory(v as RequestCategory)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="academic">Academic</SelectItem>
+                    <SelectItem value="financial">Financial</SelectItem>
+                    <SelectItem value="mental_health">Mental Health</SelectItem>
+                    <SelectItem value="housing">Housing</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select value={editPriority} onValueChange={(v) => setEditPriority(v as RequestPriority)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="emergency">Emergency</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-amount">Requested Amount ($)</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="edit-amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog} disabled={isLoading}>Cancel</Button>
+            <Button onClick={handleEdit} disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
