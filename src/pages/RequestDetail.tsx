@@ -188,6 +188,11 @@ export default function RequestDetail() {
                         userId={user!.id}
                         currentStatus={request.status}
                         requestedAmount={request.requested_amount}
+                        requestTitle={request.title}
+                        requestDescription={request.description}
+                        requestCategory={request.category}
+                        requestPriority={request.priority}
+                        studentId={request.student_id}
                       />
                     </CardContent>
                   </Card>

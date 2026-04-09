@@ -424,6 +424,105 @@ export function useEscalateRequest() {
   });
 }
 
+export function useEditRequest() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      requestId,
+      userId,
+      changes,
+      original,
+    }: {
+      requestId: string;
+      userId: string;
+      changes: {
+        title?: string;
+        description?: string;
+        category?: string;
+        priority?: string;
+        requested_amount?: number | null;
+      };
+      original: {
+        title: string;
+        description: string;
+        category: string;
+        priority: string;
+        requested_amount?: number | null;
+        student_id: string;
+      };
+    }) => {
+      // Build update payload with only changed fields
+      const updatePayload: Record<string, unknown> = {};
+      const changeNotes: string[] = [];
+
+      if (changes.title && changes.title !== original.title) {
+        updatePayload.title = changes.title;
+        changeNotes.push('title updated');
+      }
+      if (changes.description && changes.description !== original.description) {
+        updatePayload.description = changes.description;
+        changeNotes.push('description updated');
+      }
+      if (changes.category && changes.category !== original.category) {
+        updatePayload.category = changes.category;
+        changeNotes.push(`category changed from ${original.category} to ${changes.category}`);
+      }
+      if (changes.priority && changes.priority !== original.priority) {
+        updatePayload.priority = changes.priority;
+        changeNotes.push(`priority changed from ${original.priority} to ${changes.priority}`);
+      }
+      if (changes.requested_amount !== undefined && changes.requested_amount !== original.requested_amount) {
+        updatePayload.requested_amount = changes.requested_amount;
+        const oldAmt = original.requested_amount
+          ? `$${original.requested_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+          : 'none';
+        const newAmt = changes.requested_amount !== null
+          ? `$${changes.requested_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+          : 'none';
+        changeNotes.push(`amount changed from ${oldAmt} to ${newAmt}`);
+      }
+
+      if (Object.keys(updatePayload).length === 0) {
+        throw new Error('No changes were made.');
+      }
+
+      const { error: updateError } = await supabase
+        .from('support_requests')
+        .update(updatePayload)
+        .eq('id', requestId);
+
+      if (updateError) throw updateError;
+
+      // Log the edit in request_updates
+      const note = `Request modified: ${changeNotes.join(', ')}.`;
+      const { error: noteError } = await supabase
+        .from('request_updates')
+        .insert({
+          request_id: requestId,
+          user_id: userId,
+          note,
+          is_internal: false,
+        });
+
+      if (noteError) throw noteError;
+
+      // In-app notification for the student
+      createInAppNotification({
+        userId: original.student_id,
+        title: '✏️ Request Modified',
+        message: `Your request has been updated by staff: ${changeNotes.join(', ')}.`,
+        type: 'status_update',
+        link: `/requests/${requestId}`,
+      });
+    },
+    onSuccess: (_, { requestId }) => {
+      queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
+    },
+  });
+}
+
 export function useAddReply() {
   const queryClient = useQueryClient();
 
