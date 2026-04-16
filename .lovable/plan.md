@@ -1,38 +1,37 @@
 
 
-The user says mobile is still not right after my last pass. I should investigate concrete issues rather than guess. Let me check the current state of key pages on a mobile viewport via session replay context — they're on `/requests/:id`. The last pass only updated RequestDetail header + Messages + dialog. I deferred a deeper pass on tables, dashboards, forms, and the sidebar.
+Looking at this — currently the RLS policy "Participants can upload attachments" allows uploads for any request where the user is the student/case manager/admin, regardless of status. So technically uploads should already work on resolved requests.
 
-Without seeing a screenshot, I'll plan a focused mobile audit + fixes based on the deferred items. I'll keep it tight and ask one clarifying question to make sure I focus on the right pain points.
+Let me check the frontend — `RequestAttachments.tsx` doesn't seem to have any status gating, and `RequestDetail.tsx` renders it unconditionally based on my last edit.
 
-## Plan: Mobile Responsiveness — Round 2
+Wait — the issue might be the storage bucket policies. Let me think... the recent migration added storage.objects policies for `request-attachments`. Need to confirm those don't gate by status either.
 
-### Audit targets (≤640px)
-1. **`SidebarLayout` top header** — too many items in the header row push content off-screen on phones. Hide search input on `<md`, shrink avatar/notification spacing, ensure hamburger is always tappable.
-2. **`RequestDetail`** — 3-col grid still feels cramped at narrow widths; convert to single column under `lg`, make Quick Actions/Attachments stack first, ensure no horizontal overflow from long titles or AI badge row.
-3. **`SubmitRequest` wizard** — step indicators wrap awkwardly, footer Next/Back buttons need to be sticky and full-width on mobile.
-4. **`ManageRequests` / `RequestsList` / `TrackRequests`** — filter bars wrap into too many rows; collapse filters into a Sheet/drawer on mobile, switch table rows to stacked cards under `sm`.
-5. **`StudentFolders` / `UserManagement` / `StudentAssignmentsTable`** — replace horizontal-scroll tables with stacked cards under `sm` (per memory `responsive-admin-layout` we currently scroll, but cards are easier to read).
-6. **`Dashboard` / `AdminDashboard` / `AnalyticsDashboard`** — stat grids → 1 col mobile, 2 `sm`, 4 `lg`; charts get fixed `h-64` and `min-w-0` to prevent overflow.
-7. **`Messages`** — add a "Back to conversations" button in `MessageThread` header on mobile.
-8. **Dialogs** (`ScheduleMeetingDialog`, `InviteUserDialog`, `SurveyPreviewDialog`, `ComposeMessage`) — ensure full-width on mobile, sticky footer actions, body scrolls.
-9. **Typography & touch targets** — global pass: `text-2xl sm:text-3xl` on H1s, ensure buttons hit 44px min height, increase tap targets on icon-only buttons.
+Actually re-reading the RLS: it joins to `support_requests` and only checks participation, not status. So both DB and storage should allow it. The user's complaint suggests something IS blocking it though.
 
-### Files to edit
+Most likely culprit: students. The `support_requests` table has an UPDATE policy "Students can update their own pending requests" gated to `status = 'submitted'`, but uploading attachments doesn't update support_requests — it inserts into request_attachments. So that shouldn't block it.
+
+Possibility: the RequestAttachments card might be hidden in the UI when status is resolved, OR there's a check I'm missing. Let me plan to verify and fix.
+
+## Plan: Allow Attachments on Resolved Requests
+
+### Investigation
+- Check `RequestDetail.tsx` for any conditional that hides the attachments card when `status === 'resolved'`
+- Check `RequestAttachments.tsx` for any disabled state based on request status
+- Verify RLS policies on `request_attachments` and `storage.objects` for `request-attachments` bucket don't gate by status (current policies look status-agnostic)
+
+### Likely fix
+- Remove any status-based gating in the UI so the upload dropzone stays interactive on resolved/cancelled requests
+- If RLS is found to gate by status, drop and recreate the policy without the status check
+- Ensure the "Attachments" card always renders on `RequestDetail` regardless of status
+
+### Files
 | File | Change |
 |---|---|
-| `src/components/layouts/SidebarLayout.tsx` | Header simplification on mobile, hide search, tighter spacing |
-| `src/pages/RequestDetail.tsx` | Single-col under `lg`, reorder cards, prevent overflow |
-| `src/pages/SubmitRequest.tsx` | Sticky footer, full-width inputs, wizard steps wrap cleanly |
-| `src/pages/ManageRequests.tsx` | Filter Sheet on mobile, stacked cards |
-| `src/pages/RequestsList.tsx`, `src/pages/TrackRequests.tsx` | Stacked cards under `sm` |
-| `src/pages/StudentFolders.tsx`, `src/components/admin/UserManagement.tsx`, `src/components/admin/StudentAssignmentsTable.tsx` | Card fallback under `sm` |
-| `src/pages/Dashboard.tsx`, `src/pages/AdminDashboard.tsx`, `src/pages/admin/AnalyticsDashboard.tsx` | Responsive stat grids, chart `min-w-0` |
-| `src/components/messages/MessageThread.tsx` | Back button on mobile |
-| Dialogs (4 files) | Sticky footer, scrollable body |
-| `src/index.css` | Optional small utility for 44px tap targets |
+| `src/pages/RequestDetail.tsx` | Ensure Attachments card always visible |
+| `src/components/requests/RequestAttachments.tsx` | Remove any status-based disable |
+| Migration (only if needed) | Loosen RLS to ignore status |
 
 ### Notes
-- No backend changes.
-- I'll test by mentally walking through each page at 375px width during implementation.
-- Will preserve existing brand styling (Forest Green primary, pill UI).
+- No new tables, secrets, or buckets
+- Will verify exact gate location during implementation before changing anything
 
