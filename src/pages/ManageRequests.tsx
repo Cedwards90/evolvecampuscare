@@ -126,18 +126,18 @@ export default function ManageRequests() {
         {/* Priority Queue Alert */}
         {(priorityCount.emergency > 0 || priorityCount.high > 0) && (
           <Card className="border-destructive/50 bg-destructive/5">
-            <CardContent className="flex items-center gap-4 py-4">
-              <AlertCircle className="h-6 w-6 text-destructive" />
-              <div>
+            <CardContent className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 py-4">
+              <AlertCircle className="h-6 w-6 text-destructive flex-shrink-0" />
+              <div className="flex-1 min-w-0">
                 <p className="font-semibold">Attention Required</p>
                 <p className="text-sm text-muted-foreground">
                   You have {priorityCount.emergency} emergency and {priorityCount.high} high-priority requests pending.
                 </p>
               </div>
-              <Button 
-                variant="destructive" 
-                size="sm" 
-                className="ml-auto"
+              <Button
+                variant="destructive"
+                size="sm"
+                className="sm:ml-auto w-full sm:w-auto"
                 onClick={() => setPriorityFilter('emergency')}
               >
                 View Emergency
@@ -225,68 +225,114 @@ export default function ManageRequests() {
               description="No requests match your current filters."
             />
           ) : (
-            <Card className="border border-border/50">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Request</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRequests.map((request) => (
-                    <TableRow 
-                      key={request.id}
-                      className={request.is_emergency ? 'bg-destructive/5' : undefined}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-xs font-semibold text-primary">
-                              {request.student?.full_name?.split(' ').map(n => n[0]).join('')}
-                            </span>
-                          </div>
-                          <Link 
-                            to={`/students/${request.student_id}`}
-                            className="font-medium hover:underline"
-                          >
-                            {request.student?.full_name}
-                          </Link>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Link to={`/requests/${request.id}`} className="hover:underline">
-                          <div className="max-w-xs">
-                            <p className="font-medium truncate">{request.title}</p>
-                            <p className="text-sm text-muted-foreground truncate">{request.description}</p>
-                          </div>
+            <>
+              {/* Mobile card list */}
+              <div className="space-y-3 sm:hidden">
+                {filteredRequests.map((request) => (
+                  <Card
+                    key={request.id}
+                    className={request.is_emergency ? 'border-destructive/50 bg-destructive/5' : 'border-border/50'}
+                  >
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <Link to={`/requests/${request.id}`} className="flex-1 min-w-0 hover:underline">
+                          <p className="font-medium truncate">{request.title}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{request.description}</p>
                         </Link>
-                      </TableCell>
-                      <TableCell>
-                        <CategoryBadge category={request.category} />
-                      </TableCell>
-                      <TableCell>
-                        <PriorityBadge priority={request.priority} />
-                      </TableCell>
-                      <TableCell>
                         <StatusBadge status={request.status} />
-                      </TableCell>
-                      <TableCell>
-                        <TimeAgo date={request.created_at} />
-                      </TableCell>
-                      <TableCell className="text-right">
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-[10px] font-semibold text-primary">
+                            {request.student?.full_name?.split(' ').map(n => n[0]).join('')}
+                          </span>
+                        </div>
+                        <Link
+                          to={`/students/${request.student_id}`}
+                          className="font-medium hover:underline truncate"
+                        >
+                          {request.student?.full_name}
+                        </Link>
+                        <span className="ml-auto text-muted-foreground"><TimeAgo date={request.created_at} /></span>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap gap-1.5">
+                          <PriorityBadge priority={request.priority} />
+                          <CategoryBadge category={request.category} />
+                        </div>
                         <RequestQuickActions request={request} />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop table */}
+              <Card className="border border-border/50 hidden sm:block overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Request</TableHead>
+                        <TableHead className="hidden md:table-cell">Category</TableHead>
+                        <TableHead>Priority</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="hidden lg:table-cell">Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredRequests.map((request) => (
+                        <TableRow
+                          key={request.id}
+                          className={request.is_emergency ? 'bg-destructive/5' : undefined}
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                <span className="text-xs font-semibold text-primary">
+                                  {request.student?.full_name?.split(' ').map(n => n[0]).join('')}
+                                </span>
+                              </div>
+                              <Link
+                                to={`/students/${request.student_id}`}
+                                className="font-medium hover:underline"
+                              >
+                                {request.student?.full_name}
+                              </Link>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Link to={`/requests/${request.id}`} className="hover:underline">
+                              <div className="max-w-xs">
+                                <p className="font-medium truncate">{request.title}</p>
+                                <p className="text-sm text-muted-foreground truncate">{request.description}</p>
+                              </div>
+                            </Link>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <CategoryBadge category={request.category} />
+                          </TableCell>
+                          <TableCell>
+                            <PriorityBadge priority={request.priority} />
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={request.status} />
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            <TimeAgo date={request.created_at} />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <RequestQuickActions request={request} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            </>
           )}
         </section>
       </div>
