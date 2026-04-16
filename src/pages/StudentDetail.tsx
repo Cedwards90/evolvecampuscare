@@ -363,6 +363,11 @@ export default function StudentDetail() {
           <TabsContent value="checkins" className="space-y-4">
             <StudentCheckInsTab studentId={id!} />
           </TabsContent>
+
+          {/* Post-Graduation Plan Tab */}
+          <TabsContent value="grad-plan" className="space-y-4">
+            <PostGradPlanTab studentId={id!} />
+          </TabsContent>
         </Tabs>
       </div>
     </SidebarLayout>
