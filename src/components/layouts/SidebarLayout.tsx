@@ -375,7 +375,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           <div className="hidden sm:flex items-center gap-2 text-sm min-w-0">
             <span className="font-semibold truncate">
               {(() => {
-                const allNavItems = [...navItems, ...bottomNavItems];
+                const allNavItems = [...navGroups.flatMap(g => g.items), ...bottomNavItems];
                 const match = allNavItems.find(item => location.pathname === item.href);
                 return match?.label || 'Dashboard';
               })()}
