@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { RequestTimeline } from '@/components/requests/RequestTimeline';
 import { RequestActions } from '@/components/requests/RequestActions';
 import { RequestMessages } from '@/components/requests/RequestMessages';
+import { RequestAttachments } from '@/components/requests/RequestAttachments';
 import { StatusBadge } from '@/components/StatusBadge';
 import { PriorityBadge } from '@/components/PriorityBadge';
 import { CategoryBadge } from '@/components/CategoryBadge';
@@ -84,13 +85,13 @@ export default function RequestDetail() {
     <SidebarLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <div className="flex flex-wrap items-start gap-3 sm:gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="flex-shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold">{request.title}</h1>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-bold break-words">{request.title}</h1>
               {request.is_emergency && (
                 <Badge variant="destructive" className="gap-1">
                   <AlertTriangle className="h-3 w-3" />
@@ -99,8 +100,8 @@ export default function RequestDetail() {
               )}
             </div>
             <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              Created {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
+              <Clock className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">Created {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}</span>
             </div>
           </div>
           <StatusBadge status={request.status} />
@@ -211,6 +212,9 @@ export default function RequestDetail() {
                 )}
               </>
             )}
+
+            {/* Attachments */}
+            <RequestAttachments requestId={request.id} />
 
             {/* Reply Card */}
             <Card>
