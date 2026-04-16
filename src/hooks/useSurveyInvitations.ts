@@ -103,3 +103,44 @@ export function useMarkSurveyComplete() {
     },
   });
 }
+
+export function useCancelInvitation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (invitationId: string) => {
+      const { error } = await supabase
+        .from('survey_invitations')
+        .delete()
+        .eq('id', invitationId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-invitations-all'] });
+      queryClient.invalidateQueries({ queryKey: ['survey-invitations'] });
+    },
+  });
+}
+
+export function useResendInvitation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ studentId, surveyType }: { studentId: string; surveyType: string }) => {
+      const title = surveyType === 'checkin' ? 'Check-In Reminder' : 'Post-Graduation Plan Reminder';
+      const message = surveyType === 'checkin'
+        ? 'Reminder: please complete your check-in.'
+        : 'Reminder: please complete your 12-month post-graduation plan.';
+      const link = surveyType === 'checkin' ? '/check-in' : '/post-graduation-plan';
+      const { error } = await supabase.from('notifications').insert({
+        user_id: studentId,
+        type: 'survey_reminder',
+        title,
+        message,
+        link,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-invitations-all'] });
+    },
+  });
+}

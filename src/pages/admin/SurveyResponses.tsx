@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
-import { useAllCheckIns, useAllPostGradPlans } from '@/hooks/useSurveyResponses';
+import { useAllCheckIns, useAllPostGradPlans, usePendingInvitations } from '@/hooks/useSurveyResponses';
+import { useCancelInvitation, useResendInvitation } from '@/hooks/useSurveyInvitations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +12,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye, Bell, X } from 'lucide-react';
 import { SurveyPreviewDialog } from '@/components/admin/SurveyPreviewDialog';
+import { toast } from 'sonner';
 
 function MoodBadge({ rating }: { rating: number }) {
   const colors = rating >= 4 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
@@ -26,12 +28,17 @@ export default function SurveyResponses() {
   const [previewType, setPreviewType] = useState<'checkin' | 'post_grad' | null>(null);
   const { data: checkIns, isLoading: loadingCheckIns } = useAllCheckIns();
   const { data: plans, isLoading: loadingPlans } = useAllPostGradPlans();
+  const { data: pending, isLoading: loadingPending } = usePendingInvitations();
 
   const filteredCheckIns = checkIns?.filter(c =>
     (c.student_name || c.student_email).toLowerCase().includes(search.toLowerCase())
   ) || [];
 
   const filteredPlans = plans?.filter(p =>
+    (p.student_name || p.student_email).toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
+  const filteredPending = pending?.filter(p =>
     (p.student_name || p.student_email).toLowerCase().includes(search.toLowerCase())
   ) || [];
 
@@ -65,11 +72,38 @@ export default function SurveyResponses() {
         surveyType={previewType || 'checkin'}
       />
 
-      <Tabs defaultValue="checkins">
+      <Tabs defaultValue="pending">
         <TabsList>
+          <TabsTrigger value="pending">Pending ({filteredPending.length})</TabsTrigger>
           <TabsTrigger value="checkins">Check-Ins ({filteredCheckIns.length})</TabsTrigger>
           <TabsTrigger value="plans">Post-Graduation Plans ({filteredPlans.length})</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="pending">
+          {loadingPending ? <LoadingSpinner /> : filteredPending.length === 0 ? (
+            <Card><CardContent className="py-8 text-center text-muted-foreground">No pending surveys.</CardContent></Card>
+          ) : (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Survey Type</TableHead>
+                    <TableHead>Sent By</TableHead>
+                    <TableHead>Sent</TableHead>
+                    <TableHead>Pending</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPending.map(p => (
+                    <PendingRow key={p.id} invitation={p} />
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </TabsContent>
 
         <TabsContent value="checkins">
           {loadingCheckIns ? <LoadingSpinner /> : filteredCheckIns.length === 0 ? (
@@ -223,5 +257,68 @@ function PlanCard({ plan }: { plan: ReturnType<typeof useAllPostGradPlans>['data
         </CollapsibleContent>
       </Card>
     </Collapsible>
+  );
+}
+
+function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingInvitations>['data'] extends (infer T)[] | undefined ? T : never }) {
+  const cancel = useCancelInvitation();
+  const resend = useResendInvitation();
+  const days = Math.floor((Date.now() - new Date(invitation.created_at).getTime()) / 86400000);
+
+  const daysClass = days >= 14
+    ? 'bg-destructive/10 text-destructive border-destructive/20'
+    : days >= 7
+    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+    : 'bg-muted text-muted-foreground';
+
+  const typeLabel = invitation.survey_type === 'checkin' ? 'Check-In' : 'Post-Grad Plan';
+
+  return (
+    <TableRow>
+      <TableCell>
+        <Link to={`/students/${invitation.student_id}`} className="font-medium text-primary hover:underline">
+          {invitation.student_name || invitation.student_email}
+        </Link>
+      </TableCell>
+      <TableCell>
+        <Badge variant="outline">{typeLabel}</Badge>
+      </TableCell>
+      <TableCell className="text-muted-foreground text-sm">{invitation.sender_name || '—'}</TableCell>
+      <TableCell className="text-muted-foreground text-sm">
+        {new Date(invitation.created_at).toLocaleDateString()}
+      </TableCell>
+      <TableCell>
+        <Badge variant="outline" className={daysClass}>
+          {days === 0 ? 'Today' : `${days}d`}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={resend.isPending}
+            onClick={() => resend.mutate(
+              { studentId: invitation.student_id, surveyType: invitation.survey_type },
+              { onSuccess: () => toast.success('Reminder sent') }
+            )}
+          >
+            <Bell className="h-3.5 w-3.5 mr-1" /> Resend
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={cancel.isPending}
+            onClick={() => {
+              if (confirm('Cancel this pending survey invitation?')) {
+                cancel.mutate(invitation.id, { onSuccess: () => toast.success('Invitation cancelled') });
+              }
+            }}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }
