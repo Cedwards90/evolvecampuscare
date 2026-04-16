@@ -22,6 +22,7 @@ import { RequestTimeline } from '@/components/requests/RequestTimeline';
 import { RequestActions } from '@/components/requests/RequestActions';
 import { RequestMessages } from '@/components/requests/RequestMessages';
 import { RequestAttachments } from '@/components/requests/RequestAttachments';
+import { StatusProgressBar } from '@/components/requests/StatusProgressBar';
 import { StatusBadge } from '@/components/StatusBadge';
 import { PriorityBadge } from '@/components/PriorityBadge';
 import { CategoryBadge } from '@/components/CategoryBadge';
@@ -104,8 +105,27 @@ export default function RequestDetail() {
               <span className="truncate">Created {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}</span>
             </div>
           </div>
-          <StatusBadge status={request.status} />
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <StatusBadge status={request.status} />
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {(() => {
+                const eta: Record<string, string> = {
+                  emergency: 'Typical response: within 2 hours',
+                  high: 'Typical response: within 8 hours',
+                  medium: 'Typical response: within 24 hours',
+                  low: 'Typical response: within 72 hours',
+                };
+                return eta[request.priority] || '';
+              })()}
+            </span>
+          </div>
         </div>
+
+        {/* Status progression */}
+        <StatusProgressBar
+          status={request.status}
+          isAssigned={!!request.assigned_case_manager_id}
+        />
 
         {/* Main content grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -287,14 +307,30 @@ export default function RequestDetail() {
                 <Separator />
                 
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{request.student?.email || 'No email'}</span>
+                  <div className="flex items-center gap-2 text-sm min-w-0">
+                    <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    {request.student?.email ? (
+                      <a
+                        href={`mailto:${request.student.email}`}
+                        className="text-primary hover:underline truncate"
+                        aria-label={`Email ${request.student.full_name || 'student'}`}
+                      >
+                        {request.student.email}
+                      </a>
+                    ) : (
+                      <span>No email</span>
+                    )}
                   </div>
                   {request.student?.phone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{request.student.phone}</span>
+                    <div className="flex items-center gap-2 text-sm min-w-0">
+                      <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <a
+                        href={`tel:${request.student.phone}`}
+                        className="text-primary hover:underline truncate"
+                        aria-label={`Call ${request.student.full_name || 'student'}`}
+                      >
+                        {request.student.phone}
+                      </a>
                     </div>
                   )}
                 </div>
