@@ -25,7 +25,7 @@ export default function Messages() {
   return (
     <SidebarLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <PageHeader
             title="Messages"
             description={role === 'student' 
@@ -36,8 +36,8 @@ export default function Messages() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Conversation List */}
-          <Card className="lg:col-span-1 border border-border/50">
+          {/* Conversation List - hide on mobile when a thread is open */}
+          <Card className={`lg:col-span-1 border border-border/50 ${userId ? 'hidden lg:block' : ''}`}>
             <CardContent className="p-4">
               <h3 className="font-semibold mb-4">Conversations</h3>
               {isLoading ? (
@@ -51,7 +51,7 @@ export default function Messages() {
           </Card>
 
           {/* Message Thread */}
-          <Card className="lg:col-span-2 border border-border/50 min-h-[600px]">
+          <Card className={`lg:col-span-2 border border-border/50 min-h-[500px] lg:min-h-[600px] ${!userId ? 'hidden lg:block' : ''}`}>
             {userId ? (
               <MessageThread otherUserId={userId} />
             ) : (
