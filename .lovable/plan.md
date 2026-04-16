@@ -1,45 +1,42 @@
 
 
-User wants a way to send surveys to entire cohorts in bulk, not one student at a time.
+User is on `/admin/surveys` and wants to see pending (sent but not completed) survey invitations after dispatch.
+<lov-tool-use id="toolu_vrtx_01GaDpooa2MYdC96RivAM88V" name="code--view" integration-id="code" data="{\"file_path\": \"src/pages/admin/SurveyResponses.tsx\"}">
+</lov-tool-use>
 
-### Current state
-- `SendSurveyDialog.tsx` exists and sends a survey (`survey_invitations` insert) for a single student.
-- Students have a `cohort_start_date` field on `profiles`.
-- Admins can manage all `survey_invitations`. Case managers can send only to assigned students.
+<lov-tool-use id="toolu_vrtx_019gV5XDJ4siwm95fBZKW8aQ" name="code--view" integration-id="code" data="{\"file_path\": \"src/pages/admin/SurveyResponses.tsx\"}">
+</lov-tool-use>
+<lov-plan>
 
-### Plan: Bulk Cohort Survey Dispatch
+User is on `/admin/surveys` and wants to see surveys that have been **sent but not yet completed** (pending invitations).
 
-#### 1. New dialog component
-Create `src/components/admin/BulkCohortSurveyDialog.tsx`:
-- Survey type select (re-use the same options as `SendSurveyDialog`: intake, satisfaction, post-graduation, etc.)
-- Cohort selector — a dropdown of distinct `cohort_start_date` values pulled from `profiles` (formatted as "March 2024 Cohort"), plus an "All students" option
-- Optional organization filter (dropdown of `training_organizations`)
-- Optional notes textarea
-- Preview count: "This will send to **N students**" updated live as filters change
-- "Send to N students" submit button with confirmation
+### Plan: Add "Pending" tab to Survey Responses page
 
-#### 2. Mutation logic
-- Query `profiles` filtered by selected `cohort_start_date` (and `organization_id` if set), joined to `user_roles` where role = 'student'
-- For case managers: further restrict to students in `student_assignments` where `case_manager_id = auth.uid()` (RLS will enforce, but filter client-side too for accurate count)
-- Skip students who already have an **incomplete** invitation of the same `survey_type` (avoid duplicates)
-- Bulk insert into `survey_invitations` (one row per student)
-- Toast: "Sent {survey_type} to {N} students. {M} skipped (already pending)."
-- Invalidate `survey-invitations` query
+#### 1. New hook
+Add `usePendingInvitations()` to `src/hooks/useSurveyResponses.ts` — selects from `survey_invitations` where `completed_at IS NULL`, joined to student profile (name/email) and sender profile (sent-by name). Sorted newest first.
 
-#### 3. Mount the new button
-- `src/pages/admin/UserManagementPage.tsx` (or wherever `SendSurveyDialog` is used today) — add a "Send to Cohort" button next to existing actions
-- Also expose on the case manager's `MyStudentsSection.tsx` (scoped to their assigned students' cohorts)
+#### 2. New tab on `SurveyResponses.tsx`
+Add a third tab **"Pending (N)"** alongside Check-Ins and Post-Graduation Plans. Tab contents:
+- Table with columns: Student, Survey Type (Check-In / Post-Grad Plan badge), Sent By, Sent Date, Days Pending, Notes, Actions
+- "Days pending" shown as a muted badge that turns amber after 7 days, red after 14
+- Action: **Resend** button (creates a fresh notification + updates invite timestamp) and **Cancel** button (deletes the row, admin-only)
+- Empty state: "No pending surveys."
+- Search input already on page filters by student name across all three tabs
+
+#### 3. Cancel/resend mutations
+Add to `useSurveyInvitations.ts`:
+- `useCancelInvitation()` — deletes the row (admin RLS already covers this via `ALL` policy)
+- `useResendInvitation()` — re-inserts a notification row and bumps `created_at` (or inserts a new invitation and deletes the old one — simpler: just create a new notification ping)
 
 ### Files
 | File | Change |
 |---|---|
-| `src/components/admin/BulkCohortSurveyDialog.tsx` | NEW dialog with cohort + org filters and bulk insert |
-| `src/pages/admin/UserManagementPage.tsx` | Mount "Send to Cohort" button |
-| `src/components/casemanager/MyStudentsSection.tsx` | Mount the same button (CM-scoped) |
+| `src/hooks/useSurveyResponses.ts` | Add `usePendingInvitations` |
+| `src/hooks/useSurveyInvitations.ts` | Add cancel + resend mutations |
+| `src/pages/admin/SurveyResponses.tsx` | New "Pending" tab + table |
 
 ### Notes
-- No schema changes — `survey_invitations` already supports per-student rows
-- No new RLS — existing policies already cover both admin and case-manager paths
-- No edge function — direct inserts via Supabase client
-- Survey types reused from `SendSurveyDialog` to stay consistent
+- No schema or RLS changes required
+- Case-manager scope not in this plan (page is admin-only); if needed later, filter by assigned students client-side
+- Completed invitations naturally disappear from the Pending tab once student submits the survey (existing `useMarkSurveyComplete` already sets `completed_at`)
 
