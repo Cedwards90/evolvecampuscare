@@ -72,11 +72,38 @@ export default function SurveyResponses() {
         surveyType={previewType || 'checkin'}
       />
 
-      <Tabs defaultValue="checkins">
+      <Tabs defaultValue="pending">
         <TabsList>
+          <TabsTrigger value="pending">Pending ({filteredPending.length})</TabsTrigger>
           <TabsTrigger value="checkins">Check-Ins ({filteredCheckIns.length})</TabsTrigger>
           <TabsTrigger value="plans">Post-Graduation Plans ({filteredPlans.length})</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="pending">
+          {loadingPending ? <LoadingSpinner /> : filteredPending.length === 0 ? (
+            <Card><CardContent className="py-8 text-center text-muted-foreground">No pending surveys.</CardContent></Card>
+          ) : (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Survey Type</TableHead>
+                    <TableHead>Sent By</TableHead>
+                    <TableHead>Sent</TableHead>
+                    <TableHead>Pending</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPending.map(p => (
+                    <PendingRow key={p.id} invitation={p} />
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </TabsContent>
 
         <TabsContent value="checkins">
           {loadingCheckIns ? <LoadingSpinner /> : filteredCheckIns.length === 0 ? (
