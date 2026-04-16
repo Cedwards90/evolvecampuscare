@@ -11,7 +11,10 @@ import {
   AlertCircle,
   MessageSquare,
   User,
-  GraduationCap
+  GraduationCap,
+  CalendarDays,
+  Briefcase,
+  Pencil,
 } from 'lucide-react';
 import { StickyNote, PenLine, Building2 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
