@@ -1,35 +1,40 @@
 
 
-## Plan: Add Edit Request for Case Managers and Admins
+## Plan: Ensure Org Assignment Changes Propagate Site-Wide
 
 ### Problem
-The edit request feature hasn't been built yet. It needs to allow both case managers (for assigned requests) and admins (for any request) to edit request details like title, description, category, priority, and requested amount.
+When users are assigned to organizations (via the Bulk Assign dialog or organization detail page), only 3 React Query caches are invalidated (`training-organizations`, `users-with-roles`, `organization-members`). Other views that display organization data — student folders, student detail, case manager stats, analytics — show stale organization info until a manual page refresh.
+
+### Root Cause
+The `useBulkAssignOrganization` mutation's `onSuccess` handler doesn't invalidate all relevant query keys. Several hooks independently fetch and cache organization data.
+
+### Solution
+Add the missing query key invalidations to the `onSuccess` callback of `useBulkAssignOrganization` in `src/hooks/useTrainingOrganizations.ts`.
 
 ### Changes
 
-**1. `src/hooks/useRequest.ts`** — Add `useEditRequest` mutation
-- Updates `support_requests` fields: title, description, category, priority, requested_amount
-- Creates a `request_updates` entry logging what changed (e.g., "Request modified: title updated, amount changed from $500 to $300")
-- Sends in-app notification to the student about the modification
+**`src/hooks/useTrainingOrganizations.ts`** — Expand `onSuccess` invalidations in `useBulkAssignOrganization`
 
-**2. `src/components/requests/RequestActions.tsx`** — Add Edit button + dialog
-- Add `'edit'` to `DialogType`
-- New props: `requestTitle`, `requestDescription`, `requestCategory`, `requestPriority` for pre-populating the edit form
-- Add "Edit Request" button (Pencil icon) visible when status is `submitted` or `in_progress`
-- Edit dialog with form fields: title, description, category (dropdown), priority (dropdown), requested amount
-- On save, call `useEditRequest` mutation
+Add these query key invalidations alongside the existing ones:
+- `student-folders` — so the Student Folders page reflects new org assignments
+- `organization-detail` — so the Organization Detail page refreshes member lists
+- `student-detail` — so individual student pages show the correct org
+- `case-manager-stats` — so dashboard stats recalculate
+- `analytics` — so admin analytics reflect org changes
 
-**3. `src/pages/RequestDetail.tsx`** — Pass additional props to RequestActions
-- Pass `requestTitle`, `requestDescription`, `requestCategory`, `requestPriority` so the edit form can pre-populate
+**`src/hooks/useTrainingOrganizations.ts`** — Also expand `onSuccess` in `useUpdateOrganization`
 
-### No database changes needed
-Both admins and case managers already have UPDATE permission on `support_requests` via existing RLS policies.
+When an org's name or status changes, invalidate:
+- `student-folders` — org names displayed inline
+- `users-with-roles` — org names in user table
+- `organization-detail` — the detail page itself
+- `org-name` — the `OrgBadgeInline` component's cache
 
 ### File Summary
 
 | File | Change |
 |------|--------|
-| `src/hooks/useRequest.ts` | Add `useEditRequest` mutation |
-| `src/components/requests/RequestActions.tsx` | Add Edit button + edit dialog |
-| `src/pages/RequestDetail.tsx` | Pass request detail props to RequestActions |
+| `src/hooks/useTrainingOrganizations.ts` | Add missing query invalidations to `useBulkAssignOrganization` and `useUpdateOrganization` |
+
+Single file change — no database or RLS modifications needed.
 
