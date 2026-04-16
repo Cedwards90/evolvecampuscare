@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { Paperclip, Upload, Download, Trash2, FileText, Image as ImageIcon, FileSpreadsheet, File as FileIcon } from 'lucide-react';
 import {
   useRequestAttachments,
@@ -26,6 +27,12 @@ interface Props {
   requestId: string;
 }
 
+interface UploadingFile {
+  id: string;
+  name: string;
+  progress: number;
+}
+
 function formatBytes(bytes: number | null): string {
   if (!bytes) return '';
   if (bytes < 1024) return `${bytes} B`;
@@ -41,6 +48,8 @@ function getIcon(mime: string | null) {
   return FileIcon;
 }
 
+const ACCEPTED_LABEL = 'PDF, Word, Excel, CSV, JPG, PNG, WEBP, HEIC, GIF, TXT';
+
 export function RequestAttachments({ requestId }: Props) {
   const { user } = useAuth();
   const { data: attachments = [], isLoading } = useRequestAttachments(requestId);
@@ -49,6 +58,7 @@ export function RequestAttachments({ requestId }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [preview, setPreview] = useState<{ url: string; name: string } | null>(null);
+  const [uploading, setUploading] = useState<UploadingFile[]>([]);
 
   const handleFiles = async (files: FileList | File[]) => {
     const list = Array.from(files);
@@ -57,7 +67,25 @@ export function RequestAttachments({ requestId }: Props) {
       return;
     }
     for (const f of list) {
-      await upload.mutateAsync(f).catch(() => {});
+      const tempId = `${Date.now()}-${f.name}`;
+      setUploading((u) => [...u, { id: tempId, name: f.name, progress: 10 }]);
+      // Simulate progress while we await upload (Supabase JS doesn't expose progress)
+      const interval = setInterval(() => {
+        setUploading((u) =>
+          u.map((x) => (x.id === tempId && x.progress < 85 ? { ...x, progress: x.progress + 15 } : x)),
+        );
+      }, 250);
+      try {
+        await upload.mutateAsync(f);
+        setUploading((u) => u.map((x) => (x.id === tempId ? { ...x, progress: 100 } : x)));
+      } catch {
+        // toast handled in hook
+      } finally {
+        clearInterval(interval);
+        setTimeout(() => {
+          setUploading((u) => u.filter((x) => x.id !== tempId));
+        }, 400);
+      }
     }
   };
 
