@@ -55,22 +55,47 @@ interface NavItem {
   badge?: number;
 }
 
-const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['student', 'case_manager', 'admin'] },
-  { label: 'Submit Request', href: '/student-submitting-a-support-request', icon: FileText, roles: ['student'] },
-  { label: 'Track Requests', href: '/student-tracking-request-status-scheduling-meeting', icon: Clock, roles: ['student'] },
-  { label: 'Offline Drafts', href: '/student-creating-offline-draft-request', icon: WifiOff, roles: ['student'] },
-  { label: 'Manage Requests', href: '/case-manager-managing-student-requests', icon: Users, roles: ['case_manager'] },
-  { label: 'Student Folders', href: '/student-folders', icon: FolderOpen, roles: ['case_manager', 'admin'] },
-  { label: 'Messages', href: '/messages', icon: MessageSquare, roles: ['student', 'case_manager', 'admin'] },
-  { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin'] },
-  { label: 'User Management', href: '/admin/users', icon: Shield, roles: ['admin'] },
-  { label: 'Organizations', href: '/admin/organizations', icon: Building2, roles: ['admin'] },
-  { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: ['case_manager', 'admin'] },
-  { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin'] },
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    label: 'Workspace',
+    items: [
+      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['student', 'case_manager', 'admin'] },
+      { label: 'Messages', href: '/messages', icon: MessageSquare, roles: ['student', 'case_manager', 'admin'] },
+    ],
+  },
+  {
+    label: 'Requests',
+    items: [
+      { label: 'Submit Request', href: '/student-submitting-a-support-request', icon: FileText, roles: ['student'] },
+      { label: 'Track Requests', href: '/student-tracking-request-status-scheduling-meeting', icon: Clock, roles: ['student'] },
+      { label: 'Offline Drafts', href: '/student-creating-offline-draft-request', icon: WifiOff, roles: ['student'] },
+      { label: 'Manage Requests', href: '/case-manager-managing-student-requests', icon: Users, roles: ['case_manager'] },
+    ],
+  },
+  {
+    label: 'Students',
+    items: [
+      { label: 'Student Folders', href: '/student-folders', icon: FolderOpen, roles: ['case_manager', 'admin'] },
+      { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: ['case_manager', 'admin'] },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin'] },
+      { label: 'User Management', href: '/admin/users', icon: Shield, roles: ['admin'] },
+      { label: 'Organizations', href: '/admin/organizations', icon: Building2, roles: ['admin'] },
+    ],
+  },
 ];
 
 const bottomNavItems: NavItem[] = [
+  { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin'] },
   { label: 'Help Center', href: '/support', icon: HelpCircle, roles: ['student', 'case_manager', 'admin'] },
 ];
 
