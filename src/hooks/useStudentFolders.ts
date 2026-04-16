@@ -99,6 +99,7 @@ export function useStudentFolders() {
           last_activity: lastReq?.updated_at || null,
           organization_id: orgId || null,
           organization_name: orgId ? orgMap.get(orgId) || null : null,
+          graduation_date: (p as any).graduation_date || null,
         };
       }).sort((a, b) => (b.last_activity || '').localeCompare(a.last_activity || ''));
     },
