@@ -179,45 +179,71 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           />
         </div>
 
-        {/* Navigation Label */}
-        {!sidebarCollapsed && (
-          <div className="px-4 py-3">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Navigation
-            </span>
-          </div>
-        )}
-
         {/* Main Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-2">
-          <ul className="space-y-1">
-            {filteredNavItems.map((item) => (
-              <li key={item.href}>
-                <Link
-                  to={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                    isActive(item.href)
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1"
-                  )}
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200" />
-                  {!sidebarCollapsed && (
-                    <>
-                      <span className="flex-1">{item.label}</span>
-                      {item.badge && item.badge > 0 && (
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
-                          {item.badge > 9 ? '9+' : item.badge}
-                        </span>
-                      )}
-                      {!item.badge && <ChevronRight className="h-4 w-4 opacity-50" />}
-                    </>
-                  )}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {sidebarCollapsed ? (
+            <ul className="space-y-1">
+              {allFilteredNavItems.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    to={item.href}
+                    title={item.label}
+                    className={cn(
+                      "flex items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                      isActive(item.href)
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="space-y-3">
+              {filteredGroups.map((group) => {
+                const open = isGroupOpen(group.label);
+                return (
+                  <div key={group.label}>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.label)}
+                      className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <span>{group.label}</span>
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !open && "-rotate-90")} />
+                    </button>
+                    {open && (
+                      <ul className="mt-1 space-y-1">
+                        {group.items.map((item) => (
+                          <li key={item.href}>
+                            <Link
+                              to={item.href}
+                              className={cn(
+                                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                                isActive(item.href)
+                                  ? "bg-primary text-primary-foreground shadow-sm"
+                                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1"
+                              )}
+                            >
+                              <item.icon className="h-5 w-5 flex-shrink-0" />
+                              <span className="flex-1">{item.label}</span>
+                              {item.badge && item.badge > 0 && (
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                                  {item.badge > 9 ? '9+' : item.badge}
+                                </span>
+                              )}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </nav>
 
         {/* Bottom Section */}
