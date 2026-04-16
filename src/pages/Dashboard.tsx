@@ -159,7 +159,7 @@ export default function Dashboard() {
         {/* Check-In Banner */}
          {showCheckInBanner && (
           <Card className="border-accent/50 bg-accent/10">
-            <CardContent className="flex items-center justify-between p-4">
+            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-medium text-sm">📋 Time for your 3-week check-in!</p>
                 <p className="text-xs text-muted-foreground">Let us know how you're doing — it only takes a minute.</p>
@@ -176,7 +176,7 @@ export default function Dashboard() {
           <>
             {pendingSurveys.map((survey) => (
               <Card key={survey.id} className="border-primary/50 bg-primary/5">
-                <CardContent className="flex items-center justify-between p-4">
+                <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium text-sm">
                       📝 {survey.survey_type === 'checkin' ? 'Check-In Requested' : 'Post-Graduation Plan Requested'}
@@ -200,7 +200,7 @@ export default function Dashboard() {
 
         {role === 'student' && (
           <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="flex items-center justify-between p-4">
+            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-medium text-sm">🎓 12-Month Post-Graduation Plan</p>
                 <p className="text-xs text-muted-foreground">Plan your first year after graduation — career, housing, finances, and more.</p>
@@ -215,7 +215,7 @@ export default function Dashboard() {
         {/* Intake Survey Reminder */}
         {role === 'student' && !intakeCompleted && (
           <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="flex items-center justify-between p-4">
+            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-medium text-sm">Complete your wellness check-in</p>
                 <p className="text-xs text-muted-foreground">Help us understand how to best support you — it only takes a few minutes.</p>
