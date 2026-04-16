@@ -454,6 +454,65 @@ export default function StudentDetail() {
             <PostGradPlanTab studentId={id!} />
           </TabsContent>
         </Tabs>
+
+        {/* Edit Dates Dialog */}
+        <Dialog open={editDatesOpen} onOpenChange={setEditDatesOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Milestone Dates</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Cohort Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !cohortStart && "text-muted-foreground")}>
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {cohortStart ? format(cohortStart, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker mode="single" selected={cohortStart} onSelect={setCohortStart} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label>Graduation Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !gradDate && "text-muted-foreground")}>
+                      <GraduationCap className="mr-2 h-4 w-4" />
+                      {gradDate ? format(gradDate, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker mode="single" selected={gradDate} onSelect={setGradDate} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label>Placement Date (Job Secured)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !placementDate && "text-muted-foreground")}>
+                      <Briefcase className="mr-2 h-4 w-4" />
+                      {placementDate ? format(placementDate, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker mode="single" selected={placementDate} onSelect={setPlacementDate} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDatesOpen(false)}>Cancel</Button>
+              <Button onClick={saveDates} disabled={savingDates}>
+                {savingDates ? 'Saving...' : 'Save Dates'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </SidebarLayout>
   );
