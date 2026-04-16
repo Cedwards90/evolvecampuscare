@@ -39,13 +39,6 @@ export function useAllCheckIns() {
   return useQuery({
     queryKey: ['all-checkins'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('student_checkins')
-        .select('*, profiles!inner(full_name, email)')
-        .eq('profiles.user_id', supabase.rpc ? '' : '')
-        .order('created_at', { ascending: false });
-
-      // Manual join since foreign key doesn't exist
       const { data: checkins, error: checkinsError } = await supabase
         .from('student_checkins')
         .select('*')
