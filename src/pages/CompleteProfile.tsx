@@ -261,6 +261,37 @@ export default function CompleteProfile() {
               </Select>
             </div>
 
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Cohort Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal", !cohortStartDate && "text-muted-foreground")}>
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {cohortStartDate ? format(cohortStartDate, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={cohortStartDate} onSelect={setCohortStartDate} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label>Expected Graduation Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal", !graduationDate && "text-muted-foreground")}>
+                      <GraduationCap className="mr-2 h-4 w-4" />
+                      {graduationDate ? format(graduationDate, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={graduationDate} onSelect={setGraduationDate} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
             <div className="flex gap-3 pt-4">
               <Button
                 type="button"
