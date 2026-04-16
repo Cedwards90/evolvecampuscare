@@ -250,6 +250,7 @@ export default function RequestDetail() {
                 <RequestTimeline 
                   updates={request.updates} 
                   showInternal={isStaff}
+                  requestId={request.id}
                 />
               </CardContent>
             </Card>
