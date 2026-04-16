@@ -259,3 +259,66 @@ function PlanCard({ plan }: { plan: ReturnType<typeof useAllPostGradPlans>['data
     </Collapsible>
   );
 }
+
+function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingInvitations>['data'] extends (infer T)[] | undefined ? T : never }) {
+  const cancel = useCancelInvitation();
+  const resend = useResendInvitation();
+  const days = Math.floor((Date.now() - new Date(invitation.created_at).getTime()) / 86400000);
+
+  const daysClass = days >= 14
+    ? 'bg-destructive/10 text-destructive border-destructive/20'
+    : days >= 7
+    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+    : 'bg-muted text-muted-foreground';
+
+  const typeLabel = invitation.survey_type === 'checkin' ? 'Check-In' : 'Post-Grad Plan';
+
+  return (
+    <TableRow>
+      <TableCell>
+        <Link to={`/students/${invitation.student_id}`} className="font-medium text-primary hover:underline">
+          {invitation.student_name || invitation.student_email}
+        </Link>
+      </TableCell>
+      <TableCell>
+        <Badge variant="outline">{typeLabel}</Badge>
+      </TableCell>
+      <TableCell className="text-muted-foreground text-sm">{invitation.sender_name || '—'}</TableCell>
+      <TableCell className="text-muted-foreground text-sm">
+        {new Date(invitation.created_at).toLocaleDateString()}
+      </TableCell>
+      <TableCell>
+        <Badge variant="outline" className={daysClass}>
+          {days === 0 ? 'Today' : `${days}d`}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={resend.isPending}
+            onClick={() => resend.mutate(
+              { studentId: invitation.student_id, surveyType: invitation.survey_type },
+              { onSuccess: () => toast.success('Reminder sent') }
+            )}
+          >
+            <Bell className="h-3.5 w-3.5 mr-1" /> Resend
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={cancel.isPending}
+            onClick={() => {
+              if (confirm('Cancel this pending survey invitation?')) {
+                cancel.mutate(invitation.id, { onSuccess: () => toast.success('Invitation cancelled') });
+              }
+            }}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
