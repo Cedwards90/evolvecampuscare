@@ -146,9 +146,12 @@ export function RequestAttachments({ requestId }: Props) {
             dragOver ? 'border-primary bg-primary/5' : 'border-border'
           }`}
         >
-          <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground mb-3">
-            Drag & drop files here, or
+          <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" aria-hidden="true" />
+          <p className="text-sm text-muted-foreground mb-1">
+            Drag &amp; drop files here, or
+          </p>
+          <p className="text-xs text-muted-foreground mb-3">
+            Accepted: {ACCEPTED_LABEL}
           </p>
           <Button
             type="button"
@@ -157,6 +160,7 @@ export function RequestAttachments({ requestId }: Props) {
             onClick={() => inputRef.current?.click()}
             disabled={upload.isPending || attachments.length >= MAX_FILES_PER_REQUEST}
             className="min-h-[44px]"
+            aria-label="Choose files to upload"
           >
             {upload.isPending ? 'Uploading...' : 'Choose files'}
           </Button>
@@ -172,6 +176,21 @@ export function RequestAttachments({ requestId }: Props) {
             }}
           />
         </div>
+
+        {/* In-progress uploads */}
+        {uploading.length > 0 && (
+          <ul className="space-y-2" aria-live="polite">
+            {uploading.map((u) => (
+              <li key={u.id} className="rounded-md border border-border p-3">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="text-sm font-medium truncate">{u.name}</span>
+                  <span className="text-xs text-muted-foreground flex-shrink-0">{u.progress}%</span>
+                </div>
+                <Progress value={u.progress} className="h-1.5" />
+              </li>
+            ))}
+          </ul>
+        )}
 
         {/* List */}
         {isLoading ? (
