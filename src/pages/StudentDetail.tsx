@@ -607,3 +607,115 @@ function StudentCheckInsTab({ studentId }: { studentId: string }) {
     </div>
   );
 }
+
+function PostGradPlanTab({ studentId }: { studentId: string }) {
+  const { data: plans = [], isLoading } = useStudentPlans(studentId);
+
+  if (isLoading) return <LoadingSpinner />;
+
+  if (plans.length === 0) {
+    return (
+      <EmptyState
+        icon={GraduationCap}
+        title="No post-graduation plan yet"
+        description="This student hasn't submitted a 12-month post-graduation plan."
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {plans.map((plan) => (
+        <Card key={plan.id} className="border border-border/50">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">
+                Plan submitted {format(new Date(plan.created_at), 'PPP')}
+              </CardTitle>
+              {plan.graduation_date && (
+                <Badge variant="outline">
+                  Graduation: {format(new Date(plan.graduation_date), 'MMM yyyy')}
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {plan.career_goals && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Career Goals</p>
+                  <p className="text-sm">{plan.career_goals}</p>
+                </div>
+              )}
+              {plan.education_goals && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Education Goals</p>
+                  <p className="text-sm">{plan.education_goals}</p>
+                </div>
+              )}
+              {plan.housing_plan && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Housing Plan</p>
+                  <p className="text-sm">{plan.housing_plan}</p>
+                </div>
+              )}
+              {plan.financial_plan && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Financial Plan</p>
+                  <p className="text-sm">{plan.financial_plan}</p>
+                </div>
+              )}
+              {plan.health_wellness && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Health & Wellness</p>
+                  <p className="text-sm">{plan.health_wellness}</p>
+                </div>
+              )}
+              {plan.support_needed && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Support Needed</p>
+                  <p className="text-sm">{plan.support_needed}</p>
+                </div>
+              )}
+            </div>
+            <div className="border-t pt-3 space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground">Quarterly Milestones</p>
+              <div className="grid gap-3 md:grid-cols-2">
+                {plan.month_1_3_actions && (
+                  <div>
+                    <p className="text-xs font-medium text-primary">Months 1–3</p>
+                    <p className="text-sm">{plan.month_1_3_actions}</p>
+                  </div>
+                )}
+                {plan.month_4_6_actions && (
+                  <div>
+                    <p className="text-xs font-medium text-primary">Months 4–6</p>
+                    <p className="text-sm">{plan.month_4_6_actions}</p>
+                  </div>
+                )}
+                {plan.month_7_9_actions && (
+                  <div>
+                    <p className="text-xs font-medium text-primary">Months 7–9</p>
+                    <p className="text-sm">{plan.month_7_9_actions}</p>
+                  </div>
+                )}
+                {plan.month_10_12_actions && (
+                  <div>
+                    <p className="text-xs font-medium text-primary">Months 10–12</p>
+                    <p className="text-sm">{plan.month_10_12_actions}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            {plan.additional_notes && (
+              <div className="border-t pt-3">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Additional Notes</p>
+                <p className="text-sm">{plan.additional_notes}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
