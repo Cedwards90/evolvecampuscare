@@ -1,21 +1,39 @@
+import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { 
-  MessageSquare, 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle, 
-  Clock, 
+import {
+  MessageSquare,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Clock,
   Lock,
-  ArrowRight
+  ArrowRight,
+  Trash2,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import type { RequestUpdate, Profile, RequestStatus } from '@/types/database';
 
 interface RequestTimelineProps {
   updates: (RequestUpdate & { user: Profile | null })[];
   showInternal: boolean;
+  requestId?: string;
 }
 
 const statusIcons: Record<RequestStatus, React.ComponentType<{ className?: string }>> = {
