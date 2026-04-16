@@ -111,13 +111,48 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   // Enable real-time message notifications for staff
   useRealtimeMessages();
 
-  const filteredNavItems = navItems.filter(item => role && item.roles.includes(role)).map(item => {
+  const decorate = (item: NavItem): NavItem => {
     if (item.href === '/messages' && unreadCount && unreadCount > 0) {
       return { ...item, badge: unreadCount };
     }
     return item;
-  });
+  };
+
+  const filteredGroups = navGroups
+    .map(g => ({
+      label: g.label,
+      items: g.items.filter(i => role && i.roles.includes(role)).map(decorate),
+    }))
+    .filter(g => g.items.length > 0);
+
+  const allFilteredNavItems = filteredGroups.flatMap(g => g.items);
   const filteredBottomNavItems = bottomNavItems.filter(item => role && item.roles.includes(role));
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem('sidebar:openGroups');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return {};
+  });
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups(prev => {
+      const next = { ...prev, [label]: prev[label] === undefined ? false : !prev[label] };
+      try { localStorage.setItem('sidebar:openGroups', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const activeGroup = filteredGroups.find(g => g.items.some(i => location.pathname === i.href));
+    if (activeGroup && openGroups[activeGroup.label] === false) {
+      setOpenGroups(prev => ({ ...prev, [activeGroup.label]: true }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  const isGroupOpen = (label: string) => openGroups[label] !== false;
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
