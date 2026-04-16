@@ -85,19 +85,75 @@ export function usePendingInvitations() {
         .order('created_at', { ascending: false });
       if (error) throw error;
 
-      const userIds = [...new Set([
-        ...invites.map(i => i.student_id),
-        ...invites.map(i => i.sent_by),
-      ])];
+      const studentIds = [...new Set(invites.map(i => i.student_id))];
 
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, email')
-        .in('user_id', userIds);
+      const [{ data: checkins }, { data: plans }, { data: profiles }] = await Promise.all([
+        supabase
+          .from('student_checkins')
+          .select('student_id, created_at')
+          .in('student_id', studentIds.length ? studentIds : ['00000000-0000-0000-0000-000000000000']),
+        supabase
+          .from('post_graduation_plans')
+          .select('student_id, created_at')
+          .in('student_id', studentIds.length ? studentIds : ['00000000-0000-0000-0000-000000000000']),
+        supabase
+          .from('profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', [...new Set([...invites.map(i => i.student_id), ...invites.map(i => i.sent_by)])]),
+      ]);
+
+      // Group submissions per student for quick lookup
+      const checkinsByStudent = new Map<string, string[]>();
+      checkins?.forEach(c => {
+        const arr = checkinsByStudent.get(c.student_id) || [];
+        arr.push(c.created_at);
+        checkinsByStudent.set(c.student_id, arr);
+      });
+      const plansByStudent = new Map<string, string[]>();
+      plans?.forEach(p => {
+        const arr = plansByStudent.get(p.student_id) || [];
+        arr.push(p.created_at);
+        plansByStudent.set(p.student_id, arr);
+      });
+
+      const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+      // Find invites that have a matching submission within grace window
+      const toAutoHeal: { id: string; completed_at: string }[] = [];
+      const trulyPending = invites.filter(inv => {
+        const submissions = inv.survey_type === 'checkin'
+          ? checkinsByStudent.get(inv.student_id)
+          : inv.survey_type === 'post_graduation_plan'
+          ? plansByStudent.get(inv.student_id)
+          : undefined;
+
+        if (!submissions?.length) return true;
+
+        const inviteTime = new Date(inv.created_at).getTime();
+        const match = submissions.find(s => new Date(s).getTime() >= inviteTime - ONE_DAY_MS);
+
+        if (match) {
+          toAutoHeal.push({ id: inv.id, completed_at: match });
+          return false;
+        }
+        return true;
+      });
+
+      // Fire-and-forget auto-heal
+      if (toAutoHeal.length > 0) {
+        Promise.all(
+          toAutoHeal.map(h =>
+            supabase
+              .from('survey_invitations')
+              .update({ completed_at: h.completed_at })
+              .eq('id', h.id)
+          )
+        ).catch(err => console.warn('Auto-heal survey_invitations failed:', err));
+      }
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-      return invites.map(i => ({
+      return trulyPending.map(i => ({
         ...i,
         student_name: profileMap.get(i.student_id)?.full_name || null,
         student_email: profileMap.get(i.student_id)?.email || '',
