@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { useSubmitCheckIn } from '@/hooks/useStudentCheckIns';
+import { useMarkSurveyComplete } from '@/hooks/useSurveyInvitations';
 import { toast } from 'sonner';
 import { CheckCircle, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -18,6 +19,7 @@ const progressLabels = ['Struggling', 'Behind', 'On Track', 'Progressing Well', 
 export default function StudentCheckIn() {
   const navigate = useNavigate();
   const submitCheckIn = useSubmitCheckIn();
+  const markComplete = useMarkSurveyComplete();
   const [moodRating, setMoodRating] = useState(3);
   const [progressRating, setProgressRating] = useState(3);
   const [wins, setWins] = useState('');
@@ -36,6 +38,8 @@ export default function StudentCheckIn() {
       });
       setSubmitted(true);
       toast.success('Check-in submitted! Thank you for sharing.');
+      // Mark any pending survey invitation as complete
+      markComplete.mutate('checkin');
     } catch {
       toast.error('Failed to submit check-in. Please try again.');
     }
