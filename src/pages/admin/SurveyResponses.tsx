@@ -23,6 +23,7 @@ function MoodBadge({ rating }: { rating: number }) {
 
 export default function SurveyResponses() {
   const [search, setSearch] = useState('');
+  const [previewType, setPreviewType] = useState<'checkin' | 'post_grad' | null>(null);
   const { data: checkIns, isLoading: loadingCheckIns } = useAllCheckIns();
   const { data: plans, isLoading: loadingPlans } = useAllPostGradPlans();
 
