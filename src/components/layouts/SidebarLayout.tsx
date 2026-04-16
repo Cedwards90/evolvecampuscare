@@ -354,7 +354,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="p-4 lg:p-6">
+        <main className="p-3 sm:p-4 lg:p-6 min-w-0 overflow-x-hidden">
           {children}
         </main>
       </div>

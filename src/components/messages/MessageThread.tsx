@@ -77,20 +77,20 @@ export function MessageThread({ otherUserId }: MessageThreadProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b">
-        <Link to="/messages">
-          <Button variant="ghost" size="icon" className="md:hidden">
+      <div className="flex items-center gap-3 p-3 sm:p-4 border-b">
+        <Link to="/messages" className="md:hidden">
+          <Button variant="ghost" size="icon">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <Avatar className="h-10 w-10">
+        <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
           <AvatarFallback className="bg-primary/10 text-primary">
             {getInitials(otherUser?.full_name || null)}
           </AvatarFallback>
         </Avatar>
-        <div>
-          <p className="font-semibold">{otherUser?.full_name || 'Unknown User'}</p>
-          <p className="text-sm text-muted-foreground">{otherUser?.email}</p>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold truncate">{otherUser?.full_name || 'Unknown User'}</p>
+          <p className="text-sm text-muted-foreground truncate">{otherUser?.email}</p>
         </div>
       </div>
 
