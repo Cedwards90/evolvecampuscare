@@ -1,40 +1,63 @@
 
 
-## Plan: Ensure Org Assignment Changes Propagate Site-Wide
+## Plan: 12-Month Post-Graduation Plan for Students
 
-### Problem
-When users are assigned to organizations (via the Bulk Assign dialog or organization detail page), only 3 React Query caches are invalidated (`training-organizations`, `users-with-roles`, `organization-members`). Other views that display organization data — student folders, student detail, case manager stats, analytics — show stale organization info until a manual page refresh.
+### Overview
+Add a multi-section form where students create a 12-month post-graduation plan covering career, education, housing, finances, health, and personal development. Admins and case managers can view submitted plans from the student detail page.
 
-### Root Cause
-The `useBulkAssignOrganization` mutation's `onSuccess` handler doesn't invalidate all relevant query keys. Several hooks independently fetch and cache organization data.
+### Database
 
-### Solution
-Add the missing query key invalidations to the `onSuccess` callback of `useBulkAssignOrganization` in `src/hooks/useTrainingOrganizations.ts`.
+**New table: `post_graduation_plans`**
+- `id` (uuid, PK)
+- `student_id` (uuid, not null)
+- `graduation_date` (date, nullable)
+- `career_goals` (text)
+- `education_goals` (text)
+- `housing_plan` (text)
+- `financial_plan` (text)
+- `health_wellness` (text)
+- `support_needed` (text)
+- `month_1_3_actions` (text) — first quarter milestones
+- `month_4_6_actions` (text) — second quarter milestones
+- `month_7_9_actions` (text) — third quarter milestones
+- `month_10_12_actions` (text) — fourth quarter milestones
+- `additional_notes` (text, nullable)
+- `created_at` (timestamptz, default now)
+- `updated_at` (timestamptz, default now)
+
+**RLS**: Students insert/view own; case managers view assigned students'; admins view all.
 
 ### Changes
 
-**`src/hooks/useTrainingOrganizations.ts`** — Expand `onSuccess` invalidations in `useBulkAssignOrganization`
+**1. Database migration** — Create `post_graduation_plans` table with RLS policies
 
-Add these query key invalidations alongside the existing ones:
-- `student-folders` — so the Student Folders page reflects new org assignments
-- `organization-detail` — so the Organization Detail page refreshes member lists
-- `student-detail` — so individual student pages show the correct org
-- `case-manager-stats` — so dashboard stats recalculate
-- `analytics` — so admin analytics reflect org changes
+**2. `src/hooks/usePostGraduationPlan.ts`** — New hook
+- `useSubmitPlan` mutation (insert)
+- `useMyPlans` query (student's own plans)
+- `useStudentPlans` query (staff viewing a student's plans)
 
-**`src/hooks/useTrainingOrganizations.ts`** — Also expand `onSuccess` in `useUpdateOrganization`
+**3. `src/pages/PostGraduationPlan.tsx`** — New multi-step form page
+- Step 1: Graduation date + career goals + education goals
+- Step 2: Housing plan + financial plan + health/wellness
+- Step 3: Quarterly milestones (months 1-3, 4-6, 7-9, 10-12)
+- Step 4: Support needed + additional notes + review/submit
+- Progress bar, back/next navigation (same pattern as IntakeSurvey)
+- Success screen after submission
 
-When an org's name or status changes, invalidate:
-- `student-folders` — org names displayed inline
-- `users-with-roles` — org names in user table
-- `organization-detail` — the detail page itself
-- `org-name` — the `OrgBadgeInline` component's cache
+**4. `src/App.tsx`** — Add `/post-graduation-plan` route (student only)
+
+**5. `src/pages/Dashboard.tsx`** — Add card/link for students to access the plan
+
+**6. `src/pages/StudentDetail.tsx`** — Add "Post-Graduation Plan" tab for staff to view submitted plans
 
 ### File Summary
 
-| File | Change |
+| File | Action |
 |------|--------|
-| `src/hooks/useTrainingOrganizations.ts` | Add missing query invalidations to `useBulkAssignOrganization` and `useUpdateOrganization` |
-
-Single file change — no database or RLS modifications needed.
+| Migration | Create `post_graduation_plans` table + RLS |
+| `src/hooks/usePostGraduationPlan.ts` | Create — data hooks |
+| `src/pages/PostGraduationPlan.tsx` | Create — multi-step form |
+| `src/App.tsx` | Add route |
+| `src/pages/Dashboard.tsx` | Add plan link for students |
+| `src/pages/StudentDetail.tsx` | Add plan view tab for staff |
 
