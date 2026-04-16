@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/EmptyState';
 import { InviteStudentDialog } from '@/components/casemanager/InviteStudentDialog';
+import { BulkCohortSurveyDialog } from '@/components/admin/BulkCohortSurveyDialog';
 import type { MyStudent } from '@/hooks/useMyStudents';
 
 interface MyStudentsSectionProps {
