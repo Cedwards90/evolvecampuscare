@@ -45,6 +45,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { OrgBadgeInline } from '@/components/OrgBadgeInline';
 import { useStudentPlans } from '@/hooks/usePostGraduationPlan';
 import { Smile, Frown, Meh, TrendingUp as TrendUp, TrendingDown } from 'lucide-react';
+import { SendSurveyDialog } from '@/components/admin/SendSurveyDialog';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -150,6 +151,10 @@ export default function StudentDetail() {
                         Schedule Meeting
                       </Button>
                     }
+                  />
+                  <SendSurveyDialog
+                    studentId={id!}
+                    studentName={student.profile?.full_name || 'Student'}
                   />
                 </div>
               </div>

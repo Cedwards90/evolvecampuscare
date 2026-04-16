@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useSubmitPlan } from '@/hooks/usePostGraduationPlan';
+import { useMarkSurveyComplete } from '@/hooks/useSurveyInvitations';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 
 const STEPS = [
@@ -22,6 +23,7 @@ export default function PostGraduationPlan() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const submitPlan = useSubmitPlan();
+  const markComplete = useMarkSurveyComplete();
   const [currentStep, setCurrentStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
 
@@ -72,6 +74,7 @@ export default function PostGraduationPlan() {
       });
       setSubmitted(true);
       toast({ title: 'Plan submitted!', description: 'Your 12-month post-graduation plan has been saved.' });
+      markComplete.mutate('post_graduation_plan');
     } catch {
       toast({ title: 'Error', description: 'Failed to submit your plan. Please try again.', variant: 'destructive' });
     }

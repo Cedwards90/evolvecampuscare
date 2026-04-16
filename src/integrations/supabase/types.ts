@@ -658,6 +658,36 @@ export type Database = {
         }
         Relationships: []
       }
+      survey_invitations: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          sent_by: string
+          student_id: string
+          survey_type: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sent_by: string
+          student_id: string
+          survey_type: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sent_by?: string
+          student_id?: string
+          survey_type?: string
+        }
+        Relationships: []
+      }
       training_organizations: {
         Row: {
           contact_email: string | null
