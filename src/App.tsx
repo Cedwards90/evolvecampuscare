@@ -25,6 +25,7 @@ import UserManagementPage from "./pages/admin/UserManagementPage";
 import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
 import TrainingOrganizations from "./pages/admin/TrainingOrganizations";
 import OrganizationDetail from "./pages/admin/OrganizationDetail";
+import SurveyResponses from "./pages/admin/SurveyResponses";
 import RequestDetail from "./pages/RequestDetail";
 import RequestsList from "./pages/RequestsList";
 import CaseManagerDetail from "./pages/CaseManagerDetail";
@@ -136,6 +137,11 @@ function App() {
             <Route path="/admin/organizations/:id" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <OrganizationDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/surveys" element={
+              <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                <SurveyResponses />
               </ProtectedRoute>
             } />
                   
