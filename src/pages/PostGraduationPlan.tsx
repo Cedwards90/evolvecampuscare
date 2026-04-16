@@ -15,7 +15,7 @@ const STEPS = [
   { key: 'goals', title: 'Career & Education', icon: GraduationCap, description: 'Your career and education goals for the first year after graduation.' },
   { key: 'living', title: 'Housing & Finances', icon: Home, description: 'Plan for your living situation and financial stability.' },
   { key: 'milestones', title: 'Quarterly Milestones', icon: Target, description: 'Break your year into quarterly action items.' },
-  { key: 'support', title: 'Wellness & Support', icon: Heart, description: 'Your health plan and the support you'll need.' },
+  { key: 'support', title: 'Wellness & Support', icon: Heart, description: "Your health plan and the support you'll need." },
 ];
 
 export default function PostGraduationPlan() {
