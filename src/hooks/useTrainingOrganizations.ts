@@ -70,7 +70,13 @@ export function useUpdateOrganization() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['training-organizations'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-organizations'] });
+      queryClient.invalidateQueries({ queryKey: ['student-folders'] });
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['org-name'] });
+    },
   });
 }
 
@@ -116,6 +122,12 @@ export function useBulkAssignOrganization() {
       queryClient.invalidateQueries({ queryKey: ['training-organizations'] });
       queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
       queryClient.invalidateQueries({ queryKey: ['organization-members'] });
+      queryClient.invalidateQueries({ queryKey: ['student-folders'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['student-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['case-manager-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['org-name'] });
     },
   });
 }
