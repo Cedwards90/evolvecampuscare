@@ -126,9 +126,22 @@
     @apply border-border;
   }
 
-  body {
+  html, body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: var(--font-body);
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  body {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  /* Prevent any element from forcing horizontal scroll */
+  #root {
+    max-width: 100vw;
+    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -144,6 +157,17 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Mobile overflow guardrails */
+  .safe-content > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .break-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   /* Status colors */

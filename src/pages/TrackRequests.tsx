@@ -185,7 +185,7 @@ export default function TrackRequests() {
             </div>
             <div className="flex gap-2">
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as RequestStatus | 'all')}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="flex-1 min-w-0 sm:w-[140px] sm:flex-none">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -199,7 +199,7 @@ export default function TrackRequests() {
               </Select>
 
               <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as RequestCategory | 'all')}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="flex-1 min-w-0 sm:w-[140px] sm:flex-none">
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>

@@ -159,7 +159,7 @@ export default function Dashboard() {
         {/* Check-In Banner */}
          {showCheckInBanner && (
           <Card className="border-accent/50 bg-accent/10">
-            <CardContent className="flex items-center justify-between p-4">
+            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-medium text-sm">📋 Time for your 3-week check-in!</p>
                 <p className="text-xs text-muted-foreground">Let us know how you're doing — it only takes a minute.</p>
@@ -176,7 +176,7 @@ export default function Dashboard() {
           <>
             {pendingSurveys.map((survey) => (
               <Card key={survey.id} className="border-primary/50 bg-primary/5">
-                <CardContent className="flex items-center justify-between p-4">
+                <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium text-sm">
                       📝 {survey.survey_type === 'checkin' ? 'Check-In Requested' : 'Post-Graduation Plan Requested'}
@@ -200,7 +200,7 @@ export default function Dashboard() {
 
         {role === 'student' && (
           <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="flex items-center justify-between p-4">
+            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-medium text-sm">🎓 12-Month Post-Graduation Plan</p>
                 <p className="text-xs text-muted-foreground">Plan your first year after graduation — career, housing, finances, and more.</p>
@@ -215,7 +215,7 @@ export default function Dashboard() {
         {/* Intake Survey Reminder */}
         {role === 'student' && !intakeCompleted && (
           <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="flex items-center justify-between p-4">
+            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-medium text-sm">Complete your wellness check-in</p>
                 <p className="text-xs text-muted-foreground">Help us understand how to best support you — it only takes a few minutes.</p>
@@ -367,25 +367,27 @@ export default function Dashboard() {
                 </Card>
               ) : myAssignment ? (
                 <Card className="border border-border/50">
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <Avatar className="h-14 w-14">
-                      <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                        {myAssignment.case_manager.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'CM'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h3 className="font-display font-semibold">{myAssignment.case_manager.full_name || 'Your Case Manager'}</h3>
-                      <p className="text-sm text-muted-foreground">{myAssignment.case_manager.email}</p>
-                      {myAssignment.case_manager.phone && (
-                        <p className="text-sm text-muted-foreground">{myAssignment.case_manager.phone}</p>
-                      )}
+                  <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center">
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <Avatar className="h-14 w-14 flex-shrink-0">
+                        <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+                          {myAssignment.case_manager.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'CM'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-display font-semibold truncate">{myAssignment.case_manager.full_name || 'Your Case Manager'}</h3>
+                        <p className="text-sm text-muted-foreground truncate">{myAssignment.case_manager.email}</p>
+                        {myAssignment.case_manager.phone && (
+                          <p className="text-sm text-muted-foreground truncate">{myAssignment.case_manager.phone}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 sm:flex-shrink-0">
                       <ScheduleMeetingDialog
                         studentId={user?.id || ''}
                         studentName={profile?.full_name || 'Student'}
                         trigger={
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="w-full sm:w-auto">
                             <Calendar className="mr-2 h-4 w-4" />
                             Schedule Meeting
                           </Button>
