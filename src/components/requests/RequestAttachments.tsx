@@ -101,6 +101,7 @@ export function RequestAttachments({ requestId }: Props) {
         </CardTitle>
         <CardDescription>
           Receipts, invoices, photos, or supporting documents. Max {MAX_FILES_PER_REQUEST} files, 10 MB each.
+          You can add attachments at any time, including after a request is resolved.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
