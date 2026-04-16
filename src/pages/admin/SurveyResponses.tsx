@@ -28,12 +28,17 @@ export default function SurveyResponses() {
   const [previewType, setPreviewType] = useState<'checkin' | 'post_grad' | null>(null);
   const { data: checkIns, isLoading: loadingCheckIns } = useAllCheckIns();
   const { data: plans, isLoading: loadingPlans } = useAllPostGradPlans();
+  const { data: pending, isLoading: loadingPending } = usePendingInvitations();
 
   const filteredCheckIns = checkIns?.filter(c =>
     (c.student_name || c.student_email).toLowerCase().includes(search.toLowerCase())
   ) || [];
 
   const filteredPlans = plans?.filter(p =>
+    (p.student_name || p.student_email).toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
+  const filteredPending = pending?.filter(p =>
     (p.student_name || p.student_email).toLowerCase().includes(search.toLowerCase())
   ) || [];
 
