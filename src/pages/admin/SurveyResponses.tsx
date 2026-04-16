@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye } from 'lucide-react';
+import { SurveyPreviewDialog } from '@/components/admin/SurveyPreviewDialog';
 
 function MoodBadge({ rating }: { rating: number }) {
   const colors = rating >= 4 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
@@ -22,6 +23,7 @@ function MoodBadge({ rating }: { rating: number }) {
 
 export default function SurveyResponses() {
   const [search, setSearch] = useState('');
+  const [previewType, setPreviewType] = useState<'checkin' | 'post_grad' | null>(null);
   const { data: checkIns, isLoading: loadingCheckIns } = useAllCheckIns();
   const { data: plans, isLoading: loadingPlans } = useAllPostGradPlans();
 
@@ -37,15 +39,31 @@ export default function SurveyResponses() {
     <SidebarLayout>
       <PageHeader title="Survey Responses" description="View all student check-ins and post-graduation plans" />
 
-      <div className="mb-4 relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Filter by student name..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Filter by student name..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setPreviewType('checkin')}>
+            <Eye className="mr-2 h-4 w-4" /> Preview Check-In
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setPreviewType('post_grad')}>
+            <Eye className="mr-2 h-4 w-4" /> Preview Post-Grad Plan
+          </Button>
+        </div>
       </div>
+
+      <SurveyPreviewDialog
+        open={previewType !== null}
+        onOpenChange={(open) => !open && setPreviewType(null)}
+        surveyType={previewType || 'checkin'}
+      />
 
       <Tabs defaultValue="checkins">
         <TabsList>
