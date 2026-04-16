@@ -210,6 +210,7 @@ export default function UserManagementPage() {
                 Analytics
               </Link>
             </Button>
+            <BulkCohortSurveyDialog />
             <InviteUserDialog />
           </div>
         </div>
