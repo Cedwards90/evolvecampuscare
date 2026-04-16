@@ -101,7 +101,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const isActive = (href: string) => location.pathname === href;
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
+    <div className="flex min-h-screen bg-muted/30 max-w-full overflow-x-hidden">
       {/* Sidebar */}
       <aside 
         className={cn(
@@ -245,7 +245,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
       {/* Main Content */}
       <div className={cn(
-        "flex-1 transition-all duration-300",
+        "flex-1 min-w-0 max-w-full overflow-x-hidden transition-all duration-300",
         sidebarCollapsed ? "lg:ml-[70px]" : "lg:ml-[260px]"
       )}>
         {/* Top Header */}
@@ -354,7 +354,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="p-3 sm:p-4 lg:p-6 min-w-0 overflow-x-hidden">
+        <main className="p-3 sm:p-4 lg:p-6 min-w-0 max-w-full overflow-x-hidden safe-content">
           {children}
         </main>
       </div>
