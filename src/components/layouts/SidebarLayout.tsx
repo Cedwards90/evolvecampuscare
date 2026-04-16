@@ -249,12 +249,12 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
         sidebarCollapsed ? "lg:ml-[70px]" : "lg:ml-[260px]"
       )}>
         {/* Top Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border/40 bg-card px-4 lg:px-6">
+        <header className="sticky top-0 z-30 flex h-14 sm:h-16 items-center gap-1 sm:gap-3 border-b border-border/40 bg-card px-2 sm:px-4 lg:px-6">
           {/* Mobile Menu Toggle */}
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
+            className="lg:hidden flex-shrink-0"
             onClick={() => setMobileMenuOpen(true)}
           >
             <Menu className="h-5 w-5" />
@@ -264,15 +264,15 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="hidden lg:flex"
+            className="hidden lg:flex flex-shrink-0"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           >
             <Menu className="h-5 w-5" />
           </Button>
 
           {/* Breadcrumb */}
-          <div className="hidden sm:flex items-center gap-2 text-sm">
-            <span className="font-semibold">
+          <div className="hidden sm:flex items-center gap-2 text-sm min-w-0">
+            <span className="font-semibold truncate">
               {(() => {
                 const allNavItems = [...navItems, ...bottomNavItems];
                 const match = allNavItems.find(item => location.pathname === item.href);
@@ -284,8 +284,8 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Search */}
-          <div className="hidden md:flex relative w-64">
+          {/* Search - desktop only */}
+          <div className="hidden lg:flex relative w-64">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input 
               placeholder="Search..." 

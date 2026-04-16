@@ -108,9 +108,9 @@ export default function RequestDetail() {
         </div>
 
         {/* Main content grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Left column - Request details and timeline */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6 min-w-0">
             {/* Request Details Card */}
             <Card>
               <CardHeader>
@@ -256,7 +256,7 @@ export default function RequestDetail() {
           </div>
 
           {/* Right column - Student info and metadata */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6 min-w-0">
             {/* Student Card */}
             <Card>
               <CardHeader>

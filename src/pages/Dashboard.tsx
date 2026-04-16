@@ -227,9 +227,9 @@ export default function Dashboard() {
           </Card>
         )}
         {/* Header with Breadcrumb */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-bold">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="font-display text-xl sm:text-2xl font-bold truncate">
               Welcome back, {profile?.full_name?.split(' ')[0] || 'User'}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -241,7 +241,7 @@ export default function Dashboard() {
               }
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2">
             <Button variant="outline" size="sm">
               <Calendar className="mr-2 h-4 w-4" />
               {format(new Date(), 'yyyy')}

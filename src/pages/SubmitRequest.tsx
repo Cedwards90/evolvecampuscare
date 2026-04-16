@@ -150,21 +150,21 @@ export default function SubmitRequest() {
         {/* Progress Indicator */}
         <div className="flex items-center justify-between">
           {[1, 2, 3, 4].map((s) => (
-            <div key={s} className="flex items-center">
+            <div key={s} className="flex items-center flex-1 last:flex-none">
               <div
                 className={cn(
-                  'flex h-10 w-10 items-center justify-center rounded-full border-2 font-semibold transition-colors',
+                  'flex h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 items-center justify-center rounded-full border-2 text-sm sm:text-base font-semibold transition-colors',
                   s < step && 'border-primary bg-primary text-primary-foreground',
                   s === step && 'border-primary text-primary',
                   s > step && 'border-muted text-muted-foreground'
                 )}
               >
-                {s < step ? <Check className="h-5 w-5" /> : s}
+                {s < step ? <Check className="h-4 w-4 sm:h-5 sm:w-5" /> : s}
               </div>
               {s < 4 && (
                 <div
                   className={cn(
-                    'h-1 w-12 sm:w-24 mx-2',
+                    'h-1 flex-1 mx-1 sm:mx-2',
                     s < step ? 'bg-primary' : 'bg-muted'
                   )}
                 />
