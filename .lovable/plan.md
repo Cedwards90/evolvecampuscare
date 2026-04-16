@@ -1,58 +1,38 @@
 
 
-## Plan: Survey Trigger Controls for Admins and Case Managers
+## Plan: Track Cohort Start, Graduation, and Placement Dates
 
 ### Overview
-Add a `survey_invitations` table and UI controls so admins and case managers can send survey requests (3-week check-in or post-graduation plan) to individual students. Students see a banner on their dashboard linking them to the appropriate survey.
+Add three date fields to the `profiles` table — `cohort_start_date`, `graduation_date`, and `placement_date` — so staff can track key student milestones. These dates are editable by admins and case managers from the Student Detail page.
 
 ### Database
 
-**New table: `survey_invitations`**
-- `id` (uuid, PK, default gen_random_uuid())
-- `survey_type` (text, not null) — `'checkin'` or `'post_graduation_plan'`
-- `student_id` (uuid, not null)
-- `sent_by` (uuid, not null)
-- `completed_at` (timestamptz, nullable)
-- `notes` (text, nullable)
-- `created_at` (timestamptz, default now())
+**Migration: Add columns to `profiles`**
+- `cohort_start_date` (date, nullable)
+- `graduation_date` (date, nullable)
+- `placement_date` (date, nullable)
 
-**RLS policies:**
-- Admins: full access (ALL)
-- Case managers: INSERT/SELECT for assigned students only
-- Students: SELECT own invitations, UPDATE own (to mark completed)
+No new RLS needed — existing profile policies already allow admin updates and staff reads.
 
 ### Changes
 
-**1. `src/hooks/useSurveyInvitations.ts`** — New hook
-- `useSendSurvey` — inserts into `survey_invitations` + creates in-app notification for the student
-- `usePendingSurveys` — student query for uncompleted invitations
-- `useStudentSurveyHistory` — staff query for a specific student's survey history
+**1. `src/pages/StudentDetail.tsx`** — Display and edit milestone dates
+- Show the three dates in the profile header section (below email/phone)
+- Add an "Edit Dates" button (for admins and case managers) that opens a dialog with three date pickers
+- Save updates via a direct `supabase.from('profiles').update(...)` call
 
-**2. `src/components/admin/SendSurveyDialog.tsx`** — New dialog component
-- Props: `studentId`, `studentName`
-- Survey type selector (Check-In / Post-Graduation Plan)
-- Optional notes field
-- Calls `useSendSurvey` on submit
+**2. `src/pages/CompleteProfile.tsx`** — Optionally let students set their cohort start and expected graduation dates during onboarding
 
-**3. `src/pages/StudentDetail.tsx`** — Add "Send Survey" button
-- Next to existing "Send Message" and "Schedule Meeting" buttons in the profile header
-- Opens `SendSurveyDialog`
+**3. `src/hooks/useStudentDetail.ts`** — No changes needed; already fetches `select('*')` from profiles, so new columns are included automatically
 
-**4. `src/pages/Dashboard.tsx`** — Add pending survey banner for students
-- Query `usePendingSurveys`; if any exist, show alert card with link to `/check-in` or `/post-graduation-plan`
-
-**5. `src/pages/StudentCheckIn.tsx` and `src/pages/PostGraduationPlan.tsx`** — Mark survey complete
-- After successful submission, update `survey_invitations` to set `completed_at`
+**4. `src/pages/StudentFolders.tsx`** — Add graduation date column to the student folders table for at-a-glance visibility
 
 ### File Summary
 
 | File | Action |
 |------|--------|
-| Migration | Create `survey_invitations` table + RLS |
-| `src/hooks/useSurveyInvitations.ts` | Create — survey hooks |
-| `src/components/admin/SendSurveyDialog.tsx` | Create — trigger dialog |
-| `src/pages/StudentDetail.tsx` | Add Send Survey button |
-| `src/pages/Dashboard.tsx` | Add pending survey banner |
-| `src/pages/StudentCheckIn.tsx` | Mark checkin survey complete |
-| `src/pages/PostGraduationPlan.tsx` | Mark plan survey complete |
+| Migration | Add 3 date columns to `profiles` |
+| `src/pages/StudentDetail.tsx` | Show dates + edit dialog |
+| `src/pages/CompleteProfile.tsx` | Add cohort start / graduation fields |
+| `src/pages/StudentFolders.tsx` | Show graduation date in table |
 
