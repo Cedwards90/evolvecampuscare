@@ -140,8 +140,8 @@ export default function StudentFolders() {
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {(student as any).graduation_date
-                        ? format(new Date((student as any).graduation_date), 'MMM d, yyyy')
+                      {student.graduation_date
+                        ? format(new Date(student.graduation_date), 'MMM d, yyyy')
                         : '—'}
                     </TableCell>
                     <TableCell className="text-center font-medium">
