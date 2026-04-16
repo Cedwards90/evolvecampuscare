@@ -1,38 +1,37 @@
 
 
-## Plan: Track Cohort Start, Graduation, and Placement Dates
+## Plan: Survey Responses Viewer for Staff
 
 ### Overview
-Add three date fields to the `profiles` table — `cohort_start_date`, `graduation_date`, and `placement_date` — so staff can track key student milestones. These dates are editable by admins and case managers from the Student Detail page.
-
-### Database
-
-**Migration: Add columns to `profiles`**
-- `cohort_start_date` (date, nullable)
-- `graduation_date` (date, nullable)
-- `placement_date` (date, nullable)
-
-No new RLS needed — existing profile policies already allow admin updates and staff reads.
+Create a dedicated page (`/admin/surveys`) where admins and case managers can browse all submitted check-ins and post-graduation plans across students in one centralized view, with filtering by survey type, student name, and date range.
 
 ### Changes
 
-**1. `src/pages/StudentDetail.tsx`** — Display and edit milestone dates
-- Show the three dates in the profile header section (below email/phone)
-- Add an "Edit Dates" button (for admins and case managers) that opens a dialog with three date pickers
-- Save updates via a direct `supabase.from('profiles').update(...)` call
+**1. `src/pages/admin/SurveyResponses.tsx`** — New page
+- Tabs: "Check-Ins" and "Post-Graduation Plans"
+- Check-Ins tab: table listing all check-ins with student name, date, mood, progress ratings, and expandable detail rows for wins/blockers/notes
+- Post-Grad Plans tab: table/card list with student name, submission date, graduation date, and expandable sections for goals and milestones
+- Search bar to filter by student name
+- Links to student detail page from each row
+- Uses existing `useStudentCheckIns` pattern but queries all accessible records (new hooks)
 
-**2. `src/pages/CompleteProfile.tsx`** — Optionally let students set their cohort start and expected graduation dates during onboarding
+**2. `src/hooks/useSurveyResponses.ts`** — New hook
+- `useAllCheckIns()` — fetches `student_checkins` joined with `profiles` (student name), respecting existing RLS (case managers see assigned, admins see all)
+- `useAllPostGradPlans()` — fetches `post_graduation_plans` joined with `profiles`, same RLS
+- `useAllSurveyInvitations()` — fetches `survey_invitations` joined with profiles for the invitation history/status view
 
-**3. `src/hooks/useStudentDetail.ts`** — No changes needed; already fetches `select('*')` from profiles, so new columns are included automatically
+**3. `src/App.tsx`** — Add route `/admin/surveys` for `case_manager` and `admin` roles
 
-**4. `src/pages/StudentFolders.tsx`** — Add graduation date column to the student folders table for at-a-glance visibility
+**4. `src/components/layouts/SidebarLayout.tsx`** — Add "Surveys" nav item for case_manager and admin roles (using ClipboardList icon)
 
 ### File Summary
 
 | File | Action |
 |------|--------|
-| Migration | Add 3 date columns to `profiles` |
-| `src/pages/StudentDetail.tsx` | Show dates + edit dialog |
-| `src/pages/CompleteProfile.tsx` | Add cohort start / graduation fields |
-| `src/pages/StudentFolders.tsx` | Show graduation date in table |
+| `src/hooks/useSurveyResponses.ts` | Create — cross-student query hooks |
+| `src/pages/admin/SurveyResponses.tsx` | Create — survey viewer page |
+| `src/App.tsx` | Add route |
+| `src/components/layouts/SidebarLayout.tsx` | Add nav item |
+
+No database or RLS changes needed — existing policies already grant the correct access.
 
