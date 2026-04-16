@@ -43,6 +43,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { OrgBadgeInline } from '@/components/OrgBadgeInline';
+import { useStudentPlans } from '@/hooks/usePostGraduationPlan';
 import { Smile, Frown, Meh, TrendingUp as TrendUp, TrendingDown } from 'lucide-react';
 
 function getInitials(name: string | null): string {
