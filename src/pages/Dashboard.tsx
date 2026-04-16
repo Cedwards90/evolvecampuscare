@@ -367,25 +367,27 @@ export default function Dashboard() {
                 </Card>
               ) : myAssignment ? (
                 <Card className="border border-border/50">
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <Avatar className="h-14 w-14">
-                      <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                        {myAssignment.case_manager.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'CM'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h3 className="font-display font-semibold">{myAssignment.case_manager.full_name || 'Your Case Manager'}</h3>
-                      <p className="text-sm text-muted-foreground">{myAssignment.case_manager.email}</p>
-                      {myAssignment.case_manager.phone && (
-                        <p className="text-sm text-muted-foreground">{myAssignment.case_manager.phone}</p>
-                      )}
+                  <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center">
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <Avatar className="h-14 w-14 flex-shrink-0">
+                        <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+                          {myAssignment.case_manager.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'CM'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-display font-semibold truncate">{myAssignment.case_manager.full_name || 'Your Case Manager'}</h3>
+                        <p className="text-sm text-muted-foreground truncate">{myAssignment.case_manager.email}</p>
+                        {myAssignment.case_manager.phone && (
+                          <p className="text-sm text-muted-foreground truncate">{myAssignment.case_manager.phone}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 sm:flex-shrink-0">
                       <ScheduleMeetingDialog
                         studentId={user?.id || ''}
                         studentName={profile?.full_name || 'Student'}
                         trigger={
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="w-full sm:w-auto">
                             <Calendar className="mr-2 h-4 w-4" />
                             Schedule Meeting
                           </Button>
