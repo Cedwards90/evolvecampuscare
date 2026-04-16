@@ -251,6 +251,63 @@ export type Database = {
           },
         ]
       }
+      post_graduation_plans: {
+        Row: {
+          additional_notes: string | null
+          career_goals: string
+          created_at: string
+          education_goals: string
+          financial_plan: string
+          graduation_date: string | null
+          health_wellness: string
+          housing_plan: string
+          id: string
+          month_1_3_actions: string
+          month_10_12_actions: string
+          month_4_6_actions: string
+          month_7_9_actions: string
+          student_id: string
+          support_needed: string
+          updated_at: string
+        }
+        Insert: {
+          additional_notes?: string | null
+          career_goals?: string
+          created_at?: string
+          education_goals?: string
+          financial_plan?: string
+          graduation_date?: string | null
+          health_wellness?: string
+          housing_plan?: string
+          id?: string
+          month_1_3_actions?: string
+          month_10_12_actions?: string
+          month_4_6_actions?: string
+          month_7_9_actions?: string
+          student_id: string
+          support_needed?: string
+          updated_at?: string
+        }
+        Update: {
+          additional_notes?: string | null
+          career_goals?: string
+          created_at?: string
+          education_goals?: string
+          financial_plan?: string
+          graduation_date?: string | null
+          health_wellness?: string
+          housing_plan?: string
+          id?: string
+          month_1_3_actions?: string
+          month_10_12_actions?: string
+          month_4_6_actions?: string
+          month_7_9_actions?: string
+          student_id?: string
+          support_needed?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
