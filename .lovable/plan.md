@@ -1,34 +1,45 @@
 
 
-User wants the PWA icon (used when "Add to Home Screen" / install) to be the Evolve Foundation logo instead of the current placeholder `pwa-192x192.png` / `pwa-512x512.png`.
+User wants a way to send surveys to entire cohorts in bulk, not one student at a time.
 
-Currently `vite.config.ts` references `/pwa-192x192.png` and `/pwa-512x512.png`, and `index.html` references `/pwa-192x192.png` for the apple-touch-icon. The Evolve logo is hosted at `https://www.evolvefoundation.us/lovable-uploads/evolve-logo.webp`.
+### Current state
+- `SendSurveyDialog.tsx` exists and sends a survey (`survey_invitations` insert) for a single student.
+- Students have a `cohort_start_date` field on `profiles`.
+- Admins can manage all `survey_invitations`. Case managers can send only to assigned students.
 
-Browsers/PWA installers require the manifest icons to be same-origin PNG files at the declared sizes. I need to generate proper square PNG files from the logo and place them in `public/`.
+### Plan: Bulk Cohort Survey Dispatch
 
-## Plan: Use Evolve logo as PWA icon
+#### 1. New dialog component
+Create `src/components/admin/BulkCohortSurveyDialog.tsx`:
+- Survey type select (re-use the same options as `SendSurveyDialog`: intake, satisfaction, post-graduation, etc.)
+- Cohort selector — a dropdown of distinct `cohort_start_date` values pulled from `profiles` (formatted as "March 2024 Cohort"), plus an "All students" option
+- Optional organization filter (dropdown of `training_organizations`)
+- Optional notes textarea
+- Preview count: "This will send to **N students**" updated live as filters change
+- "Send to N students" submit button with confirmation
 
-### Steps
-1. **Download** the Evolve logo from `https://www.evolvefoundation.us/lovable-uploads/evolve-logo.webp`.
-2. **Generate PNGs** at the required sizes using ImageMagick:
-   - `public/pwa-192x192.png` (192×192)
-   - `public/pwa-512x512.png` (512×512)
-   - `public/apple-touch-icon.png` (180×180, optional polish)
-   The logo will be centered on a white background (matches the manifest's `background_color: "#FFFFFF"`) and padded so it reads well as a maskable icon.
-3. **Verify** the generated images by inspecting dimensions and a quick visual check.
-4. **No code changes needed** in `vite.config.ts` — the existing manifest already points at `/pwa-192x192.png` and `/pwa-512x512.png`. The new files will simply replace the placeholders.
-5. **Optionally** update `index.html`'s `apple-touch-icon` to point at the new 180×180 file for a sharper iOS home-screen icon.
+#### 2. Mutation logic
+- Query `profiles` filtered by selected `cohort_start_date` (and `organization_id` if set), joined to `user_roles` where role = 'student'
+- For case managers: further restrict to students in `student_assignments` where `case_manager_id = auth.uid()` (RLS will enforce, but filter client-side too for accurate count)
+- Skip students who already have an **incomplete** invitation of the same `survey_type` (avoid duplicates)
+- Bulk insert into `survey_invitations` (one row per student)
+- Toast: "Sent {survey_type} to {N} students. {M} skipped (already pending)."
+- Invalidate `survey-invitations` query
+
+#### 3. Mount the new button
+- `src/pages/admin/UserManagementPage.tsx` (or wherever `SendSurveyDialog` is used today) — add a "Send to Cohort" button next to existing actions
+- Also expose on the case manager's `MyStudentsSection.tsx` (scoped to their assigned students' cohorts)
 
 ### Files
 | File | Change |
 |---|---|
-| `public/pwa-192x192.png` | Replace with Evolve logo (192×192, white bg) |
-| `public/pwa-512x512.png` | Replace with Evolve logo (512×512, white bg) |
-| `public/apple-touch-icon.png` | New 180×180 icon |
-| `index.html` | Update `apple-touch-icon` href (1-line tweak) |
+| `src/components/admin/BulkCohortSurveyDialog.tsx` | NEW dialog with cohort + org filters and bulk insert |
+| `src/pages/admin/UserManagementPage.tsx` | Mount "Send to Cohort" button |
+| `src/components/casemanager/MyStudentsSection.tsx` | Mount the same button (CM-scoped) |
 
 ### Notes
-- PWA install icon only updates after republishing — Lovable preview iframe disables the service worker, so the user will need to publish to see the new icon on installed devices.
-- Existing favicon (small browser tab icon) already uses the live `evolve-logo.webp` URL and is unchanged.
-- No backend, manifest, or dependency changes.
+- No schema changes — `survey_invitations` already supports per-student rows
+- No new RLS — existing policies already cover both admin and case-manager paths
+- No edge function — direct inserts via Supabase client
+- Survey types reused from `SendSurveyDialog` to stay consistent
 
