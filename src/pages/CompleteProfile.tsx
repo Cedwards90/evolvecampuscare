@@ -64,6 +64,8 @@ export default function CompleteProfile() {
   const { data: organizations } = useActiveOrganizations();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState<string>('');
+  const [cohortStartDate, setCohortStartDate] = useState<Date | undefined>();
+  const [graduationDate, setGraduationDate] = useState<Date | undefined>();
 
   const {
     register,
@@ -95,6 +97,8 @@ export default function CompleteProfile() {
           year_of_study: data.year_of_study || null,
           preferred_contact: data.preferred_contact,
           organization_id: selectedOrgId || null,
+          cohort_start_date: cohortStartDate ? cohortStartDate.toISOString().split('T')[0] : null,
+          graduation_date: graduationDate ? graduationDate.toISOString().split('T')[0] : null,
         } as any)
         .eq('user_id', user.id);
 
