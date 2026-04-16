@@ -1,42 +1,33 @@
 
 
-User is on `/admin/surveys` and wants to see pending (sent but not completed) survey invitations after dispatch.
-<lov-tool-use id="toolu_vrtx_01GaDpooa2MYdC96RivAM88V" name="code--view" integration-id="code" data="{\"file_path\": \"src/pages/admin/SurveyResponses.tsx\"}">
-</lov-tool-use>
+### Problem
+The Pending tab on `/admin/surveys` shows students who have **already completed** their check-in or post-grad plan. Confirmed in DB:
+- 2 students (Diarra Stinson, Shavez Moody) submitted check-ins at 16:47 / 17:20.
+- All `survey_invitations.completed_at` are NULL because the bulk send (21:08) happened *after* their submissions.
+- `useMarkSurveyComplete` only fires at submit-time, so it can't retroactively mark invites that didn't yet exist.
+- Going forward, even new completions would only mark *one* invite per student per type — bulk-sent duplicates stay stuck as "pending".
 
-<lov-tool-use id="toolu_vrtx_019gV5XDJ4siwm95fBZKW8aQ" name="code--view" integration-id="code" data="{\"file_path\": \"src/pages/admin/SurveyResponses.tsx\"}">
-</lov-tool-use>
-<lov-plan>
+### Fix: derive completion from actual submissions, not just the `completed_at` flag
 
-User is on `/admin/surveys` and wants to see surveys that have been **sent but not yet completed** (pending invitations).
+Update `usePendingInvitations()` in `src/hooks/useSurveyResponses.ts` to:
+1. Fetch all `survey_invitations` where `completed_at IS NULL` (as today).
+2. Also fetch:
+   - `student_checkins` rows (student_id + created_at) for any student in the invite list.
+   - `post_graduation_plans` rows (student_id + created_at) for any student in the invite list.
+3. **Filter out** any invitation where the student has a matching submission of that `survey_type` with `created_at >= invitation.created_at - 1 day` (1-day grace covers the bulk-send-after-submit case the user just hit).
+   - `checkin` → match against `student_checkins`
+   - `post_graduation_plan` → match against `post_graduation_plans`
+4. Return only the truly-pending list. Counts in the tab badge auto-correct.
 
-### Plan: Add "Pending" tab to Survey Responses page
-
-#### 1. New hook
-Add `usePendingInvitations()` to `src/hooks/useSurveyResponses.ts` — selects from `survey_invitations` where `completed_at IS NULL`, joined to student profile (name/email) and sender profile (sent-by name). Sorted newest first.
-
-#### 2. New tab on `SurveyResponses.tsx`
-Add a third tab **"Pending (N)"** alongside Check-Ins and Post-Graduation Plans. Tab contents:
-- Table with columns: Student, Survey Type (Check-In / Post-Grad Plan badge), Sent By, Sent Date, Days Pending, Notes, Actions
-- "Days pending" shown as a muted badge that turns amber after 7 days, red after 14
-- Action: **Resend** button (creates a fresh notification + updates invite timestamp) and **Cancel** button (deletes the row, admin-only)
-- Empty state: "No pending surveys."
-- Search input already on page filters by student name across all three tabs
-
-#### 3. Cancel/resend mutations
-Add to `useSurveyInvitations.ts`:
-- `useCancelInvitation()` — deletes the row (admin RLS already covers this via `ALL` policy)
-- `useResendInvitation()` — re-inserts a notification row and bumps `created_at` (or inserts a new invitation and deletes the old one — simpler: just create a new notification ping)
+### Bonus: auto-mark them complete
+For invites we filter out as already-submitted, fire-and-forget an `update` setting `completed_at` to the submission time. This cleans up the data so future queries are fast and accurate, and it also fixes the student-side `usePendingSurveys` reminder list.
 
 ### Files
 | File | Change |
 |---|---|
-| `src/hooks/useSurveyResponses.ts` | Add `usePendingInvitations` |
-| `src/hooks/useSurveyInvitations.ts` | Add cancel + resend mutations |
-| `src/pages/admin/SurveyResponses.tsx` | New "Pending" tab + table |
+| `src/hooks/useSurveyResponses.ts` | Update `usePendingInvitations` to cross-check submissions + auto-heal `completed_at` |
 
 ### Notes
-- No schema or RLS changes required
-- Case-manager scope not in this plan (page is admin-only); if needed later, filter by assigned students client-side
-- Completed invitations naturally disappear from the Pending tab once student submits the survey (existing `useMarkSurveyComplete` already sets `completed_at`)
+- No schema changes, no RLS changes (admin already has full update on `survey_invitations`).
+- Brand & UI untouched — the existing Pending tab simply shows a smaller, accurate list.
 
