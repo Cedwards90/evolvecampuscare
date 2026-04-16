@@ -65,6 +65,47 @@ function getInitials(name: string | null): string {
 export default function StudentDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: student, isLoading, error } = useStudentDetail(id);
+  const { toast } = useToast();
+  const { role } = useAuth();
+  const [editDatesOpen, setEditDatesOpen] = useState(false);
+  const [cohortStart, setCohortStart] = useState<Date | undefined>();
+  const [gradDate, setGradDate] = useState<Date | undefined>();
+  const [placementDate, setPlacementDate] = useState<Date | undefined>();
+  const [savingDates, setSavingDates] = useState(false);
+
+  const isStaff = role === 'admin' || role === 'case_manager';
+
+  const openEditDates = () => {
+    const p = student?.profile as any;
+    setCohortStart(p?.cohort_start_date ? new Date(p.cohort_start_date) : undefined);
+    setGradDate(p?.graduation_date ? new Date(p.graduation_date) : undefined);
+    setPlacementDate(p?.placement_date ? new Date(p.placement_date) : undefined);
+    setEditDatesOpen(true);
+  };
+
+  const saveDates = async () => {
+    if (!id) return;
+    setSavingDates(true);
+    try {
+      const { error: err } = await supabase
+        .from('profiles')
+        .update({
+          cohort_start_date: cohortStart ? cohortStart.toISOString().split('T')[0] : null,
+          graduation_date: gradDate ? gradDate.toISOString().split('T')[0] : null,
+          placement_date: placementDate ? placementDate.toISOString().split('T')[0] : null,
+        } as any)
+        .eq('user_id', id);
+      if (err) throw err;
+      toast({ title: 'Dates updated successfully' });
+      setEditDatesOpen(false);
+      // Refetch will happen via react-query invalidation
+      window.location.reload();
+    } catch (e) {
+      toast({ title: 'Error', description: 'Failed to save dates', variant: 'destructive' });
+    } finally {
+      setSavingDates(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -142,6 +183,34 @@ export default function StudentDetail() {
                       <Phone className="h-4 w-4" />
                       <span>{student.profile.phone}</span>
                     </div>
+                  )}
+                </div>
+
+                {/* Milestone Dates */}
+                <div className="flex flex-wrap gap-4 text-sm">
+                  {(student.profile as any)?.cohort_start_date && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <CalendarDays className="h-4 w-4" />
+                      <span>Cohort Start: {format(new Date((student.profile as any).cohort_start_date), 'MMM d, yyyy')}</span>
+                    </div>
+                  )}
+                  {(student.profile as any)?.graduation_date && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <GraduationCap className="h-4 w-4" />
+                      <span>Graduation: {format(new Date((student.profile as any).graduation_date), 'MMM d, yyyy')}</span>
+                    </div>
+                  )}
+                  {(student.profile as any)?.placement_date && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Briefcase className="h-4 w-4" />
+                      <span>Placement: {format(new Date((student.profile as any).placement_date), 'MMM d, yyyy')}</span>
+                    </div>
+                  )}
+                  {isStaff && (
+                    <Button variant="ghost" size="sm" onClick={openEditDates} className="h-6 px-2 text-xs">
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit Dates
+                    </Button>
                   )}
                 </div>
 
