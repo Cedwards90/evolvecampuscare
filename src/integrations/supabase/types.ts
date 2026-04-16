@@ -311,13 +311,16 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          cohort_start_date: string | null
           created_at: string
           department: string | null
           email: string
           full_name: string | null
+          graduation_date: string | null
           id: string
           organization_id: string | null
           phone: string | null
+          placement_date: string | null
           preferred_contact: string | null
           preferred_language: string | null
           student_id: string | null
@@ -327,13 +330,16 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          cohort_start_date?: string | null
           created_at?: string
           department?: string | null
           email: string
           full_name?: string | null
+          graduation_date?: string | null
           id?: string
           organization_id?: string | null
           phone?: string | null
+          placement_date?: string | null
           preferred_contact?: string | null
           preferred_language?: string | null
           student_id?: string | null
@@ -343,13 +349,16 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          cohort_start_date?: string | null
           created_at?: string
           department?: string | null
           email?: string
           full_name?: string | null
+          graduation_date?: string | null
           id?: string
           organization_id?: string | null
           phone?: string | null
+          placement_date?: string | null
           preferred_contact?: string | null
           preferred_language?: string | null
           student_id?: string | null

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderOpen, Search, CheckCircle, Clock, FileText, Building2 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { FolderOpen, Search, CheckCircle, Clock, FileText, Building2, GraduationCap } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -94,6 +94,7 @@ export default function StudentFolders() {
                   <TableHead>Student</TableHead>
                   <TableHead>Organization</TableHead>
                   <TableHead>Intake</TableHead>
+                  <TableHead>Graduation</TableHead>
                   <TableHead className="text-center">Requests</TableHead>
                   <TableHead className="text-center">Pending</TableHead>
                   <TableHead>Last Activity</TableHead>
@@ -137,6 +138,11 @@ export default function StudentFolders() {
                           Pending
                         </Badge>
                       )}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {student.graduation_date
+                        ? format(new Date(student.graduation_date), 'MMM d, yyyy')
+                        : '—'}
                     </TableCell>
                     <TableCell className="text-center font-medium">
                       {student.total_requests}

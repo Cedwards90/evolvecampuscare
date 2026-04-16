@@ -12,6 +12,7 @@ export interface StudentFolder {
   last_activity: string | null;
   organization_id: string | null;
   organization_name: string | null;
+  graduation_date: string | null;
 }
 
 export function useStudentFolders() {
@@ -44,7 +45,7 @@ export function useStudentFolders() {
       // Step 2: Fetch profiles
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('user_id, full_name, email, organization_id')
+        .select('user_id, full_name, email, organization_id, graduation_date')
         .in('user_id', studentIds);
       if (profileError) throw profileError;
 
@@ -98,6 +99,7 @@ export function useStudentFolders() {
           last_activity: lastReq?.updated_at || null,
           organization_id: orgId || null,
           organization_name: orgId ? orgMap.get(orgId) || null : null,
+          graduation_date: (p as any).graduation_date || null,
         };
       }).sort((a, b) => (b.last_activity || '').localeCompare(a.last_activity || ''));
     },

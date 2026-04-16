@@ -11,7 +11,10 @@ import {
   AlertCircle,
   MessageSquare,
   User,
-  GraduationCap
+  GraduationCap,
+  CalendarDays,
+  Briefcase,
+  Pencil,
 } from 'lucide-react';
 import { StickyNote, PenLine, Building2 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -46,6 +49,13 @@ import { OrgBadgeInline } from '@/components/OrgBadgeInline';
 import { useStudentPlans } from '@/hooks/usePostGraduationPlan';
 import { Smile, Frown, Meh, TrendingUp as TrendUp, TrendingDown } from 'lucide-react';
 import { SendSurveyDialog } from '@/components/admin/SendSurveyDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarPicker } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -55,6 +65,47 @@ function getInitials(name: string | null): string {
 export default function StudentDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: student, isLoading, error } = useStudentDetail(id);
+  const { toast } = useToast();
+  const { role } = useAuth();
+  const [editDatesOpen, setEditDatesOpen] = useState(false);
+  const [cohortStart, setCohortStart] = useState<Date | undefined>();
+  const [gradDate, setGradDate] = useState<Date | undefined>();
+  const [placementDate, setPlacementDate] = useState<Date | undefined>();
+  const [savingDates, setSavingDates] = useState(false);
+
+  const isStaff = role === 'admin' || role === 'case_manager';
+
+  const openEditDates = () => {
+    const p = student?.profile as any;
+    setCohortStart(p?.cohort_start_date ? new Date(p.cohort_start_date) : undefined);
+    setGradDate(p?.graduation_date ? new Date(p.graduation_date) : undefined);
+    setPlacementDate(p?.placement_date ? new Date(p.placement_date) : undefined);
+    setEditDatesOpen(true);
+  };
+
+  const saveDates = async () => {
+    if (!id) return;
+    setSavingDates(true);
+    try {
+      const { error: err } = await supabase
+        .from('profiles')
+        .update({
+          cohort_start_date: cohortStart ? cohortStart.toISOString().split('T')[0] : null,
+          graduation_date: gradDate ? gradDate.toISOString().split('T')[0] : null,
+          placement_date: placementDate ? placementDate.toISOString().split('T')[0] : null,
+        } as any)
+        .eq('user_id', id);
+      if (err) throw err;
+      toast({ title: 'Dates updated successfully' });
+      setEditDatesOpen(false);
+      // Refetch will happen via react-query invalidation
+      window.location.reload();
+    } catch (e) {
+      toast({ title: 'Error', description: 'Failed to save dates', variant: 'destructive' });
+    } finally {
+      setSavingDates(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -132,6 +183,34 @@ export default function StudentDetail() {
                       <Phone className="h-4 w-4" />
                       <span>{student.profile.phone}</span>
                     </div>
+                  )}
+                </div>
+
+                {/* Milestone Dates */}
+                <div className="flex flex-wrap gap-4 text-sm">
+                  {(student.profile as any)?.cohort_start_date && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <CalendarDays className="h-4 w-4" />
+                      <span>Cohort Start: {format(new Date((student.profile as any).cohort_start_date), 'MMM d, yyyy')}</span>
+                    </div>
+                  )}
+                  {(student.profile as any)?.graduation_date && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <GraduationCap className="h-4 w-4" />
+                      <span>Graduation: {format(new Date((student.profile as any).graduation_date), 'MMM d, yyyy')}</span>
+                    </div>
+                  )}
+                  {(student.profile as any)?.placement_date && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Briefcase className="h-4 w-4" />
+                      <span>Placement: {format(new Date((student.profile as any).placement_date), 'MMM d, yyyy')}</span>
+                    </div>
+                  )}
+                  {isStaff && (
+                    <Button variant="ghost" size="sm" onClick={openEditDates} className="h-6 px-2 text-xs">
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit Dates
+                    </Button>
                   )}
                 </div>
 
@@ -375,6 +454,65 @@ export default function StudentDetail() {
             <PostGradPlanTab studentId={id!} />
           </TabsContent>
         </Tabs>
+
+        {/* Edit Dates Dialog */}
+        <Dialog open={editDatesOpen} onOpenChange={setEditDatesOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Milestone Dates</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Cohort Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !cohortStart && "text-muted-foreground")}>
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {cohortStart ? format(cohortStart, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker mode="single" selected={cohortStart} onSelect={setCohortStart} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label>Graduation Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !gradDate && "text-muted-foreground")}>
+                      <GraduationCap className="mr-2 h-4 w-4" />
+                      {gradDate ? format(gradDate, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker mode="single" selected={gradDate} onSelect={setGradDate} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label>Placement Date (Job Secured)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !placementDate && "text-muted-foreground")}>
+                      <Briefcase className="mr-2 h-4 w-4" />
+                      {placementDate ? format(placementDate, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker mode="single" selected={placementDate} onSelect={setPlacementDate} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDatesOpen(false)}>Cancel</Button>
+              <Button onClick={saveDates} disabled={savingDates}>
+                {savingDates ? 'Saving...' : 'Save Dates'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </SidebarLayout>
   );

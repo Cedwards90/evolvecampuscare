@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { User, Phone, GraduationCap, Building, Mail, Building2 } from 'lucide-react';
+import { User, Phone, GraduationCap, Building, Mail, Building2, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveOrganizations } from '@/hooks/useTrainingOrganizations';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 const profileSchema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -60,6 +64,8 @@ export default function CompleteProfile() {
   const { data: organizations } = useActiveOrganizations();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState<string>('');
+  const [cohortStartDate, setCohortStartDate] = useState<Date | undefined>();
+  const [graduationDate, setGraduationDate] = useState<Date | undefined>();
 
   const {
     register,
@@ -91,6 +97,8 @@ export default function CompleteProfile() {
           year_of_study: data.year_of_study || null,
           preferred_contact: data.preferred_contact,
           organization_id: selectedOrgId || null,
+          cohort_start_date: cohortStartDate ? cohortStartDate.toISOString().split('T')[0] : null,
+          graduation_date: graduationDate ? graduationDate.toISOString().split('T')[0] : null,
         } as any)
         .eq('user_id', user.id);
 
@@ -251,6 +259,37 @@ export default function CompleteProfile() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Cohort Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal", !cohortStartDate && "text-muted-foreground")}>
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {cohortStartDate ? format(cohortStartDate, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={cohortStartDate} onSelect={setCohortStartDate} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label>Expected Graduation Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal", !graduationDate && "text-muted-foreground")}>
+                      <GraduationCap className="mr-2 h-4 w-4" />
+                      {graduationDate ? format(graduationDate, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={graduationDate} onSelect={setGraduationDate} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
 
             <div className="flex gap-3 pt-4">
