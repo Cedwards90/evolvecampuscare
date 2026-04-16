@@ -176,7 +176,7 @@ export default function ManageRequests() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as RequestStatus | 'all')}>
-                <SelectTrigger className="w-[130px]">
+                <SelectTrigger className="flex-1 min-w-0 sm:w-[130px] sm:flex-none">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -189,7 +189,7 @@ export default function ManageRequests() {
               </Select>
 
               <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as RequestPriority | 'all')}>
-                <SelectTrigger className="w-[130px]">
+                <SelectTrigger className="flex-1 min-w-0 sm:w-[130px] sm:flex-none">
                   <SelectValue placeholder="Priority" />
                 </SelectTrigger>
                 <SelectContent>

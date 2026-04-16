@@ -574,7 +574,7 @@ export default function AdminDashboard() {
               />
             </div>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as RequestStatus | 'all')}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="flex-1 min-w-0 sm:w-[150px] sm:flex-none">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
