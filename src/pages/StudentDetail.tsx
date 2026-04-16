@@ -200,6 +200,10 @@ export default function StudentDetail() {
               <Smile className="h-4 w-4" />
               Check-Ins
             </TabsTrigger>
+            <TabsTrigger value="grad-plan" className="gap-2">
+              <GraduationCap className="h-4 w-4" />
+              Post-Grad Plan
+            </TabsTrigger>
           </TabsList>
 
           {/* Requests Tab */}
