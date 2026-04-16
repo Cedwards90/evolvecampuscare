@@ -10,7 +10,8 @@ import {
   CheckCircle,
   AlertCircle,
   MessageSquare,
-  User
+  User,
+  GraduationCap
 } from 'lucide-react';
 import { StickyNote, PenLine, Building2 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
