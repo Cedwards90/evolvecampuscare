@@ -52,10 +52,38 @@ const statusColors: Record<RequestStatus, string> = {
   cancelled: 'bg-red-500',
 };
 
-export function RequestTimeline({ updates, showInternal }: RequestTimelineProps) {
-  const filteredUpdates = showInternal 
-    ? updates 
+export function RequestTimeline({ updates, showInternal, requestId }: RequestTimelineProps) {
+  const { user, role } = useAuth();
+  const queryClient = useQueryClient();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  const filteredUpdates = showInternal
+    ? updates
     : updates.filter(u => !u.is_internal);
+
+  const canDelete = (update: RequestUpdate) => {
+    if (!user) return false;
+    if (role === 'admin') return true;
+    if (role === 'case_manager' && update.user_id === user.id) return true;
+    return false;
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    const { error } = await supabase.from('request_updates').delete().eq('id', id);
+    setDeletingId(null);
+    setPendingDelete(null);
+    if (error) {
+      toast.error('Failed to delete entry: ' + error.message);
+      return;
+    }
+    toast.success('Activity entry deleted');
+    if (requestId) {
+      queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+    }
+    queryClient.invalidateQueries({ queryKey: ['request-updates'] });
+  };
 
   if (filteredUpdates.length === 0) {
     return (
@@ -126,6 +154,19 @@ export function RequestTimeline({ updates, showInternal }: RequestTimelineProps)
                 <span className="text-xs text-muted-foreground ml-auto">
                   {formatDistanceToNow(new Date(update.created_at), { addSuffix: true })}
                 </span>
+                {canDelete(update) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => setPendingDelete(update.id)}
+                    disabled={deletingId === update.id}
+                    aria-label="Delete activity entry"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
 
               {isStatusChange && update.previous_status && update.new_status && (
@@ -147,6 +188,26 @@ export function RequestTimeline({ updates, showInternal }: RequestTimelineProps)
           </div>
         );
       })}
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete activity entry?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes this entry from the activity timeline. This action cannot be undone. The request status itself will not change.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => pendingDelete && handleDelete(pendingDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
