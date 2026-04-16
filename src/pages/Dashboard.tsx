@@ -41,6 +41,7 @@ import { useRequests } from '@/hooks/useRequests';
 import { useCaseManagers } from '@/hooks/useCaseManagerStats';
 import { useMyAssignment } from '@/hooks/useMyAssignment';
 import { format, subDays } from 'date-fns';
+import { usePendingSurveys } from '@/hooks/useSurveyInvitations';
 
 export default function Dashboard() {
   const { role, user, profile } = useAuth();
@@ -52,6 +53,7 @@ export default function Dashboard() {
   const { data: myAssignment, isLoading: assignmentLoading } = useMyAssignment();
   const { intakeCompleted } = useIntakeSurvey();
   const { data: latestCheckIn } = useLatestCheckIn();
+  const { data: pendingSurveys = [] } = usePendingSurveys();
   
   // Show check-in banner if no check-in or last one > 21 days ago
   const showCheckInBanner = useMemo(() => {
@@ -167,6 +169,33 @@ export default function Dashboard() {
               </Button>
             </CardContent>
           </Card>
+        )}
+
+        {/* Pending Survey Invitations Banner */}
+        {role === 'student' && pendingSurveys.length > 0 && (
+          <>
+            {pendingSurveys.map((survey) => (
+              <Card key={survey.id} className="border-primary/50 bg-primary/5">
+                <CardContent className="flex items-center justify-between p-4">
+                  <div>
+                    <p className="font-medium text-sm">
+                      📝 {survey.survey_type === 'checkin' ? 'Check-In Requested' : 'Post-Graduation Plan Requested'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {survey.notes || (survey.survey_type === 'checkin'
+                        ? 'Your case manager has asked you to complete a check-in.'
+                        : 'Your case manager has asked you to complete your 12-month plan.')}
+                    </p>
+                  </div>
+                  <Button size="sm" asChild>
+                    <Link to={survey.survey_type === 'checkin' ? '/check-in' : '/post-graduation-plan'}>
+                      {survey.survey_type === 'checkin' ? 'Complete Check-In' : 'Start Plan'}
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </>
         )}
 
         {role === 'student' && (
