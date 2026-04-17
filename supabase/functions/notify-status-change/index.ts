@@ -180,7 +180,9 @@ const handler = async (req: Request): Promise<Response> => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user }, error: authError } = await authClient.auth.getUser();
+    // Pass token explicitly to avoid AuthSessionMissingError in edge runtime
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await authClient.auth.getUser(token);
 
     if (authError || !user) {
       console.error("Authentication failed:", authError);
