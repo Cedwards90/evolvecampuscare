@@ -80,7 +80,8 @@ export default function SurveyResponses() {
           <TabsTrigger value="plans">Post-Graduation Plans ({filteredPlans.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending">
+        <TabsContent value="pending" className="space-y-4">
+          <RecentlySentSection invitations={recentlySent || []} />
           {loadingPending ? <LoadingSpinner /> : filteredPending.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">No pending surveys.</CardContent></Card>
           ) : (
@@ -92,6 +93,7 @@ export default function SurveyResponses() {
                     <TableHead>Survey Type</TableHead>
                     <TableHead>Sent By</TableHead>
                     <TableHead>Sent</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Pending</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
