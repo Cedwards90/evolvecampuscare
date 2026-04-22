@@ -109,7 +109,7 @@ export function BulkCohortSurveyDialog({ scopedStudentIds, trigger }: BulkCohort
       const toSend = recipientIds.filter((id) => !skip.has(id));
 
       if (toSend.length === 0) {
-        return { sent: 0, skipped: skip.size };
+        return { sent: 0, skipped: skip.size, emailSent: 0, emailFailed: 0, emailSkipped: 0 };
       }
 
       const invitations = toSend.map((studentId) => ({
@@ -117,6 +117,7 @@ export function BulkCohortSurveyDialog({ scopedStudentIds, trigger }: BulkCohort
         survey_type: surveyType,
         sent_by: user!.id,
         notes: notes.trim() || null,
+        email_status: 'pending',
       }));
       const { error: insErr } = await supabase.from('survey_invitations').insert(invitations);
       if (insErr) throw insErr;
@@ -138,17 +139,49 @@ export function BulkCohortSurveyDialog({ scopedStudentIds, trigger }: BulkCohort
       // Best-effort; ignore notif errors so survey send still succeeds
       await supabase.from('notifications').insert(notifs);
 
-      return { sent: toSend.length, skipped: skip.size };
+      // Best-effort email dispatch via edge function
+      let emailSent = 0;
+      let emailFailed = 0;
+      let emailSkipped = 0;
+      try {
+        const { data: emailRes, error: emailErr } = await supabase.functions.invoke(
+          'send-survey-invitation',
+          {
+            body: {
+              studentIds: toSend,
+              surveyType,
+              notes: notes.trim() || undefined,
+            },
+          },
+        );
+        if (emailErr) {
+          console.warn('Email dispatch failed:', emailErr);
+          emailFailed = toSend.length;
+        } else {
+          emailSent = emailRes?.sent ?? 0;
+          emailFailed = emailRes?.failed ?? 0;
+          emailSkipped = emailRes?.skipped ?? 0;
+        }
+      } catch (err) {
+        console.warn('Email dispatch threw:', err);
+        emailFailed = toSend.length;
+      }
+
+      return { sent: toSend.length, skipped: skip.size, emailSent, emailFailed, emailSkipped };
     },
-    onSuccess: ({ sent, skipped }) => {
+    onSuccess: ({ sent, skipped, emailSent, emailFailed, emailSkipped }) => {
       queryClient.invalidateQueries({ queryKey: ['survey-invitations'] });
       queryClient.invalidateQueries({ queryKey: ['pending-surveys'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-invitations-all'] });
       if (sent === 0) {
         toast.info(`No new surveys sent. ${skipped} student(s) already had a pending request.`);
       } else {
-        toast.success(
-          `Sent to ${sent} student${sent === 1 ? '' : 's'}.${skipped ? ` ${skipped} skipped (already pending).` : ''}`,
-        );
+        const parts = [`Sent to ${sent} student${sent === 1 ? '' : 's'}`];
+        parts.push(`${emailSent} email${emailSent === 1 ? '' : 's'} delivered`);
+        if (emailFailed) parts.push(`${emailFailed} failed`);
+        if (emailSkipped) parts.push(`${emailSkipped} skipped (no email)`);
+        if (skipped) parts.push(`${skipped} already pending`);
+        toast.success(parts.join(' · '));
       }
       setOpen(false);
       setSurveyType('');

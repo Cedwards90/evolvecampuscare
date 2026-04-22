@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.delete-own-account]
 verify_jwt = false
+
+[functions.send-survey-invitation]
+verify_jwt = false
