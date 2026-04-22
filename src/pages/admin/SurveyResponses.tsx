@@ -291,6 +291,9 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
         {new Date(invitation.created_at).toLocaleDateString()}
       </TableCell>
       <TableCell>
+        <EmailStatusBadge status={invitation.email_status} error={invitation.email_error} />
+      </TableCell>
+      <TableCell>
         <Badge variant="outline" className={daysClass}>
           {days === 0 ? 'Today' : `${days}d`}
         </Badge>
