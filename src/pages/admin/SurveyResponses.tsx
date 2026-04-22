@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye, Bell, X } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye, Bell, X, Mail, MailX, Clock, Send } from 'lucide-react';
 import { SurveyPreviewDialog } from '@/components/admin/SurveyPreviewDialog';
 import { toast } from 'sonner';
 
@@ -29,6 +29,7 @@ export default function SurveyResponses() {
   const { data: checkIns, isLoading: loadingCheckIns } = useAllCheckIns();
   const { data: plans, isLoading: loadingPlans } = useAllPostGradPlans();
   const { data: pending, isLoading: loadingPending } = usePendingInvitations();
+  const { data: recentlySent } = useRecentlySentInvitations();
 
   const filteredCheckIns = checkIns?.filter(c =>
     (c.student_name || c.student_email).toLowerCase().includes(search.toLowerCase())
