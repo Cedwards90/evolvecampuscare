@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
-import { useAllCheckIns, useAllPostGradPlans, usePendingInvitations } from '@/hooks/useSurveyResponses';
+import { useAllCheckIns, useAllPostGradPlans, usePendingInvitations, useRecentlySentInvitations } from '@/hooks/useSurveyResponses';
 import { useCancelInvitation, useResendInvitation } from '@/hooks/useSurveyInvitations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
