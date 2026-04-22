@@ -671,6 +671,9 @@ export type Database = {
         Row: {
           completed_at: string | null
           created_at: string
+          email_error: string | null
+          email_sent_at: string | null
+          email_status: string | null
           id: string
           notes: string | null
           sent_by: string
@@ -680,6 +683,9 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           created_at?: string
+          email_error?: string | null
+          email_sent_at?: string | null
+          email_status?: string | null
           id?: string
           notes?: string | null
           sent_by: string
@@ -689,6 +695,9 @@ export type Database = {
         Update: {
           completed_at?: string | null
           created_at?: string
+          email_error?: string | null
+          email_sent_at?: string | null
+          email_status?: string | null
           id?: string
           notes?: string | null
           sent_by?: string
