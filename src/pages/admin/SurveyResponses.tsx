@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
-import { useAllCheckIns, useAllPostGradPlans, usePendingInvitations } from '@/hooks/useSurveyResponses';
+import { useAllCheckIns, useAllPostGradPlans, usePendingInvitations, useRecentlySentInvitations } from '@/hooks/useSurveyResponses';
 import { useCancelInvitation, useResendInvitation } from '@/hooks/useSurveyInvitations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye, Bell, X } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye, Bell, X, Mail, MailX, Clock, Send } from 'lucide-react';
 import { SurveyPreviewDialog } from '@/components/admin/SurveyPreviewDialog';
 import { toast } from 'sonner';
 
@@ -29,6 +29,7 @@ export default function SurveyResponses() {
   const { data: checkIns, isLoading: loadingCheckIns } = useAllCheckIns();
   const { data: plans, isLoading: loadingPlans } = useAllPostGradPlans();
   const { data: pending, isLoading: loadingPending } = usePendingInvitations();
+  const { data: recentlySent } = useRecentlySentInvitations();
 
   const filteredCheckIns = checkIns?.filter(c =>
     (c.student_name || c.student_email).toLowerCase().includes(search.toLowerCase())
@@ -79,7 +80,8 @@ export default function SurveyResponses() {
           <TabsTrigger value="plans">Post-Graduation Plans ({filteredPlans.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending">
+        <TabsContent value="pending" className="space-y-4">
+          <RecentlySentSection invitations={recentlySent || []} />
           {loadingPending ? <LoadingSpinner /> : filteredPending.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">No pending surveys.</CardContent></Card>
           ) : (
@@ -91,6 +93,7 @@ export default function SurveyResponses() {
                     <TableHead>Survey Type</TableHead>
                     <TableHead>Sent By</TableHead>
                     <TableHead>Sent</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Pending</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -288,6 +291,9 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
         {new Date(invitation.created_at).toLocaleDateString()}
       </TableCell>
       <TableCell>
+        <EmailStatusBadge status={invitation.email_status} error={invitation.email_error} />
+      </TableCell>
+      <TableCell>
         <Badge variant="outline" className={daysClass}>
           {days === 0 ? 'Today' : `${days}d`}
         </Badge>
@@ -320,5 +326,91 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
         </div>
       </TableCell>
     </TableRow>
+  );
+}
+
+function EmailStatusBadge({ status, error }: { status: string | null; error?: string | null }) {
+  const config = {
+    sent: { icon: Mail, label: 'Delivered', cls: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-300/40' },
+    pending: { icon: Clock, label: 'Pending', cls: 'bg-muted text-muted-foreground' },
+    failed: { icon: MailX, label: 'Failed', cls: 'bg-destructive/10 text-destructive border-destructive/20' },
+    skipped_no_email: { icon: MailX, label: 'No email', cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20' },
+    disabled_by_admin: { icon: MailX, label: 'Disabled', cls: 'bg-muted text-muted-foreground' },
+  } as const;
+  const c = (status && config[status as keyof typeof config]) || config.pending;
+  const Icon = c.icon;
+  return (
+    <Badge variant="outline" className={`${c.cls} gap-1`} title={error || undefined}>
+      <Icon className="h-3 w-3" />
+      {c.label}
+    </Badge>
+  );
+}
+
+function RecentlySentSection({ invitations }: { invitations: ReturnType<typeof useRecentlySentInvitations>['data'] extends (infer T)[] | undefined ? T[] : never }) {
+  if (!invitations.length) return null;
+
+  // Group by batch: same created_at minute + sent_by + survey_type
+  const groups = new Map<string, typeof invitations>();
+  invitations.forEach(inv => {
+    const minute = new Date(inv.created_at).toISOString().slice(0, 16);
+    const key = `${minute}|${inv.sent_by}|${inv.survey_type}`;
+    const arr = groups.get(key) || [];
+    arr.push(inv);
+    groups.set(key, arr);
+  });
+  const batches = Array.from(groups.values()).sort(
+    (a, b) => new Date(b[0].created_at).getTime() - new Date(a[0].created_at).getTime(),
+  ).slice(0, 8);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Send className="h-4 w-4 text-primary" />
+          Recently Sent (last 7 days)
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="space-y-2">
+          {batches.map((batch, idx) => {
+            const first = batch[0];
+            const typeLabel = first.survey_type === 'checkin' ? 'Check-In' : 'Post-Grad Plan';
+            const sentCount = batch.filter(b => b.email_status === 'sent').length;
+            const failedCount = batch.filter(b => b.email_status === 'failed').length;
+            const completedCount = batch.filter(b => b.completed_at).length;
+            return (
+              <div key={idx} className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline">{typeLabel}</Badge>
+                  <span className="font-medium">{batch.length} recipient{batch.length === 1 ? '' : 's'}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-muted-foreground">by {first.sender_name || 'staff'}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-muted-foreground">{new Date(first.created_at).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs">
+                  {sentCount > 0 && (
+                    <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-300/40">
+                      {sentCount} delivered
+                    </Badge>
+                  )}
+                  {failedCount > 0 && (
+                    <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
+                      {failedCount} failed
+                    </Badge>
+                  )}
+                  {completedCount > 0 && (
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                      {completedCount} completed
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -69,6 +69,22 @@ export interface PendingInvitation {
   sent_by: string;
   notes: string | null;
   created_at: string;
+  email_status: string | null;
+  email_sent_at: string | null;
+  email_error: string | null;
+  student_name: string | null;
+  student_email: string;
+  sender_name: string | null;
+}
+
+export interface RecentlySentInvitation {
+  id: string;
+  student_id: string;
+  survey_type: string;
+  sent_by: string;
+  created_at: string;
+  completed_at: string | null;
+  email_status: string | null;
   student_name: string | null;
   student_email: string;
   sender_name: string | null;
@@ -116,7 +132,7 @@ export function usePendingInvitations() {
         plansByStudent.set(p.student_id, arr);
       });
 
-      const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+      const ONE_HOUR_MS = 60 * 60 * 1000;
 
       // Find invites that have a matching submission within grace window
       const toAutoHeal: { id: string; completed_at: string }[] = [];
@@ -130,7 +146,7 @@ export function usePendingInvitations() {
         if (!submissions?.length) return true;
 
         const inviteTime = new Date(inv.created_at).getTime();
-        const match = submissions.find(s => new Date(s).getTime() >= inviteTime - ONE_DAY_MS);
+        const match = submissions.find(s => new Date(s).getTime() >= inviteTime - ONE_HOUR_MS);
 
         if (match) {
           toAutoHeal.push({ id: inv.id, completed_at: match });
@@ -159,6 +175,36 @@ export function usePendingInvitations() {
         student_email: profileMap.get(i.student_id)?.email || '',
         sender_name: profileMap.get(i.sent_by)?.full_name || profileMap.get(i.sent_by)?.email || null,
       })) as PendingInvitation[];
+    },
+  });
+}
+
+export function useRecentlySentInvitations() {
+  return useQuery({
+    queryKey: ['recently-sent-invitations'],
+    queryFn: async () => {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: invites, error } = await supabase
+        .from('survey_invitations')
+        .select('*')
+        .gte('created_at', sevenDaysAgo)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      if (!invites?.length) return [] as RecentlySentInvitation[];
+
+      const userIds = [...new Set([...invites.map(i => i.student_id), ...invites.map(i => i.sent_by)])];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email')
+        .in('user_id', userIds);
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return invites.map(i => ({
+        ...i,
+        student_name: profileMap.get(i.student_id)?.full_name || null,
+        student_email: profileMap.get(i.student_id)?.email || '',
+        sender_name: profileMap.get(i.sent_by)?.full_name || profileMap.get(i.sent_by)?.email || null,
+      })) as RecentlySentInvitation[];
     },
   });
 }

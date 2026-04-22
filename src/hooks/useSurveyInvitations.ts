@@ -2,17 +2,49 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface SendResult {
+  sent: number;
+  failed: number;
+  skipped: number;
+}
+
+async function dispatchEmails(args: {
+  studentIds: string[];
+  surveyType: string;
+  notes?: string;
+  isReminder?: boolean;
+}): Promise<SendResult> {
+  try {
+    const { data, error } = await supabase.functions.invoke('send-survey-invitation', {
+      body: args,
+    });
+    if (error) {
+      console.warn('send-survey-invitation invoke error:', error);
+      return { sent: 0, failed: args.studentIds.length, skipped: 0 };
+    }
+    return {
+      sent: data?.sent ?? 0,
+      failed: data?.failed ?? 0,
+      skipped: data?.skipped ?? 0,
+    };
+  } catch (err) {
+    console.warn('send-survey-invitation threw:', err);
+    return { sent: 0, failed: args.studentIds.length, skipped: 0 };
+  }
+}
+
 export function useSendSurvey() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ studentId, surveyType, notes }: { studentId: string; surveyType: string; notes?: string }) => {
+    mutationFn: async ({ studentId, surveyType, notes }: { studentId: string; surveyType: string; notes?: string }): Promise<SendResult> => {
       const { error } = await supabase.from('survey_invitations').insert({
         student_id: studentId,
         survey_type: surveyType,
         sent_by: user!.id,
         notes: notes || null,
+        email_status: 'pending',
       });
       if (error) throw error;
 
@@ -30,10 +62,14 @@ export function useSendSurvey() {
         message,
         link,
       });
+
+      // Best-effort email dispatch
+      return await dispatchEmails({ studentIds: [studentId], surveyType, notes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['survey-invitations'] });
       queryClient.invalidateQueries({ queryKey: ['pending-surveys'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-invitations-all'] });
     },
   });
 }
@@ -79,7 +115,6 @@ export function useMarkSurveyComplete() {
 
   return useMutation({
     mutationFn: async (surveyType: string) => {
-      // Mark the most recent uncompleted invitation of this type
       const { data: pending } = await supabase
         .from('survey_invitations')
         .select('id')
@@ -124,7 +159,7 @@ export function useCancelInvitation() {
 export function useResendInvitation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ studentId, surveyType }: { studentId: string; surveyType: string }) => {
+    mutationFn: async ({ studentId, surveyType }: { studentId: string; surveyType: string }): Promise<SendResult> => {
       const title = surveyType === 'checkin' ? 'Check-In Reminder' : 'Post-Graduation Plan Reminder';
       const message = surveyType === 'checkin'
         ? 'Reminder: please complete your check-in.'
@@ -138,6 +173,8 @@ export function useResendInvitation() {
         link,
       });
       if (error) throw error;
+
+      return await dispatchEmails({ studentIds: [studentId], surveyType, isReminder: true });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-invitations-all'] });
