@@ -179,6 +179,36 @@ export function usePendingInvitations() {
   });
 }
 
+export function useRecentlySentInvitations() {
+  return useQuery({
+    queryKey: ['recently-sent-invitations'],
+    queryFn: async () => {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: invites, error } = await supabase
+        .from('survey_invitations')
+        .select('*')
+        .gte('created_at', sevenDaysAgo)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      if (!invites?.length) return [] as RecentlySentInvitation[];
+
+      const userIds = [...new Set([...invites.map(i => i.student_id), ...invites.map(i => i.sent_by)])];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email')
+        .in('user_id', userIds);
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return invites.map(i => ({
+        ...i,
+        student_name: profileMap.get(i.student_id)?.full_name || null,
+        student_email: profileMap.get(i.student_id)?.email || '',
+        sender_name: profileMap.get(i.sent_by)?.full_name || profileMap.get(i.sent_by)?.email || null,
+      })) as RecentlySentInvitation[];
+    },
+  });
+}
+
 export function useAllPostGradPlans() {
   return useQuery({
     queryKey: ['all-postgrad-plans'],
