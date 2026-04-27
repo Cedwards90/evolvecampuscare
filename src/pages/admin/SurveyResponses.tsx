@@ -272,6 +272,8 @@ function PlanCard({ plan }: { plan: ReturnType<typeof useAllPostGradPlans>['data
 function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingInvitations>['data'] extends (infer T)[] | undefined ? T : never }) {
   const cancel = useCancelInvitation();
   const resend = useResendInvitation();
+  const [resultOpen, setResultOpen] = useState(false);
+  const [result, setResult] = useState<ResendResult | null>(null);
   // Use the most recent send timestamp so resends reset the age clock.
   const lastSentAt = invitation.email_sent_at || invitation.created_at;
   const days = Math.floor((Date.now() - new Date(lastSentAt).getTime()) / 86400000);
