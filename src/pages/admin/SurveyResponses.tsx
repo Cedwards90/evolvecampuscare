@@ -306,22 +306,23 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
             size="sm"
             variant="outline"
             disabled={resend.isPending}
-            onClick={() => {
-              const promise = resend.mutateAsync({
-                studentId: invitation.student_id,
-                surveyType: invitation.survey_type,
-              });
-              toast.promise(promise, {
-                loading: 'Sending reminder...',
-                success: (result) => {
-                  const parts = ['Reminder sent'];
-                  if (result.sent) parts.push('email delivered');
-                  else if (result.failed) parts.push('email failed');
-                  else if (result.skipped) parts.push('no email on file');
-                  return parts.join(' · ');
-                },
-                error: 'Failed to send reminder',
-              });
+            onClick={async () => {
+              const toastId = `resend-${invitation.id}`;
+              toast.loading('Sending reminder...', { id: toastId });
+              try {
+                const result = await resend.mutateAsync({
+                  studentId: invitation.student_id,
+                  surveyType: invitation.survey_type,
+                });
+                const parts = ['Reminder sent'];
+                if (result.sent) parts.push('email delivered');
+                else if (result.failed) parts.push('email failed');
+                else if (result.skipped) parts.push('no email on file');
+                toast.success(parts.join(' · '), { id: toastId });
+              } catch (err) {
+                console.error('Resend failed:', err);
+                toast.error('Failed to send reminder', { id: toastId });
+              }
             }}
           >
             <Bell className="h-3.5 w-3.5 mr-1" /> Resend
@@ -330,13 +331,16 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
             size="sm"
             variant="ghost"
             disabled={cancel.isPending}
-            onClick={() => {
-              if (confirm('Cancel this pending survey invitation?')) {
-                toast.promise(cancel.mutateAsync(invitation.id), {
-                  loading: 'Cancelling...',
-                  success: 'Invitation cancelled',
-                  error: 'Failed to cancel invitation',
-                });
+            onClick={async () => {
+              if (!confirm('Cancel this pending survey invitation?')) return;
+              const toastId = `cancel-${invitation.id}`;
+              toast.loading('Cancelling...', { id: toastId });
+              try {
+                await cancel.mutateAsync(invitation.id);
+                toast.success('Invitation cancelled', { id: toastId });
+              } catch (err) {
+                console.error('Cancel failed:', err);
+                toast.error('Failed to cancel invitation', { id: toastId });
               }
             }}
           >
