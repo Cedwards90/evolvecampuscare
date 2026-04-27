@@ -1,40 +1,47 @@
 ## Problem
-Clicking **Resend** in the Pending Surveys table does nothing. Two compounding bugs:
+When clicking **Resend** on a pending survey row, the user sees no confirmation. Toast handlers exist on the mutation (`onSuccess` / `onError`), but:
 
-1. **RLS blocks the notification insert.** `useResendInvitation` does:
-   ```ts
-   await supabase.from('notifications').insert({ user_id: studentId, ... })
-   ```
-   The `notifications` INSERT policy is `auth.uid() = user_id`, so an admin/case manager cannot create a notification *for* a student. The insert returns an RLS error, the hook calls `throw error`, and the email dispatch never runs. (The edge function logs confirm `send-survey-invitation` has never been invoked from a Resend click.)
-
-2. **The error is swallowed.** The Resend button only passes `onSuccess` to `mutate(...)` — no `onError`, no toast. The mutation rejects, React Query logs it, and the UI shows nothing. From the user's perspective the click is dead.
-
-`useSendSurvey` (the initial Send) has the same RLS issue but happens to mask it because it doesn't `throw` on the notification insert error — so emails still go out for new sends. Resend is the only broken path.
+- The edge function call can take 1–3 seconds — the button just sits there with no immediate feedback.
+- If the success result has no `sent`/`failed`/`skipped` (e.g. unexpected response), `toast.success` still fires with just `'Reminder sent'`, but if the request is silently pending the user perceives nothing.
+- There's no loading toast bridging the gap.
 
 ## Fix
 
-### 1. Make the notification insert non-fatal in `useResendInvitation`
-Match the pattern used by `useSendSurvey`: best-effort the in-app notification (log on failure, don't throw), then always invoke the email edge function. This unblocks the email pipeline regardless of the RLS situation.
+In `src/pages/admin/SurveyResponses.tsx`, wrap the Resend `mutate` call in `toast.promise(...)` so the user sees:
+1. Immediate **"Sending reminder..."** toast on click
+2. **"Reminder sent · email delivered"** (or appropriate variant) on success
+3. **"Failed to send reminder"** on error
 
-### 2. Route notification inserts through an edge function (proper fix)
-The real fix for both Send and Resend is to insert the student-facing notification with the service role from inside `send-survey-invitation`. The edge function already has the student lookup and runs with elevated privileges, so it can:
-- Insert the `notifications` row for the student (bypassing RLS cleanly)
-- Then send the email
+Also add the same `toast.promise` pattern to the **Cancel** button for consistency.
 
-Remove the client-side `notifications.insert` from both `useSendSurvey` and `useResendInvitation`, and let the edge function own it. This eliminates the RLS workaround and guarantees the in-app bell + email stay in sync.
+### Code change (PendingRow)
 
-### 3. Surface errors on the Resend button
-Add `onError` to the `resend.mutate(...)` call in `PendingRow` so failures show a toast (`"Failed to send reminder"`) instead of looking dead. Also surface the email-dispatch result in the success toast (`"Reminder sent · email delivered"` / `"… email failed"` / `"… no email on file"`), matching `SendSurveyDialog`.
+```tsx
+onClick={() => {
+  const promise = resend.mutateAsync({
+    studentId: invitation.student_id,
+    surveyType: invitation.survey_type,
+  });
+  toast.promise(promise, {
+    loading: 'Sending reminder...',
+    success: (result) => {
+      const parts = ['Reminder sent'];
+      if (result.sent) parts.push('email delivered');
+      else if (result.failed) parts.push('email failed');
+      else if (result.skipped) parts.push('no email on file');
+      return parts.join(' · ');
+    },
+    error: 'Failed to send reminder',
+  });
+}}
+```
 
 ## Files
 
 | File | Change |
 |---|---|
-| `supabase/functions/send-survey-invitation/index.ts` | Insert `notifications` row per student (with service role) before/after sending email; accept `isReminder` to vary title/message |
-| `src/hooks/useSurveyInvitations.ts` | Remove client-side `notifications.insert` from `useSendSurvey` and `useResendInvitation`; rely on edge function |
-| `src/pages/admin/SurveyResponses.tsx` | Add `onError` toast to Resend button; expand success toast with email delivery status |
+| `src/pages/admin/SurveyResponses.tsx` | Replace `resend.mutate(...)` callback-style with `toast.promise(resend.mutateAsync(...))` for immediate + final feedback. Apply same pattern to Cancel button. |
 
 ## Notes
-- No schema changes, no RLS changes.
-- In-app notifications and email dispatch become a single atomic-ish operation owned by the edge function — fixes a long-standing silent RLS failure on the original Send path too.
-- The edge function is already deployed and authenticated; only its body needs updating, then redeploy.
+- No backend, schema, or hook changes needed.
+- `toast.promise` is the standard sonner pattern for async actions — gives instant visual confirmation that the click registered.
