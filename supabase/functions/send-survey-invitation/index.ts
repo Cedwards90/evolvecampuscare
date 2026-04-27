@@ -224,6 +224,31 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // In-app notification copy
+    const notifTitle = body.surveyType === "checkin"
+      ? (isReminder ? "Check-In Reminder" : "Check-In Requested")
+      : (isReminder ? "Post-Graduation Plan Reminder" : "Post-Graduation Plan Requested");
+    const notifMessage = body.surveyType === "checkin"
+      ? (isReminder
+          ? "Reminder: please complete your check-in."
+          : "Your case manager has requested you complete a check-in.")
+      : (isReminder
+          ? "Reminder: please complete your 12-month post-graduation plan."
+          : "Your case manager has requested you complete your 12-month post-graduation plan.");
+    const notifLink = body.surveyType === "checkin" ? "/check-in" : "/post-graduation-plan";
+
+    if (settings.in_app_enabled) {
+      const notifRows = body.studentIds.map((sid) => ({
+        user_id: sid,
+        type: isReminder ? "survey_reminder" : "survey_request",
+        title: notifTitle,
+        message: notifMessage,
+        link: notifLink,
+      }));
+      const { error: notifErr } = await supabase.from("notifications").insert(notifRows);
+      if (notifErr) console.error("notifications insert failed:", notifErr.message);
+    }
+
     for (const studentId of body.studentIds) {
       const prof = profileMap.get(studentId);
       if (!prof?.email) {
