@@ -318,18 +318,32 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
               const toastId = `resend-${invitation.id}`;
               toast.loading('Sending reminder...', { id: toastId });
               try {
-                const result = await resend.mutateAsync({
+                const r = await resend.mutateAsync({
                   studentId: invitation.student_id,
                   surveyType: invitation.survey_type,
                 });
                 const parts = ['Reminder sent'];
-                if (result.sent) parts.push('email delivered');
-                else if (result.failed) parts.push('email failed');
-                else if (result.skipped) parts.push('no email on file');
+                let status: ResendResult['status'] = 'delivered';
+                let errorMsg: string | undefined;
+                if (r.sent) {
+                  parts.push('email delivered');
+                  status = 'delivered';
+                } else if (r.failed) {
+                  parts.push('email failed');
+                  status = 'failed';
+                  errorMsg = invitation.email_error || undefined;
+                } else if (r.skipped) {
+                  parts.push('no email on file');
+                  status = 'skipped';
+                }
                 toast.success(parts.join(' · '), { id: toastId });
-              } catch (err) {
+                setResult({ status, error: errorMsg });
+                setResultOpen(true);
+              } catch (err: any) {
                 console.error('Resend failed:', err);
                 toast.error('Failed to send reminder', { id: toastId });
+                setResult({ status: 'failed', error: err?.message || 'Unknown error' });
+                setResultOpen(true);
               }
             }}
           >
