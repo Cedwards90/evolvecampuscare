@@ -306,7 +306,16 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
             disabled={resend.isPending}
             onClick={() => resend.mutate(
               { studentId: invitation.student_id, surveyType: invitation.survey_type },
-              { onSuccess: () => toast.success('Reminder sent') }
+              {
+                onSuccess: (result) => {
+                  const parts = ['Reminder sent'];
+                  if (result.sent) parts.push('email delivered');
+                  else if (result.failed) parts.push('email failed');
+                  else if (result.skipped) parts.push('no email on file');
+                  toast.success(parts.join(' · '));
+                },
+                onError: () => toast.error('Failed to send reminder'),
+              }
             )}
           >
             <Bell className="h-3.5 w-3.5 mr-1" /> Resend
