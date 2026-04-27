@@ -12,9 +12,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye, Bell, X, Mail, MailX, Clock, Send } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye, Bell, X, Mail, MailX, Clock, Send, CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
 import { SurveyPreviewDialog } from '@/components/admin/SurveyPreviewDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+
+type ResendResult = {
+  status: 'delivered' | 'skipped' | 'failed';
+  error?: string;
+};
 
 function MoodBadge({ rating }: { rating: number }) {
   const colors = rating >= 4 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
@@ -266,6 +272,8 @@ function PlanCard({ plan }: { plan: ReturnType<typeof useAllPostGradPlans>['data
 function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingInvitations>['data'] extends (infer T)[] | undefined ? T : never }) {
   const cancel = useCancelInvitation();
   const resend = useResendInvitation();
+  const [resultOpen, setResultOpen] = useState(false);
+  const [result, setResult] = useState<ResendResult | null>(null);
   // Use the most recent send timestamp so resends reset the age clock.
   const lastSentAt = invitation.email_sent_at || invitation.created_at;
   const days = Math.floor((Date.now() - new Date(lastSentAt).getTime()) / 86400000);
@@ -278,7 +286,14 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
 
   const typeLabel = invitation.survey_type === 'checkin' ? 'Check-In' : 'Post-Grad Plan';
 
+  const statusMeta = result?.status === 'delivered'
+    ? { Icon: CheckCircle2, color: 'text-green-600 dark:text-green-400', title: 'Reminder delivered', body: 'The reminder email was sent successfully.' }
+    : result?.status === 'skipped'
+    ? { Icon: AlertCircle, color: 'text-amber-600 dark:text-amber-400', title: 'Reminder skipped', body: 'No email address on file for this student.' }
+    : { Icon: XCircle, color: 'text-destructive', title: 'Reminder failed', body: 'The email service did not accept the message.' };
+
   return (
+    <>
     <TableRow>
       <TableCell>
         <Link to={`/students/${invitation.student_id}`} className="font-medium text-primary hover:underline">
@@ -310,18 +325,32 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
               const toastId = `resend-${invitation.id}`;
               toast.loading('Sending reminder...', { id: toastId });
               try {
-                const result = await resend.mutateAsync({
+                const r = await resend.mutateAsync({
                   studentId: invitation.student_id,
                   surveyType: invitation.survey_type,
                 });
                 const parts = ['Reminder sent'];
-                if (result.sent) parts.push('email delivered');
-                else if (result.failed) parts.push('email failed');
-                else if (result.skipped) parts.push('no email on file');
+                let status: ResendResult['status'] = 'delivered';
+                let errorMsg: string | undefined;
+                if (r.sent) {
+                  parts.push('email delivered');
+                  status = 'delivered';
+                } else if (r.failed) {
+                  parts.push('email failed');
+                  status = 'failed';
+                  errorMsg = invitation.email_error || undefined;
+                } else if (r.skipped) {
+                  parts.push('no email on file');
+                  status = 'skipped';
+                }
                 toast.success(parts.join(' · '), { id: toastId });
-              } catch (err) {
+                setResult({ status, error: errorMsg });
+                setResultOpen(true);
+              } catch (err: any) {
                 console.error('Resend failed:', err);
                 toast.error('Failed to send reminder', { id: toastId });
+                setResult({ status: 'failed', error: err?.message || 'Unknown error' });
+                setResultOpen(true);
               }
             }}
           >
@@ -349,6 +378,36 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
         </div>
       </TableCell>
     </TableRow>
+    <Dialog open={resultOpen} onOpenChange={setResultOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <div className={`flex items-center gap-2 ${statusMeta.color}`}>
+            <statusMeta.Icon className="h-5 w-5" />
+            <DialogTitle>{statusMeta.title}</DialogTitle>
+          </div>
+          <DialogDescription className="pt-2">{statusMeta.body}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 text-sm">
+          <div>
+            <span className="text-muted-foreground">To:</span>{' '}
+            <span className="font-medium">{invitation.student_email || '—'}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Survey:</span>{' '}
+            <span className="font-medium">{typeLabel}</span>
+          </div>
+          {result?.status === 'failed' && (
+            <div className="mt-3 rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground break-all">
+              {result.error || 'The email service did not accept the message.'}
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button onClick={() => setResultOpen(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
