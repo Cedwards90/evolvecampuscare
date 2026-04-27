@@ -145,20 +145,7 @@ export function useResendInvitation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ studentId, surveyType }: { studentId: string; surveyType: string }): Promise<SendResult> => {
-      const title = surveyType === 'checkin' ? 'Check-In Reminder' : 'Post-Graduation Plan Reminder';
-      const message = surveyType === 'checkin'
-        ? 'Reminder: please complete your check-in.'
-        : 'Reminder: please complete your 12-month post-graduation plan.';
-      const link = surveyType === 'checkin' ? '/check-in' : '/post-graduation-plan';
-      const { error } = await supabase.from('notifications').insert({
-        user_id: studentId,
-        type: 'survey_reminder',
-        title,
-        message,
-        link,
-      });
-      if (error) throw error;
-
+      // Email + in-app reminder notification handled by edge function (uses service role)
       return await dispatchEmails({ studentIds: [studentId], surveyType, isReminder: true });
     },
     onSuccess: () => {
