@@ -1,26 +1,34 @@
-## Problem
-The "days" badge in the Pending Surveys table is calculated from `invitation.created_at`, which never changes. When you click **Resend**, the row still shows the same age (e.g. `9d`) even though a fresh email just went out. The "Sent" date column has the same issue.
+## Goal
+Make the Survey Responses page behave reliably when an admin clicks **Resend**:
+- show a visible confirmation/error notification every time
+- reset the pending row’s **Sent** date and **day count** immediately after a successful resend
 
-## Fix
-Use the most recent send timestamp (`email_sent_at`) — falling back to `created_at` for invitations that haven't been emailed yet — for both the "Sent" date and the days-elapsed badge. The `send-survey-invitation` edge function already updates `email_sent_at` on every successful send (initial and resend), so the row will refresh automatically once the React Query cache invalidates after the resend mutation.
+## What I’ll change
+1. **Make resend notifications explicit and reliable**
+   - Replace the current `toast.promise(...)` flow in `src/pages/admin/SurveyResponses.tsx` with an explicit loading/success/error sequence.
+   - This avoids relying on promise-toast behavior and ensures the user always sees feedback after clicking **Resend**.
 
-```ts
-// Before
-const days = Math.floor((Date.now() - new Date(invitation.created_at).getTime()) / 86400000);
+2. **Update the pending row immediately after resend**
+   - In `src/hooks/useSurveyInvitations.ts`, update the cached `pending-invitations-all` data on resend success so the matching invitation row gets:
+     - `email_sent_at = now`
+     - `email_status = 'sent'` when delivery succeeds
+   - Keep the existing refetch/invalidation too, so the UI is both immediate and server-confirmed.
 
-// After
-const lastSentAt = invitation.email_sent_at || invitation.created_at;
-const days = Math.floor((Date.now() - new Date(lastSentAt).getTime()) / 86400000);
-```
+3. **Keep the day count driven by the most recent send time**
+   - Keep `email_sent_at ?? created_at` as the source for:
+     - the **Sent** column
+     - the **Today / Xd** badge
+   - This ensures resends restart the clock instead of showing the original invite age.
 
-The "Sent" cell switches from `invitation.created_at` to `lastSentAt` for the same reason.
+4. **Refresh related survey lists after resend**
+   - Invalidate the recent survey list as well so any “recently sent” summary stays in sync with reminder activity.
 
 ## Files
+- `src/pages/admin/SurveyResponses.tsx`
+- `src/hooks/useSurveyInvitations.ts`
 
-| File | Change |
-|---|---|
-| `src/pages/admin/SurveyResponses.tsx` | In `PendingRow`, derive `lastSentAt = email_sent_at ?? created_at` and use it for both the days badge and the Sent date column |
-
-## Notes
-- No backend / schema changes — `email_sent_at` is already populated by the edge function and already returned by `usePendingInvitations`.
-- The existing `queryClient.invalidateQueries({ queryKey: ['pending-invitations-all'] })` in `useResendInvitation` will refetch and re-render the row with the new timestamp immediately after a resend.
+## Technical details
+- The backend function already updates `email_sent_at` on successful resend, so no schema change is needed.
+- The main reliability improvement is to stop depending only on a refetch to show the new timestamp.
+- The resend mutation will optimistically patch the affected invitation in React Query cache, then revalidate from the backend.
+- Notification copy will reflect the actual result returned by the resend function (`delivered`, `failed`, or `no email on file`).

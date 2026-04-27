@@ -148,8 +148,26 @@ export function useResendInvitation() {
       // Email + in-app reminder notification handled by edge function (uses service role)
       return await dispatchEmails({ studentIds: [studentId], surveyType, isReminder: true });
     },
-    onSuccess: () => {
+    onSuccess: (result, variables) => {
+      // Optimistically reset the row's last-sent timestamp so the "Today"/days
+      // badge and Sent date update immediately, without waiting for the refetch.
+      const nowIso = new Date().toISOString();
+      queryClient.setQueryData<any[]>(['pending-invitations-all'], (prev) => {
+        if (!prev) return prev;
+        return prev.map((inv) => {
+          if (inv.student_id !== variables.studentId || inv.survey_type !== variables.surveyType) {
+            return inv;
+          }
+          return {
+            ...inv,
+            email_sent_at: nowIso,
+            email_status: result.sent > 0 ? 'sent' : result.failed > 0 ? 'failed' : inv.email_status,
+            email_error: result.failed > 0 ? inv.email_error : null,
+          };
+        });
+      });
       queryClient.invalidateQueries({ queryKey: ['pending-invitations-all'] });
+      queryClient.invalidateQueries({ queryKey: ['recently-sent-invitations'] });
     },
   });
 }
