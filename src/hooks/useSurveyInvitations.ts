@@ -48,22 +48,7 @@ export function useSendSurvey() {
       });
       if (error) throw error;
 
-      // Create in-app notification for the student
-      const title = surveyType === 'checkin' ? 'Check-In Requested' : 'Post-Graduation Plan Requested';
-      const message = surveyType === 'checkin'
-        ? 'Your case manager has requested you complete a check-in.'
-        : 'Your case manager has requested you complete your 12-month post-graduation plan.';
-      const link = surveyType === 'checkin' ? '/check-in' : '/post-graduation-plan';
-
-      await supabase.from('notifications').insert({
-        user_id: studentId,
-        type: 'survey_request',
-        title,
-        message,
-        link,
-      });
-
-      // Best-effort email dispatch
+      // Email + in-app notification handled by edge function (uses service role to bypass RLS)
       return await dispatchEmails({ studentIds: [studentId], surveyType, notes });
     },
     onSuccess: () => {
