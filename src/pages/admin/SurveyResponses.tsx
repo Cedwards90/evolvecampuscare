@@ -286,7 +286,14 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
 
   const typeLabel = invitation.survey_type === 'checkin' ? 'Check-In' : 'Post-Grad Plan';
 
+  const statusMeta = result?.status === 'delivered'
+    ? { Icon: CheckCircle2, color: 'text-green-600 dark:text-green-400', title: 'Reminder delivered', body: 'The reminder email was sent successfully.' }
+    : result?.status === 'skipped'
+    ? { Icon: AlertCircle, color: 'text-amber-600 dark:text-amber-400', title: 'Reminder skipped', body: 'No email address on file for this student.' }
+    : { Icon: XCircle, color: 'text-destructive', title: 'Reminder failed', body: 'The email service did not accept the message.' };
+
   return (
+    <>
     <TableRow>
       <TableCell>
         <Link to={`/students/${invitation.student_id}`} className="font-medium text-primary hover:underline">
