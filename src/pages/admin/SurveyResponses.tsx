@@ -378,6 +378,36 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
         </div>
       </TableCell>
     </TableRow>
+    <Dialog open={resultOpen} onOpenChange={setResultOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <div className={`flex items-center gap-2 ${statusMeta.color}`}>
+            <statusMeta.Icon className="h-5 w-5" />
+            <DialogTitle>{statusMeta.title}</DialogTitle>
+          </div>
+          <DialogDescription className="pt-2">{statusMeta.body}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 text-sm">
+          <div>
+            <span className="text-muted-foreground">To:</span>{' '}
+            <span className="font-medium">{invitation.student_email || '—'}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Survey:</span>{' '}
+            <span className="font-medium">{typeLabel}</span>
+          </div>
+          {result?.status === 'failed' && (
+            <div className="mt-3 rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground break-all">
+              {result.error || 'The email service did not accept the message.'}
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button onClick={() => setResultOpen(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
