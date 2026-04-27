@@ -266,7 +266,9 @@ function PlanCard({ plan }: { plan: ReturnType<typeof useAllPostGradPlans>['data
 function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingInvitations>['data'] extends (infer T)[] | undefined ? T : never }) {
   const cancel = useCancelInvitation();
   const resend = useResendInvitation();
-  const days = Math.floor((Date.now() - new Date(invitation.created_at).getTime()) / 86400000);
+  // Use the most recent send timestamp so resends reset the age clock.
+  const lastSentAt = invitation.email_sent_at || invitation.created_at;
+  const days = Math.floor((Date.now() - new Date(lastSentAt).getTime()) / 86400000);
 
   const daysClass = days >= 14
     ? 'bg-destructive/10 text-destructive border-destructive/20'
@@ -288,7 +290,7 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
       </TableCell>
       <TableCell className="text-muted-foreground text-sm">{invitation.sender_name || '—'}</TableCell>
       <TableCell className="text-muted-foreground text-sm">
-        {new Date(invitation.created_at).toLocaleDateString()}
+        {new Date(lastSentAt).toLocaleDateString()}
       </TableCell>
       <TableCell>
         <EmailStatusBadge status={invitation.email_status} error={invitation.email_error} />
