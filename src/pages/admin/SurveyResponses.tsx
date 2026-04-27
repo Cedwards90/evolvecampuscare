@@ -304,19 +304,23 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
             size="sm"
             variant="outline"
             disabled={resend.isPending}
-            onClick={() => resend.mutate(
-              { studentId: invitation.student_id, surveyType: invitation.survey_type },
-              {
-                onSuccess: (result) => {
+            onClick={() => {
+              const promise = resend.mutateAsync({
+                studentId: invitation.student_id,
+                surveyType: invitation.survey_type,
+              });
+              toast.promise(promise, {
+                loading: 'Sending reminder...',
+                success: (result) => {
                   const parts = ['Reminder sent'];
                   if (result.sent) parts.push('email delivered');
                   else if (result.failed) parts.push('email failed');
                   else if (result.skipped) parts.push('no email on file');
-                  toast.success(parts.join(' · '));
+                  return parts.join(' · ');
                 },
-                onError: () => toast.error('Failed to send reminder'),
-              }
-            )}
+                error: 'Failed to send reminder',
+              });
+            }}
           >
             <Bell className="h-3.5 w-3.5 mr-1" /> Resend
           </Button>
@@ -326,7 +330,11 @@ function PendingRow({ invitation }: { invitation: ReturnType<typeof usePendingIn
             disabled={cancel.isPending}
             onClick={() => {
               if (confirm('Cancel this pending survey invitation?')) {
-                cancel.mutate(invitation.id, { onSuccess: () => toast.success('Invitation cancelled') });
+                toast.promise(cancel.mutateAsync(invitation.id), {
+                  loading: 'Cancelling...',
+                  success: 'Invitation cancelled',
+                  error: 'Failed to cancel invitation',
+                });
               }
             }}
           >
