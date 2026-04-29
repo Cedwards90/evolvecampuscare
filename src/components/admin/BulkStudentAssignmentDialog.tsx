@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -15,7 +16,7 @@ import {
 import { useCaseManagers } from '@/hooks/useCaseManagerStats';
 import { useBulkAssignStudents, type UnassignedStudent } from '@/hooks/useStudentAssignments';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle, Users } from 'lucide-react';
+import { AlertTriangle, Search, Users } from 'lucide-react';
 
 interface BulkStudentAssignmentDialogProps {
   open: boolean;
