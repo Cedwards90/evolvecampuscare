@@ -107,6 +107,25 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMFAVerification, setShowMFAVerification] = useState(false);
   const [showMFAEnrollment, setShowMFAEnrollment] = useState(false);
+  const [signupCooldownUntil, setSignupCooldownUntil] = useState<number | null>(null);
+  const [loginCooldownUntil, setLoginCooldownUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!signupCooldownUntil && !loginCooldownUntil) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [signupCooldownUntil, loginCooldownUntil]);
+
+  const signupCooldownRemaining = signupCooldownUntil ? Math.max(0, Math.ceil((signupCooldownUntil - now) / 1000)) : 0;
+  const loginCooldownRemaining = loginCooldownUntil ? Math.max(0, Math.ceil((loginCooldownUntil - now) / 1000)) : 0;
+
+  useEffect(() => {
+    if (signupCooldownUntil && signupCooldownRemaining === 0) setSignupCooldownUntil(null);
+  }, [signupCooldownUntil, signupCooldownRemaining]);
+  useEffect(() => {
+    if (loginCooldownUntil && loginCooldownRemaining === 0) setLoginCooldownUntil(null);
+  }, [loginCooldownUntil, loginCooldownRemaining]);
   const { user, role, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
