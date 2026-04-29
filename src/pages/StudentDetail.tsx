@@ -21,6 +21,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { PriorityBadge } from '@/components/PriorityBadge';
 import { CategoryBadge } from '@/components/CategoryBadge';
@@ -107,7 +108,21 @@ export default function StudentDetail() {
   if (isLoading) {
     return (
       <SidebarLayout>
-        <LoadingSpinner />
+        <div className="space-y-6" role="status" aria-live="polite" aria-label="Loading student profile">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-16 w-16 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-6 w-1/3" />
+              <Skeleton className="h-4 w-1/4" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-full max-w-md" />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full rounded-lg" />
+            ))}
+          </div>
+        </div>
       </SidebarLayout>
     );
   }

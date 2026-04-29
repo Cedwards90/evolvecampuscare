@@ -18,6 +18,8 @@ import { AIBadge } from '@/components/AIBadge';
 import { TimeAgo } from '@/components/TimeAgo';
 import { EmptyState } from '@/components/EmptyState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
+import { RequestListSkeleton } from '@/components/skeletons/RequestListSkeleton';
 import { RequestQuickActions } from '@/components/requests/RequestQuickActions';
 import { MyStudentsSection } from '@/components/casemanager/MyStudentsSection';
 import { Button } from '@/components/ui/button';
@@ -217,7 +219,7 @@ export default function ManageRequests() {
           <h2 className="font-display text-h3">Request Queue</h2>
           
           {requestsLoading ? (
-            <LoadingSpinner />
+            <TableSkeleton rows={6} columns={5} />
           ) : filteredRequests.length === 0 ? (
             <EmptyState
               icon={Filter}
