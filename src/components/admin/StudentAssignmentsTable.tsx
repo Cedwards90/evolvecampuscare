@@ -229,14 +229,14 @@ export function StudentAssignmentsTable() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12"><Checkbox checked={unassignedStudents && selectedStudentIds.size === unassignedStudents.length} onCheckedChange={handleSelectAll} /></TableHead>
+                  <TableHead className="w-12"><Checkbox checked={filteredUnassigned.length > 0 && selectedStudentIds.size === filteredUnassigned.length} onCheckedChange={handleSelectAll} /></TableHead>
                   <TableHead>Student</TableHead>
                   <TableHead>Pending</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {unassignedStudents?.map((s) => (
+                {filteredUnassigned.map((s) => (
                   <TableRow key={s.user_id}>
                     <TableCell><Checkbox checked={selectedStudentIds.has(s.user_id)} onCheckedChange={(c) => handleSelectStudent(s.user_id, c as boolean)} /></TableCell>
                     <TableCell>
