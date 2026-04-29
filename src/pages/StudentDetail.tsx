@@ -263,6 +263,14 @@ export default function StudentDetail() {
           </CardContent>
         </Card>
 
+        {role === 'admin' && (
+          <StudentAssignmentCard
+            studentProfile={student.profile}
+            assignedCaseManager={student.assignment?.case_manager || null}
+            pendingRequests={student.stats.pending_requests}
+          />
+        )}
+
         {/* Tabs */}
         <Tabs defaultValue="requests" className="space-y-4">
           <TabsList>
