@@ -558,10 +558,26 @@ function StudentFileTab({ studentId, requests }: { studentId: string; requests: 
   });
 
   const handleAddNote = async () => {
-    if (!newNote.trim()) return;
+    const trimmed = newNote.trim();
+    if (trimmed.length < 3) {
+      toast({
+        title: 'Note too short',
+        description: 'Please write at least 3 characters before saving.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (trimmed.length > 5000) {
+      toast({
+        title: 'Note too long',
+        description: 'Notes must be under 5,000 characters.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setAddingNote(true);
     try {
-      await addNote.mutateAsync({ content: newNote });
+      await addNote.mutateAsync({ content: trimmed });
       setNewNote('');
     } finally {
       setAddingNote(false);
