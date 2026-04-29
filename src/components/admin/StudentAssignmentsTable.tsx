@@ -140,11 +140,22 @@ export function StudentAssignmentsTable() {
           <TabsTrigger value="unassigned">Unassigned ({unassignedStudents?.length || 0})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="assigned" className="mt-4">
+        <TabsContent value="assigned" className="mt-4 space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search assigned students by student or case manager name..."
+              value={assignedSearch}
+              onChange={(e) => setAssignedSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">Loading...</div>
           ) : assignments?.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No students assigned yet.</div>
+          ) : filteredAssignments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No assignments match your search.</div>
           ) : (
             <Table>
               <TableHeader>
@@ -156,7 +167,7 @@ export function StudentAssignmentsTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assignments?.map((a) => (
+                {filteredAssignments.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -193,6 +204,15 @@ export function StudentAssignmentsTable() {
         </TabsContent>
 
         <TabsContent value="unassigned" className="mt-4 space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search unassigned students by name or email..."
+              value={unassignedSearch}
+              onChange={(e) => setUnassignedSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           {selectedStudentIds.size > 0 && (
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <span className="text-sm font-medium">{selectedStudentIds.size} selected</span>
@@ -203,6 +223,8 @@ export function StudentAssignmentsTable() {
             <div className="text-center py-8 text-muted-foreground">Loading...</div>
           ) : unassignedStudents?.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">All students assigned.</div>
+          ) : filteredUnassigned.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No students match your search.</div>
           ) : (
             <Table>
               <TableHeader>
