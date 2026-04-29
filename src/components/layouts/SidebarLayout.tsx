@@ -105,7 +105,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
       {/* Sidebar */}
       <aside 
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen border-r border-border/40 bg-card transition-all duration-300 hidden lg:flex flex-col",
+          "fixed left-0 top-0 z-40 h-screen border-r border-border/40 bg-card transition-all duration-300 hidden md:flex flex-col",
           sidebarCollapsed ? "w-[70px]" : "w-[260px]"
         )}
       >
@@ -198,7 +198,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
       {/* Mobile Sidebar Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 z-30 bg-background/80 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-30 bg-background/80 backdrop-blur-sm md:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -246,15 +246,15 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
       {/* Main Content */}
       <div className={cn(
         "flex-1 min-w-0 max-w-full overflow-x-hidden transition-all duration-300",
-        sidebarCollapsed ? "lg:ml-[70px]" : "lg:ml-[260px]"
+        sidebarCollapsed ? "md:ml-[70px]" : "md:ml-[260px]"
       )}>
         {/* Top Header */}
-        <header className="sticky top-0 z-30 flex h-14 sm:h-16 items-center gap-1 sm:gap-3 border-b border-border/40 bg-card px-2 sm:px-4 lg:px-6">
+        <header className="sticky top-0 z-30 flex h-14 sm:h-16 items-center gap-1 sm:gap-3 border-b border-border/40 bg-card px-2 sm:px-4 md:px-6">
           {/* Mobile Menu Toggle */}
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden flex-shrink-0"
+            className="md:hidden flex-shrink-0"
             onClick={() => setMobileMenuOpen(true)}
           >
             <Menu className="h-5 w-5" />
@@ -264,7 +264,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="hidden lg:flex flex-shrink-0"
+            className="hidden md:flex flex-shrink-0"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           >
             <Menu className="h-5 w-5" />
@@ -285,7 +285,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           <div className="flex-1" />
 
           {/* Search - desktop only */}
-          <div className="hidden lg:flex relative w-64">
+          <div className="hidden md:flex relative w-64">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input 
               placeholder="Search..." 
@@ -354,7 +354,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="p-3 sm:p-4 lg:p-6 min-w-0 max-w-full overflow-x-hidden safe-content">
+        <main className="p-3 sm:p-4 md:p-6 min-w-0 max-w-full overflow-x-hidden safe-content">
           {children}
         </main>
       </div>
