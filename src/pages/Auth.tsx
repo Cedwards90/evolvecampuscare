@@ -182,16 +182,19 @@ export default function Auth() {
   });
 
   const onLogin = async (data: LoginFormData) => {
+    if (loginCooldownRemaining > 0 || isSubmitting) return;
     setIsSubmitting(true);
     try {
       const { error } = await signIn(data.email, data.password);
       if (error) {
+        const t = translateAuthError(error as any, 'login');
+        if (t.cooldownSeconds) {
+          setLoginCooldownUntil(Date.now() + t.cooldownSeconds * 1000);
+        }
         toast({
           variant: 'destructive',
-          title: 'Sign in failed',
-          description: error.message === 'Invalid login credentials' 
-            ? 'Invalid email or password. Please try again.'
-            : error.message,
+          title: t.title,
+          description: t.message,
         });
         return;
       }
@@ -234,18 +237,19 @@ export default function Auth() {
   };
 
   const onSignup = async (data: SignupFormData) => {
+    if (signupCooldownRemaining > 0 || isSubmitting) return;
     setIsSubmitting(true);
     try {
       const { error } = await signUp(data.email, data.password, data.fullName);
       if (error) {
-        let errorMessage = error.message;
-        if (error.message.includes('already registered')) {
-          errorMessage = 'This email is already registered. Please sign in instead.';
+        const t = translateAuthError(error as any, 'signup');
+        if (t.cooldownSeconds) {
+          setSignupCooldownUntil(Date.now() + t.cooldownSeconds * 1000);
         }
         toast({
           variant: 'destructive',
-          title: 'Sign up failed',
-          description: errorMessage,
+          title: t.title,
+          description: t.message,
         });
       } else {
         toast({
