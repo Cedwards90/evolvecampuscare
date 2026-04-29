@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [roleError, setRoleError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUserData = async (userId: string) => {
@@ -39,18 +40,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ]);
 
       if (profileResult.error) console.error('Profile fetch error:', profileResult.error);
-      if (roleResult.error) console.error('Role fetch error:', roleResult.error);
+      if (roleResult.error) {
+        console.error('Role fetch error:', roleResult.error);
+        setRoleError(roleResult.error.message);
+      } else {
+        setRoleError(null);
+      }
 
       if (profileResult.data) setProfile(profileResult.data as Profile);
       if (roleResult.data) setRole(roleResult.data as AppRole);
-
-      console.log('[Auth]', {
-        userId,
-        role: roleResult.data ?? null,
-        profile: !!profileResult.data,
-      });
     } catch (error) {
       console.error('Error fetching user data:', error);
+      setRoleError(error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
