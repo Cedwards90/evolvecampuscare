@@ -507,11 +507,11 @@ function StatTile({
   tone?: 'default' | 'danger';
 }) {
   return (
-    <div className="rounded-lg border bg-card p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
+    <div className="rounded-lg border bg-card p-2.5">
+      <p className="text-xs text-muted-foreground truncate">{label}</p>
       <p
         className={cn(
-          'mt-1 text-lg font-semibold',
+          'mt-1 text-base font-semibold truncate',
           tone === 'danger' && 'text-destructive'
         )}
       >
