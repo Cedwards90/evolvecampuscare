@@ -152,7 +152,7 @@ export function MFAEnrollment({ onEnrollmentComplete, onSkip }: MFAEnrollmentPro
               <code className="flex-1 p-2 bg-muted rounded text-xs break-all font-mono">
                 {secret}
               </code>
-              <Button variant="outline" size="icon" onClick={copySecret}>
+              <Button variant="outline" size="icon" aria-label="Copy secret to clipboard" onClick={copySecret}>
                 {copied ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>

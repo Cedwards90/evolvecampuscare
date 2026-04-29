@@ -75,7 +75,7 @@ export function MessageThread({ otherUserId }: MessageThreadProps) {
       {/* Header */}
       <div className="flex items-center gap-3 p-3 sm:p-4 border-b">
         <Link to="/messages" className="md:hidden">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" aria-label="Send message">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>

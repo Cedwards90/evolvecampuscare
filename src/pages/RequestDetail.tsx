@@ -84,7 +84,7 @@ export default function RequestDetail() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-start gap-3 sm:gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="flex-shrink-0">
+          <Button variant="ghost" size="icon" aria-label="Go back" onClick={() => navigate(-1)} className="flex-shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1 min-w-0">

@@ -48,7 +48,7 @@ export function SummaryCard({
         )}
         <Button 
           variant="ghost" 
-          size="icon" 
+          size="icon" aria-label="More options" 
           className="h-8 w-8 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/20"
         >
           <Settings className="h-4 w-4" />

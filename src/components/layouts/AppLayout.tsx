@@ -159,7 +159,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             {/* Mobile menu button */}
             <Button
               variant="ghost"
-              size="icon"
+              size="icon" aria-label="User menu"
               className="md:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >

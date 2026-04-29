@@ -350,7 +350,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           {/* Mobile Menu Toggle */}
           <Button
             variant="ghost"
-            size="icon"
+            size="icon" aria-label="Open menu"
             className="lg:hidden flex-shrink-0"
             onClick={() => setMobileMenuOpen(true)}
           >
@@ -360,7 +360,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           {/* Sidebar Toggle (Desktop) */}
           <Button
             variant="ghost"
-            size="icon"
+            size="icon" aria-label="Close menu"
             className="hidden lg:flex flex-shrink-0"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           >
@@ -396,7 +396,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           {/* Language selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label="User menu">
                 <Globe className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
