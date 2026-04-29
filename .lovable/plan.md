@@ -1,62 +1,70 @@
 ## Goal
-Add stricter CSV parsing and a detailed pre-submit error report to the Bulk Invite Students dialog. Frontend-only change to `BulkInviteStudentsDialog.tsx`.
+Diagnose and gracefully handle the "rate limit exceeded" error on signup. Show clear, friendly messages with retry timing and prevent duplicate submissions — without weakening any security or auth defaults.
 
-## Changes
+## Diagnosis
 
-### 1. Stricter CSV parser
-Replace naive `split(',')` with a quoted-field parser:
-- Handle `"a,b"` quoted cells, `""` escaped quote, embedded newlines inside quoted cells.
-- Strip BOM (`\uFEFF`) from start of file.
-- Comma delimiter only.
-- Track **source line number** (1-indexed) for every row so errors point at exact lines.
-- Header detection: case-insensitive match for `email` (required column), optional `full_name | fullname | name`. If no `email` header **and** first cell of row 1 is not an email → reject file with a clear error ("CSV must include an `email` column or one email per row").
-- Empty lines reported as `empty_row` issue (not silently dropped).
-- Rows with header but missing email cell → `missing_email` issue.
+**Where the limit is enforced:** Supabase Auth applies built-in per-IP and per-email rate limits to `auth.signUp()` and the email-confirmation send it triggers. Defaults (visible in Cloud → Auth → Rate limits):
+- Email send: ~2 per hour per address (free tier) — most common cause of "rate limit exceeded" on signup.
+- Sign-up/sign-in: 30 per hour per IP.
+- Token verification: 30 per 5 minutes.
 
-### 2. Stricter validation
-Per-row issues with typed reason codes:
+The error surfaces to the client as a Supabase `AuthApiError` with message containing `"rate limit"` or `"For security purposes, you can only request this after N seconds"` (HTTP 429). Our current `onSignup` in `src/pages/Auth.tsx` only special-cases `"already registered"` and shows the raw message for everything else, which is why users see a bare "rate limit exceeded".
 
-| Code | Trigger | Severity |
-|---|---|---|
-| `empty_row` | Line blank after trim | warn (skip) |
-| `missing_email` | Header present, email cell empty | **hard error** |
-| `invalid_format` | Fails regex, contains spaces, > 254 chars total, or local-part > 64 chars | **hard error** |
-| `duplicate_in_batch` | Email already seen earlier — show "first seen on line N" | warn (skip) |
-| `over_limit` | Beyond MAX (100) — flag rows 101+ | warn (skip) |
-| `valid` | Passes all checks | — |
+**Aggravating factors found in code review:**
+- `signUp()` in `src/contexts/AuthContext.tsx` does not protect against duplicate clicks beyond the local `isSubmitting` flag. If a user double-clicks fast or the request hangs, multiple signups can fire and burn the per-email/IP quota.
+- No client-side cooldown after a 429 — the user can keep clicking and re-trigger the same error.
+- No surfacing of the `Retry-After` / "after N seconds" hint Supabase returns.
 
-Normalization: trim, lowercase, strip surrounding quotes. `fullName` trimmed and capped at 100 chars.
+## Plan (frontend-only, no backend or auth-config changes)
 
-### 3. Detailed error report UI (pre-submit)
-Replaces the small 32-row scroll list with a structured report card whenever any non-valid row exists:
-- **Summary chips** grouped by issue type (e.g. `2 invalid · 1 missing email · 3 duplicates · 1 empty`).
-- **Grouped report list** in a `ScrollArea` (~240px): one section per issue type, each entry shows `Line {n} — {email or "(empty)"} — {reason}`. Duplicates also show "first seen on line N".
-- **Download error report (.csv)** button — exports `line,email,issue,detail` columns for every non-valid row via a client-side blob.
+### 1. Recognize and translate rate-limit errors
+In `src/pages/Auth.tsx › onSignup`:
+- Detect rate-limit errors by checking `error.message` for `rate limit`, `too many requests`, or the regex `/after (\d+) seconds?/i`, **or** `(error as any).status === 429`.
+- Extract retry seconds from the message when present; otherwise default to 60s.
+- Show a friendly toast: *"Too many signup attempts. Please wait {N} seconds and try again."*
+- Apply the same translation to `onLogin` for consistency (sign-in shares the same limiter family) — only the message text changes; no logic changes.
 
-### 4. Submit gate (block only on hard errors)
-- Send button **disabled** if any `invalid_format` or `missing_email` row exists. Tooltip / inline message: "Fix invalid emails in your file, then re-upload."
-- `empty_row`, `duplicate_in_batch`, `over_limit` rows are auto-skipped silently (still listed in the report) — Send stays enabled.
-- Existing 100-cap message kept for `over_limit`.
+### 2. Cooldown + duplicate-submit guard
+- Add `signupCooldownUntil: number | null` state in `Auth.tsx`.
+- When a 429 is detected, set it to `Date.now() + retrySeconds * 1000`.
+- A small `useEffect` ticks every second to compute remaining seconds for display.
+- The "Create Account" button is **disabled** while `isSubmitting` OR `cooldownRemaining > 0`, and its label switches to *"Try again in {N}s"*.
+- An inline `Alert` above the form shows the cooldown reason and countdown so it's visible even if the toast was dismissed.
+- Form submit handler short-circuits if cooldown is active (defense in depth against Enter key).
 
-### 5. Paste tab parity
-Apply the same per-line tracking and issue codes to the paste tab (lines numbered from the textarea). Reuse the same report UI.
+### 3. Prevent accidental double-submits
+- Already have `isSubmitting`, but also disable the form's Submit on `mousedown` of the button (button already `type="submit"` + `disabled` — verify).
+- Apply the same cooldown pattern to the **Login** form using a separate `loginCooldownUntil` (independent counters so a signup limit doesn't lock login).
 
-### 6. UX polish
-- Use existing `Alert`, `Badge`, `Collapsible`, `ScrollArea` primitives — no new deps.
-- Keep existing layout, Forest Green/Sage tokens, pill UI.
-- Existing post-submit progress flow is unchanged.
+### 4. Friendly mapping for common Supabase auth errors
+Add a small `translateAuthError(error)` helper at the top of `Auth.tsx` (not exported / not shared yet — keep change small). Maps:
+- `already registered` → existing message
+- `rate limit` / 429 → cooldown message with seconds
+- `Email rate limit exceeded` → *"Too many emails sent to this address recently. Please wait a few minutes before trying again."*
+- `Invalid login credentials` → *"Email or password is incorrect."* (login only)
+- Anything else → fall back to the original `error.message`.
 
-## Files
-**Edited (frontend only)**
-- `src/components/admin/BulkInviteStudentsDialog.tsx` — rewrite `parseCsv` + `parsePasted` + `validate`, add issue-code types, replace error list with grouped report + CSV download + hard-error submit gate.
+### 5. UX feedback polish
+- Toast variant `destructive` for errors (kept).
+- Show the countdown in both the inline Alert and the button label.
+- Once cooldown elapses, the alert auto-dismisses and the button re-enables.
 
-**Untouched**
-- `src/hooks/useBulkInvite.ts`
-- `supabase/functions/bulk-invite-students/index.ts`
-- All other dialogs, hooks, edge functions, DB schema.
+## What we will NOT change (require explicit approval)
+- Supabase Auth rate-limit configuration in Cloud (email, signup, token) — kept at current values.
+- Email confirmation requirement (`auto_confirm_email`) — stays off.
+- Password complexity, MFA flow, HIBP setting.
+- `signUp()` in `AuthContext.tsx` (no signature change).
+- Edge functions, DB schema, RLS.
+
+## Files to edit
+- `src/pages/Auth.tsx` — add `translateAuthError`, cooldown state for signup + login, inline alert, button label countdown, retry-after parsing.
 
 ## Out of scope
-- Server-side parsing changes (edge function still receives only validated `valid` rows).
-- Cross-batch duplicate check vs existing `user_invitations` (already handled server-side as `skipped`).
-- File-size / line limits (no caps before parsing).
-- New parser dependencies (e.g. papaparse) — kept inline.
+- Adding captcha / hCaptcha (requires user opt-in + key).
+- Server-side rate limiting (per project rules — no backend rate limiting added).
+- Raising Supabase rate limits (would need explicit approval and weakens protection).
+
+## Verification after implementation
+- Trigger signup with the same email 3× in a row → second attempt should show *"Too many emails sent…"* + a countdown, button disabled.
+- Confirm normal happy-path signup still works (no behavior change when no error).
+- Confirm login form's cooldown is independent.
