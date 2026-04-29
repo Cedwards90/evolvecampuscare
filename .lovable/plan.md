@@ -1,34 +1,41 @@
 
 
-User wants the PWA icon (used when "Add to Home Screen" / install) to be the Evolve Foundation logo instead of the current placeholder `pwa-192x192.png` / `pwa-512x512.png`.
+## Diagnosis
 
-Currently `vite.config.ts` references `/pwa-192x192.png` and `/pwa-512x512.png`, and `index.html` references `/pwa-192x192.png` for the apple-touch-icon. The Evolve logo is hosted at `https://www.evolvefoundation.us/lovable-uploads/evolve-logo.webp`.
+Your screenshot shows you are on the **public Landing page (`/`)**, not signed in. The Landing page intentionally has a minimal top bar (logo + "Go to Dashboard" / "Sign In") — it does not show the sidebar with **User Management**, **Manage Requests**, **Organizations**, etc.
 
-Browsers/PWA installers require the manifest icons to be same-origin PNG files at the declared sizes. I need to generate proper square PNG files from the logo and place them in `public/`.
+Those navigation links live in `SidebarLayout`, which only renders **after you sign in** on protected routes like `/dashboard`, `/admin/users`, `/requests`, etc. The previous fix (lowering the sidebar breakpoint from `lg` → `md`) is working correctly on those authenticated pages.
 
-## Plan: Use Evolve logo as PWA icon
+The "no way to navigate" feeling comes from the Landing page itself having no shortcuts into the app's main areas for signed-in users, and no quick links for signed-out admins/case managers either.
 
-### Steps
-1. **Download** the Evolve logo from `https://www.evolvefoundation.us/lovable-uploads/evolve-logo.webp`.
-2. **Generate PNGs** at the required sizes using ImageMagick:
-   - `public/pwa-192x192.png` (192×192)
-   - `public/pwa-512x512.png` (512×512)
-   - `public/apple-touch-icon.png` (180×180, optional polish)
-   The logo will be centered on a white background (matches the manifest's `background_color: "#FFFFFF"`) and padded so it reads well as a maskable icon.
-3. **Verify** the generated images by inspecting dimensions and a quick visual check.
-4. **No code changes needed** in `vite.config.ts` — the existing manifest already points at `/pwa-192x192.png` and `/pwa-512x512.png`. The new files will simply replace the placeholders.
-5. **Optionally** update `index.html`'s `apple-touch-icon` to point at the new 180×180 file for a sharper iOS home-screen icon.
+## Two possible fixes — which do you want?
 
-### Files
+### Option A — Improve the public Landing page top bar (recommended)
+
+Add a slim, role-aware top nav on `/` so users can jump straight into the app:
+
+- **Signed out**: keep "Sign In" + "Get Started", add a "Help Center" link.
+- **Signed in (any role)**: replace "Go to Dashboard" with a small set of quick links based on role:
+  - **Student**: Dashboard · Submit Request · Track Requests · Messages
+  - **Case Manager**: Dashboard · Manage Requests · Student Folders · Messages
+  - **Admin**: Dashboard · User Management · Manage Requests · Analytics
+- Mobile: collapse into a hamburger sheet using the same `filteredNavItems` logic from `SidebarLayout`.
+
+### Option B — Auto-redirect signed-in users away from `/`
+
+When a logged-in user lands on `/`, automatically send them to `/dashboard` (where the full sidebar is). This eliminates the "dead end" entirely.
+
+Both options are small UI changes — no backend, no schema, no new routes.
+
+### Files involved
 | File | Change |
 |---|---|
-| `public/pwa-192x192.png` | Replace with Evolve logo (192×192, white bg) |
-| `public/pwa-512x512.png` | Replace with Evolve logo (512×512, white bg) |
-| `public/apple-touch-icon.png` | New 180×180 icon |
-| `index.html` | Update `apple-touch-icon` href (1-line tweak) |
+| `src/pages/Landing.tsx` | Option A: add role-aware top nav. Option B: add `useEffect` redirect when `user` exists. |
+| `src/components/layouts/SidebarLayout.tsx` | No change — sidebar already works on protected routes after the breakpoint fix. |
 
-### Notes
-- PWA install icon only updates after republishing — Lovable preview iframe disables the service worker, so the user will need to publish to see the new icon on installed devices.
-- Existing favicon (small browser tab icon) already uses the live `evolve-logo.webp` URL and is unchanged.
-- No backend, manifest, or dependency changes.
+### Quick check
+Before I build either option, can you confirm:
+1. When you click **"Go to Dashboard"** from the Landing page and reach `/dashboard`, **does the left sidebar appear** with all the nav links (Dashboard, Manage Requests, User Management, etc.)?
+   - If **yes** → Option A or B will solve the navigation gap on `/`.
+   - If **no** → the sidebar itself is still broken on authenticated pages and we need to debug further (different fix).
 
