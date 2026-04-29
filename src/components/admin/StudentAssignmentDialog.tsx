@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -47,15 +49,28 @@ export function StudentAssignmentDialog({
   onAssigned,
 }: StudentAssignmentDialogProps) {
   const [selectedCaseManager, setSelectedCaseManager] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const { data: caseManagers, isLoading: caseManagersLoading } = useCaseManagers();
   const assignStudent = useAssignStudent();
   const { user } = useAuth();
 
-  // Sort case managers by available capacity (fewer students first)
+  // Sort case managers by available capacity (fewer students first), then filter by search
   const sortedCaseManagers = useMemo(() => {
     if (!caseManagers) return [];
-    return [...caseManagers].sort((a, b) => a.active_requests - b.active_requests);
-  }, [caseManagers]);
+    const sorted = [...caseManagers].sort((a, b) => a.active_requests - b.active_requests);
+    const q = search.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter(
+      (cm) =>
+        (cm.full_name || '').toLowerCase().includes(q) ||
+        (cm.email || '').toLowerCase().includes(q)
+    );
+  }, [caseManagers, search]);
+
+  const selectedCM = caseManagers?.find((cm) => cm.user_id === selectedCaseManager);
+  const selectedAtCapacity = selectedCM
+    ? selectedCM.active_requests >= MAX_STUDENTS_PER_CM
+    : false;
 
   const handleAssign = async () => {
     if (!selectedCaseManager || !student || !user?.id) return;
@@ -98,6 +113,16 @@ export function StudentAssignmentDialog({
           </div>
         )}
 
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search case managers by name or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
         <ScrollArea className="max-h-[300px] pr-4">
           <div className="space-y-2">
             {caseManagersLoading ? (
@@ -106,23 +131,27 @@ export function StudentAssignmentDialog({
               </div>
             ) : sortedCaseManagers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No case managers available
+                {search ? 'No case managers match your search.' : 'No case managers available'}
               </div>
             ) : (
               sortedCaseManagers.map((cm) => {
                 const workloadPercentage = Math.min((cm.active_requests / MAX_STUDENTS_PER_CM) * 100, 100);
                 const isSelected = selectedCaseManager === cm.user_id;
                 const workloadStatus = getWorkloadStatus(cm.active_requests, MAX_STUDENTS_PER_CM);
+                const atCapacity = cm.active_requests >= MAX_STUDENTS_PER_CM;
 
                 return (
                   <div
                     key={cm.user_id}
-                    onClick={() => setSelectedCaseManager(cm.user_id)}
+                    onClick={() => !atCapacity && setSelectedCaseManager(cm.user_id)}
                     className={cn(
-                      'flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors',
+                      'flex items-center gap-3 p-3 rounded-lg border transition-colors',
+                      atCapacity
+                        ? 'opacity-60 cursor-not-allowed border-border'
+                        : 'cursor-pointer',
                       isSelected
                         ? 'border-primary bg-primary/5'
-                        : 'border-border hover:bg-muted/50'
+                        : !atCapacity && 'border-border hover:bg-muted/50'
                     )}
                   >
                     <Avatar className="h-10 w-10">
@@ -139,6 +168,11 @@ export function StudentAssignmentDialog({
                         </span>
                         {isSelected && (
                           <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                        )}
+                        {atCapacity && (
+                          <Badge variant="outline" className="text-xs border-destructive text-destructive">
+                            At capacity
+                          </Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground truncate">
@@ -176,13 +210,20 @@ export function StudentAssignmentDialog({
           </div>
         </ScrollArea>
 
+        {selectedAtCapacity && (
+          <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
+            <AlertCircle className="h-4 w-4" />
+            <span>Selected case manager is at full capacity. Choose another.</span>
+          </div>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
             onClick={handleAssign}
-            disabled={!selectedCaseManager || assignStudent.isPending}
+            disabled={!selectedCaseManager || selectedAtCapacity || assignStudent.isPending}
           >
             {assignStudent.isPending ? 'Assigning...' : 'Assign Student'}
           </Button>

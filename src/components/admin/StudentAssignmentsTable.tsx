@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { UserPlus, RefreshCw, Trash2, Users } from 'lucide-react';
+import { UserPlus, RefreshCw, Trash2, Users, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Table,
   TableBody,
@@ -40,6 +42,9 @@ function getInitials(name: string | null | undefined): string {
 }
 
 export function StudentAssignmentsTable() {
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
+
   const { data: assignments, isLoading: assignmentsLoading } = useStudentAssignments();
   const { data: unassignedStudents, isLoading: unassignedLoading } = useUnassignedStudents();
   const removeAssignment = useRemoveStudentAssignment();
@@ -49,6 +54,37 @@ export function StudentAssignmentsTable() {
   const [removeConfirmStudent, setRemoveConfirmStudent] = useState<StudentAssignment | null>(null);
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [bulkAssignDialogOpen, setBulkAssignDialogOpen] = useState(false);
+  const [assignedSearch, setAssignedSearch] = useState('');
+  const [unassignedSearch, setUnassignedSearch] = useState('');
+
+  const filteredAssignments = useMemo(() => {
+    if (!assignments) return [];
+    const q = assignedSearch.trim().toLowerCase();
+    if (!q) return assignments;
+    return assignments.filter((a) => {
+      const name = (a.student?.full_name || '').toLowerCase();
+      const email = (a.student?.email || '').toLowerCase();
+      const cmName = (a.case_manager?.full_name || '').toLowerCase();
+      return name.includes(q) || email.includes(q) || cmName.includes(q);
+    });
+  }, [assignments, assignedSearch]);
+
+  const filteredUnassigned = useMemo(() => {
+    if (!unassignedStudents) return [];
+    const q = unassignedSearch.trim().toLowerCase();
+    if (!q) return unassignedStudents;
+    return unassignedStudents.filter((s) => {
+      const name = (s.profile?.full_name || '').toLowerCase();
+      const email = (s.profile?.email || '').toLowerCase();
+      return name.includes(q) || email.includes(q);
+    });
+  }, [unassignedStudents, unassignedSearch]);
+
+  // Find pending request count for the student being removed
+  const removeStudentPending = useMemo(() => {
+    if (!removeConfirmStudent || !unassignedStudents) return 0;
+    return unassignedStudents.find(s => s.user_id === removeConfirmStudent.student_id)?.pendingRequests || 0;
+  }, [removeConfirmStudent, unassignedStudents]);
 
   const handleAssignClick = (student: UnassignedStudent) => {
     setSelectedStudent(student);
@@ -78,8 +114,8 @@ export function StudentAssignmentsTable() {
   };
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked && unassignedStudents) {
-      setSelectedStudentIds(new Set(unassignedStudents.map(s => s.user_id)));
+    if (checked) {
+      setSelectedStudentIds(new Set(filteredUnassigned.map(s => s.user_id)));
     } else {
       setSelectedStudentIds(new Set());
     }
@@ -87,6 +123,14 @@ export function StudentAssignmentsTable() {
 
   const selectedStudentsForBulk = unassignedStudents?.filter(s => selectedStudentIds.has(s.user_id)) || [];
   const isLoading = assignmentsLoading || unassignedLoading;
+
+  if (!isAdmin) {
+    return (
+      <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+        You do not have permission to manage student assignments.
+      </div>
+    );
+  }
 
   return (
     <>
@@ -96,11 +140,22 @@ export function StudentAssignmentsTable() {
           <TabsTrigger value="unassigned">Unassigned ({unassignedStudents?.length || 0})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="assigned" className="mt-4">
+        <TabsContent value="assigned" className="mt-4 space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search assigned students by student or case manager name..."
+              value={assignedSearch}
+              onChange={(e) => setAssignedSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">Loading...</div>
           ) : assignments?.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No students assigned yet.</div>
+          ) : filteredAssignments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No assignments match your search.</div>
           ) : (
             <Table>
               <TableHeader>
@@ -112,7 +167,7 @@ export function StudentAssignmentsTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assignments?.map((a) => (
+                {filteredAssignments.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -149,6 +204,15 @@ export function StudentAssignmentsTable() {
         </TabsContent>
 
         <TabsContent value="unassigned" className="mt-4 space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search unassigned students by name or email..."
+              value={unassignedSearch}
+              onChange={(e) => setUnassignedSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           {selectedStudentIds.size > 0 && (
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <span className="text-sm font-medium">{selectedStudentIds.size} selected</span>
@@ -159,18 +223,20 @@ export function StudentAssignmentsTable() {
             <div className="text-center py-8 text-muted-foreground">Loading...</div>
           ) : unassignedStudents?.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">All students assigned.</div>
+          ) : filteredUnassigned.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No students match your search.</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12"><Checkbox checked={unassignedStudents && selectedStudentIds.size === unassignedStudents.length} onCheckedChange={handleSelectAll} /></TableHead>
+                  <TableHead className="w-12"><Checkbox checked={filteredUnassigned.length > 0 && selectedStudentIds.size === filteredUnassigned.length} onCheckedChange={handleSelectAll} /></TableHead>
                   <TableHead>Student</TableHead>
                   <TableHead>Pending</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {unassignedStudents?.map((s) => (
+                {filteredUnassigned.map((s) => (
                   <TableRow key={s.user_id}>
                     <TableCell><Checkbox checked={selectedStudentIds.has(s.user_id)} onCheckedChange={(c) => handleSelectStudent(s.user_id, c as boolean)} /></TableCell>
                     <TableCell>
@@ -196,7 +262,14 @@ export function StudentAssignmentsTable() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Assignment</AlertDialogTitle>
-            <AlertDialogDescription>Remove assignment for <strong>{removeConfirmStudent?.student?.full_name}</strong>?</AlertDialogDescription>
+            <AlertDialogDescription>
+              Remove assignment for <strong>{removeConfirmStudent?.student?.full_name}</strong>?
+              {removeStudentPending > 0 && (
+                <span className="block mt-2 text-warning">
+                  {removeStudentPending} pending request{removeStudentPending > 1 ? 's' : ''} will remain attached to the current case manager until reassigned.
+                </span>
+              )}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

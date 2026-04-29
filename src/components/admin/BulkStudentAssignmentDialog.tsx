@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -15,7 +16,7 @@ import {
 import { useCaseManagers } from '@/hooks/useCaseManagerStats';
 import { useBulkAssignStudents, type UnassignedStudent } from '@/hooks/useStudentAssignments';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle, Users } from 'lucide-react';
+import { AlertTriangle, Search, Users } from 'lucide-react';
 
 interface BulkStudentAssignmentDialogProps {
   open: boolean;
@@ -51,18 +52,26 @@ export function BulkStudentAssignmentDialog({
   onAssigned,
 }: BulkStudentAssignmentDialogProps) {
   const [selectedCaseManager, setSelectedCaseManager] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const { data: caseManagers, isLoading: caseManagersLoading } = useCaseManagers();
   const bulkAssign = useBulkAssignStudents();
   const { user } = useAuth();
 
   const sortedCaseManagers = useMemo(() => {
     if (!caseManagers) return [];
-    return [...caseManagers].sort((a, b) => {
+    const sorted = [...caseManagers].sort((a, b) => {
       const aCapacity = MAX_STUDENTS_PER_CM - (a.active_requests || 0);
       const bCapacity = MAX_STUDENTS_PER_CM - (b.active_requests || 0);
       return bCapacity - aCapacity;
     });
-  }, [caseManagers]);
+    const q = search.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter(
+      (cm) =>
+        (cm.full_name || '').toLowerCase().includes(q) ||
+        (cm.email || '').toLowerCase().includes(q)
+    );
+  }, [caseManagers, search]);
 
   const handleAssign = async () => {
     if (!selectedCaseManager || !user || students.length === 0) return;
@@ -119,6 +128,15 @@ export function BulkStudentAssignmentDialog({
           </div>
 
           <p className="text-sm font-medium mb-3">Select a Case Manager:</p>
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           <ScrollArea className="h-[280px] pr-4">
             <div className="space-y-2">
               {caseManagersLoading ? (
@@ -127,7 +145,7 @@ export function BulkStudentAssignmentDialog({
                 </div>
               ) : sortedCaseManagers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No case managers available.
+                  {search ? 'No case managers match your search.' : 'No case managers available.'}
                 </div>
               ) : (
                 sortedCaseManagers.map((cm) => {
