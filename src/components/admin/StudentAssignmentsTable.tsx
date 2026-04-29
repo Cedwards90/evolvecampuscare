@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
+import { getInitials } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { UserPlus, RefreshCw, Trash2, Users, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-import { getInitials } from '@/lib/utils';
   Table,
   TableBody,
   TableCell,

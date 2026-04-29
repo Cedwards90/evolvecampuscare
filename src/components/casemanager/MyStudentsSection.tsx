@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { getInitials } from '@/lib/utils';
 import { Users, FileText, Calendar, Clock, ArrowRight, UserPlus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +10,6 @@ import { EmptyState } from '@/components/EmptyState';
 import { InviteStudentDialog } from '@/components/casemanager/InviteStudentDialog';
 import { BulkCohortSurveyDialog } from '@/components/admin/BulkCohortSurveyDialog';
 import type { MyStudent } from '@/hooks/useMyStudents';
-import { getInitials } from '@/lib/utils';
 
 interface MyStudentsSectionProps {
   students: MyStudent[];

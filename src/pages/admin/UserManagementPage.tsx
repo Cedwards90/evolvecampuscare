@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
+import { getInitials } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { 
-import { getInitials } from '@/lib/utils';
   Search, 
   Filter, 
   Users, 

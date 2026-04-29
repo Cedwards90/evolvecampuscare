@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getInitials } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { FolderOpen, Search, CheckCircle, Clock, FileText, Building2, GraduationCap } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -12,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-import { getInitials } from '@/lib/utils';
   Table,
   TableBody,
   TableCell,

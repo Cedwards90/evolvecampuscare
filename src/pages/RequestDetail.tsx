@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
 import { getInitials } from '@/lib/utils';
+import { 
   ArrowLeft, 
   User, 
   Calendar, 

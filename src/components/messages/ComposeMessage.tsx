@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
+import { getInitials } from '@/lib/utils';
 import { Send, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
-import { getInitials } from '@/lib/utils';
   Dialog,
   DialogContent,
   DialogDescription,
