@@ -10,7 +10,7 @@ import {
   FileText,
   Mail,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -171,7 +171,7 @@ export default function CaseManagersPage() {
 
   return (
     <SidebarLayout>
-      <div className="container mx-auto p-4 md:p-6 space-y-6">
+      <div className="w-full max-w-full space-y-6">
         <PageHeader
           title="Case Managers"
           description="Monitor case manager workloads and reassign students between case managers."
@@ -188,7 +188,7 @@ export default function CaseManagersPage() {
             description="Invite case managers from User Management to start assigning students."
           />
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+          <div className="grid gap-6 xl:grid-cols-[300px_1fr]">
             {/* Left: CM list */}
             <Card className="h-fit">
               <CardHeader className="space-y-3">
@@ -268,7 +268,7 @@ export default function CaseManagersPage() {
                         )}
                       </div>
                       <div className="mt-3 space-y-1">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-muted-foreground">
                           <span>
                             {cm.assigned_students} students • {cm.active_requests} active
                           </span>
@@ -299,25 +299,25 @@ export default function CaseManagersPage() {
               ) : (
                 <>
                   <CardHeader className="space-y-4 border-b">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <Avatar className="h-14 w-14">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <Avatar className="h-12 w-12 shrink-0">
                           <AvatarImage src={selectedCM.avatar_url || undefined} />
                           <AvatarFallback>
                             {getInitials(selectedCM.full_name, selectedCM.email)}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <CardTitle className="text-xl">
+                        <div className="min-w-0">
+                          <CardTitle className="truncate text-lg">
                             {selectedCM.full_name || selectedCM.email}
                           </CardTitle>
                           <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-                            <Mail className="h-3.5 w-3.5" />
-                            {selectedCM.email}
+                            <Mail className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{selectedCM.email}</span>
                           </p>
                         </div>
                       </div>
-                      <Button asChild variant="outline" size="sm">
+                      <Button asChild variant="outline" size="sm" className="shrink-0">
                         <Link to={`/case-managers/${selectedCM.user_id}`}>
                           View profile
                           <ExternalLink className="ml-2 h-3.5 w-3.5" />
@@ -325,9 +325,9 @@ export default function CaseManagersPage() {
                       </Button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       <StatTile label="Students" value={selectedCM.assigned_students} />
-                      <StatTile label="Active requests" value={selectedCM.active_requests} />
+                      <StatTile label="Active" value={selectedCM.active_requests} />
                       <StatTile
                         label="Emergency"
                         value={selectedCM.emergency_requests}
@@ -385,13 +385,13 @@ export default function CaseManagersPage() {
                       />
                     ) : (
                       <div className="overflow-x-auto rounded-lg border">
-                        <Table>
+                        <Table className="min-w-[640px]">
                           <TableHeader>
                             <TableRow>
                               <TableHead>Student</TableHead>
                               <TableHead>Status</TableHead>
                               <TableHead className="text-center">Requests</TableHead>
-                              <TableHead>Last activity</TableHead>
+                              <TableHead className="whitespace-nowrap">Last activity</TableHead>
                               <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -399,8 +399,11 @@ export default function CaseManagersPage() {
                             {filteredStudents.map((s) => (
                               <TableRow key={s.assignmentId}>
                                 <TableCell>
-                                  <div className="flex items-center gap-3">
-                                    <Avatar className="h-8 w-8">
+                                  <Link
+                                    to={`/students/${s.studentId}`}
+                                    className="flex items-center gap-3 hover:underline"
+                                  >
+                                    <Avatar className="h-8 w-8 shrink-0">
                                       <AvatarImage src={s.student?.avatar_url || undefined} />
                                       <AvatarFallback className="text-xs">
                                         {getInitials(
@@ -417,7 +420,7 @@ export default function CaseManagersPage() {
                                         {s.student?.email}
                                       </p>
                                     </div>
-                                  </div>
+                                  </Link>
                                 </TableCell>
                                 <TableCell>
                                   {s.isInactive ? (
@@ -432,43 +435,39 @@ export default function CaseManagersPage() {
                                     <span className="text-sm">{s.totalRequests}</span>
                                     {s.pendingRequests > 0 && (
                                       <Badge variant="destructive" className="text-xs">
-                                        {s.pendingRequests} pending
+                                        {s.pendingRequests}
                                       </Badge>
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-sm text-muted-foreground">
-                                  {formatDistanceToNow(new Date(s.lastActivity), {
+                                <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                                  {formatDistanceToNowStrict(new Date(s.lastActivity), {
                                     addSuffix: true,
                                   })}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  <div className="flex justify-end gap-1">
-                                    <Button asChild variant="ghost" size="sm">
-                                      <Link to={`/students/${s.studentId}`}>View</Link>
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() =>
-                                        setReassignTarget({
-                                          studentId: s.studentId,
-                                          studentName:
-                                            s.student?.full_name ||
-                                            s.student?.email ||
-                                            'student',
-                                          fromCaseManagerId: selectedCM.user_id,
-                                          fromCaseManagerName:
-                                            selectedCM.full_name ||
-                                            selectedCM.email ||
-                                            'current case manager',
-                                        })
-                                      }
-                                    >
-                                      <ArrowRightLeft className="mr-1.5 h-3.5 w-3.5" />
-                                      Reassign
-                                    </Button>
-                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    title="Reassign student"
+                                    onClick={() =>
+                                      setReassignTarget({
+                                        studentId: s.studentId,
+                                        studentName:
+                                          s.student?.full_name ||
+                                          s.student?.email ||
+                                          'student',
+                                        fromCaseManagerId: selectedCM.user_id,
+                                        fromCaseManagerName:
+                                          selectedCM.full_name ||
+                                          selectedCM.email ||
+                                          'current case manager',
+                                      })
+                                    }
+                                  >
+                                    <ArrowRightLeft className="h-3.5 w-3.5 sm:mr-1.5" />
+                                    <span className="hidden sm:inline">Reassign</span>
+                                  </Button>
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -508,11 +507,11 @@ function StatTile({
   tone?: 'default' | 'danger';
 }) {
   return (
-    <div className="rounded-lg border bg-card p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
+    <div className="rounded-lg border bg-card p-2.5">
+      <p className="text-xs text-muted-foreground truncate">{label}</p>
       <p
         className={cn(
-          'mt-1 text-lg font-semibold',
+          'mt-1 text-base font-semibold truncate',
           tone === 'danger' && 'text-destructive'
         )}
       >

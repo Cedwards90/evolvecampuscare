@@ -1,91 +1,34 @@
-# Case Managers Page with Student Assignment Management
+# Fix Case Managers page overflow
 
-A new admin-only page at `/admin/case-managers` that lists every case manager, shows their assigned students, and lets admins reassign students between case managers — fully wired to existing hooks so updates propagate everywhere instantly.
+The right detail pane on `/admin/case-managers` overflows the frame at typical laptop widths (~1000–1280px). The "View profile" button, stat tiles, and per-row "Reassign" buttons get clipped because the `360px + 1fr` grid leaves too little room for a 4-tile stats row and a 5-column table with two action buttons.
 
-## Scope guardrails
-- New code only. No edits to existing pages, hooks, RLS, or schema unless explicitly approved.
-- Reuses the existing `useStudentAssignments`, `useAssignStudent`, `useCaseManagerStats` hooks and their query invalidations, which already cover dashboards, request lists, and CM stats.
-- Sidebar gets one new link entry (Admin section). This is the only edit outside of new files — flagged for approval below.
+## Changes (UI only — `src/pages/admin/CaseManagersPage.tsx`)
 
-## What gets built
+1. **Raise the split-pane breakpoint and shrink the left column**
+   - Change the grid from `lg:grid-cols-[360px_1fr]` to `xl:grid-cols-[300px_1fr]`.
+   - Below `xl` (1280px), the CM list and detail pane stack vertically so each gets full width. This alone resolves the clipping at 1000px.
 
-### 1. New page: `src/pages/admin/CaseManagersPage.tsx`
-Admin-only route. Two-pane layout:
+2. **Make the detail header wrap cleanly**
+   - Header row already uses `flex-wrap`; ensure the avatar+name block uses `min-w-0` and the name/email truncate so long emails never push the "View profile" button off-screen.
+   - Shrink the avatar from `h-14 w-14` to `h-12 w-12` to save horizontal space.
 
-```text
-┌─ Case Managers ─────────────────────────────────────────┐
-│ [Search CM…]  [Filter: All / Overloaded / Available]    │
-├──────────────┬──────────────────────────────────────────┤
-│ CM List      │ Selected CM detail panel                 │
-│ • Avatar     │ • Profile header + workload bar          │
-│ • Name       │ • Assigned students table                │
-│ • # students │   [Search students] [Status filter]      │
-│ • # active   │   Columns: Student • Status • Active     │
-│   requests   │            requests • Last activity • ⋯  │
-│ • Workload % │   Row action: "Reassign" → dialog        │
-└──────────────┴──────────────────────────────────────────┘
-```
+3. **Compact the stats row**
+   - Keep `grid-cols-2 sm:grid-cols-4` but reduce `StatTile` padding (`p-3` → `p-2.5`) and font sizes (`text-lg` → `text-base`) so 4 tiles fit comfortably even in the narrower split-pane width at `xl`.
 
-Features:
-- **CM cards** with assignment count badge, active-request count, workload bar (uses `useCaseManagerStats`).
-- **CM search/filter** by name/email and workload bucket.
-- **Student sub-table** per selected CM with search + status filter (active / inactive / has-pending-requests).
-- **Empty states** for CMs with no assignments.
+4. **Tighten the student table**
+   - Wrap the table in `overflow-x-auto` (already present) and add `min-w-[640px]` to the `<Table>` so columns keep readable widths and scroll horizontally only if absolutely needed.
+   - Combine the two row actions into a single compact control: keep the icon-only **Reassign** button (`size="icon"` with `ArrowRightLeft` and a tooltip) and turn **View** into a row-level link on the student name (already navigable) — this removes ~120px of action-column width.
+   - Reduce the "Last activity" column to a shorter format using `formatDistanceToNowStrict` and add `whitespace-nowrap` so it doesn't wrap to two lines (as seen in the screenshot: "7 days / ago").
 
-### 2. New component: `src/components/admin/ReassignStudentDialog.tsx`
-Confirmation dialog triggered from a student row:
-- Shows current CM → target CM (searchable Select of other CMs with workload hint).
-- Optional notes textarea (audit context).
-- Validation: target CM required, must differ from current, has `case_manager` role.
-- "Also reassign open requests" checkbox (default on) — mirrors existing `useAssignStudent` behavior.
-- Confirm button shows loading state, disabled until valid.
+5. **Left CM card polish**
+   - Cards already fit; just add `truncate` safeguards on long emails and ensure the workload meta row uses `flex-wrap` so the "1 emergency" badge wraps below instead of pushing content.
 
-### 3. New hook: `src/hooks/useReassignStudent.ts`
-Thin wrapper that:
-- Calls existing `useAssignStudent` mutation (it already upserts on `student_id` and updates open requests).
-- Inserts an audit row into `request_updates` for each updated request with `note: "Student reassigned from {oldCM} to {newCM} by admin. {notes}"` and `is_internal: true`.
-- Permission check: throws if caller is not admin (defense-in-depth; RLS already enforces this).
-- Invalidates the same query keys already used: `student-assignments`, `unassigned-students`, `requests`, `case-managers`, `case-manager-stats`, plus `my-students` and `my-assignment` so student & CM dashboards refresh instantly.
+## Out of scope
 
-### 4. Routing
-Add to `src/App.tsx` (new route only, no edits to existing routes):
-```tsx
-<Route path="/admin/case-managers" element={
-  <ProtectedRoute allowedRoles={['admin']}>
-    <CaseManagersPage />
-  </ProtectedRoute>
-} />
-```
+- No business-logic, hook, route, or RLS changes.
+- No changes to `ReassignStudentDialog`, `useReassignStudent`, sidebar, or other pages.
 
-### 5. Sidebar entry — REQUIRES APPROVAL (one-line edit)
-Add one item to `adminNavItems` in `src/components/layouts/SidebarLayout.tsx`:
-```tsx
-{ label: 'Case Managers', href: '/admin/case-managers', icon: UserCog, roles: ['admin'] }
-```
-This is the only change to an existing file. If you'd rather I leave the sidebar alone and you'll wire navigation yourself, say so.
+## Verification
 
-## Realtime propagation guarantee
-Every place that displays assignments already reads from these query keys; the mutation invalidates all of them in one pass, so reassignment instantly updates:
-- Admin Case Managers page (this page)
-- `CaseManagerDetail` page (`case-manager-stats`)
-- Student dashboard "My Case Manager" card (`my-assignment`)
-- CM dashboard "My Students" (`my-students`)
-- Requests list / detail (`requests`)
-- Existing `StudentAssignmentsTable` on admin dashboard (`student-assignments`)
-
-## Security & audit
-- Route gated by `ProtectedRoute allowedRoles={['admin']}`.
-- Existing RLS on `student_assignments` already restricts management to admins (`Admins can manage student assignments`) — no schema changes needed.
-- Audit trail via `request_updates` insert with `is_internal=true` so students don't see internal reassignment notes; CMs and admins do (per existing `request_updates` SELECT policy).
-
-## Files
-**New:**
-- `src/pages/admin/CaseManagersPage.tsx`
-- `src/components/admin/ReassignStudentDialog.tsx`
-- `src/hooks/useReassignStudent.ts`
-
-**Edited (with your approval):**
-- `src/App.tsx` — add one route
-- `src/components/layouts/SidebarLayout.tsx` — add one nav item
-
-**Not touched:** database schema, RLS, existing hooks, existing pages.
+- Reload `/admin/case-managers` at 1000px, 1280px, and 1440px viewports.
+- Confirm: header "View profile" button is visible, all 4 stat tiles render, table action buttons are reachable without horizontal scroll at ≥1280px and scroll gracefully below that.
