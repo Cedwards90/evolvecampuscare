@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -55,47 +54,22 @@ interface NavItem {
   badge?: number;
 }
 
-interface NavGroup {
-  label: string;
-  items: NavItem[];
-}
-
-const navGroups: NavGroup[] = [
-  {
-    label: 'Workspace',
-    items: [
-      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['student', 'case_manager', 'admin'] },
-      { label: 'Messages', href: '/messages', icon: MessageSquare, roles: ['student', 'case_manager', 'admin'] },
-    ],
-  },
-  {
-    label: 'Requests',
-    items: [
-      { label: 'Submit Request', href: '/student-submitting-a-support-request', icon: FileText, roles: ['student'] },
-      { label: 'Track Requests', href: '/student-tracking-request-status-scheduling-meeting', icon: Clock, roles: ['student'] },
-      { label: 'Offline Drafts', href: '/student-creating-offline-draft-request', icon: WifiOff, roles: ['student'] },
-      { label: 'Manage Requests', href: '/case-manager-managing-student-requests', icon: Users, roles: ['case_manager'] },
-    ],
-  },
-  {
-    label: 'Students',
-    items: [
-      { label: 'Student Folders', href: '/student-folders', icon: FolderOpen, roles: ['case_manager', 'admin'] },
-      { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: ['case_manager', 'admin'] },
-    ],
-  },
-  {
-    label: 'Administration',
-    items: [
-      { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin'] },
-      { label: 'User Management', href: '/admin/users', icon: Shield, roles: ['admin'] },
-      { label: 'Organizations', href: '/admin/organizations', icon: Building2, roles: ['admin'] },
-    ],
-  },
+const navItems: NavItem[] = [
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['student', 'case_manager', 'admin'] },
+  { label: 'Submit Request', href: '/student-submitting-a-support-request', icon: FileText, roles: ['student'] },
+  { label: 'Track Requests', href: '/student-tracking-request-status-scheduling-meeting', icon: Clock, roles: ['student'] },
+  { label: 'Offline Drafts', href: '/student-creating-offline-draft-request', icon: WifiOff, roles: ['student'] },
+  { label: 'Manage Requests', href: '/case-manager-managing-student-requests', icon: Users, roles: ['case_manager'] },
+  { label: 'Student Folders', href: '/student-folders', icon: FolderOpen, roles: ['case_manager', 'admin'] },
+  { label: 'Messages', href: '/messages', icon: MessageSquare, roles: ['student', 'case_manager', 'admin'] },
+  { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin'] },
+  { label: 'User Management', href: '/admin/users', icon: Shield, roles: ['admin'] },
+  { label: 'Organizations', href: '/admin/organizations', icon: Building2, roles: ['admin'] },
+  { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: ['case_manager', 'admin'] },
+  { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin'] },
 ];
 
 const bottomNavItems: NavItem[] = [
-  { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin'] },
   { label: 'Help Center', href: '/support', icon: HelpCircle, roles: ['student', 'case_manager', 'admin'] },
 ];
 
@@ -111,48 +85,13 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   // Enable real-time message notifications for staff
   useRealtimeMessages();
 
-  const decorate = (item: NavItem): NavItem => {
+  const filteredNavItems = navItems.filter(item => role && item.roles.includes(role)).map(item => {
     if (item.href === '/messages' && unreadCount && unreadCount > 0) {
       return { ...item, badge: unreadCount };
     }
     return item;
-  };
-
-  const filteredGroups = navGroups
-    .map(g => ({
-      label: g.label,
-      items: g.items.filter(i => role && i.roles.includes(role)).map(decorate),
-    }))
-    .filter(g => g.items.length > 0);
-
-  const allFilteredNavItems = filteredGroups.flatMap(g => g.items);
-  const filteredBottomNavItems = bottomNavItems.filter(item => role && item.roles.includes(role));
-
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    try {
-      const raw = localStorage.getItem('sidebar:openGroups');
-      if (raw) return JSON.parse(raw);
-    } catch {}
-    return {};
   });
-
-  const toggleGroup = (label: string) => {
-    setOpenGroups(prev => {
-      const next = { ...prev, [label]: prev[label] === undefined ? false : !prev[label] };
-      try { localStorage.setItem('sidebar:openGroups', JSON.stringify(next)); } catch {}
-      return next;
-    });
-  };
-
-  useEffect(() => {
-    const activeGroup = filteredGroups.find(g => g.items.some(i => location.pathname === i.href));
-    if (activeGroup && openGroups[activeGroup.label] === false) {
-      setOpenGroups(prev => ({ ...prev, [activeGroup.label]: true }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
-
-  const isGroupOpen = (label: string) => openGroups[label] !== false;
+  const filteredBottomNavItems = bottomNavItems.filter(item => role && item.roles.includes(role));
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
@@ -179,71 +118,45 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           />
         </div>
 
+        {/* Navigation Label */}
+        {!sidebarCollapsed && (
+          <div className="px-4 py-3">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Navigation
+            </span>
+          </div>
+        )}
+
         {/* Main Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-2">
-          {sidebarCollapsed ? (
-            <ul className="space-y-1">
-              {allFilteredNavItems.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    to={item.href}
-                    title={item.label}
-                    className={cn(
-                      "flex items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                      isActive(item.href)
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                    )}
-                  >
-                    <item.icon className="h-5 w-5 flex-shrink-0" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="space-y-3">
-              {filteredGroups.map((group) => {
-                const open = isGroupOpen(group.label);
-                return (
-                  <div key={group.label}>
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(group.label)}
-                      className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <span>{group.label}</span>
-                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !open && "-rotate-90")} />
-                    </button>
-                    {open && (
-                      <ul className="mt-1 space-y-1">
-                        {group.items.map((item) => (
-                          <li key={item.href}>
-                            <Link
-                              to={item.href}
-                              className={cn(
-                                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
-                                isActive(item.href)
-                                  ? "bg-primary text-primary-foreground shadow-sm"
-                                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1"
-                              )}
-                            >
-                              <item.icon className="h-5 w-5 flex-shrink-0" />
-                              <span className="flex-1">{item.label}</span>
-                              {item.badge && item.badge > 0 && (
-                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
-                                  {item.badge > 9 ? '9+' : item.badge}
-                                </span>
-                              )}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <ul className="space-y-1">
+            {filteredNavItems.map((item) => (
+              <li key={item.href}>
+                <Link
+                  to={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                    isActive(item.href)
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1"
+                  )}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200" />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="flex-1">{item.label}</span>
+                      {item.badge && item.badge > 0 && (
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                          {item.badge > 9 ? '9+' : item.badge}
+                        </span>
+                      )}
+                      {!item.badge && <ChevronRight className="h-4 w-4 opacity-50" />}
+                    </>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </nav>
 
         {/* Bottom Section */}
@@ -308,39 +221,25 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <div className="space-y-3">
-            {filteredGroups.map((group) => (
-              <div key={group.label}>
-                <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {group.label}
-                </div>
-                <ul className="space-y-1">
-                  {group.items.map((item) => (
-                    <li key={item.href}>
-                      <Link
-                        to={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={cn(
-                          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                          isActive(item.href)
-                            ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                        )}
-                      >
-                        <item.icon className="h-5 w-5" />
-                        <span className="flex-1">{item.label}</span>
-                        {item.badge && item.badge > 0 && (
-                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
-                            {item.badge > 9 ? '9+' : item.badge}
-                          </span>
-                        )}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+          <ul className="space-y-1">
+            {filteredNavItems.map((item) => (
+              <li key={item.href}>
+                <Link
+                  to={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                    isActive(item.href)
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         </nav>
       </aside>
 
@@ -375,7 +274,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           <div className="hidden sm:flex items-center gap-2 text-sm min-w-0">
             <span className="font-semibold truncate">
               {(() => {
-                const allNavItems = [...navGroups.flatMap(g => g.items), ...bottomNavItems];
+                const allNavItems = [...navItems, ...bottomNavItems];
                 const match = allNavItems.find(item => location.pathname === item.href);
                 return match?.label || 'Dashboard';
               })()}

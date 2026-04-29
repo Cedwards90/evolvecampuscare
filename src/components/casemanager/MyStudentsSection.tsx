@@ -7,7 +7,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/EmptyState';
 import { InviteStudentDialog } from '@/components/casemanager/InviteStudentDialog';
-import { BulkCohortSurveyDialog } from '@/components/admin/BulkCohortSurveyDialog';
 import type { MyStudent } from '@/hooks/useMyStudents';
 
 interface MyStudentsSectionProps {
@@ -67,17 +66,14 @@ export function MyStudentsSection({ students, isLoading }: MyStudentsSectionProp
             {students.length}
           </Badge>
         </div>
-        <div className="flex gap-2">
-          <BulkCohortSurveyDialog scopedStudentIds={students.map((s) => s.student_id)} />
-          <InviteStudentDialog
-            trigger={
-              <Button variant="outline" size="sm">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Invite Student
-              </Button>
-            }
-          />
-        </div>
+        <InviteStudentDialog
+          trigger={
+            <Button variant="outline" size="sm">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite Student
+            </Button>
+          }
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

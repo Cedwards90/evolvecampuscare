@@ -40,12 +40,8 @@ export function SendSurveyDialog({ studentId, studentName, trigger }: SendSurvey
       return;
     }
     try {
-      const result = await sendSurvey.mutateAsync({ studentId, surveyType, notes: notes.trim() || undefined });
-      const parts = [`Survey request sent to ${studentName}`];
-      if (result.sent) parts.push('email delivered');
-      else if (result.failed) parts.push('email failed (in-app only)');
-      else if (result.skipped) parts.push('no email on file (in-app only)');
-      toast.success(parts.join(' · '));
+      await sendSurvey.mutateAsync({ studentId, surveyType, notes: notes.trim() || undefined });
+      toast.success(`Survey request sent to ${studentName}.`);
       setOpen(false);
       setSurveyType('');
       setNotes('');
