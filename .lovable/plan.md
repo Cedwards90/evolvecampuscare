@@ -1,70 +1,66 @@
 ## Root cause
 
-You're signed in as `admin@evolvefoundation.us` (confirmed: MFA verified, role `admin` in DB). But the sidebar only shows the items everyone gets (Dashboard, Messages, Settings) — Admin Dashboard, User Management, Organizations, Surveys, Student Folders are missing.
-
-The bug is in `AuthContext.fetchUserData`:
-
-```ts
-const { data: roleData } = await supabase
-  .from('user_roles')
-  .select('role')
-  .eq('user_id', userId)
-  .order('created_at', { ascending: true })
-  .limit(1)
-  .single();
+Console shows:
+```
+permission denied for function has_role
+permission denied for function get_user_role
 ```
 
-Two problems:
+The `authenticated` Postgres role does not have `EXECUTE` on these `SECURITY DEFINER` functions. Because `has_role(...)` is referenced in nearly every RLS policy (including `profiles`), all role-gated reads silently fail. The `AuthContext` then sets `role = null` and `profile = null`, and `SidebarLayout` renders the "no role assigned" empty state — for every user, including admin.
 
-1. **Wrong role priority.** `.order('created_at')` picks the *oldest* role row. If a user was first inserted as `student` (default from `handle_new_user`) and then upgraded to `admin`, this query returns `student`. The DB already has a `get_user_role()` function that orders by role priority (admin → case_manager → student) — but the frontend ignores it.
-2. **Silent failures.** `.single()` throws when the result has 0 rows or an unexpected shape; the destructured `data` is then `null` and the `if (roleData)` branch is skipped without logging anything visible. Combined with the RLS skeleton swap, the sidebar ends up rendering with `role = null` after `isLoading` flips to `false`, falling through to "no role assigned" — and on the mobile/legacy path, just the common items.
-
-A second smaller issue: the **mobile sidebar** (`mobileMenuOpen` block in `SidebarLayout.tsx`) doesn't apply the same role-aware loading/empty fallback as desktop, but the role bug above is the real issue.
+So this is not a UI bug first; it's a database grant bug. The UI hardening is still useful as a safety net.
 
 ## Plan
 
-### 1. Use the DB's role-priority function (frontend)
+### 1. Database fix (primary — unblocks everything)
 
-In `src/contexts/AuthContext.tsx` `fetchUserData`, replace the `user_roles` query with a call to the existing Postgres function:
+Migration to grant execute on the role-helper functions to authenticated users:
 
-```ts
-const { data: roleData, error: roleError } = await supabase
-  .rpc('get_user_role', { _user_id: userId });
-
-if (roleError) console.error('Role fetch error:', roleError);
-if (roleData) setRole(roleData as AppRole);
+```sql
+GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_user_role(uuid) TO authenticated;
 ```
 
-`get_user_role` already returns the highest-priority role (`admin` > `case_manager` > `student`) and is `SECURITY DEFINER`, so it bypasses RLS edge cases and is faster.
+Both functions are already `SECURITY DEFINER` with a pinned `search_path`, so granting EXECUTE is safe and does not widen data access — RLS on `user_roles` still applies via the definer's logic.
 
-Also fetch profile + role **in parallel** with `Promise.all` so the UI doesn't wait twice.
+After this, `admin@evolvefoundation.us` will receive `role = 'admin'` and the full sidebar (Admin Dashboard, User Management, Organizations, Surveys, Student Folders) will render with no further code changes.
 
-### 2. Add a visible debug surface (one-time, removable)
+### 2. Auth context hardening
 
-Inside `fetchUserData`, after both fetches, log a single concise line:
+In `src/contexts/AuthContext.tsx`:
+- Surface a `roleError` state when `get_user_role` returns an error (vs. legitimately no role) so the UI can distinguish "permission/network problem" from "user genuinely has no role yet".
+- Keep the existing `Promise.all` + `maybeSingle` + `get_user_role` RPC pattern.
+- Remove the temporary `[Auth]` console.log now that the issue is identified.
 
-```ts
-console.log('[Auth]', { userId, role: roleData, profile: !!profileData });
-```
+### 3. Sidebar fallback (safety net)
 
-This makes it trivial to confirm in the browser console that the admin role is actually arriving. Remove later if noisy.
+In `src/components/layouts/SidebarLayout.tsx` (desktop + mobile nav blocks), when `!isLoading && !role`:
+- Always show a minimum safe nav: **Dashboard**, **Settings**, **Help Center**.
+- Show a small banner: "Your account is being set up. Contact your administrator if this persists." with a mailto link to the configured admin email.
+- If `roleError` is set, swap the message to: "We couldn't load your account permissions. Please refresh, or contact your administrator." with a Retry button that calls `refreshProfile()`.
 
-### 3. Mirror the desktop fallback in the mobile sidebar
+This guarantees a logged-in user is never stranded on a blank shell, regardless of future RLS regressions.
 
-In `SidebarLayout.tsx`, the mobile `<aside>` block currently maps `filteredNavItems` unconditionally. Wrap it with the same `isLoading` skeleton and `!role` fallback used in the desktop nav so behavior is consistent on phones.
+### 4. ProtectedRoute consistency
 
-### 4. Verify
+In `src/components/layouts/ProtectedRoute.tsx`:
+- Keep current loading spinner behavior.
+- When `user` exists but `role` is null and `allowedRoles` is set, redirect to `/dashboard` (already happens implicitly) and let the dashboard show the fallback banner from step 3 instead of bouncing the user to `/auth`.
+- No change needed for the public `/dashboard` route since it has no `allowedRoles`.
 
-1. Reload `/dashboard` as `admin@evolvefoundation.us` → the sidebar should show: Dashboard, Manage Requests (no — admin doesn't get this), **Admin Dashboard, User Management, Organizations, Surveys, Student Folders, Messages, Settings**.
-2. Sign in as a case manager → should see: Dashboard, Manage Requests, Student Folders, Messages, Surveys, Settings.
-3. Sign in as a student → should see: Dashboard, Submit Request, Track Requests, Offline Drafts, Messages, Settings.
-4. Console should print `[Auth] { role: 'admin', profile: true }`.
+### 5. Live role updates (no extra plumbing needed)
 
-### Files to change
+`onAuthStateChange` already calls `fetchUserData` on every auth event, and `refreshProfile()` is exposed on the context. Admin user-management screens that change a role should call `refreshProfile()` for the affected current session; cross-user realtime updates are out of scope for this fix (would require a `user_roles` realtime subscription — flag as future work, not part of this plan).
 
-| File | Change |
-|---|---|
-| `src/contexts/AuthContext.tsx` | Use `get_user_role` RPC; parallelize profile+role fetch; add one debug log |
-| `src/components/layouts/SidebarLayout.tsx` | Apply loading/empty fallback to mobile sidebar block too |
+### Files touched
 
-No DB migration needed — `get_user_role` already exists.
+- New migration: grant EXECUTE on `has_role` and `get_user_role`
+- `src/contexts/AuthContext.tsx` — add `roleError`, drop debug log
+- `src/components/layouts/SidebarLayout.tsx` — fallback nav + banner (desktop + mobile)
+- `src/components/layouts/ProtectedRoute.tsx` — minor: don't redirect away from `/dashboard` when role is null
+
+### Verification
+
+1. After migration, hard-refresh as `admin@evolvefoundation.us` → console `[Auth]` (before removal) shows `role: "admin"` and full admin sidebar appears.
+2. Temporarily revoke EXECUTE locally (or simulate by signing in as a brand-new user with no `user_roles` row) → fallback banner + Dashboard/Settings/Help links render instead of empty sidebar.
+3. Confirm Case Manager and Student logins still see only their permitted nav items.
