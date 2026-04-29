@@ -15,7 +15,13 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Pin context to globalThis so HMR re-evaluations of this module don't
+// create a second AuthContext (which would make useAuth throw with a
+// "must be used within an AuthProvider" error after a hot reload).
+const __AUTH_CTX_KEY = '__lovable_auth_context__';
+const AuthContext: React.Context<AuthContextType | undefined> =
+  (globalThis as any)[__AUTH_CTX_KEY] ??
+  ((globalThis as any)[__AUTH_CTX_KEY] = createContext<AuthContextType | undefined>(undefined));
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
