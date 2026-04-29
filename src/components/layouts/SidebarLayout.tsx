@@ -102,7 +102,8 @@ const bottomNavItems: NavItem[] = [
 export function SidebarLayout({ children }: SidebarLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, profile, role, signOut } = useAuth();
+  const { user, profile, role, isLoading: authLoading, signOut } = useAuth();
+  const roleLoading = authLoading || (!!user && !role);
   const { language, setLanguage } = useLanguage();
   const { isOnline } = useOffline();
   const location = useLocation();
