@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -47,15 +49,28 @@ export function StudentAssignmentDialog({
   onAssigned,
 }: StudentAssignmentDialogProps) {
   const [selectedCaseManager, setSelectedCaseManager] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const { data: caseManagers, isLoading: caseManagersLoading } = useCaseManagers();
   const assignStudent = useAssignStudent();
   const { user } = useAuth();
 
-  // Sort case managers by available capacity (fewer students first)
+  // Sort case managers by available capacity (fewer students first), then filter by search
   const sortedCaseManagers = useMemo(() => {
     if (!caseManagers) return [];
-    return [...caseManagers].sort((a, b) => a.active_requests - b.active_requests);
-  }, [caseManagers]);
+    const sorted = [...caseManagers].sort((a, b) => a.active_requests - b.active_requests);
+    const q = search.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter(
+      (cm) =>
+        (cm.full_name || '').toLowerCase().includes(q) ||
+        (cm.email || '').toLowerCase().includes(q)
+    );
+  }, [caseManagers, search]);
+
+  const selectedCM = caseManagers?.find((cm) => cm.user_id === selectedCaseManager);
+  const selectedAtCapacity = selectedCM
+    ? selectedCM.active_requests >= MAX_STUDENTS_PER_CM
+    : false;
 
   const handleAssign = async () => {
     if (!selectedCaseManager || !student || !user?.id) return;
