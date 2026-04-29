@@ -23,6 +23,7 @@ import ManageRequests from "./pages/ManageRequests";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
+import CaseManagersPage from "./pages/admin/CaseManagersPage";
 import TrainingOrganizations from "./pages/admin/TrainingOrganizations";
 import OrganizationDetail from "./pages/admin/OrganizationDetail";
 import SurveyResponses from "./pages/admin/SurveyResponses";
@@ -129,6 +130,11 @@ function App() {
                       <UserManagementPage />
                     </ProtectedRoute>
                   } />
+            <Route path="/admin/case-managers" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <CaseManagersPage />
+              </ProtectedRoute>
+            } />
             <Route path="/admin/organizations" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <TrainingOrganizations />
