@@ -85,12 +85,22 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   // Enable real-time message notifications for staff
   useRealtimeMessages();
 
-  const filteredNavItems = navItems.filter(item => role && item.roles.includes(role)).map(item => {
-    if (item.href === '/messages' && unreadCount && unreadCount > 0) {
-      return { ...item, badge: unreadCount };
-    }
-    return item;
-  });
+  // Minimum-safe nav items shown when a user has no role yet (or role lookup failed).
+  // Keeps the user from being stranded on a blank shell.
+  const fallbackNavItems: NavItem[] = [
+    { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: [] },
+    { label: 'Settings', href: '/settings', icon: Settings, roles: [] },
+    { label: 'Help Center', href: '/support', icon: HelpCircle, roles: [] },
+  ];
+
+  const filteredNavItems = role
+    ? navItems.filter(item => item.roles.includes(role)).map(item => {
+        if (item.href === '/messages' && unreadCount && unreadCount > 0) {
+          return { ...item, badge: unreadCount };
+        }
+        return item;
+      })
+    : fallbackNavItems;
   const filteredBottomNavItems = bottomNavItems.filter(item => role && item.roles.includes(role));
 
   const getInitials = (name: string | null) => {
