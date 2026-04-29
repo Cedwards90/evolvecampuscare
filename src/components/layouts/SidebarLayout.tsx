@@ -235,25 +235,37 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <ul className="space-y-1">
-            {filteredNavItems.map((item) => (
-              <li key={item.href}>
-                <Link
-                  to={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                    isActive(item.href)
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  )}
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {isLoading ? (
+            <ul className="space-y-1">
+              {[...Array(6)].map((_, i) => (
+                <li key={i} className="h-10 rounded-lg bg-muted/50 animate-pulse" />
+              ))}
+            </ul>
+          ) : !role ? (
+            <div className="rounded-lg border border-border/40 bg-muted/40 p-3 text-xs text-muted-foreground">
+              Your account has no role assigned yet. Please contact an administrator.
+            </div>
+          ) : (
+            <ul className="space-y-1">
+              {filteredNavItems.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    to={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                      isActive(item.href)
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </nav>
       </aside>
 
