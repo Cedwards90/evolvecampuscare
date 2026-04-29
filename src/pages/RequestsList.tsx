@@ -17,6 +17,7 @@ import { CategoryBadge } from '@/components/CategoryBadge';
 import { TimeAgo } from '@/components/TimeAgo';
 import { EmptyState } from '@/components/EmptyState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -124,7 +125,7 @@ export default function RequestsList() {
       <div className="space-y-6">
         {/* Back button and header */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" aria-label="Go back" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <PageHeader
@@ -259,9 +260,9 @@ export default function RequestsList() {
 
         {/* Requests Table */}
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <LoadingSpinner size="lg" />
-          </div>
+          <Card className="border border-border/50">
+            <TableSkeleton rows={6} columns={5} />
+          </Card>
         ) : sortedRequests.length === 0 ? (
           <EmptyState
             icon={Filter}

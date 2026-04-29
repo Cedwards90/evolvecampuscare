@@ -39,7 +39,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import type { AppRole } from '@/types/database';
 
 interface SidebarLayoutProps {
@@ -154,10 +154,6 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
   const isGroupOpen = (label: string) => openGroups[label] !== false;
 
-  const getInitials = (name: string | null) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
 
   const isActive = (href: string) => location.pathname === href;
 
@@ -354,7 +350,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           {/* Mobile Menu Toggle */}
           <Button
             variant="ghost"
-            size="icon"
+            size="icon" aria-label="Open menu"
             className="lg:hidden flex-shrink-0"
             onClick={() => setMobileMenuOpen(true)}
           >
@@ -364,7 +360,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           {/* Sidebar Toggle (Desktop) */}
           <Button
             variant="ghost"
-            size="icon"
+            size="icon" aria-label="Close menu"
             className="hidden lg:flex flex-shrink-0"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           >
@@ -400,7 +396,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           {/* Language selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label="User menu">
                 <Globe className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

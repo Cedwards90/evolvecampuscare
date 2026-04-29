@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { getInitials } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -40,10 +41,6 @@ function getWorkloadStatus(count: number, max: number): string {
   return 'Low';
 }
 
-function getInitials(name: string | null | undefined): string {
-  if (!name) return '?';
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-}
 
 export function BulkStudentAssignmentDialog({
   open,

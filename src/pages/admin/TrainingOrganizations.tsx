@@ -243,10 +243,10 @@ export default function TrainingOrganizations() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => setBulkAssignOrg(org)} title="Assign users">
+                          <Button variant="ghost" size="icon" aria-label="Assign users" onClick={() => setBulkAssignOrg(org)} title="Assign users">
                             <Users className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(org)} title="Edit">
+                          <Button variant="ghost" size="icon" aria-label="Edit organization" onClick={() => openEdit(org)} title="Edit">
                             <Pencil className="h-4 w-4" />
                           </Button>
                         </div>

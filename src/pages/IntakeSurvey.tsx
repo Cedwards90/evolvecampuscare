@@ -11,6 +11,33 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useIntakeSurvey } from '@/hooks/useIntakeSurvey';
+import { z } from 'zod';
+
+// Bound free-text fields to prevent abuse / DB bloat. All fields optional —
+// intake survey allows skipping.
+const TEXT_MAX = 2000;
+const sectionSchemas: Record<number, z.ZodSchema> = {
+  0: z.object({
+    living_situation: z.string().max(100).optional().or(z.literal('')),
+    work_status: z.string().max(100).optional().or(z.literal('')),
+    support_network: z.string().max(100).optional().or(z.literal('')),
+  }),
+  1: z.object({
+    basic_needs_comfort: z.number().int().min(1).max(5),
+    daily_challenges: z.array(z.string().max(100)).max(20),
+    focus_challenges: z.string().trim().max(TEXT_MAX, { message: `Please keep responses under ${TEXT_MAX} characters` }).optional().or(z.literal('')),
+  }),
+  2: z.object({
+    stress_level: z.number().int().min(1).max(5),
+    talk_support: z.string().max(100).optional().or(z.literal('')),
+    interested_resources: z.array(z.string().max(100)).max(20),
+  }),
+  3: z.object({
+    main_reason: z.string().trim().max(TEXT_MAX, { message: `Please keep responses under ${TEXT_MAX} characters` }).optional().or(z.literal('')),
+    success_vision: z.string().trim().max(TEXT_MAX, { message: `Please keep responses under ${TEXT_MAX} characters` }).optional().or(z.literal('')),
+    anything_else: z.string().trim().max(TEXT_MAX, { message: `Please keep responses under ${TEXT_MAX} characters` }).optional().or(z.literal('')),
+  }),
+};
 
 const STEPS = [
   { key: 'about_you', title: 'About You', icon: Home, description: 'Let us get to know you a little better.' },
@@ -77,11 +104,21 @@ export default function IntakeSurvey() {
   };
 
   const handleNext = async () => {
+    const sectionData = getSectionData(currentStep);
+    const schema = sectionSchemas[currentStep];
+    if (schema) {
+      const parsed = schema.safeParse(sectionData);
+      if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'Please review your responses.';
+        toast({ title: 'Please review your responses', description: firstError, variant: 'destructive' });
+        return;
+      }
+    }
     setSaving(true);
     try {
       await saveSection.mutateAsync({
         section: STEPS[currentStep].key,
-        responses: getSectionData(currentStep),
+        responses: sectionData,
       });
 
       if (currentStep < STEPS.length - 1) {

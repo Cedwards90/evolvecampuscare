@@ -1,5 +1,6 @@
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
+import { getInitials } from '@/lib/utils';
 import { 
   ArrowLeft, 
   Mail, 
@@ -68,10 +69,6 @@ export default function CaseManagerDetail() {
   const navigate = useNavigate();
   const { data: stats, isLoading, error } = useCaseManagerStats(id);
 
-  const getInitials = (name: string | null) => {
-    if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
 
   if (isLoading) {
     return (
@@ -120,7 +117,7 @@ export default function CaseManagerDetail() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" aria-label="Go back" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">

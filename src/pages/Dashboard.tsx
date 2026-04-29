@@ -13,6 +13,8 @@ import { StatsSummaryBar } from '@/components/dashboard/StatsSummaryBar';
 import { RequestCard } from '@/components/RequestCard';
 import { AIBadge } from '@/components/AIBadge';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { StatsGridSkeleton } from '@/components/skeletons/StatsGridSkeleton';
+import { RequestListSkeleton } from '@/components/skeletons/RequestListSkeleton';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -146,8 +148,9 @@ export default function Dashboard() {
   if (requestsLoading) {
     return (
       <SidebarLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <LoadingSpinner size="lg" />
+        <div className="space-y-6">
+          <StatsGridSkeleton count={4} />
+          <RequestListSkeleton count={4} />
         </div>
       </SidebarLayout>
     );

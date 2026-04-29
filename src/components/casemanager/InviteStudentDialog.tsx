@@ -151,7 +151,7 @@ export function InviteStudentDialog({ trigger }: InviteStudentDialogProps) {
                   <Button 
                     type="button" 
                     variant="outline" 
-                    size="icon"
+                    size="icon" aria-label="Copy invite link"
                     onClick={copyToClipboard}
                   >
                     <Copy className="h-4 w-4" />

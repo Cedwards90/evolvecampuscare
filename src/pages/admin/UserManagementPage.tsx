@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { getInitials } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { 
   Search, 
@@ -138,10 +139,6 @@ export default function UserManagementPage() {
     };
   }, [users, pendingInvitations]);
 
-  const getInitials = (name: string | null) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
 
   const handleRoleChange = async () => {
     if (!selectedUser || !newRole) return;
@@ -413,7 +410,7 @@ export default function UserManagementPage() {
                           <TableCell>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
+                                <Button variant="ghost" size="icon" aria-label="User actions">
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>

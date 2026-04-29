@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { getInitials } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { UserPlus, RefreshCw, Trash2, Users, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -36,10 +37,6 @@ import {
 import { StudentAssignmentDialog } from './StudentAssignmentDialog';
 import { BulkStudentAssignmentDialog } from './BulkStudentAssignmentDialog';
 
-function getInitials(name: string | null | undefined): string {
-  if (!name) return '?';
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-}
 
 export function StudentAssignmentsTable() {
   const { role } = useAuth();
