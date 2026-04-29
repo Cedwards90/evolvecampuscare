@@ -145,41 +145,51 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                 <li key={i} className="h-10 rounded-lg bg-muted/50 animate-pulse" />
               ))}
             </ul>
-          ) : !role ? (
-            !sidebarCollapsed && (
-              <div className="rounded-lg border border-border/40 bg-muted/40 p-3 text-xs text-muted-foreground">
-                Your account has no role assigned yet. Please contact an administrator.
-              </div>
-            )
           ) : (
-            <ul className="space-y-1">
-              {filteredNavItems.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    to={item.href}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                      isActive(item.href)
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1"
-                    )}
-                  >
-                    <item.icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200" />
-                    {!sidebarCollapsed && (
-                      <>
-                        <span className="flex-1">{item.label}</span>
-                        {item.badge && item.badge > 0 && (
-                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
-                            {item.badge > 9 ? '9+' : item.badge}
-                          </span>
-                        )}
-                        {!item.badge && <ChevronRight className="h-4 w-4 opacity-50" />}
-                      </>
-                    )}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <>
+              {!role && !sidebarCollapsed && (
+                <div className="mb-3 rounded-lg border border-border/40 bg-muted/40 p-3 text-xs text-muted-foreground">
+                  {roleError ? (
+                    <>
+                      <p className="mb-2">We couldn't load your account permissions.</p>
+                      <Button size="sm" variant="outline" className="w-full" onClick={() => refreshProfile()}>
+                        Retry
+                      </Button>
+                    </>
+                  ) : (
+                    <p>Your account is being set up. Please contact an administrator if this persists.</p>
+                  )}
+                </div>
+              )}
+              <ul className="space-y-1">
+                {filteredNavItems.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      to={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                        isActive(item.href)
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1"
+                      )}
+                    >
+                      <item.icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200" />
+                      {!sidebarCollapsed && (
+                        <>
+                          <span className="flex-1">{item.label}</span>
+                          {item.badge && item.badge > 0 && (
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                              {item.badge > 9 ? '9+' : item.badge}
+                            </span>
+                          )}
+                          {!item.badge && <ChevronRight className="h-4 w-4 opacity-50" />}
+                        </>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </nav>
 
