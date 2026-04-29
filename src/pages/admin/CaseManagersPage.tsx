@@ -171,7 +171,7 @@ export default function CaseManagersPage() {
 
   return (
     <SidebarLayout>
-      <div className="container mx-auto p-4 md:p-6 space-y-6">
+      <div className="w-full max-w-full space-y-6">
         <PageHeader
           title="Case Managers"
           description="Monitor case manager workloads and reassign students between case managers."
