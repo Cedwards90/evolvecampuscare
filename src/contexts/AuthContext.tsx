@@ -26,29 +26,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserData = async (userId: string) => {
     try {
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-      
-      if (profileData) {
-        setProfile(profileData as Profile);
-      }
+      const [profileResult, roleResult] = await Promise.all([
+        supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
+        supabase.rpc('get_user_role', { _user_id: userId }),
+      ]);
 
-      // Fetch role
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .single();
-      
-      if (roleData) {
-        setRole(roleData.role as AppRole);
-      }
+      if (profileResult.error) console.error('Profile fetch error:', profileResult.error);
+      if (roleResult.error) console.error('Role fetch error:', roleResult.error);
+
+      if (profileResult.data) setProfile(profileResult.data as Profile);
+      if (roleResult.data) setRole(roleResult.data as AppRole);
+
+      console.log('[Auth]', {
+        userId,
+        role: roleResult.data ?? null,
+        profile: !!profileResult.data,
+      });
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
