@@ -42,6 +42,9 @@ function getInitials(name: string | null | undefined): string {
 }
 
 export function StudentAssignmentsTable() {
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
+
   const { data: assignments, isLoading: assignmentsLoading } = useStudentAssignments();
   const { data: unassignedStudents, isLoading: unassignedLoading } = useUnassignedStudents();
   const removeAssignment = useRemoveStudentAssignment();
@@ -51,6 +54,37 @@ export function StudentAssignmentsTable() {
   const [removeConfirmStudent, setRemoveConfirmStudent] = useState<StudentAssignment | null>(null);
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [bulkAssignDialogOpen, setBulkAssignDialogOpen] = useState(false);
+  const [assignedSearch, setAssignedSearch] = useState('');
+  const [unassignedSearch, setUnassignedSearch] = useState('');
+
+  const filteredAssignments = useMemo(() => {
+    if (!assignments) return [];
+    const q = assignedSearch.trim().toLowerCase();
+    if (!q) return assignments;
+    return assignments.filter((a) => {
+      const name = (a.student?.full_name || '').toLowerCase();
+      const email = (a.student?.email || '').toLowerCase();
+      const cmName = (a.case_manager?.full_name || '').toLowerCase();
+      return name.includes(q) || email.includes(q) || cmName.includes(q);
+    });
+  }, [assignments, assignedSearch]);
+
+  const filteredUnassigned = useMemo(() => {
+    if (!unassignedStudents) return [];
+    const q = unassignedSearch.trim().toLowerCase();
+    if (!q) return unassignedStudents;
+    return unassignedStudents.filter((s) => {
+      const name = (s.profile?.full_name || '').toLowerCase();
+      const email = (s.profile?.email || '').toLowerCase();
+      return name.includes(q) || email.includes(q);
+    });
+  }, [unassignedStudents, unassignedSearch]);
+
+  // Find pending request count for the student being removed
+  const removeStudentPending = useMemo(() => {
+    if (!removeConfirmStudent || !unassignedStudents) return 0;
+    return unassignedStudents.find(s => s.user_id === removeConfirmStudent.student_id)?.pendingRequests || 0;
+  }, [removeConfirmStudent, unassignedStudents]);
 
   const handleAssignClick = (student: UnassignedStudent) => {
     setSelectedStudent(student);
