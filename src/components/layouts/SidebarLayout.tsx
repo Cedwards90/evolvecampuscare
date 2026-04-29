@@ -206,7 +206,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
       {/* Mobile Sidebar */}
       <aside 
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen w-[260px] border-r border-border/40 bg-card transition-transform duration-300 lg:hidden flex flex-col",
+          "fixed left-0 top-0 z-40 h-screen w-[260px] border-r border-border/40 bg-card transition-transform duration-300 md:hidden flex flex-col",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
