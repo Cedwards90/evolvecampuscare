@@ -212,6 +212,7 @@ export default function UserManagementPage() {
               </Link>
             </Button>
             <BulkCohortSurveyDialog />
+            <BulkInviteStudentsDialog />
             <InviteUserDialog />
           </div>
         </div>
