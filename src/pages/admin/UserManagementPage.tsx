@@ -24,6 +24,7 @@ import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
 import { BulkCohortSurveyDialog } from '@/components/admin/BulkCohortSurveyDialog';
+import { BulkInviteStudentsDialog } from '@/components/admin/BulkInviteStudentsDialog';
 import { PendingInvitationsSection } from '@/components/admin/PendingInvitationsSection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -211,6 +212,7 @@ export default function UserManagementPage() {
               </Link>
             </Button>
             <BulkCohortSurveyDialog />
+            <BulkInviteStudentsDialog />
             <InviteUserDialog />
           </div>
         </div>

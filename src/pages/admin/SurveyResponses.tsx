@@ -12,8 +12,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye, Bell, X, Mail, MailX, Clock, Send, CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye, Bell, X, Mail, MailX, Clock, Send, CheckCircle2, AlertCircle, XCircle, CalendarClock } from 'lucide-react';
 import { SurveyPreviewDialog } from '@/components/admin/SurveyPreviewDialog';
+import { DistributeSurveyDialog } from '@/components/admin/DistributeSurveyDialog';
+import { useScheduledDistributions, useCancelScheduledDistribution } from '@/hooks/useSurveyDistribution';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
@@ -70,6 +72,9 @@ export default function SurveyResponses() {
           <Button variant="outline" size="sm" onClick={() => setPreviewType('post_grad')}>
             <Eye className="mr-2 h-4 w-4" /> Preview Post-Grad Plan
           </Button>
+          <DistributeSurveyDialog trigger={
+            <Button size="sm"><Send className="mr-2 h-4 w-4" /> Distribute Survey</Button>
+          } />
         </div>
       </div>
 
@@ -82,6 +87,7 @@ export default function SurveyResponses() {
       <Tabs defaultValue="pending">
         <TabsList>
           <TabsTrigger value="pending">Pending ({filteredPending.length})</TabsTrigger>
+          <TabsTrigger value="distributions">Distributions</TabsTrigger>
           <TabsTrigger value="checkins">Check-Ins ({filteredCheckIns.length})</TabsTrigger>
           <TabsTrigger value="plans">Post-Graduation Plans ({filteredPlans.length})</TabsTrigger>
         </TabsList>
@@ -112,6 +118,10 @@ export default function SurveyResponses() {
               </Table>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="distributions">
+          <DistributionsTab />
         </TabsContent>
 
         <TabsContent value="checkins">
@@ -493,6 +503,76 @@ function RecentlySentSection({ invitations }: { invitations: ReturnType<typeof u
           })}
         </div>
       </CardContent>
+    </Card>
+  );
+}
+
+function DistributionsTab() {
+  const { data, isLoading } = useScheduledDistributions();
+  const cancel = useCancelScheduledDistribution();
+
+  if (isLoading) return <LoadingSpinner />;
+  if (!data || data.length === 0) {
+    return <Card><CardContent className="py-8 text-center text-muted-foreground">No scheduled or recent distributions.</CardContent></Card>;
+  }
+
+  return (
+    <Card>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Survey</TableHead>
+            <TableHead>Recipients</TableHead>
+            <TableHead>Scheduled For</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Results</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.map(d => {
+            const typeLabel = d.survey_type === 'checkin' ? 'Check-In' : 'Post-Grad Plan';
+            const statusColor =
+              d.status === 'scheduled' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20' :
+              d.status === 'processing' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20' :
+              d.status === 'complete' ? 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20' :
+              d.status === 'failed' ? 'bg-destructive/10 text-destructive border-destructive/20' :
+              'bg-muted text-muted-foreground';
+            return (
+              <TableRow key={d.id}>
+                <TableCell><Badge variant="outline">{typeLabel}</Badge></TableCell>
+                <TableCell className="text-sm">{d.total_recipients}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1"><CalendarClock className="h-3 w-3" />
+                    {new Date(d.scheduled_for).toLocaleString()}
+                  </span>
+                </TableCell>
+                <TableCell><Badge variant="outline" className={statusColor}>{d.status}</Badge></TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {d.status === 'complete' || d.status === 'failed'
+                    ? `${d.sent_count} sent · ${d.failed_count} failed · ${d.skipped_count} skipped`
+                    : '—'}
+                </TableCell>
+                <TableCell className="text-right">
+                  {d.status === 'scheduled' && (
+                    <Button
+                      size="sm" variant="ghost"
+                      disabled={cancel.isPending}
+                      onClick={async () => {
+                        if (!confirm('Cancel this scheduled distribution?')) return;
+                        try { await cancel.mutateAsync(d.id); toast.success('Cancelled'); }
+                        catch { toast.error('Failed to cancel'); }
+                      }}
+                    >
+                      <X className="h-3.5 w-3.5 mr-1" /> Cancel
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
     </Card>
   );
 }
