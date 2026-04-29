@@ -317,6 +317,16 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
+          {roleLoading ? (
+            <ul className="space-y-2" role="status" aria-label="Loading navigation">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <li key={i} className="flex items-center gap-3 rounded-lg px-3 py-2.5">
+                  <div className="h-5 w-5 flex-shrink-0 rounded bg-muted animate-pulse" />
+                  <div className="h-4 flex-1 rounded bg-muted animate-pulse" />
+                </li>
+              ))}
+            </ul>
+          ) : (
           <div className="space-y-3">
             {filteredGroups.map((group) => (
               <div key={group.label}>
@@ -350,6 +360,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
               </div>
             ))}
           </div>
+          )}
         </nav>
       </aside>
 
