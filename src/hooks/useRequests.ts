@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { queryKeys } from '@/lib/queryKeys';
 import type { SupportRequest, RequestStatus, RequestPriority, RequestCategory, Profile } from '@/types/database';
 
 export interface RequestFilters {
@@ -15,7 +14,7 @@ export interface RequestFilters {
 
 export function useRequests(filters: RequestFilters = {}) {
   return useQuery({
-    queryKey: queryKeys.requests.list(filters),
+    queryKey: ['requests', filters],
     queryFn: async () => {
       let query = supabase
         .from('support_requests')

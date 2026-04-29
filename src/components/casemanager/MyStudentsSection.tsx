@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { getInitials } from '@/lib/utils';
 import { Users, FileText, Calendar, Clock, ArrowRight, UserPlus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +15,10 @@ interface MyStudentsSectionProps {
   isLoading: boolean;
 }
 
+function getInitials(name: string | null): string {
+  if (!name) return '?';
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+}
 
 export function MyStudentsSection({ students, isLoading }: MyStudentsSectionProps) {
   if (isLoading) {

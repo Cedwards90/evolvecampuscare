@@ -254,7 +254,7 @@ export default function ResetPassword() {
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon" aria-label="Toggle password visibility"
+                  size="icon"
                   className="absolute right-0 top-0 h-full px-3"
                   onClick={() => setShowPassword(!showPassword)}
                 >

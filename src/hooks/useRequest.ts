@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { queryKeys } from '@/lib/queryKeys';
 import type { SupportRequest, RequestUpdate, Profile, RequestStatus } from '@/types/database';
 
 interface RequestWithDetails extends SupportRequest {

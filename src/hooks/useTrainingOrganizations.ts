@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { queryKeys } from '@/lib/queryKeys';
 
 export interface TrainingOrganization {
   id: string;
@@ -15,7 +14,7 @@ export interface TrainingOrganization {
 
 export function useTrainingOrganizations() {
   return useQuery({
-    queryKey: queryKeys.organizations.all,
+    queryKey: ['training-organizations'],
     queryFn: async (): Promise<TrainingOrganization[]> => {
       const { data, error } = await supabase
         .from('training_organizations')
@@ -29,7 +28,7 @@ export function useTrainingOrganizations() {
 
 export function useActiveOrganizations() {
   return useQuery({
-    queryKey: queryKeys.organizations.active,
+    queryKey: ['training-organizations', 'active'],
     queryFn: async (): Promise<TrainingOrganization[]> => {
       const { data, error } = await supabase
         .from('training_organizations')
@@ -54,7 +53,7 @@ export function useCreateOrganization() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['training-organizations'] }),
   });
 }
 
@@ -72,9 +71,9 @@ export function useUpdateOrganization() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.students.folders });
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      queryClient.invalidateQueries({ queryKey: ['training-organizations'] });
+      queryClient.invalidateQueries({ queryKey: ['student-folders'] });
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
       queryClient.invalidateQueries({ queryKey: ['organization-detail'] });
       queryClient.invalidateQueries({ queryKey: ['org-name'] });
     },
@@ -120,14 +119,14 @@ export function useBulkAssignOrganization() {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      queryClient.invalidateQueries({ queryKey: ['training-organizations'] });
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
       queryClient.invalidateQueries({ queryKey: ['organization-members'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.students.folders });
+      queryClient.invalidateQueries({ queryKey: ['student-folders'] });
       queryClient.invalidateQueries({ queryKey: ['organization-detail'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.caseManagers.stats() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.analytics.all });
+      queryClient.invalidateQueries({ queryKey: ['student-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['case-manager-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
       queryClient.invalidateQueries({ queryKey: ['org-name'] });
     },
   });

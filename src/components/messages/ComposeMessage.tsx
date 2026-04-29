@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { getInitials } from '@/lib/utils';
 import { Send, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,6 +66,10 @@ export function ComposeMessage({
   }, [defaultSubject]);
 
 
+  const getInitials = (name: string | null) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   const handleSend = async () => {
     if (!recipientId || !content.trim()) return;

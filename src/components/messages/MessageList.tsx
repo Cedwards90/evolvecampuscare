@@ -4,7 +4,7 @@ import { MessageSquare, User } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { cn, getInitials } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import type { Conversation } from '@/types/messages';
 
 interface MessageListProps {
@@ -13,6 +13,10 @@ interface MessageListProps {
 }
 
 export function MessageList({ conversations, activeUserId }: MessageListProps) {
+  const getInitials = (name: string | null) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   if (conversations.length === 0) {
     return (

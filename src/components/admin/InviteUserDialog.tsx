@@ -182,7 +182,7 @@ export function InviteUserDialog({ trigger }: InviteUserDialogProps) {
                   <Button 
                     type="button" 
                     variant="outline" 
-                    size="icon" aria-label="Copy invite link"
+                    size="icon"
                     onClick={copyToClipboard}
                   >
                     <Copy className="h-4 w-4" />

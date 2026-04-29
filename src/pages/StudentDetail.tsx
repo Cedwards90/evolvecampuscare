@@ -21,7 +21,6 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { PriorityBadge } from '@/components/PriorityBadge';
 import { CategoryBadge } from '@/components/CategoryBadge';
@@ -50,15 +49,18 @@ import { OrgBadgeInline } from '@/components/OrgBadgeInline';
 import { useStudentPlans } from '@/hooks/usePostGraduationPlan';
 import { Smile, Frown, Meh, TrendingUp as TrendUp, TrendingDown } from 'lucide-react';
 import { SendSurveyDialog } from '@/components/admin/SendSurveyDialog';
-import { StudentAssignmentCard } from '@/components/admin/StudentAssignmentCard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
-import { cn, getInitials } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
+function getInitials(name: string | null): string {
+  if (!name) return '?';
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+}
 
 export default function StudentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -108,21 +110,7 @@ export default function StudentDetail() {
   if (isLoading) {
     return (
       <SidebarLayout>
-        <div className="space-y-6" role="status" aria-live="polite" aria-label="Loading student profile">
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-16 w-16 rounded-full" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-6 w-1/3" />
-              <Skeleton className="h-4 w-1/4" />
-            </div>
-          </div>
-          <Skeleton className="h-10 w-full max-w-md" />
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-32 w-full rounded-lg" />
-            ))}
-          </div>
-        </div>
+        <LoadingSpinner />
       </SidebarLayout>
     );
   }
@@ -274,14 +262,6 @@ export default function StudentDetail() {
             </div>
           </CardContent>
         </Card>
-
-        {role === 'admin' && (
-          <StudentAssignmentCard
-            studentProfile={student.profile}
-            assignedCaseManager={student.assignment?.case_manager || null}
-            pendingRequests={student.stats.pending_requests}
-          />
-        )}
 
         {/* Tabs */}
         <Tabs defaultValue="requests" className="space-y-4">
@@ -541,7 +521,6 @@ export default function StudentDetail() {
 // ---- Student File Tab Component ----
 function StudentFileTab({ studentId, requests }: { studentId: string; requests: import('@/types/database').SupportRequest[] }) {
   const { notes, isLoading: notesLoading, addNote } = useFileNotes(studentId);
-  const { toast } = useToast();
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
 
@@ -559,26 +538,10 @@ function StudentFileTab({ studentId, requests }: { studentId: string; requests: 
   });
 
   const handleAddNote = async () => {
-    const trimmed = newNote.trim();
-    if (trimmed.length < 3) {
-      toast({
-        title: 'Note too short',
-        description: 'Please write at least 3 characters before saving.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (trimmed.length > 5000) {
-      toast({
-        title: 'Note too long',
-        description: 'Notes must be under 5,000 characters.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    if (!newNote.trim()) return;
     setAddingNote(true);
     try {
-      await addNote.mutateAsync({ content: trimmed });
+      await addNote.mutateAsync({ content: newNote });
       setNewNote('');
     } finally {
       setAddingNote(false);

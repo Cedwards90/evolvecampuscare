@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { queryKeys } from '@/lib/queryKeys';
 import { subDays, format, startOfDay, eachDayOfInterval } from 'date-fns';
 
 export interface WorkloadTrend {
@@ -39,7 +38,7 @@ export interface AnalyticsData {
 
 export function useAnalyticsData(days: number = 30) {
   return useQuery({
-    queryKey: queryKeys.analytics.range(days),
+    queryKey: ['analytics', days],
     queryFn: async (): Promise<AnalyticsData> => {
       const startDate = subDays(new Date(), days);
       const dateRange = eachDayOfInterval({ start: startDate, end: new Date() });

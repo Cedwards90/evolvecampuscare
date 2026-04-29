@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { getInitials } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { FolderOpen, Search, CheckCircle, Clock, FileText, Building2, GraduationCap } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -22,6 +21,10 @@ import {
 } from '@/components/ui/table';
 import { useStudentFolders } from '@/hooks/useStudentFolders';
 
+function getInitials(name: string | null): string {
+  if (!name) return '?';
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+}
 
 export default function StudentFolders() {
   const { data: students, isLoading } = useStudentFolders();

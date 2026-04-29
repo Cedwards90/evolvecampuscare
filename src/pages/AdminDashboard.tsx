@@ -25,8 +25,6 @@ import { CategoryBadge } from '@/components/CategoryBadge';
 import { TimeAgo } from '@/components/TimeAgo';
 import { EmptyState } from '@/components/EmptyState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { StatsGridSkeleton } from '@/components/skeletons/StatsGridSkeleton';
-import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
 import { RequestQuickActions } from '@/components/requests/RequestQuickActions';
 import { ComposeMessage } from '@/components/messages/ComposeMessage';
 import { Button } from '@/components/ui/button';
@@ -174,9 +172,8 @@ export default function AdminDashboard() {
   if (isLoading) {
     return (
       <SidebarLayout>
-        <div className="space-y-6">
-          <StatsGridSkeleton count={4} />
-          <TableSkeleton rows={6} columns={5} />
+        <div className="flex items-center justify-center min-h-[400px]">
+          <LoadingSpinner size="lg" />
         </div>
       </SidebarLayout>
     );

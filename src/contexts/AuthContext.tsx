@@ -26,27 +26,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserData = async (userId: string) => {
     try {
-      // Fetch profile and role in parallel; tolerate missing rows during signup race
-      const [profileRes, roleRes] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle(),
-        supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: true })
-          .limit(1)
-          .maybeSingle(),
-      ]);
-
-      if (profileRes.data) {
-        setProfile(profileRes.data as Profile);
+      // Fetch profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      if (profileData) {
+        setProfile(profileData as Profile);
       }
-      if (roleRes.data) {
-        setRole(roleRes.data.role as AppRole);
+
+      // Fetch role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+      
+      if (roleData) {
+        setRole(roleData.role as AppRole);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -63,10 +64,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Defer Supabase calls with setTimeout to prevent deadlock
         if (session?.user) {
           setTimeout(() => {
-            fetchUserData(session.user.id).finally(() => setIsLoading(false));
+            fetchUserData(session.user.id);
           }, 0);
         } else {
-          setIsLoading(false);
           setProfile(null);
           setRole(null);
         }

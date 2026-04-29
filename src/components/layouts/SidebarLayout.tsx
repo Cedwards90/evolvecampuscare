@@ -39,7 +39,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
-import { cn, getInitials } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import type { AppRole } from '@/types/database';
 
 interface SidebarLayoutProps {
@@ -102,8 +102,7 @@ const bottomNavItems: NavItem[] = [
 export function SidebarLayout({ children }: SidebarLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, profile, role, isLoading: authLoading, signOut } = useAuth();
-  const roleLoading = authLoading || (!!user && !role);
+  const { user, profile, role, signOut } = useAuth();
   const { language, setLanguage } = useLanguage();
   const { isOnline } = useOffline();
   const location = useLocation();
@@ -155,6 +154,10 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
   const isGroupOpen = (label: string) => openGroups[label] !== false;
 
+  const getInitials = (name: string | null) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   const isActive = (href: string) => location.pathname === href;
 
@@ -178,19 +181,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
         {/* Main Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-2">
-          {roleLoading ? (
-            <ul className="space-y-2" role="status" aria-label="Loading navigation">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <li key={i} className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5",
-                  sidebarCollapsed && "justify-center"
-                )}>
-                  <div className="h-5 w-5 flex-shrink-0 rounded bg-muted animate-pulse" />
-                  {!sidebarCollapsed && <div className="h-4 flex-1 rounded bg-muted animate-pulse" />}
-                </li>
-              ))}
-            </ul>
-          ) : sidebarCollapsed ? (
+          {sidebarCollapsed ? (
             <ul className="space-y-1">
               {allFilteredNavItems.map((item) => (
                 <li key={item.href}>
@@ -317,16 +308,6 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          {roleLoading ? (
-            <ul className="space-y-2" role="status" aria-label="Loading navigation">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <li key={i} className="flex items-center gap-3 rounded-lg px-3 py-2.5">
-                  <div className="h-5 w-5 flex-shrink-0 rounded bg-muted animate-pulse" />
-                  <div className="h-4 flex-1 rounded bg-muted animate-pulse" />
-                </li>
-              ))}
-            </ul>
-          ) : (
           <div className="space-y-3">
             {filteredGroups.map((group) => (
               <div key={group.label}>
@@ -360,7 +341,6 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
               </div>
             ))}
           </div>
-          )}
         </nav>
       </aside>
 
@@ -374,7 +354,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           {/* Mobile Menu Toggle */}
           <Button
             variant="ghost"
-            size="icon" aria-label="Open menu"
+            size="icon"
             className="lg:hidden flex-shrink-0"
             onClick={() => setMobileMenuOpen(true)}
           >
@@ -384,7 +364,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           {/* Sidebar Toggle (Desktop) */}
           <Button
             variant="ghost"
-            size="icon" aria-label="Close menu"
+            size="icon"
             className="hidden lg:flex flex-shrink-0"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           >
@@ -420,7 +400,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           {/* Language selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="User menu">
+              <Button variant="ghost" size="icon">
                 <Globe className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
