@@ -102,7 +102,8 @@ const bottomNavItems: NavItem[] = [
 export function SidebarLayout({ children }: SidebarLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, profile, role, signOut } = useAuth();
+  const { user, profile, role, isLoading: authLoading, signOut } = useAuth();
+  const roleLoading = authLoading || (!!user && !role);
   const { language, setLanguage } = useLanguage();
   const { isOnline } = useOffline();
   const location = useLocation();
@@ -177,7 +178,19 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
         {/* Main Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-2">
-          {sidebarCollapsed ? (
+          {roleLoading ? (
+            <ul className="space-y-2" role="status" aria-label="Loading navigation">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <li key={i} className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5",
+                  sidebarCollapsed && "justify-center"
+                )}>
+                  <div className="h-5 w-5 flex-shrink-0 rounded bg-muted animate-pulse" />
+                  {!sidebarCollapsed && <div className="h-4 flex-1 rounded bg-muted animate-pulse" />}
+                </li>
+              ))}
+            </ul>
+          ) : sidebarCollapsed ? (
             <ul className="space-y-1">
               {allFilteredNavItems.map((item) => (
                 <li key={item.href}>
@@ -304,6 +317,16 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
+          {roleLoading ? (
+            <ul className="space-y-2" role="status" aria-label="Loading navigation">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <li key={i} className="flex items-center gap-3 rounded-lg px-3 py-2.5">
+                  <div className="h-5 w-5 flex-shrink-0 rounded bg-muted animate-pulse" />
+                  <div className="h-4 flex-1 rounded bg-muted animate-pulse" />
+                </li>
+              ))}
+            </ul>
+          ) : (
           <div className="space-y-3">
             {filteredGroups.map((group) => (
               <div key={group.label}>
@@ -337,6 +360,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
               </div>
             ))}
           </div>
+          )}
         </nav>
       </aside>
 
