@@ -52,18 +52,26 @@ export function BulkStudentAssignmentDialog({
   onAssigned,
 }: BulkStudentAssignmentDialogProps) {
   const [selectedCaseManager, setSelectedCaseManager] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const { data: caseManagers, isLoading: caseManagersLoading } = useCaseManagers();
   const bulkAssign = useBulkAssignStudents();
   const { user } = useAuth();
 
   const sortedCaseManagers = useMemo(() => {
     if (!caseManagers) return [];
-    return [...caseManagers].sort((a, b) => {
+    const sorted = [...caseManagers].sort((a, b) => {
       const aCapacity = MAX_STUDENTS_PER_CM - (a.active_requests || 0);
       const bCapacity = MAX_STUDENTS_PER_CM - (b.active_requests || 0);
       return bCapacity - aCapacity;
     });
-  }, [caseManagers]);
+    const q = search.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter(
+      (cm) =>
+        (cm.full_name || '').toLowerCase().includes(q) ||
+        (cm.email || '').toLowerCase().includes(q)
+    );
+  }, [caseManagers, search]);
 
   const handleAssign = async () => {
     if (!selectedCaseManager || !user || students.length === 0) return;
