@@ -188,7 +188,7 @@ export default function CaseManagersPage() {
             description="Invite case managers from User Management to start assigning students."
           />
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+          <div className="grid gap-6 xl:grid-cols-[300px_1fr]">
             {/* Left: CM list */}
             <Card className="h-fit">
               <CardHeader className="space-y-3">
