@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { UserPlus, RefreshCw, Trash2, Users } from 'lucide-react';
+import { UserPlus, RefreshCw, Trash2, Users, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Table,
   TableBody,
