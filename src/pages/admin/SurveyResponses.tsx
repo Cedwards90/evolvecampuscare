@@ -72,6 +72,9 @@ export default function SurveyResponses() {
           <Button variant="outline" size="sm" onClick={() => setPreviewType('post_grad')}>
             <Eye className="mr-2 h-4 w-4" /> Preview Post-Grad Plan
           </Button>
+          <DistributeSurveyDialog trigger={
+            <Button size="sm"><Send className="mr-2 h-4 w-4" /> Distribute Survey</Button>
+          } />
         </div>
       </div>
 
