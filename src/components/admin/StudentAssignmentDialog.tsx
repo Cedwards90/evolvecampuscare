@@ -113,6 +113,16 @@ export function StudentAssignmentDialog({
           </div>
         )}
 
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search case managers by name or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
         <ScrollArea className="max-h-[300px] pr-4">
           <div className="space-y-2">
             {caseManagersLoading ? (
@@ -121,7 +131,7 @@ export function StudentAssignmentDialog({
               </div>
             ) : sortedCaseManagers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No case managers available
+                {search ? 'No case managers match your search.' : 'No case managers available'}
               </div>
             ) : (
               sortedCaseManagers.map((cm) => {
