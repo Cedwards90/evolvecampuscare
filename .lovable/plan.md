@@ -1,41 +1,52 @@
+## Root cause
 
+Your sidebar IS rendering on `/dashboard` — your screenshot shows the "NAVIGATION" label and the "Support Center" promo card. The nav links between them are empty because:
 
-## Diagnosis
+1. `SidebarLayout` filters nav items with `role && item.roles.includes(role)`.
+2. Your currently signed-in user (avatar shows **"U"**, not "A" for admin) has **no row in `user_roles`** — so `role` is `null` and every item is filtered out.
+3. The DB confirms ~20 recent users (students who signed up) have no role assigned. Only 3 admins (`admin@evolvefoundation.us`, `jbester@gechamber.com`, `jmac@evolvefoundation.us`) have rows in `user_roles`.
 
-Your screenshot shows you are on the **public Landing page (`/`)**, not signed in. The Landing page intentionally has a minimal top bar (logo + "Go to Dashboard" / "Sign In") — it does not show the sidebar with **User Management**, **Manage Requests**, **Organizations**, etc.
+So this is a **data/onboarding bug**, not a layout bug. The fix has three parts.
 
-Those navigation links live in `SidebarLayout`, which only renders **after you sign in** on protected routes like `/dashboard`, `/admin/users`, `/requests`, etc. The previous fix (lowering the sidebar breakpoint from `lg` → `md`) is working correctly on those authenticated pages.
+## Plan
 
-The "no way to navigate" feeling comes from the Landing page itself having no shortcuts into the app's main areas for signed-in users, and no quick links for signed-out admins/case managers either.
+### 1. Backfill missing roles (migration)
 
-## Two possible fixes — which do you want?
+Insert `('user_id', 'student')` into `user_roles` for every user in `profiles` who currently has no role row. Safe default — the 20 unassigned accounts all look like students who signed up via the public flow.
 
-### Option A — Improve the public Landing page top bar (recommended)
+```sql
+INSERT INTO public.user_roles (user_id, role)
+SELECT p.user_id, 'student'::app_role
+FROM public.profiles p
+LEFT JOIN public.user_roles ur ON ur.user_id = p.user_id
+WHERE ur.user_id IS NULL;
+```
 
-Add a slim, role-aware top nav on `/` so users can jump straight into the app:
+### 2. Ensure new signups always get a role (trigger)
 
-- **Signed out**: keep "Sign In" + "Get Started", add a "Help Center" link.
-- **Signed in (any role)**: replace "Go to Dashboard" with a small set of quick links based on role:
-  - **Student**: Dashboard · Submit Request · Track Requests · Messages
-  - **Case Manager**: Dashboard · Manage Requests · Student Folders · Messages
-  - **Admin**: Dashboard · User Management · Manage Requests · Analytics
-- Mobile: collapse into a hamburger sheet using the same `filteredNavItems` logic from `SidebarLayout`.
+Check whether the existing `handle_new_user`/profile-creation trigger also inserts into `user_roles`. If it doesn't, update it (or add a sibling trigger) so every new `auth.users` row gets a default `'student'` role inserted alongside the profile. This prevents the bug from recurring.
 
-### Option B — Auto-redirect signed-in users away from `/`
+If the invitation flow already assigns a role (Case Manager / Admin invites), it must continue to take precedence — the trigger only inserts a default when no role row exists yet.
 
-When a logged-in user lands on `/`, automatically send them to `/dashboard` (where the full sidebar is). This eliminates the "dead end" entirely.
+### 3. Make the sidebar fail-safe (UX guardrail)
 
-Both options are small UI changes — no backend, no schema, no new routes.
+Even with the data fixed, `role` is briefly `null` while `fetchUserData` is loading, and could be `null` for any future edge case. Update `SidebarLayout` so that when `role` is `null`:
+- Show a loading skeleton for the nav while `useAuth().isLoading` is true, OR
+- Show a minimal "common" nav (Dashboard, Settings, Help Center) and a small "Your account is missing a role — contact an administrator" notice when not loading.
 
-### Files involved
+This way the sidebar can never silently render as a blank strip again.
+
+### Files to change
+
 | File | Change |
 |---|---|
-| `src/pages/Landing.tsx` | Option A: add role-aware top nav. Option B: add `useEffect` redirect when `user` exists. |
-| `src/components/layouts/SidebarLayout.tsx` | No change — sidebar already works on protected routes after the breakpoint fix. |
+| `supabase/migrations/<new>.sql` | Backfill missing student roles + add/extend trigger to default-assign role on signup |
+| `src/components/layouts/SidebarLayout.tsx` | Loading skeleton + missing-role fallback UI |
 
-### Quick check
-Before I build either option, can you confirm:
-1. When you click **"Go to Dashboard"** from the Landing page and reach `/dashboard`, **does the left sidebar appear** with all the nav links (Dashboard, Manage Requests, User Management, etc.)?
-   - If **yes** → Option A or B will solve the navigation gap on `/`.
-   - If **no** → the sidebar itself is still broken on authenticated pages and we need to debug further (different fix).
+No other components, routes, or auth flows need to change. Admins like `admin@evolvefoundation.us` already have correct roles and will see the full sidebar immediately on next reload.
 
+### Verification after build
+
+1. Reload `/dashboard` as your current user → nav items appear.
+2. Sign in as `admin@evolvefoundation.us` → all admin items (User Management, Organizations, Surveys, Admin Dashboard) appear.
+3. Create a brand-new test signup → confirm it gets `student` role and full student nav appears immediately.
