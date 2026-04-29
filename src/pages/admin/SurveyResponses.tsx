@@ -120,6 +120,10 @@ export default function SurveyResponses() {
           )}
         </TabsContent>
 
+        <TabsContent value="distributions">
+          <DistributionsTab />
+        </TabsContent>
+
         <TabsContent value="checkins">
           {loadingCheckIns ? <LoadingSpinner /> : filteredCheckIns.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">No check-ins found.</CardContent></Card>
