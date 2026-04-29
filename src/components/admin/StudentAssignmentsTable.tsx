@@ -262,7 +262,14 @@ export function StudentAssignmentsTable() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Assignment</AlertDialogTitle>
-            <AlertDialogDescription>Remove assignment for <strong>{removeConfirmStudent?.student?.full_name}</strong>?</AlertDialogDescription>
+            <AlertDialogDescription>
+              Remove assignment for <strong>{removeConfirmStudent?.student?.full_name}</strong>?
+              {removeStudentPending > 0 && (
+                <span className="block mt-2 text-warning">
+                  {removeStudentPending} pending request{removeStudentPending > 1 ? 's' : ''} will remain attached to the current case manager until reassigned.
+                </span>
+              )}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
