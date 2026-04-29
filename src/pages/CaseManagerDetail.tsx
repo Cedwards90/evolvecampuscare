@@ -1,7 +1,7 @@
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
-import { 
 import { getInitials } from '@/lib/utils';
+import { 
   ArrowLeft, 
   Mail, 
   Phone,
