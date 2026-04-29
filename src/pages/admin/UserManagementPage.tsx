@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { 
+import { getInitials } from '@/lib/utils';
   Search, 
   Filter, 
   Users, 
@@ -138,10 +139,6 @@ export default function UserManagementPage() {
     };
   }, [users, pendingInvitations]);
 
-  const getInitials = (name: string | null) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
 
   const handleRoleChange = async () => {
     if (!selectedUser || !newRole) return;

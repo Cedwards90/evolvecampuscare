@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
+import { getInitials } from '@/lib/utils';
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -26,10 +27,6 @@ interface Props {
   pendingRequests?: number;
 }
 
-function getInitials(name: string | null | undefined): string {
-  if (!name) return '?';
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-}
 
 export function StudentAssignmentCard({ studentProfile, assignedCaseManager, pendingRequests = 0 }: Props) {
   const [assignOpen, setAssignOpen] = useState(false);

@@ -9,16 +9,13 @@ import { EmptyState } from '@/components/EmptyState';
 import { InviteStudentDialog } from '@/components/casemanager/InviteStudentDialog';
 import { BulkCohortSurveyDialog } from '@/components/admin/BulkCohortSurveyDialog';
 import type { MyStudent } from '@/hooks/useMyStudents';
+import { getInitials } from '@/lib/utils';
 
 interface MyStudentsSectionProps {
   students: MyStudent[];
   isLoading: boolean;
 }
 
-function getInitials(name: string | null): string {
-  if (!name) return '?';
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-}
 
 export function MyStudentsSection({ students, isLoading }: MyStudentsSectionProps) {
   if (isLoading) {

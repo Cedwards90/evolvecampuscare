@@ -39,7 +39,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import type { AppRole } from '@/types/database';
 
 interface SidebarLayoutProps {
@@ -154,10 +154,6 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
   const isGroupOpen = (label: string) => openGroups[label] !== false;
 
-  const getInitials = (name: string | null) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
 
   const isActive = (href: string) => location.pathname === href;
 

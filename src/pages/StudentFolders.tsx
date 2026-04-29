@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
+import { getInitials } from '@/lib/utils';
   Table,
   TableBody,
   TableCell,
@@ -21,10 +22,6 @@ import {
 } from '@/components/ui/table';
 import { useStudentFolders } from '@/hooks/useStudentFolders';
 
-function getInitials(name: string | null): string {
-  if (!name) return '?';
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-}
 
 export default function StudentFolders() {
   const { data: students, isLoading } = useStudentFolders();

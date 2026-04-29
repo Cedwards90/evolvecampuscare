@@ -29,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import type { AppRole } from '@/types/database';
 
 interface AppLayoutProps {
@@ -62,10 +62,6 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const filteredNavItems = navItems.filter(item => role && item.roles.includes(role));
 
-  const getInitials = (name: string | null) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

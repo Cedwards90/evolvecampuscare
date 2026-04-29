@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
+import { getInitials } from '@/lib/utils';
   Dialog,
   DialogContent,
   DialogDescription,
@@ -40,10 +41,6 @@ function getWorkloadStatus(count: number, max: number): string {
   return 'Low';
 }
 
-function getInitials(name: string | null | undefined): string {
-  if (!name) return '?';
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-}
 
 export function BulkStudentAssignmentDialog({
   open,

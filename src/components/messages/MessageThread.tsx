@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConversation, useSendMessage, useMarkAsRead } from '@/hooks/useMessages';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import type { StaffMessage } from '@/types/messages';
 
 interface MessageThreadProps {
@@ -24,10 +24,6 @@ export function MessageThread({ otherUserId }: MessageThreadProps) {
   const sendMessage = useSendMessage();
   const markAsRead = useMarkAsRead();
 
-  const getInitials = (name: string | null) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
 
   // Mark unread messages as read
   useEffect(() => {

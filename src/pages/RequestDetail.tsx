@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
+import { getInitials } from '@/lib/utils';
   ArrowLeft, 
   User, 
   Calendar, 
@@ -42,10 +43,6 @@ export default function RequestDetail() {
     request?.assigned_case_manager_id === user?.id
   );
 
-  const getInitials = (name: string | null) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
 
   if (isLoading) {
     return (

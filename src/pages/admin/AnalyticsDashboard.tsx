@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+import { getInitials } from '@/lib/utils';
   Users,
   FileText,
   Clock,
@@ -41,10 +42,6 @@ import {
 } from '@/components/ui/select';
 import { useAnalyticsData } from '@/hooks/useAnalyticsData';
 
-function getInitials(name: string | null): string {
-  if (!name) return '?';
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-}
 
 export default function AnalyticsDashboard() {
   const [dateRange, setDateRange] = useState<number>(30);

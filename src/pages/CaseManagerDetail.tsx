@@ -1,6 +1,7 @@
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
 import { 
+import { getInitials } from '@/lib/utils';
   ArrowLeft, 
   Mail, 
   Phone,
@@ -68,10 +69,6 @@ export default function CaseManagerDetail() {
   const navigate = useNavigate();
   const { data: stats, isLoading, error } = useCaseManagerStats(id);
 
-  const getInitials = (name: string | null) => {
-    if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
 
   if (isLoading) {
     return (

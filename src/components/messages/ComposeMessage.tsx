@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
+import { getInitials } from '@/lib/utils';
   Dialog,
   DialogContent,
   DialogDescription,
@@ -66,10 +67,6 @@ export function ComposeMessage({
   }, [defaultSubject]);
 
 
-  const getInitials = (name: string | null) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
 
   const handleSend = async () => {
     if (!recipientId || !content.trim()) return;
