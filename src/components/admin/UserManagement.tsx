@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getInitials } from '@/lib/utils';
 import { Search, UserCog, Shield, GraduationCap, Briefcase, Loader2 } from 'lucide-react';
 import { useUsers, useUpdateUserRole, type UserWithRole } from '@/hooks/useUsers';
 import { useAuth } from '@/contexts/AuthContext';
