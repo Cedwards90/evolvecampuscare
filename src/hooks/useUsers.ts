@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { queryKeys } from '@/lib/queryKeys';
 import type { AppRole } from '@/types/database';
 
 export interface UserWithRole {
@@ -16,7 +17,7 @@ export interface UserWithRole {
 
 export function useUsers() {
   return useQuery({
-    queryKey: ['users-with-roles'],
+    queryKey: queryKeys.users.all,
     queryFn: async (): Promise<UserWithRole[]> => {
       // Fetch profiles
       const { data: profiles, error: profilesError } = await supabase
@@ -95,7 +96,7 @@ export function useUpdateUserRole() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
     },
   });
 }
@@ -115,9 +116,9 @@ export function useDeleteUser() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
-      queryClient.invalidateQueries({ queryKey: ['case-managers'] });
-      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.caseManagers });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.students });
     },
   });
 }

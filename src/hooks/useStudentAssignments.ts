@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { queryKeys } from '@/lib/queryKeys';
 import type { Profile } from '@/types/database';
 
 export interface StudentAssignment {
