@@ -49,6 +49,7 @@ import { OrgBadgeInline } from '@/components/OrgBadgeInline';
 import { useStudentPlans } from '@/hooks/usePostGraduationPlan';
 import { Smile, Frown, Meh, TrendingUp as TrendUp, TrendingDown } from 'lucide-react';
 import { SendSurveyDialog } from '@/components/admin/SendSurveyDialog';
+import { StudentAssignmentCard } from '@/components/admin/StudentAssignmentCard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
