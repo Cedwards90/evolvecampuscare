@@ -105,6 +105,92 @@ export type Database = {
           },
         ]
       }
+      bulk_invite_job_items: {
+        Row: {
+          created_at: string
+          email: string
+          error: string | null
+          full_name: string | null
+          id: string
+          invitation_id: string | null
+          job_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          error?: string | null
+          full_name?: string | null
+          id?: string
+          invitation_id?: string | null
+          job_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          error?: string | null
+          full_name?: string | null
+          id?: string
+          invitation_id?: string | null
+          job_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_invite_job_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_invite_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bulk_invite_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          failed: number
+          id: string
+          notes: string | null
+          organization_id: string | null
+          processed: number
+          skipped: number
+          status: string
+          succeeded: number
+          total: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          failed?: number
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          processed?: number
+          skipped?: number
+          status?: string
+          succeeded?: number
+          total?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          failed?: number
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          processed?: number
+          skipped?: number
+          status?: string
+          succeeded?: number
+          total?: number
+        }
+        Relationships: []
+      }
       file_notes: {
         Row: {
           author_id: string
@@ -458,6 +544,57 @@ export type Database = {
           },
         ]
       }
+      scheduled_survey_distributions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          error: string | null
+          failed_count: number
+          id: string
+          notes: string | null
+          recipient_ids: string[]
+          scheduled_for: string
+          sent_count: number
+          skipped_count: number
+          status: string
+          survey_type: string
+          total_recipients: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          error?: string | null
+          failed_count?: number
+          id?: string
+          notes?: string | null
+          recipient_ids?: string[]
+          scheduled_for: string
+          sent_count?: number
+          skipped_count?: number
+          status?: string
+          survey_type: string
+          total_recipients?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          error?: string | null
+          failed_count?: number
+          id?: string
+          notes?: string | null
+          recipient_ids?: string[]
+          scheduled_for?: string
+          sent_count?: number
+          skipped_count?: number
+          status?: string
+          survey_type?: string
+          total_recipients?: number
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           id: string
@@ -671,6 +808,9 @@ export type Database = {
         Row: {
           completed_at: string | null
           created_at: string
+          email_error: string | null
+          email_sent_at: string | null
+          email_status: string | null
           id: string
           notes: string | null
           sent_by: string
@@ -680,6 +820,9 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           created_at?: string
+          email_error?: string | null
+          email_sent_at?: string | null
+          email_status?: string | null
           id?: string
           notes?: string | null
           sent_by: string
@@ -689,6 +832,9 @@ export type Database = {
         Update: {
           completed_at?: string | null
           created_at?: string
+          email_error?: string | null
+          email_sent_at?: string | null
+          email_status?: string | null
           id?: string
           notes?: string | null
           sent_by?: string
