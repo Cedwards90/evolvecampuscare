@@ -42,6 +42,62 @@ const signupSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 type SignupFormData = z.infer<typeof signupSchema>;
 
+type AuthFlow = 'login' | 'signup';
+
+interface TranslatedAuthError {
+  title: string;
+  message: string;
+  cooldownSeconds?: number;
+}
+
+function translateAuthError(error: { message?: string; status?: number } | null | undefined, flow: AuthFlow): TranslatedAuthError {
+  const raw = (error?.message || '').toString();
+  const lower = raw.toLowerCase();
+  const status = (error as any)?.status;
+
+  // Extract "after N seconds" hint from Supabase
+  const afterMatch = raw.match(/after\s+(\d+)\s*seconds?/i);
+  const retryFromMessage = afterMatch ? parseInt(afterMatch[1], 10) : undefined;
+
+  const isRateLimited =
+    status === 429 ||
+    lower.includes('rate limit') ||
+    lower.includes('too many requests') ||
+    lower.includes('over_email_send_rate_limit') ||
+    !!retryFromMessage;
+
+  if (isRateLimited) {
+    const seconds = retryFromMessage ?? 60;
+    const isEmailLimit = lower.includes('email');
+    return {
+      title: 'Too many attempts',
+      message: isEmailLimit
+        ? `Too many emails sent to this address recently. Please wait ${seconds} second${seconds === 1 ? '' : 's'} before trying again.`
+        : `Too many ${flow === 'signup' ? 'signup' : 'sign-in'} attempts. Please wait ${seconds} second${seconds === 1 ? '' : 's'} and try again.`,
+      cooldownSeconds: seconds,
+    };
+  }
+
+  if (lower.includes('already registered') || lower.includes('user already')) {
+    return {
+      title: 'Account exists',
+      message: 'This email is already registered. Please sign in instead.',
+    };
+  }
+
+  if (flow === 'login' && lower.includes('invalid login credentials')) {
+    return {
+      title: 'Sign in failed',
+      message: 'Email or password is incorrect.',
+    };
+  }
+
+  return {
+    title: flow === 'signup' ? 'Sign up failed' : 'Sign in failed',
+    message: raw || 'An unexpected error occurred. Please try again.',
+  };
+}
+
 export default function Auth() {
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get('invite');
