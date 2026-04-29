@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Eye, EyeOff, Loader2, Mail, Check, X } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, Check, X, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,6 +42,62 @@ const signupSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 type SignupFormData = z.infer<typeof signupSchema>;
 
+type AuthFlow = 'login' | 'signup';
+
+interface TranslatedAuthError {
+  title: string;
+  message: string;
+  cooldownSeconds?: number;
+}
+
+function translateAuthError(error: { message?: string; status?: number } | null | undefined, flow: AuthFlow): TranslatedAuthError {
+  const raw = (error?.message || '').toString();
+  const lower = raw.toLowerCase();
+  const status = (error as any)?.status;
+
+  // Extract "after N seconds" hint from Supabase
+  const afterMatch = raw.match(/after\s+(\d+)\s*seconds?/i);
+  const retryFromMessage = afterMatch ? parseInt(afterMatch[1], 10) : undefined;
+
+  const isRateLimited =
+    status === 429 ||
+    lower.includes('rate limit') ||
+    lower.includes('too many requests') ||
+    lower.includes('over_email_send_rate_limit') ||
+    !!retryFromMessage;
+
+  if (isRateLimited) {
+    const seconds = retryFromMessage ?? 60;
+    const isEmailLimit = lower.includes('email');
+    return {
+      title: 'Too many attempts',
+      message: isEmailLimit
+        ? `Too many emails sent to this address recently. Please wait ${seconds} second${seconds === 1 ? '' : 's'} before trying again.`
+        : `Too many ${flow === 'signup' ? 'signup' : 'sign-in'} attempts. Please wait ${seconds} second${seconds === 1 ? '' : 's'} and try again.`,
+      cooldownSeconds: seconds,
+    };
+  }
+
+  if (lower.includes('already registered') || lower.includes('user already')) {
+    return {
+      title: 'Account exists',
+      message: 'This email is already registered. Please sign in instead.',
+    };
+  }
+
+  if (flow === 'login' && lower.includes('invalid login credentials')) {
+    return {
+      title: 'Sign in failed',
+      message: 'Email or password is incorrect.',
+    };
+  }
+
+  return {
+    title: flow === 'signup' ? 'Sign up failed' : 'Sign in failed',
+    message: raw || 'An unexpected error occurred. Please try again.',
+  };
+}
+
 export default function Auth() {
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get('invite');
@@ -50,6 +107,25 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMFAVerification, setShowMFAVerification] = useState(false);
   const [showMFAEnrollment, setShowMFAEnrollment] = useState(false);
+  const [signupCooldownUntil, setSignupCooldownUntil] = useState<number | null>(null);
+  const [loginCooldownUntil, setLoginCooldownUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!signupCooldownUntil && !loginCooldownUntil) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [signupCooldownUntil, loginCooldownUntil]);
+
+  const signupCooldownRemaining = signupCooldownUntil ? Math.max(0, Math.ceil((signupCooldownUntil - now) / 1000)) : 0;
+  const loginCooldownRemaining = loginCooldownUntil ? Math.max(0, Math.ceil((loginCooldownUntil - now) / 1000)) : 0;
+
+  useEffect(() => {
+    if (signupCooldownUntil && signupCooldownRemaining === 0) setSignupCooldownUntil(null);
+  }, [signupCooldownUntil, signupCooldownRemaining]);
+  useEffect(() => {
+    if (loginCooldownUntil && loginCooldownRemaining === 0) setLoginCooldownUntil(null);
+  }, [loginCooldownUntil, loginCooldownRemaining]);
   const { user, role, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -106,16 +182,19 @@ export default function Auth() {
   });
 
   const onLogin = async (data: LoginFormData) => {
+    if (loginCooldownRemaining > 0 || isSubmitting) return;
     setIsSubmitting(true);
     try {
       const { error } = await signIn(data.email, data.password);
       if (error) {
+        const t = translateAuthError(error as any, 'login');
+        if (t.cooldownSeconds) {
+          setLoginCooldownUntil(Date.now() + t.cooldownSeconds * 1000);
+        }
         toast({
           variant: 'destructive',
-          title: 'Sign in failed',
-          description: error.message === 'Invalid login credentials' 
-            ? 'Invalid email or password. Please try again.'
-            : error.message,
+          title: t.title,
+          description: t.message,
         });
         return;
       }
@@ -158,18 +237,19 @@ export default function Auth() {
   };
 
   const onSignup = async (data: SignupFormData) => {
+    if (signupCooldownRemaining > 0 || isSubmitting) return;
     setIsSubmitting(true);
     try {
       const { error } = await signUp(data.email, data.password, data.fullName);
       if (error) {
-        let errorMessage = error.message;
-        if (error.message.includes('already registered')) {
-          errorMessage = 'This email is already registered. Please sign in instead.';
+        const t = translateAuthError(error as any, 'signup');
+        if (t.cooldownSeconds) {
+          setSignupCooldownUntil(Date.now() + t.cooldownSeconds * 1000);
         }
         toast({
           variant: 'destructive',
-          title: 'Sign up failed',
-          description: errorMessage,
+          title: t.title,
+          description: t.message,
         });
       } else {
         toast({
@@ -325,9 +405,18 @@ export default function Auth() {
                   </Link>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                {loginCooldownRemaining > 0 && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Too many attempts. You can try again in {loginCooldownRemaining}s.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <Button type="submit" className="w-full" disabled={isLoading || loginCooldownRemaining > 0}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Sign In
+                  {loginCooldownRemaining > 0 ? `Try again in ${loginCooldownRemaining}s` : 'Sign In'}
                 </Button>
               </form>
             </TabsContent>
@@ -455,9 +544,18 @@ export default function Auth() {
                   )}
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                {signupCooldownRemaining > 0 && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Too many signup attempts. You can try again in {signupCooldownRemaining}s.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <Button type="submit" className="w-full" disabled={isLoading || signupCooldownRemaining > 0}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Account
+                  {signupCooldownRemaining > 0 ? `Try again in ${signupCooldownRemaining}s` : 'Create Account'}
                 </Button>
               </form>
             </TabsContent>
