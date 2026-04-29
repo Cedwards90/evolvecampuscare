@@ -114,8 +114,8 @@ export function StudentAssignmentsTable() {
   };
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked && unassignedStudents) {
-      setSelectedStudentIds(new Set(unassignedStudents.map(s => s.user_id)));
+    if (checked) {
+      setSelectedStudentIds(new Set(filteredUnassigned.map(s => s.user_id)));
     } else {
       setSelectedStudentIds(new Set());
     }
@@ -123,6 +123,14 @@ export function StudentAssignmentsTable() {
 
   const selectedStudentsForBulk = unassignedStudents?.filter(s => selectedStudentIds.has(s.user_id)) || [];
   const isLoading = assignmentsLoading || unassignedLoading;
+
+  if (!isAdmin) {
+    return (
+      <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+        You do not have permission to manage student assignments.
+      </div>
+    );
+  }
 
   return (
     <>
