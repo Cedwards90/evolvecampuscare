@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   FileText, 
   Clock, 
@@ -46,7 +47,15 @@ const features = [
 ];
 
 export default function Landing() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, isLoading, navigate]);
+
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
