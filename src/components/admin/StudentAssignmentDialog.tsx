@@ -138,16 +138,20 @@ export function StudentAssignmentDialog({
                 const workloadPercentage = Math.min((cm.active_requests / MAX_STUDENTS_PER_CM) * 100, 100);
                 const isSelected = selectedCaseManager === cm.user_id;
                 const workloadStatus = getWorkloadStatus(cm.active_requests, MAX_STUDENTS_PER_CM);
+                const atCapacity = cm.active_requests >= MAX_STUDENTS_PER_CM;
 
                 return (
                   <div
                     key={cm.user_id}
-                    onClick={() => setSelectedCaseManager(cm.user_id)}
+                    onClick={() => !atCapacity && setSelectedCaseManager(cm.user_id)}
                     className={cn(
-                      'flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors',
+                      'flex items-center gap-3 p-3 rounded-lg border transition-colors',
+                      atCapacity
+                        ? 'opacity-60 cursor-not-allowed border-border'
+                        : 'cursor-pointer',
                       isSelected
                         ? 'border-primary bg-primary/5'
-                        : 'border-border hover:bg-muted/50'
+                        : !atCapacity && 'border-border hover:bg-muted/50'
                     )}
                   >
                     <Avatar className="h-10 w-10">
@@ -164,6 +168,11 @@ export function StudentAssignmentDialog({
                         </span>
                         {isSelected && (
                           <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                        )}
+                        {atCapacity && (
+                          <Badge variant="outline" className="text-xs border-destructive text-destructive">
+                            At capacity
+                          </Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground truncate">
@@ -201,13 +210,20 @@ export function StudentAssignmentDialog({
           </div>
         </ScrollArea>
 
+        {selectedAtCapacity && (
+          <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
+            <AlertCircle className="h-4 w-4" />
+            <span>Selected case manager is at full capacity. Choose another.</span>
+          </div>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
             onClick={handleAssign}
-            disabled={!selectedCaseManager || assignStudent.isPending}
+            disabled={!selectedCaseManager || selectedAtCapacity || assignStudent.isPending}
           >
             {assignStudent.isPending ? 'Assigning...' : 'Assign Student'}
           </Button>
