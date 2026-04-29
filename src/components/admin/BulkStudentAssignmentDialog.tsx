@@ -128,6 +128,15 @@ export function BulkStudentAssignmentDialog({
           </div>
 
           <p className="text-sm font-medium mb-3">Select a Case Manager:</p>
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           <ScrollArea className="h-[280px] pr-4">
             <div className="space-y-2">
               {caseManagersLoading ? (
