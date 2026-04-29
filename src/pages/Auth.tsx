@@ -544,9 +544,18 @@ export default function Auth() {
                   )}
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                {signupCooldownRemaining > 0 && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Too many signup attempts. You can try again in {signupCooldownRemaining}s.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <Button type="submit" className="w-full" disabled={isLoading || signupCooldownRemaining > 0}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Account
+                  {signupCooldownRemaining > 0 ? `Try again in ${signupCooldownRemaining}s` : 'Create Account'}
                 </Button>
               </form>
             </TabsContent>
