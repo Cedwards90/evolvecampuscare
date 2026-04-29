@@ -175,7 +175,6 @@ export default function CaseManagersPage() {
         <PageHeader
           title="Case Managers"
           description="Monitor case manager workloads and reassign students between case managers."
-          icon={UserCog}
         />
 
         {isLoading ? (
