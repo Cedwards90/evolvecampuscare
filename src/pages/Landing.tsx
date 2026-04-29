@@ -47,14 +47,15 @@ const features = [
 ];
 
 export default function Landing() {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!isLoading && user) {
       navigate('/dashboard', { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [user, isLoading, navigate]);
+
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
