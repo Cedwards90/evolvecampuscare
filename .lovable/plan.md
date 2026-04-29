@@ -1,66 +1,91 @@
-## Root cause
+# Case Managers Page with Student Assignment Management
 
-Console shows:
+A new admin-only page at `/admin/case-managers` that lists every case manager, shows their assigned students, and lets admins reassign students between case managers — fully wired to existing hooks so updates propagate everywhere instantly.
+
+## Scope guardrails
+- New code only. No edits to existing pages, hooks, RLS, or schema unless explicitly approved.
+- Reuses the existing `useStudentAssignments`, `useAssignStudent`, `useCaseManagerStats` hooks and their query invalidations, which already cover dashboards, request lists, and CM stats.
+- Sidebar gets one new link entry (Admin section). This is the only edit outside of new files — flagged for approval below.
+
+## What gets built
+
+### 1. New page: `src/pages/admin/CaseManagersPage.tsx`
+Admin-only route. Two-pane layout:
+
+```text
+┌─ Case Managers ─────────────────────────────────────────┐
+│ [Search CM…]  [Filter: All / Overloaded / Available]    │
+├──────────────┬──────────────────────────────────────────┤
+│ CM List      │ Selected CM detail panel                 │
+│ • Avatar     │ • Profile header + workload bar          │
+│ • Name       │ • Assigned students table                │
+│ • # students │   [Search students] [Status filter]      │
+│ • # active   │   Columns: Student • Status • Active     │
+│   requests   │            requests • Last activity • ⋯  │
+│ • Workload % │   Row action: "Reassign" → dialog        │
+└──────────────┴──────────────────────────────────────────┘
 ```
-permission denied for function has_role
-permission denied for function get_user_role
+
+Features:
+- **CM cards** with assignment count badge, active-request count, workload bar (uses `useCaseManagerStats`).
+- **CM search/filter** by name/email and workload bucket.
+- **Student sub-table** per selected CM with search + status filter (active / inactive / has-pending-requests).
+- **Empty states** for CMs with no assignments.
+
+### 2. New component: `src/components/admin/ReassignStudentDialog.tsx`
+Confirmation dialog triggered from a student row:
+- Shows current CM → target CM (searchable Select of other CMs with workload hint).
+- Optional notes textarea (audit context).
+- Validation: target CM required, must differ from current, has `case_manager` role.
+- "Also reassign open requests" checkbox (default on) — mirrors existing `useAssignStudent` behavior.
+- Confirm button shows loading state, disabled until valid.
+
+### 3. New hook: `src/hooks/useReassignStudent.ts`
+Thin wrapper that:
+- Calls existing `useAssignStudent` mutation (it already upserts on `student_id` and updates open requests).
+- Inserts an audit row into `request_updates` for each updated request with `note: "Student reassigned from {oldCM} to {newCM} by admin. {notes}"` and `is_internal: true`.
+- Permission check: throws if caller is not admin (defense-in-depth; RLS already enforces this).
+- Invalidates the same query keys already used: `student-assignments`, `unassigned-students`, `requests`, `case-managers`, `case-manager-stats`, plus `my-students` and `my-assignment` so student & CM dashboards refresh instantly.
+
+### 4. Routing
+Add to `src/App.tsx` (new route only, no edits to existing routes):
+```tsx
+<Route path="/admin/case-managers" element={
+  <ProtectedRoute allowedRoles={['admin']}>
+    <CaseManagersPage />
+  </ProtectedRoute>
+} />
 ```
 
-The `authenticated` Postgres role does not have `EXECUTE` on these `SECURITY DEFINER` functions. Because `has_role(...)` is referenced in nearly every RLS policy (including `profiles`), all role-gated reads silently fail. The `AuthContext` then sets `role = null` and `profile = null`, and `SidebarLayout` renders the "no role assigned" empty state — for every user, including admin.
-
-So this is not a UI bug first; it's a database grant bug. The UI hardening is still useful as a safety net.
-
-## Plan
-
-### 1. Database fix (primary — unblocks everything)
-
-Migration to grant execute on the role-helper functions to authenticated users:
-
-```sql
-GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.get_user_role(uuid) TO authenticated;
+### 5. Sidebar entry — REQUIRES APPROVAL (one-line edit)
+Add one item to `adminNavItems` in `src/components/layouts/SidebarLayout.tsx`:
+```tsx
+{ label: 'Case Managers', href: '/admin/case-managers', icon: UserCog, roles: ['admin'] }
 ```
+This is the only change to an existing file. If you'd rather I leave the sidebar alone and you'll wire navigation yourself, say so.
 
-Both functions are already `SECURITY DEFINER` with a pinned `search_path`, so granting EXECUTE is safe and does not widen data access — RLS on `user_roles` still applies via the definer's logic.
+## Realtime propagation guarantee
+Every place that displays assignments already reads from these query keys; the mutation invalidates all of them in one pass, so reassignment instantly updates:
+- Admin Case Managers page (this page)
+- `CaseManagerDetail` page (`case-manager-stats`)
+- Student dashboard "My Case Manager" card (`my-assignment`)
+- CM dashboard "My Students" (`my-students`)
+- Requests list / detail (`requests`)
+- Existing `StudentAssignmentsTable` on admin dashboard (`student-assignments`)
 
-After this, `admin@evolvefoundation.us` will receive `role = 'admin'` and the full sidebar (Admin Dashboard, User Management, Organizations, Surveys, Student Folders) will render with no further code changes.
+## Security & audit
+- Route gated by `ProtectedRoute allowedRoles={['admin']}`.
+- Existing RLS on `student_assignments` already restricts management to admins (`Admins can manage student assignments`) — no schema changes needed.
+- Audit trail via `request_updates` insert with `is_internal=true` so students don't see internal reassignment notes; CMs and admins do (per existing `request_updates` SELECT policy).
 
-### 2. Auth context hardening
+## Files
+**New:**
+- `src/pages/admin/CaseManagersPage.tsx`
+- `src/components/admin/ReassignStudentDialog.tsx`
+- `src/hooks/useReassignStudent.ts`
 
-In `src/contexts/AuthContext.tsx`:
-- Surface a `roleError` state when `get_user_role` returns an error (vs. legitimately no role) so the UI can distinguish "permission/network problem" from "user genuinely has no role yet".
-- Keep the existing `Promise.all` + `maybeSingle` + `get_user_role` RPC pattern.
-- Remove the temporary `[Auth]` console.log now that the issue is identified.
+**Edited (with your approval):**
+- `src/App.tsx` — add one route
+- `src/components/layouts/SidebarLayout.tsx` — add one nav item
 
-### 3. Sidebar fallback (safety net)
-
-In `src/components/layouts/SidebarLayout.tsx` (desktop + mobile nav blocks), when `!isLoading && !role`:
-- Always show a minimum safe nav: **Dashboard**, **Settings**, **Help Center**.
-- Show a small banner: "Your account is being set up. Contact your administrator if this persists." with a mailto link to the configured admin email.
-- If `roleError` is set, swap the message to: "We couldn't load your account permissions. Please refresh, or contact your administrator." with a Retry button that calls `refreshProfile()`.
-
-This guarantees a logged-in user is never stranded on a blank shell, regardless of future RLS regressions.
-
-### 4. ProtectedRoute consistency
-
-In `src/components/layouts/ProtectedRoute.tsx`:
-- Keep current loading spinner behavior.
-- When `user` exists but `role` is null and `allowedRoles` is set, redirect to `/dashboard` (already happens implicitly) and let the dashboard show the fallback banner from step 3 instead of bouncing the user to `/auth`.
-- No change needed for the public `/dashboard` route since it has no `allowedRoles`.
-
-### 5. Live role updates (no extra plumbing needed)
-
-`onAuthStateChange` already calls `fetchUserData` on every auth event, and `refreshProfile()` is exposed on the context. Admin user-management screens that change a role should call `refreshProfile()` for the affected current session; cross-user realtime updates are out of scope for this fix (would require a `user_roles` realtime subscription — flag as future work, not part of this plan).
-
-### Files touched
-
-- New migration: grant EXECUTE on `has_role` and `get_user_role`
-- `src/contexts/AuthContext.tsx` — add `roleError`, drop debug log
-- `src/components/layouts/SidebarLayout.tsx` — fallback nav + banner (desktop + mobile)
-- `src/components/layouts/ProtectedRoute.tsx` — minor: don't redirect away from `/dashboard` when role is null
-
-### Verification
-
-1. After migration, hard-refresh as `admin@evolvefoundation.us` → console `[Auth]` (before removal) shows `role: "admin"` and full admin sidebar appears.
-2. Temporarily revoke EXECUTE locally (or simulate by signing in as a brand-new user with no `user_roles` row) → fallback banner + Dashboard/Settings/Help links render instead of empty sidebar.
-3. Confirm Case Manager and Student logins still see only their permitted nav items.
+**Not touched:** database schema, RLS, existing hooks, existing pages.
