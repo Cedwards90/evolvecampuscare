@@ -268,7 +268,7 @@ export default function CaseManagersPage() {
                         )}
                       </div>
                       <div className="mt-3 space-y-1">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-muted-foreground">
                           <span>
                             {cm.assigned_students} students • {cm.active_requests} active
                           </span>
