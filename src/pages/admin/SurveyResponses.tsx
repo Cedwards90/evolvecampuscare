@@ -87,6 +87,7 @@ export default function SurveyResponses() {
       <Tabs defaultValue="pending">
         <TabsList>
           <TabsTrigger value="pending">Pending ({filteredPending.length})</TabsTrigger>
+          <TabsTrigger value="distributions">Distributions</TabsTrigger>
           <TabsTrigger value="checkins">Check-Ins ({filteredCheckIns.length})</TabsTrigger>
           <TabsTrigger value="plans">Post-Graduation Plans ({filteredPlans.length})</TabsTrigger>
         </TabsList>
