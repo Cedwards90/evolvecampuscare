@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,35 +11,39 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import { ProtectedRoute } from "@/components/layouts/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
+// Eager: critical first-paint routes
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Dashboard from "./pages/Dashboard";
-import Settings from "./pages/Settings";
-import SubmitRequest from "./pages/SubmitRequest";
-import TrackRequests from "./pages/TrackRequests";
-import OfflineDraft from "./pages/OfflineDraft";
-import ManageRequests from "./pages/ManageRequests";
-import AdminDashboard from "./pages/AdminDashboard";
-import UserManagementPage from "./pages/admin/UserManagementPage";
-import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
-import TrainingOrganizations from "./pages/admin/TrainingOrganizations";
-import OrganizationDetail from "./pages/admin/OrganizationDetail";
-import SurveyResponses from "./pages/admin/SurveyResponses";
-import RequestDetail from "./pages/RequestDetail";
-import RequestsList from "./pages/RequestsList";
-import CaseManagerDetail from "./pages/CaseManagerDetail";
-import StudentDetail from "./pages/StudentDetail";
-import Messages from "./pages/Messages";
-import SupportCenter from "./pages/SupportCenter";
-import CompleteProfile from "./pages/CompleteProfile";
-import IntakeSurvey from "./pages/IntakeSurvey";
-import StudentFolders from "./pages/StudentFolders";
-import StudentCheckIn from "./pages/StudentCheckIn";
-import PostGraduationPlan from "./pages/PostGraduationPlan";
 import NotFound from "./pages/NotFound";
+
+// Lazy: everything behind auth or rarely visited
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Settings = lazy(() => import("./pages/Settings"));
+const SubmitRequest = lazy(() => import("./pages/SubmitRequest"));
+const TrackRequests = lazy(() => import("./pages/TrackRequests"));
+const OfflineDraft = lazy(() => import("./pages/OfflineDraft"));
+const ManageRequests = lazy(() => import("./pages/ManageRequests"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const UserManagementPage = lazy(() => import("./pages/admin/UserManagementPage"));
+const AnalyticsDashboard = lazy(() => import("./pages/admin/AnalyticsDashboard"));
+const TrainingOrganizations = lazy(() => import("./pages/admin/TrainingOrganizations"));
+const OrganizationDetail = lazy(() => import("./pages/admin/OrganizationDetail"));
+const SurveyResponses = lazy(() => import("./pages/admin/SurveyResponses"));
+const RequestDetail = lazy(() => import("./pages/RequestDetail"));
+const RequestsList = lazy(() => import("./pages/RequestsList"));
+const CaseManagerDetail = lazy(() => import("./pages/CaseManagerDetail"));
+const StudentDetail = lazy(() => import("./pages/StudentDetail"));
+const Messages = lazy(() => import("./pages/Messages"));
+const SupportCenter = lazy(() => import("./pages/SupportCenter"));
+const CompleteProfile = lazy(() => import("./pages/CompleteProfile"));
+const IntakeSurvey = lazy(() => import("./pages/IntakeSurvey"));
+const StudentFolders = lazy(() => import("./pages/StudentFolders"));
+const StudentCheckIn = lazy(() => import("./pages/StudentCheckIn"));
+const PostGraduationPlan = lazy(() => import("./pages/PostGraduationPlan"));
 
 // Create query client outside component to ensure stable reference
 const queryClient = new QueryClient({
@@ -49,6 +54,14 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <LoadingSpinner size="lg" />
+    </div>
+  );
+}
 
 function App() {
   return (
@@ -62,6 +75,7 @@ function App() {
                 <TooltipProvider delayDuration={0}>
                   <Toaster />
                   <Sonner />
+                  <Suspense fallback={<RouteFallback />}>
                   <Routes>
                   {/* Public routes */}
                   <Route path="/" element={<Landing />} />
@@ -210,6 +224,7 @@ function App() {
                   {/* Catch-all route */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                </Suspense>
               </TooltipProvider>
             </OfflineProvider>
           </LanguageProvider>
