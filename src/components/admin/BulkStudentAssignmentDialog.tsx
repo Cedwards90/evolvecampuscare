@@ -145,7 +145,7 @@ export function BulkStudentAssignmentDialog({
                 </div>
               ) : sortedCaseManagers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No case managers available.
+                  {search ? 'No case managers match your search.' : 'No case managers available.'}
                 </div>
               ) : (
                 sortedCaseManagers.map((cm) => {
