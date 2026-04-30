@@ -305,8 +305,8 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
       {/* Main Content */}
       <div className={cn(
-        "flex-1 min-w-0 max-w-full overflow-x-hidden transition-all duration-300",
-        sidebarCollapsed ? "md:ml-[70px]" : "md:ml-[260px]"
+        "w-full min-w-0 max-w-full overflow-x-hidden transition-all duration-300",
+        sidebarCollapsed ? "md:ml-[70px] md:w-[calc(100%-70px)]" : "md:ml-[260px] md:w-[calc(100%-260px)]"
       )}>
         {/* Top Header */}
         <header className="sticky top-0 z-30 flex h-14 sm:h-16 items-center gap-1 sm:gap-3 border-b border-border/40 bg-card px-2 sm:px-4 md:px-6">
