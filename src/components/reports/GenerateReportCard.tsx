@@ -37,7 +37,7 @@ export function GenerateReportCard({ caseManagerId }: GenerateReportCardProps = 
             size="sm"
             variant="ghost"
             className="ml-auto"
-            onClick={() => navigate('/reports')}
+            onClick={() => navigate(moreOptionsHref)}
           >
             More options
             <ArrowRight className="ml-1 h-4 w-4" />
