@@ -149,6 +149,7 @@ export function useRevokeInvitation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
       toast({
         title: 'Invitation revoked',
         description: 'The invitation has been cancelled.',
