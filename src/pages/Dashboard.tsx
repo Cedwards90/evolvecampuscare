@@ -14,6 +14,7 @@ import { RequestCard } from '@/components/RequestCard';
 import { AIBadge } from '@/components/AIBadge';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
+import { GenerateReportCard } from '@/components/reports/GenerateReportCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
