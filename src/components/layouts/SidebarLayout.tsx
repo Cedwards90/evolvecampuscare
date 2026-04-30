@@ -69,6 +69,7 @@ const navItems: NavItem[] = [
   { label: 'Case Managers', href: '/admin/case-managers', icon: UserCog, roles: ['admin'] },
   { label: 'Organizations', href: '/admin/organizations', icon: Building2, roles: ['admin'] },
   { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: ['case_manager', 'admin'] },
+  { label: 'Reports', href: '/reports', icon: FileBarChart, roles: ['case_manager', 'admin'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin'] },
 ];
 
