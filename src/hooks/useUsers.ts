@@ -96,6 +96,9 @@ export function useUpdateUserRole() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['case-managers'] });
+      queryClient.invalidateQueries({ queryKey: ['student-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['unassigned-students'] });
     },
   });
 }

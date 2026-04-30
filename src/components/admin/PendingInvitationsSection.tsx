@@ -34,7 +34,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { usePendingInvitations, useRevokeInvitation, type Invitation } from '@/hooks/useInvitations';
+import { usePendingInvitations, useRevokeInvitation, useInvitationsRealtime, type Invitation } from '@/hooks/useInvitations';
 import type { AppRole } from '@/types/database';
 import { cn } from '@/lib/utils';
 
@@ -55,6 +55,10 @@ export function PendingInvitationsSection() {
   const { data: pendingInvitations, isLoading } = usePendingInvitations();
   const revokeInvitation = useRevokeInvitation();
   const [invitationToRevoke, setInvitationToRevoke] = useState<Invitation | null>(null);
+
+  // Live-refresh the pending list when the signup trigger flips accepted_at,
+  // or when another admin revokes/sends an invite.
+  useInvitationsRealtime();
 
   const copyInvitationLink = (token: string) => {
     const url = `${window.location.origin}/auth?tab=signup&invite=${token}`;
