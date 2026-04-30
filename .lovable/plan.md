@@ -1,80 +1,99 @@
-## Problem
 
-**Bug confirmed in production data.** The `handle_invited_signup` trigger only marks the *most recent* invitation per email as accepted (`ORDER BY created_at DESC LIMIT 1`). When an admin sends multiple invitations for the same email (which happens regularly — `tukesha.hill@gmail.com`, `iamkingtureall@gmail.com`, etc. all have older duplicate invites still listed as pending even though the user has already signed up), the older rows stay in `pending` forever. They will only disappear when their `expires_at` passes 7 days later.
+## Goal
+Give Case Managers (and Admins on their behalf) a one-click way to generate, preview, and export an "Interaction Report" summarizing all platform activity for their assigned caseload over Daily / Weekly / Monthly / custom date ranges.
 
-Beyond the trigger, query invalidation is mostly good but has gaps: invite-related mutations don't invalidate user/case-manager/student lists, and the new user signup never triggers a client-side refetch of `['invitations']` or `['users-with-roles']` (so admins watching the page won't see the change until they navigate or refresh).
+## UX
 
-## Scope
+### 1. Dashboard quick-action (Case Manager view only)
+On the existing Case Manager Dashboard, add a compact **"Generate Report"** card with:
+- Three pill buttons: `Daily` · `Weekly` · `Monthly`
+- A `More options →` link that navigates to `/reports`
 
-This plan changes ONLY:
-1. The `handle_invited_signup` database function (one targeted SQL fix)
-2. `src/hooks/useInvitations.ts` (centralize cross-cache invalidation)
-3. `src/components/admin/PendingInvitationsSection.tsx` (subscribe to realtime + listen to `users-with-roles` cache)
-4. `src/pages/admin/UserManagementPage.tsx` (wire realtime/refetch hooks if not already)
+Clicking a preset opens the report preview modal directly with that range pre-selected.
 
-No changes to UI layout, business logic outside invite acceptance, RLS policies, or other features.
+### 2. Dedicated `/reports` page (new)
+Sidebar entry "Reports" visible to `case_manager` and `admin`. Page contains:
+- **Range selector**: preset chips (Daily/Weekly/Monthly) + custom date range picker (shadcn Calendar in popover, `pointer-events-auto`)
+- **Admin-only**: case manager dropdown (defaults to "All my CMs" disabled / picks one CM). For Case Managers this control is hidden — they always see their own data.
+- **Generate** button → loads data and renders the live preview below
+- **Export** split-button: `Download PDF` · `Download CSV`
+- Live preview card with all sections (see below). Loading skeleton + error states.
 
-## Plan
+## Report Contents
+All metrics scoped to the selected case manager + date range:
 
-### 1. Fix the trigger (database migration)
+1. **Header** — CM name, range, generated-at timestamp, Evolve Foundation branding
+2. **Summary tiles** — Active students, requests opened, requests resolved, avg resolution hrs, unresolved count, emergency count
+3. **Student contacts** — count of `staff_messages` sent/received, distinct students contacted
+4. **Notes added** — count of `file_notes` authored, grouped by `note_type`
+5. **Surveys** — `survey_invitations` sent and completed
+6. **Requests** — opened / in-progress / resolved / escalated, broken down by category and priority
+7. **Status changes** — `request_updates` rows authored by the CM (timeline-style table)
+8. **Follow-ups (meetings)** — `appointments` scheduled / completed / upcoming
+9. **Unresolved items** — table of currently open requests older than range start, with age and priority
+10. **Footer** — page numbers, confidentiality notice
 
-Update `handle_invited_signup` to mark **all** pending, non-expired invitations for the new user's email as accepted — not just the latest. Keep all other behavior identical (org assignment, role, auto-assign case manager) but apply it from the *most recent* invitation only (current behavior for those side-effects is correct; we just need to flip every duplicate's `accepted_at`).
+## Data Layer
 
-```text
-- Find the most recent pending invitation -> use it for role/org/assignment side effects (unchanged)
-- Then UPDATE user_invitations SET accepted_at = now()
-   WHERE email = NEW.email AND accepted_at IS NULL AND expires_at > now()
-```
+### New hook: `src/hooks/useInteractionReport.ts`
+`useInteractionReport({ caseManagerId, from, to })` — single React Query call that returns a typed `InteractionReport` object with all sections above. RLS already enforces:
+- Case Managers see only their assigned data
+- Admins see everything
 
-Also: **one-time data backfill** to clear the existing stuck rows (only those whose email already exists in `public.profiles`):
+Permission guard inside the hook: if the caller is a CM and `caseManagerId` ≠ `auth.uid()`, return error (defense-in-depth on top of RLS).
 
-```text
-UPDATE user_invitations SET accepted_at = now()
- WHERE accepted_at IS NULL
-   AND email IN (SELECT email FROM profiles)
-```
+The hook fans out parallel queries (Promise.all) against existing tables: `support_requests`, `request_updates`, `file_notes`, `staff_messages`, `survey_invitations`, `appointments`, `student_assignments` — filtered by `case_manager_id`/`assigned_case_manager_id`/`author_id`/`sender_id` and date range. No new tables or migrations needed.
 
-### 2. Single source of truth for invitation lists
+### Live updates
+Subscribe to Postgres realtime on `support_requests`, `request_updates`, `file_notes`, `appointments` (already enabled for messages/requests in earlier work). On any change touching the selected CM's rows, invalidate `['interaction-report', cmId, from, to]`. Reuse the existing realtime subscription pattern (`useRealtimeMessages`, `useInvitationsRealtime`).
 
-`useInvitations.ts` already exposes `useInvitations`, `usePendingInvitations`, `useSendInvitation`, `useRevokeInvitation`. Keep those as the only path to invitation data. Two improvements:
+## Export Layer (client-side only)
 
-- After `useSendInvitation` and `useRevokeInvitation` succeed, also invalidate `['users-with-roles']` (so the user table reflects pending counts) and `['case-managers']` (since invites can target case managers/students).
-- Add a small `useInvitationsRealtime()` hook that subscribes to `postgres_changes` on `public.user_invitations` and calls `queryClient.invalidateQueries({ queryKey: ['invitations'] })` plus `['users-with-roles']` on any INSERT/UPDATE/DELETE. Mount it once inside `PendingInvitationsSection` (and reuse on `UserManagementPage` if needed). This makes the trigger-driven `accepted_at` flip propagate to the UI live.
+### CSV
+Build CSV in-browser from the `InteractionReport` object — one section per "table block" separated by blank rows, downloaded via Blob + `a[download]`. No new dependency.
 
-### 3. Audit cross-surface invalidation (no UI changes)
+### PDF
+Use **`jspdf` + `jspdf-autotable`** (small, client-side, no server cost). Generate a branded multi-page PDF mirroring the on-screen preview: header with Evolve logo (existing asset), summary tiles as a styled grid, then each section as an autoTable. Pagination + footer added automatically.
 
-Quick audit of existing mutation hooks to confirm every place that changes shared state (`user_invitations`, `student_assignments`, `user_roles`, `profiles`) invalidates the same set of canonical keys:
+Both downloads filename pattern: `evolve-report_<cm-slug>_<from>_<to>.pdf|csv`.
 
-| Canonical key | Owners (read) | Mutations that must invalidate it |
-|---|---|---|
-| `['invitations']` / `['invitations','pending']` | `PendingInvitationsSection`, `UserManagementPage` | send/revoke invitation, **trigger-driven accept (via realtime)** |
-| `['users-with-roles']` | `UserManagementPage`, `CaseManagersPage` (indirect) | send/revoke invite, role change, delete user, accept (via realtime) |
-| `['case-managers']` | `CaseManagersPage`, assignment dialogs | reassign, assign, delete user, role change |
-| `['student-assignments']` / `['unassigned-students']` | Admin assignment views | assign, reassign, delete user |
-| `['my-students']`, `['my-assignment']` | Case manager + student dashboards | assign, reassign |
+## Permissions & Security
+- Route protected via `ProtectedRoute allowedRoles={['case_manager', 'admin']}`
+- All queries go through Supabase client → RLS enforced server-side
+- Hook double-checks the caller's role via `useAuth()` and refuses to query for another CM unless `role === 'admin'`
+- No service role / no edge function needed — keeps blast radius small
 
-Findings to fix in this loop:
-- `useUpdateUserRole` invalidates only `users-with-roles` — also invalidate `case-managers` and `student-assignments` (a role change can promote/demote a case manager, which affects the case-managers page and assignment lists).
-- `useSendInvitation` / `useRevokeInvitation` — add `users-with-roles` invalidation (so the UI's "pending" indicator next to a user, if any, refreshes).
+## States
+- **Loading**: skeleton tiles + skeleton tables in preview; export buttons disabled
+- **Error**: inline alert with retry; toast on export failure
+- **Empty range**: "No activity in this period" empty state, export buttons disabled
+- **Stale-while-realtime**: subtle "Updated just now" indicator when a realtime invalidation refetches
 
-These are the only invalidation gaps. All other flows (assign, reassign, delete user) already invalidate the right keys.
+## Files to add (new only — no edits to existing files outside the listed touchpoints)
 
-### 4. Verification
+**New:**
+- `src/hooks/useInteractionReport.ts`
+- `src/lib/reportExport.ts` (CSV + PDF builders)
+- `src/components/reports/ReportRangePicker.tsx`
+- `src/components/reports/ReportPreview.tsx`
+- `src/components/reports/GenerateReportCard.tsx` (dashboard quick-action)
+- `src/pages/Reports.tsx`
 
-After the migration runs:
-- Confirm the stuck rows for `tukesha.hill@gmail.com`, `iamkingtureall@gmail.com`, `sanif9220@gmail.com`, `successmm4347@gmail.com`, etc. now have `accepted_at` set.
-- Confirm "Pending Invitations" card on `/admin/users` shows only truly-pending entries.
-- Manually re-send a duplicate invitation to an already-signed-up email; verify both rows end up accepted (no orphans), and the pending list updates without a manual refresh thanks to realtime.
+**Touched (with permission — minimal additions only):**
+- `src/App.tsx` — register `/reports` route
+- `src/components/layouts/SidebarLayout.tsx` — add "Reports" nav item for CM/Admin
+- `src/pages/Dashboard.tsx` — render `<GenerateReportCard />` inside the existing Case Manager dashboard branch
 
-## Out of scope (will ask before touching)
+**Dependency added:** `jspdf`, `jspdf-autotable`
 
-- Preventing duplicate invitations being created in the first place (would change `generate-invitation-token` edge function behavior).
-- Showing accepted/expired invitations in the UI (currently filtered out by `usePendingInvitations`).
-- Any visual changes to the Case Managers or User Management pages.
+## Out of scope (per "no other changes without permission")
+- No edits to existing hooks, tables, RLS, or other pages
+- No scheduled/emailed reports (could be a follow-up)
+- No new edge functions
 
-## Technical notes
-
-- The trigger update is idempotent and safe to re-run.
-- The backfill `UPDATE` matches by email only against `public.profiles` (which was created by `handle_new_user` for every signed-up user) — no risk of marking a never-signed-up invitation as accepted.
-- Realtime requires `ALTER PUBLICATION supabase_realtime ADD TABLE public.user_invitations` (one-line migration addition).
-- All invalidations remain client-side via `queryClient.invalidateQueries`; we are not adding any new global state stores.
+## Acceptance
+- CM clicks Daily on dashboard → preview opens with last-24h data in <2s on warm cache
+- CM exports PDF and CSV; both contain identical figures to the preview
+- Admin on `/reports` selects another CM → sees that CM's report
+- A new `request_update` written by the CM during the session triggers a live refresh of the preview and updates the export the next time it's clicked
+- CM cannot fetch another CM's data (verified by RLS + hook guard)

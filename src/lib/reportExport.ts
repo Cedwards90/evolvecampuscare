@@ -1,0 +1,316 @@
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
+import type { InteractionReport } from '@/hooks/useInteractionReport';
+
+const slug = (s: string | null | undefined) =>
+  (s || 'case-manager').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+export function reportFilename(r: InteractionReport, ext: 'pdf' | 'csv') {
+  const from = format(new Date(r.range.from), 'yyyy-MM-dd');
+  const to = format(new Date(r.range.to), 'yyyy-MM-dd');
+  return `evolve-report_${slug(r.caseManager?.full_name || r.caseManager?.email)}_${from}_${to}.${ext}`;
+}
+
+const fmt = (d: string) => format(new Date(d), 'PP p');
+const fmtDate = (d: string) => format(new Date(d), 'PP');
+
+function downloadBlob(content: BlobPart, mime: string, filename: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function csvEscape(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  const s = String(value);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function toCsvSection(title: string, headers: string[], rows: unknown[][]): string {
+  const lines: string[] = [];
+  lines.push(title);
+  lines.push(headers.map(csvEscape).join(','));
+  rows.forEach((r) => lines.push(r.map(csvEscape).join(',')));
+  lines.push('');
+  return lines.join('\n');
+}
+
+export function exportReportCsv(r: InteractionReport) {
+  const sections: string[] = [];
+  sections.push(
+    toCsvSection(
+      'Report Header',
+      ['Case Manager', 'Email', 'From', 'To', 'Generated At'],
+      [[
+        r.caseManager?.full_name || '',
+        r.caseManager?.email || '',
+        fmtDate(r.range.from),
+        fmtDate(r.range.to),
+        fmt(r.generatedAt),
+      ]],
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Summary',
+      ['Metric', 'Value'],
+      [
+        ['Active students', r.summary.activeStudents],
+        ['Requests opened', r.summary.requestsOpened],
+        ['Requests resolved', r.summary.requestsResolved],
+        ['Avg resolution (hrs)', r.summary.avgResolutionHours],
+        ['Unresolved', r.summary.unresolvedCount],
+        ['Emergency', r.summary.emergencyCount],
+      ],
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Student Contacts',
+      ['Messages sent', 'Messages received', 'Distinct students contacted'],
+      [[r.contacts.messagesSent, r.contacts.messagesReceived, r.contacts.distinctStudents]],
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Notes Added',
+      ['Note Type', 'Count'],
+      [
+        ['Total', r.notes.total],
+        ...Object.entries(r.notes.byType).map(([k, v]) => [k, v]),
+      ],
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Surveys',
+      ['Sent', 'Completed'],
+      [[r.surveys.sent, r.surveys.completed]],
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Requests Breakdown',
+      ['Bucket', 'Key', 'Count'],
+      [
+        ['Status', 'Opened', r.requests.opened],
+        ['Status', 'In progress', r.requests.inProgress],
+        ['Status', 'Resolved', r.requests.resolved],
+        ['Status', 'Escalated', r.requests.escalated],
+        ...Object.entries(r.requests.byCategory).map(([k, v]) => ['Category', k, v]),
+        ...Object.entries(r.requests.byPriority).map(([k, v]) => ['Priority', k, v]),
+      ],
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Status Changes',
+      ['Date', 'Request ID', 'From', 'To', 'Note'],
+      r.statusChanges.map((s) => [
+        fmt(s.created_at),
+        s.request_id,
+        s.previous_status || '',
+        s.new_status || '',
+        s.note || '',
+      ]),
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Follow-ups (Meetings)',
+      ['Scheduled', 'Title', 'Status', 'Duration (min)'],
+      r.followUps.rows.map((a) => [fmt(a.scheduled_at), a.title, a.status, a.duration_minutes]),
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Unresolved Items',
+      ['Created', 'Title', 'Student', 'Priority', 'Status'],
+      r.unresolved.map((req) => [
+        fmtDate(req.created_at),
+        req.title,
+        req.student?.full_name || '',
+        req.priority,
+        req.status,
+      ]),
+    ),
+  );
+
+  downloadBlob('\ufeff' + sections.join('\n'), 'text/csv;charset=utf-8', reportFilename(r, 'csv'));
+}
+
+export function exportReportPdf(r: InteractionReport) {
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // Header
+  doc.setFillColor(5, 77, 59); // Forest Green
+  doc.rect(0, 0, pageWidth, 70, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('Evolve Foundation', 40, 32);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Case Manager Interaction Report', 40, 52);
+
+  doc.setTextColor(40, 40, 40);
+  doc.setFontSize(11);
+  let y = 95;
+  doc.setFont('helvetica', 'bold');
+  doc.text(r.caseManager?.full_name || 'Unknown Case Manager', 40, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  y += 14;
+  doc.text(r.caseManager?.email || '', 40, y);
+  y += 14;
+  doc.text(
+    `Range: ${fmtDate(r.range.from)} – ${fmtDate(r.range.to)}    Generated: ${fmt(r.generatedAt)}`,
+    40,
+    y,
+  );
+  y += 10;
+
+  autoTable(doc, {
+    startY: y + 6,
+    head: [['Metric', 'Value']],
+    body: [
+      ['Active students', r.summary.activeStudents],
+      ['Requests opened', r.summary.requestsOpened],
+      ['Requests resolved', r.summary.requestsResolved],
+      ['Avg resolution (hrs)', r.summary.avgResolutionHours],
+      ['Unresolved', r.summary.unresolvedCount],
+      ['Emergency', r.summary.emergencyCount],
+    ],
+    headStyles: { fillColor: [5, 77, 59] },
+    theme: 'striped',
+    styles: { fontSize: 10 },
+  });
+
+  autoTable(doc, {
+    head: [['Student Contacts', 'Count']],
+    body: [
+      ['Messages sent', r.contacts.messagesSent],
+      ['Messages received', r.contacts.messagesReceived],
+      ['Distinct students contacted', r.contacts.distinctStudents],
+    ],
+    headStyles: { fillColor: [136, 169, 140] },
+    theme: 'striped',
+    styles: { fontSize: 10 },
+  });
+
+  autoTable(doc, {
+    head: [['Notes Added', 'Count']],
+    body: [
+      ['Total', r.notes.total],
+      ...Object.entries(r.notes.byType).map(([k, v]) => [k, v]),
+    ],
+    headStyles: { fillColor: [136, 169, 140] },
+    theme: 'striped',
+    styles: { fontSize: 10 },
+  });
+
+  autoTable(doc, {
+    head: [['Surveys', 'Count']],
+    body: [
+      ['Sent', r.surveys.sent],
+      ['Completed', r.surveys.completed],
+    ],
+    headStyles: { fillColor: [136, 169, 140] },
+    theme: 'striped',
+    styles: { fontSize: 10 },
+  });
+
+  autoTable(doc, {
+    head: [['Requests', 'Bucket', 'Count']],
+    body: [
+      ['Status', 'Opened', r.requests.opened],
+      ['Status', 'In progress', r.requests.inProgress],
+      ['Status', 'Resolved', r.requests.resolved],
+      ['Status', 'Escalated', r.requests.escalated],
+      ...Object.entries(r.requests.byCategory).map(([k, v]) => ['Category', k, v]),
+      ...Object.entries(r.requests.byPriority).map(([k, v]) => ['Priority', k, v]),
+    ],
+    headStyles: { fillColor: [5, 77, 59] },
+    theme: 'striped',
+    styles: { fontSize: 10 },
+  });
+
+  if (r.statusChanges.length) {
+    autoTable(doc, {
+      head: [['Date', 'From', 'To', 'Note']],
+      body: r.statusChanges.map((s) => [
+        fmt(s.created_at),
+        s.previous_status || '—',
+        s.new_status || '—',
+        s.note || '',
+      ]),
+      headStyles: { fillColor: [5, 77, 59] },
+      theme: 'striped',
+      styles: { fontSize: 9, cellWidth: 'wrap' },
+      columnStyles: { 3: { cellWidth: 220 } },
+      didDrawPage: () => {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+      },
+    });
+  }
+
+  if (r.followUps.rows.length) {
+    autoTable(doc, {
+      head: [['Scheduled', 'Title', 'Status', 'Duration (min)']],
+      body: r.followUps.rows.map((a) => [fmt(a.scheduled_at), a.title, a.status, a.duration_minutes]),
+      headStyles: { fillColor: [5, 77, 59] },
+      theme: 'striped',
+      styles: { fontSize: 9 },
+    });
+  }
+
+  if (r.unresolved.length) {
+    autoTable(doc, {
+      head: [['Created', 'Title', 'Student', 'Priority', 'Status']],
+      body: r.unresolved.map((req) => [
+        fmtDate(req.created_at),
+        req.title,
+        req.student?.full_name || '',
+        req.priority,
+        req.status,
+      ]),
+      headStyles: { fillColor: [180, 60, 60] },
+      theme: 'striped',
+      styles: { fontSize: 9 },
+    });
+  }
+
+  // Footer with page numbers
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+    doc.text(
+      `Confidential — Evolve Foundation • Page ${i} of ${pageCount}`,
+      pageWidth / 2,
+      doc.internal.pageSize.getHeight() - 20,
+      { align: 'center' },
+    );
+  }
+
+  doc.save(reportFilename(r, 'pdf'));
+}
