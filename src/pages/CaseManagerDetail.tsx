@@ -35,6 +35,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useCaseManagerStats } from '@/hooks/useCaseManagerStats';
+import { GenerateReportCard } from '@/components/reports/GenerateReportCard';
 import { 
   PieChart, 
   Pie, 
