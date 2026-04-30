@@ -38,6 +38,7 @@ import IntakeSurvey from "./pages/IntakeSurvey";
 import StudentFolders from "./pages/StudentFolders";
 import StudentCheckIn from "./pages/StudentCheckIn";
 import PostGraduationPlan from "./pages/PostGraduationPlan";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 // Create query client outside component to ensure stable reference
