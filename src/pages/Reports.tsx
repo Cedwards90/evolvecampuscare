@@ -44,9 +44,10 @@ export default function Reports() {
   const [to, setTo] = useState<Date>(initialRange.to);
 
   const isAdmin = role === 'admin';
+  const urlCmId = searchParams.get('caseManagerId') || undefined;
   const { data: caseManagers } = useCaseManagers();
   const [selectedCmId, setSelectedCmId] = useState<string | undefined>(
-    isAdmin ? undefined : user?.id,
+    isAdmin ? urlCmId : user?.id,
   );
 
   // Default selection for admins once list loads
