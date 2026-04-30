@@ -287,7 +287,7 @@ export default function CaseManagersPage() {
             </Card>
 
             {/* Right: detail */}
-            <Card>
+            <Card className="min-w-0 overflow-hidden">
               {!selectedCM ? (
                 <CardContent className="py-16">
                   <EmptyState
