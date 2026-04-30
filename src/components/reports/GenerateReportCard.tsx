@@ -3,11 +3,18 @@ import { FileBarChart, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-export function GenerateReportCard() {
+interface GenerateReportCardProps {
+  caseManagerId?: string;
+}
+
+export function GenerateReportCard({ caseManagerId }: GenerateReportCardProps = {}) {
   const navigate = useNavigate();
 
+  const cmParam = caseManagerId ? `&caseManagerId=${caseManagerId}` : '';
+  const moreOptionsHref = caseManagerId ? `/reports?caseManagerId=${caseManagerId}` : '/reports';
+
   const go = (preset: 'daily' | 'weekly' | 'monthly') => {
-    navigate(`/reports?preset=${preset}`);
+    navigate(`/reports?preset=${preset}${cmParam}`);
   };
 
   return (
