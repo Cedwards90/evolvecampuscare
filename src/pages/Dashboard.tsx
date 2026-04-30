@@ -485,6 +485,11 @@ export default function Dashboard() {
 
         {role === 'case_manager' && (
           <>
+            {/* Quick report generator */}
+            <section className="space-y-4">
+              <GenerateReportCard />
+            </section>
+
             {/* AI Insights */}
             <section className="space-y-4">
               <div className="flex items-center gap-2">
