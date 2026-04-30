@@ -114,6 +114,11 @@ function App() {
                       <ManageRequests />
                     </ProtectedRoute>
                   } />
+                  <Route path="/reports" element={
+                    <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                      <Reports />
+                    </ProtectedRoute>
+                  } />
                   
                   {/* Admin routes */}
             <Route path="/admin-monitoring-reassigning-requests" element={
