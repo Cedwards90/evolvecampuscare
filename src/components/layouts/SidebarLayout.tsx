@@ -305,7 +305,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
       {/* Main Content */}
       <div className={cn(
-        "flex-1 min-w-0 max-w-full overflow-x-hidden transition-all duration-300",
+        "w-full min-w-0 max-w-full overflow-x-hidden transition-all duration-300",
         sidebarCollapsed ? "md:ml-[70px] md:w-[calc(100%-70px)]" : "md:ml-[260px] md:w-[calc(100%-260px)]"
       )}>
         {/* Top Header */}
