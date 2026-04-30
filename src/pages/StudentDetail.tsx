@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/table';
 import { useStudentDetail } from '@/hooks/useStudentDetail';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
+import { GenerateStudentReportCard } from '@/components/reports/GenerateStudentReportCard';
 import { useFileNotes } from '@/hooks/useFileNotes';
 import { useStudentCheckIns } from '@/hooks/useStudentCheckIns';
 import { Textarea } from '@/components/ui/textarea';
@@ -262,6 +263,8 @@ export default function StudentDetail() {
             </div>
           </CardContent>
         </Card>
+
+        <GenerateStudentReportCard studentId={id} />
 
         {/* Tabs */}
         <Tabs defaultValue="requests" className="space-y-4">

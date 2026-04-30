@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/table';
 import { useCaseManagerStats } from '@/hooks/useCaseManagerStats';
 import { GenerateReportCard } from '@/components/reports/GenerateReportCard';
+import { GenerateStudentReportCard } from '@/components/reports/GenerateStudentReportCard';
 import { 
   PieChart, 
   Pie, 
@@ -214,8 +215,13 @@ export default function CaseManagerDetail() {
           </Card>
         </div>
 
-        {/* Generate Report */}
-        <GenerateReportCard caseManagerId={id} />
+        {/* Generate Reports */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <GenerateReportCard caseManagerId={id} />
+          <GenerateStudentReportCard
+            description="Detailed per-student summary across this case manager's caseload."
+          />
+        </div>
 
         {/* Workload and Performance */}
         <div className="grid gap-6 lg:grid-cols-2">
