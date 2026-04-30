@@ -214,6 +214,9 @@ export default function CaseManagerDetail() {
           </Card>
         </div>
 
+        {/* Generate Report */}
+        <GenerateReportCard caseManagerId={id} />
+
         {/* Workload and Performance */}
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Workload Card */}
