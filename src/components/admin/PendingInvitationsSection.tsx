@@ -34,7 +34,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { usePendingInvitations, useRevokeInvitation, type Invitation } from '@/hooks/useInvitations';
+import { usePendingInvitations, useRevokeInvitation, useInvitationsRealtime, type Invitation } from '@/hooks/useInvitations';
 import type { AppRole } from '@/types/database';
 import { cn } from '@/lib/utils';
 
