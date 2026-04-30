@@ -114,6 +114,8 @@ export function useSendInvitation() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['case-managers'] });
       if (result.emailSent) {
         toast({
           title: 'Invitation sent',
