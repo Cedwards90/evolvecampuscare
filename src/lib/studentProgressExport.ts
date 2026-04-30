@@ -1,0 +1,552 @@
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
+import type { StudentProgressReport } from '@/hooks/useStudentProgressReport';
+import type { RiskIndicator, ActionItem } from '@/lib/studentProgressRules';
+
+export interface AISummarySections {
+  progressMade: string;
+  areasNeedingImprovement: string;
+  unresolvedConcerns: string;
+  recommendedNextSteps: string;
+  evidenceUsed?: string[];
+  insufficientData?: boolean;
+}
+
+const slug = (s: string | null | undefined) =>
+  (s || 'student').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+const fmtDate = (d: string) => format(new Date(d), 'PP');
+const fmt = (d: string) => format(new Date(d), 'PP p');
+
+export function studentReportFilename(
+  r: StudentProgressReport,
+  ext: 'pdf' | 'csv',
+): string {
+  const from = format(new Date(r.range.from), 'yyyy-MM-dd');
+  const to = format(new Date(r.range.to), 'yyyy-MM-dd');
+  const name = r.student?.full_name || r.student?.email;
+  return `evolve-student-progress_${slug(name)}_${from}_${to}.${ext}`;
+}
+
+function downloadBlob(content: BlobPart, mime: string, filename: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function csvEscape(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  const s = String(value);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function toCsvSection(title: string, headers: string[], rows: unknown[][]): string {
+  const lines: string[] = [];
+  lines.push(title);
+  lines.push(headers.map(csvEscape).join(','));
+  rows.forEach((r) => lines.push(r.map(csvEscape).join(',')));
+  lines.push('');
+  return lines.join('\n');
+}
+
+function buildCsv(r: StudentProgressReport, ai?: AISummarySections | null): string {
+  const sections: string[] = [];
+
+  sections.push(
+    toCsvSection(
+      'Student Progress Report',
+      ['Student', 'Email', 'Case Manager', 'From', 'To', 'Generated At'],
+      [[
+        r.student?.full_name || '',
+        r.student?.email || '',
+        r.caseManager?.full_name || '',
+        fmtDate(r.range.from),
+        fmtDate(r.range.to),
+        fmt(r.generatedAt),
+      ]],
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Activity Summary',
+      ['Metric', 'Value'],
+      [
+        ['Requests opened', r.summary.requestsOpened],
+        ['Requests resolved', r.summary.requestsResolved],
+        ['Unresolved (total)', r.summary.requestsUnresolved],
+        ['Open emergencies', r.summary.emergencyOpenCount],
+        ['Notes added', r.summary.notesAdded],
+        ['Messages sent (by student)', r.summary.messagesSent],
+        ['Messages received (to student)', r.summary.messagesReceived],
+        ['Appointments completed', r.summary.appointmentsCompleted],
+        ['Appointments upcoming', r.summary.appointmentsUpcoming],
+        ['Surveys sent in range', r.summary.surveysSentInRange],
+        ['Surveys completed in range', r.summary.surveysCompletedInRange],
+        ['Check-ins in range', r.summary.checkInsInRange],
+        ['Last contact', r.summary.lastContactAt ? fmt(r.summary.lastContactAt) : 'No contact in range'],
+      ],
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Risk Indicators',
+      ['Severity', 'Indicator', 'Detail'],
+      r.risks.length
+        ? r.risks.map((x) => [x.severity, x.label, x.detail])
+        : [['—', 'No risks detected', 'Based on current data.']],
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Action Items',
+      ['Severity', 'Action'],
+      r.actionItems.map((a) => [a.severity, a.text]),
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Unresolved Requests',
+      ['Created', 'Title', 'Priority', 'Status', 'Emergency', 'Age (days)', 'Last Update'],
+      r.unresolvedRequests.map((req) => [
+        fmtDate(req.created_at),
+        req.title,
+        req.priority,
+        req.status,
+        req.is_emergency ? 'yes' : 'no',
+        req.ageDays,
+        req.lastUpdateAt ? fmt(req.lastUpdateAt) : '—',
+      ]),
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Status Changes',
+      ['Date', 'Request', 'From', 'To', 'Note'],
+      r.detail.statusChanges.map((s) => [
+        fmt(s.created_at),
+        s.request?.title || s.request_id,
+        s.previous_status || '',
+        s.new_status || '',
+        s.note || '',
+      ]),
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Case Notes',
+      ['Date', 'Type', 'Content'],
+      r.detail.notes.map((n) => [fmt(n.created_at), n.note_type, n.content]),
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Check-ins',
+      ['Date', 'Mood (1-5)', 'Progress (1-5)', 'Wins', 'Blockers'],
+      r.detail.checkIns.map((c) => [
+        fmt(c.created_at),
+        c.mood_rating,
+        c.progress_rating,
+        c.wins || '',
+        c.blockers || '',
+      ]),
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Surveys',
+      ['Sent', 'Type', 'Completed'],
+      r.detail.surveysInRange.map((s) => [
+        fmtDate(s.created_at),
+        s.survey_type,
+        s.completed_at ? fmtDate(s.completed_at) : 'Not completed',
+      ]),
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Appointments',
+      ['Scheduled', 'Title', 'Status', 'Duration (min)'],
+      r.detail.appointments.map((a) => [
+        fmt(a.scheduled_at),
+        a.title,
+        a.status,
+        a.duration_minutes,
+      ]),
+    ),
+  );
+
+  if (ai) {
+    sections.push(
+      toCsvSection(
+        'AI Narrative Summary',
+        ['Section', 'Content'],
+        [
+          ['Insufficient data', ai.insufficientData ? 'yes' : 'no'],
+          ['Progress made', ai.progressMade],
+          ['Areas needing improvement', ai.areasNeedingImprovement],
+          ['Unresolved concerns', ai.unresolvedConcerns],
+          ['Recommended next steps', ai.recommendedNextSteps],
+        ],
+      ),
+    );
+  }
+
+  return '\ufeff' + sections.join('\n');
+}
+
+export function exportStudentProgressCsv(
+  r: StudentProgressReport,
+  ai?: AISummarySections | null,
+) {
+  downloadBlob(buildCsv(r, ai), 'text/csv;charset=utf-8', studentReportFilename(r, 'csv'));
+}
+
+const FOREST: [number, number, number] = [5, 77, 59];
+const SAGE: [number, number, number] = [136, 169, 140];
+const RED: [number, number, number] = [180, 60, 60];
+const AMBER: [number, number, number] = [180, 130, 40];
+
+function severityColor(sev: 'high' | 'medium' | 'low'): [number, number, number] {
+  if (sev === 'high') return RED;
+  if (sev === 'medium') return AMBER;
+  return SAGE;
+}
+
+function drawHeader(doc: jsPDF, title: string, subtitle: string) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.setFillColor(...FOREST);
+  doc.rect(0, 0, pageWidth, 70, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('Evolve Foundation', 40, 32);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text(title, 40, 52);
+  doc.setTextColor(40, 40, 40);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  if (subtitle) {
+    doc.text(subtitle, 40, 88);
+  }
+}
+
+function drawFooter(doc: jsPDF) {
+  const pageCount = doc.getNumberOfPages();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+    doc.text(
+      `Confidential — Evolve Foundation • Page ${i} of ${pageCount}`,
+      pageWidth / 2,
+      pageHeight - 20,
+      { align: 'center' },
+    );
+  }
+}
+
+function getY(doc: jsPDF): number {
+  // jsPDF-autotable stores last Y on the doc
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const last = (doc as any).lastAutoTable?.finalY;
+  return typeof last === 'number' ? last : 100;
+}
+
+function appendStudentSections(
+  doc: jsPDF,
+  r: StudentProgressReport,
+  ai: AISummarySections | null | undefined,
+  startY: number,
+) {
+  const studentName = r.student?.full_name || r.student?.email || 'Unknown student';
+  const cmName = r.caseManager?.full_name || r.caseManager?.email || 'Unassigned';
+
+  // Student header
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(...FOREST);
+  doc.text(studentName, 40, startY);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(60, 60, 60);
+  doc.text(
+    `Case manager: ${cmName}    Range: ${fmtDate(r.range.from)} – ${fmtDate(r.range.to)}`,
+    40,
+    startY + 14,
+  );
+
+  autoTable(doc, {
+    startY: startY + 24,
+    head: [['Activity', 'Value']],
+    body: [
+      ['Requests opened', String(r.summary.requestsOpened)],
+      ['Requests resolved', String(r.summary.requestsResolved)],
+      ['Unresolved (total)', String(r.summary.requestsUnresolved)],
+      ['Open emergencies', String(r.summary.emergencyOpenCount)],
+      ['Notes added', String(r.summary.notesAdded)],
+      ['Messages (sent / received)', `${r.summary.messagesSent} / ${r.summary.messagesReceived}`],
+      ['Appointments (done / upcoming)', `${r.summary.appointmentsCompleted} / ${r.summary.appointmentsUpcoming}`],
+      ['Check-ins in range', String(r.summary.checkInsInRange)],
+      ['Surveys (sent / completed)', `${r.summary.surveysSentInRange} / ${r.summary.surveysCompletedInRange}`],
+      ['Last contact', r.summary.lastContactAt ? fmt(r.summary.lastContactAt) : 'No contact in range'],
+    ],
+    headStyles: { fillColor: FOREST },
+    theme: 'striped',
+    styles: { fontSize: 9 },
+  });
+
+  // Risk indicators
+  autoTable(doc, {
+    head: [['Severity', 'Risk Indicator', 'Detail']],
+    body: r.risks.length
+      ? r.risks.map((x: RiskIndicator) => [x.severity.toUpperCase(), x.label, x.detail])
+      : [['—', 'No risk indicators detected', 'Based on current data in the selected range.']],
+    headStyles: { fillColor: RED },
+    theme: 'striped',
+    styles: { fontSize: 9 },
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.column.index === 0) {
+        const sev = (data.cell.raw as string)?.toLowerCase() as 'high' | 'medium' | 'low';
+        if (sev === 'high' || sev === 'medium' || sev === 'low') {
+          data.cell.styles.textColor = severityColor(sev);
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    },
+  });
+
+  // Action items
+  autoTable(doc, {
+    head: [['Severity', 'Recommended Action']],
+    body: r.actionItems.map((a: ActionItem) => [a.severity.toUpperCase(), a.text]),
+    headStyles: { fillColor: FOREST },
+    theme: 'striped',
+    styles: { fontSize: 9 },
+  });
+
+  // Unresolved requests
+  if (r.unresolvedRequests.length) {
+    autoTable(doc, {
+      head: [['Created', 'Title', 'Priority', 'Status', 'Age (d)', 'Last update']],
+      body: r.unresolvedRequests.map((req) => [
+        fmtDate(req.created_at),
+        req.title + (req.is_emergency ? '  ⚠' : ''),
+        req.priority,
+        req.status,
+        String(req.ageDays),
+        req.lastUpdateAt ? fmtDate(req.lastUpdateAt) : '—',
+      ]),
+      headStyles: { fillColor: FOREST },
+      theme: 'striped',
+      styles: { fontSize: 9 },
+    });
+  }
+
+  // Status changes
+  if (r.detail.statusChanges.length) {
+    autoTable(doc, {
+      head: [['Date', 'Request', 'From', 'To', 'Note']],
+      body: r.detail.statusChanges.map((s) => [
+        fmt(s.created_at),
+        s.request?.title || s.request_id,
+        s.previous_status || '—',
+        s.new_status || '—',
+        s.note || '',
+      ]),
+      headStyles: { fillColor: FOREST },
+      theme: 'striped',
+      styles: { fontSize: 9 },
+      columnStyles: { 4: { cellWidth: 180 } },
+    });
+  }
+
+  // Case notes
+  if (r.detail.notes.length) {
+    autoTable(doc, {
+      head: [['Date', 'Type', 'Content']],
+      body: r.detail.notes.map((n) => [fmt(n.created_at), n.note_type, n.content]),
+      headStyles: { fillColor: SAGE },
+      theme: 'striped',
+      styles: { fontSize: 9 },
+      columnStyles: { 2: { cellWidth: 320 } },
+    });
+  }
+
+  // Check-ins
+  if (r.detail.checkIns.length) {
+    autoTable(doc, {
+      head: [['Date', 'Mood', 'Progress', 'Wins', 'Blockers']],
+      body: r.detail.checkIns.map((c) => [
+        fmt(c.created_at),
+        `${c.mood_rating}/5`,
+        `${c.progress_rating}/5`,
+        c.wins || '',
+        c.blockers || '',
+      ]),
+      headStyles: { fillColor: SAGE },
+      theme: 'striped',
+      styles: { fontSize: 9 },
+    });
+  }
+
+  // Appointments
+  if (r.detail.appointments.length) {
+    autoTable(doc, {
+      head: [['Scheduled', 'Title', 'Status']],
+      body: r.detail.appointments.map((a) => [fmt(a.scheduled_at), a.title, a.status]),
+      headStyles: { fillColor: SAGE },
+      theme: 'striped',
+      styles: { fontSize: 9 },
+    });
+  }
+
+  // Surveys
+  if (r.detail.surveysInRange.length) {
+    autoTable(doc, {
+      head: [['Sent', 'Type', 'Completed']],
+      body: r.detail.surveysInRange.map((s) => [
+        fmtDate(s.created_at),
+        s.survey_type,
+        s.completed_at ? fmtDate(s.completed_at) : 'Not completed',
+      ]),
+      headStyles: { fillColor: SAGE },
+      theme: 'striped',
+      styles: { fontSize: 9 },
+    });
+  }
+
+  // AI narrative
+  if (ai) {
+    const y = getY(doc) + 16;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...FOREST);
+    doc.text('AI Narrative Summary', 40, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(
+      ai.insufficientData
+        ? 'Insufficient activity for an AI narrative. Showing deterministic data only.'
+        : 'AI summary grounded in the activity above. Treat as a draft to review.',
+      40,
+      y + 12,
+    );
+
+    autoTable(doc, {
+      startY: y + 22,
+      head: [['Section', 'Summary']],
+      body: [
+        ['Progress made', ai.progressMade || '—'],
+        ['Areas needing improvement', ai.areasNeedingImprovement || '—'],
+        ['Unresolved concerns', ai.unresolvedConcerns || '—'],
+        ['Recommended next steps', ai.recommendedNextSteps || '—'],
+      ],
+      headStyles: { fillColor: FOREST },
+      theme: 'striped',
+      styles: { fontSize: 9 },
+      columnStyles: { 1: { cellWidth: 380 } },
+    });
+  }
+}
+
+export function exportStudentProgressPdf(
+  r: StudentProgressReport,
+  ai?: AISummarySections | null,
+) {
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  drawHeader(
+    doc,
+    'Student Progress Report',
+    `${r.student?.full_name || r.student?.email || ''}  •  ${fmtDate(r.range.from)} – ${fmtDate(r.range.to)}  •  Generated ${fmt(r.generatedAt)}`,
+  );
+  appendStudentSections(doc, r, ai, 110);
+  drawFooter(doc);
+  doc.save(studentReportFilename(r, 'pdf'));
+}
+
+export interface BulkReportEntry {
+  report: StudentProgressReport;
+  ai?: AISummarySections | null;
+}
+
+export function exportBulkStudentProgressPdf(
+  entries: BulkReportEntry[],
+  rangeLabel: string,
+) {
+  if (!entries.length) throw new Error('No reports to export');
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  drawHeader(doc, 'Caseload Student Progress Reports', rangeLabel);
+
+  // Cover with TOC
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...FOREST);
+  doc.text(`Students included: ${entries.length}`, 40, 110);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
+  let y = 128;
+  entries.forEach((e, i) => {
+    const name = e.report.student?.full_name || e.report.student?.email || 'Unknown';
+    const risks = e.report.risks.length;
+    doc.text(`${i + 1}. ${name}  —  ${risks} risk indicator${risks === 1 ? '' : 's'}`, 40, y);
+    y += 14;
+    if (y > 720) {
+      doc.addPage();
+      y = 60;
+    }
+  });
+
+  entries.forEach((e) => {
+    doc.addPage();
+    drawHeader(
+      doc,
+      'Student Progress Report',
+      `${e.report.student?.full_name || e.report.student?.email || ''}  •  ${fmtDate(e.report.range.from)} – ${fmtDate(e.report.range.to)}`,
+    );
+    appendStudentSections(doc, e.report, e.ai, 110);
+  });
+
+  drawFooter(doc);
+  const from = format(new Date(entries[0].report.range.from), 'yyyy-MM-dd');
+  const to = format(new Date(entries[0].report.range.to), 'yyyy-MM-dd');
+  doc.save(`evolve-caseload-progress_${from}_${to}.pdf`);
+}
+
+export function exportBulkStudentProgressCsv(
+  entries: BulkReportEntry[],
+) {
+  if (!entries.length) throw new Error('No reports to export');
+  const parts = entries.map((e) => {
+    const name = e.report.student?.full_name || e.report.student?.email || 'Unknown';
+    return `### ${name}\n` + buildCsv(e.report, e.ai).replace(/^\ufeff/, '');
+  });
+  const from = format(new Date(entries[0].report.range.from), 'yyyy-MM-dd');
+  const to = format(new Date(entries[0].report.range.to), 'yyyy-MM-dd');
+  downloadBlob(
+    '\ufeff' + parts.join('\n\n'),
+    'text/csv;charset=utf-8',
+    `evolve-caseload-progress_${from}_${to}.csv`,
+  );
+}
