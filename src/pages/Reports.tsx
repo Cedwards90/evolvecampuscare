@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Download, FileText, Loader2 } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Download, FileText, Loader2, Users, ClipboardList, ArrowRight } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -90,67 +91,85 @@ export default function Reports() {
     <SidebarLayout>
       <div className="space-y-6">
         <PageHeader
-          title="Interaction Reports"
-          description="Summaries of caseload activity. Live data, downloadable as PDF or CSV."
+          title="Reports"
+          description="Caseload summaries and per-student progress reports. Live data, downloadable as PDF or CSV."
         />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Report options</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isAdmin && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Case manager:</span>
-                <Select value={selectedCmId} onValueChange={setSelectedCmId}>
-                  <SelectTrigger className="w-[280px]">
-                    <SelectValue placeholder="Select a case manager" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(caseManagers || []).map((cm) => (
-                      <SelectItem key={cm.user_id} value={cm.user_id}>
-                        {cm.full_name || cm.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+        <Tabs defaultValue="caseload" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="caseload" className="gap-2">
+              <Users className="h-4 w-4" />
+              Caseload
+            </TabsTrigger>
+            <TabsTrigger value="per-student" className="gap-2" asChild>
+              <Link to="/reports/student">
+                <ClipboardList className="h-4 w-4" />
+                Per student
+                <ArrowRight className="h-3 w-3 opacity-60" />
+              </Link>
+            </TabsTrigger>
+          </TabsList>
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <ReportRangePicker
-                preset={preset}
-                from={from}
-                to={to}
-                onChange={({ preset: p, from: f, to: t }) => {
-                  setPreset(p);
-                  setFrom(f);
-                  setTo(t);
-                }}
-              />
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => refetch()} disabled={!selectedCmId}>
-                  {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh'}
-                </Button>
-                <Button variant="outline" onClick={handleExportCsv} disabled={exportsDisabled}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </Button>
-                <Button onClick={handleExportPdf} disabled={exportsDisabled}>
-                  <Download className="mr-2 h-4 w-4" />
-                  PDF
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <TabsContent value="caseload" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Report options</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isAdmin && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Case manager:</span>
+                    <Select value={selectedCmId} onValueChange={setSelectedCmId}>
+                      <SelectTrigger className="w-[280px]">
+                        <SelectValue placeholder="Select a case manager" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(caseManagers || []).map((cm) => (
+                          <SelectItem key={cm.user_id} value={cm.user_id}>
+                            {cm.full_name || cm.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-        <ReportPreview
-          data={data}
-          isLoading={isLoading && !!selectedCmId}
-          isFetching={isFetching}
-          error={error}
-        />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <ReportRangePicker
+                    preset={preset}
+                    from={from}
+                    to={to}
+                    onChange={({ preset: p, from: f, to: t }) => {
+                      setPreset(p);
+                      setFrom(f);
+                      setTo(t);
+                    }}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => refetch()} disabled={!selectedCmId}>
+                      {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh'}
+                    </Button>
+                    <Button variant="outline" onClick={handleExportCsv} disabled={exportsDisabled}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      CSV
+                    </Button>
+                    <Button onClick={handleExportPdf} disabled={exportsDisabled}>
+                      <Download className="mr-2 h-4 w-4" />
+                      PDF
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <ReportPreview
+              data={data}
+              isLoading={isLoading && !!selectedCmId}
+              isFetching={isFetching}
+              error={error}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </SidebarLayout>
   );
