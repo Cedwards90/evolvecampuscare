@@ -31,6 +31,8 @@ import OrganizationDetail from "./pages/admin/OrganizationDetail";
 import SurveyResponses from "./pages/admin/SurveyResponses";
 import QRCodesPage from "./pages/admin/QRCodesPage";
 import QRLanding from "./pages/QRLanding";
+import QRStandaloneRequest from "./pages/QRStandaloneRequest";
+import QRRequestSuccess from "./pages/QRRequestSuccess";
 import PublicSharedRequest from "./pages/PublicSharedRequest";
 import RequestDetail from "./pages/RequestDetail";
 import RequestsList from "./pages/RequestsList";
