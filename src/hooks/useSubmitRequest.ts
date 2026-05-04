@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getQRSession, logQREvent, clearQRSession } from '@/hooks/useQRSession';
 import type { RequestCategory, RequestPriority } from '@/types/database';
 
 interface SubmitRequestParams {
