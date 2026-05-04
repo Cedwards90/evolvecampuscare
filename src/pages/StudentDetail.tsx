@@ -288,6 +288,10 @@ export default function StudentDetail() {
               <StickyNote className="h-4 w-4" />
               Student File
             </TabsTrigger>
+            <TabsTrigger value="case-notes" className="gap-2">
+              <NotebookPen className="h-4 w-4" />
+              Case Notes
+            </TabsTrigger>
             <TabsTrigger value="checkins" className="gap-2">
               <Smile className="h-4 w-4" />
               Check-Ins
