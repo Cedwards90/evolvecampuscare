@@ -2,7 +2,13 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
-import { useAllCheckIns, useAllPostGradPlans } from '@/hooks/useSurveyResponses';
+import {
+  useAllCheckIns,
+  useAllPostGradPlans,
+  usePendingCheckIns,
+  usePendingPostGradPlans,
+  type PendingStudent,
+} from '@/hooks/useSurveyResponses';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,8 +20,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Search, ChevronDown, ChevronRight, Eye, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { SurveyPreviewDialog } from '@/components/admin/SurveyPreviewDialog';
+import { SendSurveyDialog } from '@/components/admin/SendSurveyDialog';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 function MoodBadge({ rating }: { rating: number }) {
   const colors = rating >= 4 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
