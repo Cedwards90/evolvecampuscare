@@ -876,6 +876,24 @@ export type Database = {
         }
         Relationships: []
       }
+      user_filter_preferences: {
+        Row: {
+          filters: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          filters?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          filters?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_invitations: {
         Row: {
           accepted_at: string | null
