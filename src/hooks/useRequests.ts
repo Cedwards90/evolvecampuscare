@@ -61,7 +61,7 @@ export function useRequests(filters: RequestFilters = {}) {
 
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, cohort_start_date, year_of_study, organization_id')
         .in('user_id', allUserIds);
 
       const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
