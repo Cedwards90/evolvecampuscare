@@ -221,6 +221,7 @@ export default function QRCodesPage() {
   const [orgId, setOrgId] = useState<string>('');
   const [creating, setCreating] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const { data: orgs } = useQuery({
     queryKey: ['training-orgs-active'],
