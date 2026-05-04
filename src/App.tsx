@@ -65,12 +65,18 @@ const queryClient = new QueryClient({
   },
 });
 
+function RealtimeBridge() {
+  useRealtimeRequests();
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <BrowserRouter>
           <AuthProvider>
+            <RealtimeBridge />
             <LanguageProvider>
               <OfflineProvider>
                 <GlobalFiltersProvider>
