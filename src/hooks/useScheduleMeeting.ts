@@ -19,6 +19,7 @@ export function useScheduleMeeting() {
 
   return useMutation({
     mutationFn: async (params: ScheduleMeetingParams) => {
+      const { sessionId: qrSessionId } = getQRSession();
       // Create appointment in database
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointments')
@@ -31,11 +32,16 @@ export function useScheduleMeeting() {
           duration_minutes: params.durationMinutes,
           request_id: params.requestId || null,
           status: 'scheduled',
+          qr_session_id: qrSessionId || null,
         })
         .select()
         .single();
 
       if (appointmentError) throw appointmentError;
+
+      if (qrSessionId) {
+        logQREvent({ eventType: 'action_completed', actionKind: 'meeting', targetId: appointment.id }).finally(() => clearQRSession());
+      }
 
       // Call edge function to create calendar event and send notifications
       const { data: calendarResult, error: calendarError } = await supabase.functions.invoke('create-calendar-event', {
