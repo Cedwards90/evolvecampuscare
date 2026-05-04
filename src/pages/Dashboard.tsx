@@ -163,6 +163,7 @@ export default function Dashboard() {
   return (
     <SidebarLayout>
       <div className="space-y-6">
+        {role !== 'student' && <GlobalFilterBar />}
         {/* Check-In Banner */}
          {showCheckInBanner && (
           <Card className="border-accent/50 bg-accent/10">
