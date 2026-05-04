@@ -122,6 +122,8 @@ export default function ManageRequests() {
           description="Review and respond to student support requests assigned to you"
         />
 
+        <GlobalFilterBar visible={['cohort', 'yearOfStudy', 'organizationId', 'status', 'assignedCaseManagerId']} />
+
         {/* My Students Section */}
         <MyStudentsSection 
           students={myStudents || []} 
