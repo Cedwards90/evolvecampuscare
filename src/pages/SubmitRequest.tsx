@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -30,6 +30,7 @@ import { CategoryBadge } from '@/components/CategoryBadge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubmitRequest } from '@/hooks/useSubmitRequest';
+import { logQREvent, getQRSession } from '@/hooks/useQRSession';
 import { cn } from '@/lib/utils';
 import { ContextualFaqTips } from '@/components/requests/ContextualFaqTips';
 import type { RequestCategory, RequestPriority } from '@/types/database';
@@ -66,6 +67,12 @@ export default function SubmitRequest() {
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const submitRequest = useSubmitRequest();
+
+  useEffect(() => {
+    if (getQRSession().sessionId) {
+      logQREvent({ eventType: 'action_started', actionKind: 'request' });
+    }
+  }, []);
 
   const form = useForm<RequestFormData>({
     resolver: zodResolver(requestSchema),

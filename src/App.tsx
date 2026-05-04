@@ -28,6 +28,8 @@ import CaseManagersPage from "./pages/admin/CaseManagersPage";
 import TrainingOrganizations from "./pages/admin/TrainingOrganizations";
 import OrganizationDetail from "./pages/admin/OrganizationDetail";
 import SurveyResponses from "./pages/admin/SurveyResponses";
+import QRCodesPage from "./pages/admin/QRCodesPage";
+import QRLanding from "./pages/QRLanding";
 import RequestDetail from "./pages/RequestDetail";
 import RequestsList from "./pages/RequestsList";
 import CaseManagerDetail from "./pages/CaseManagerDetail";
@@ -71,6 +73,7 @@ function App() {
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/qr/:code" element={<QRLanding />} />
                   
                   {/* Protected routes - All authenticated users */}
                   <Route path="/dashboard" element={
@@ -169,8 +172,11 @@ function App() {
                 <SurveyResponses />
               </ProtectedRoute>
             } />
-                  
-                  {/* Messages - All authenticated users */}
+            <Route path="/admin/qr-codes" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                <QRCodesPage />
+              </ProtectedRoute>
+            } />
                   <Route path="/messages" element={
                     <ProtectedRoute>
                       <Messages />

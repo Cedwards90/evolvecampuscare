@@ -75,7 +75,8 @@ export default function Auth() {
       }
       
       // If we get here, user is fully authenticated
-      navigate('/dashboard', { replace: true });
+      const redirect = searchParams.get('redirect');
+      navigate(redirect || '/dashboard', { replace: true });
     }
   }, [user, role, isEnrolled, isLoading, showMFAVerification, showMFAEnrollment, navigate]);
 
@@ -177,7 +178,7 @@ export default function Auth() {
           title: 'Account created!',
           description: 'Welcome! You can now access your dashboard.',
         });
-        navigate('/dashboard', { replace: true });
+        navigate(searchParams.get('redirect') || '/dashboard', { replace: true });
       }
     } catch (err) {
       toast({

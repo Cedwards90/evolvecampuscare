@@ -1,87 +1,62 @@
+# QR Code Access for Student Actions
 
-# Add Organizational Admin Role
+## Goal
+Let organizations print a QR poster that students scan to quickly submit a request or schedule a meeting on mobile, with secure login and full funnel analytics.
 
-A new staff-tier role (`org_admin`) that gets admin-like powers, but only over data tied to the organizations they govern. Full Admins remain unchanged and continue to see everything.
+## User Flow
+1. Admin generates an org QR (or student opens their personal QR shortcut in Settings) → downloads PNG/PDF.
+2. Student scans poster → lands on `/qr/:code` (mobile-optimized action page with two big buttons: **Submit a Request** / **Schedule a Meeting**).
+3. If not logged in → redirect to `/auth?redirect=/qr/:code` with "Remember this device for 30 days" checkbox. After login, returns to action page.
+4. Student picks an action → routed to existing `/submit-request` or meeting scheduler, with a hidden `qr_session_id` carried through so the resulting request/meeting is tagged.
+5. Submissions/meetings appear in dashboards as today, plus a QR origin badge.
 
-## What an Org Admin can do
-- View students, requests, surveys, check-ins, and case files **belonging to their organization(s) only**
-- View workload / growth / resolution-time analytics scoped to their org(s)
-- Invite Students and Case Managers — invitation is locked to one of their org(s)
-- Assign / reassign Case Managers (only those in the same org) to students in that org
-- Send messages to staff and students in their org(s)
-- Required to enroll TOTP MFA (AAL2), same as Admin/Case Manager
+## Data Model (new migration)
 
-## What an Org Admin cannot do
-- See or touch any data outside their assigned organization(s)
-- Edit site_settings, notification toggles, training organizations CRUD
-- Delete users (Danger Zone)
-- Change user roles or grant admin/org_admin to others
-- Invite full Admins
-- Bypass any of the above through the UI (routes hidden) or the API (RLS enforced)
+**`qr_codes`** — one row per generated code
+- `code` (text, unique short slug for URL), `organization_id` (nullable for global), `label`, `created_by`, `is_active`, `created_at`
 
-## Data model
+**`qr_scan_events`** — full funnel
+- `qr_code_id`, `session_id` (uuid generated client-side, persisted in localStorage for the scan), `user_id` (nullable until login), `event_type` enum: `scan` | `auth_required` | `auth_completed` | `action_selected` | `action_started` | `action_completed`, `action_kind` (`request` | `meeting`, nullable), `target_id` (uuid of created request/appointment, nullable), `user_agent`, `created_at`
 
-New enum value + dedicated mapping table (multi-org):
+**Tagging** — add `qr_session_id uuid` nullable to `support_requests` and `appointments` so we can join back to the funnel without changing existing flows.
 
-```text
-app_role: 'admin' | 'case_manager' | 'student' | 'org_admin'  ← NEW
+**RLS:**
+- `qr_codes`: Admins manage all; Org admins manage own org's codes; authenticated users can SELECT active codes (needed for landing page lookup).
+- `qr_scan_events`: anyone authenticated can INSERT their own session events; Admins/Org admins SELECT scoped to their org's qr_codes; users can SELECT their own events.
 
-org_admins
-  id              uuid pk
-  user_id         uuid  -- the org admin
-  organization_id uuid  -- training_organizations.id
-  created_at, created_by
-  UNIQUE(user_id, organization_id)
-```
+## Frontend
 
-Helper functions (SECURITY DEFINER, avoid RLS recursion):
-- `is_org_admin(_user_id)` → boolean
-- `is_org_admin_of(_user_id, _org_id)` → boolean
-- `org_admin_orgs(_user_id)` → setof uuid (used inside RLS `IN (...)` subqueries)
+**New files only** (no edits to existing pages beyond two narrowly-scoped additions):
+- `src/pages/QRLanding.tsx` — route `/qr/:code`. Mobile-first, large pill buttons, Evolve branding. Logs `scan` then `action_selected` events. Stores `qr_session_id` in sessionStorage.
+- `src/pages/admin/QRCodesPage.tsx` — list/create/deactivate codes, preview, download PNG and printable PDF poster, view per-code analytics (scans, conversion to submission/meeting, top times).
+- `src/components/qr/QRPosterPreview.tsx` — printable poster with logo + instructions + QR.
+- `src/components/qr/StudentQRShortcut.tsx` — small card shown in `Settings.tsx` letting a student view/save the org QR for their own phone.
+- `src/hooks/useQRSession.ts` — reads/writes `qr_session_id` from sessionStorage and exposes a `logEvent` helper.
+- `src/lib/qr.ts` — generate QR via `qrcode` library (already a tiny dep to add).
 
-## RLS changes (org-scoped reads/writes)
+**Minimal additions to existing files** (only what's strictly required to wire it up):
+- `src/App.tsx` — add `/qr/:code` and `/admin/qr-codes` routes.
+- `src/pages/Auth.tsx` — honor `?redirect=` param and "Remember this device" checkbox (sets longer session via `supabase.auth.setSession` persistence flag in localStorage).
+- `src/pages/SubmitRequest.tsx` and the meeting scheduler — read `qr_session_id` from sessionStorage on mount, include it on insert, then log `action_completed` with `target_id`. (One-line additions, no logic changes.)
+- `src/pages/Settings.tsx` — render `<StudentQRShortcut />` if student role.
+- Admin sidebar — add link to QR Codes page (org admins see only their org's codes).
 
-Add an `OR` clause to the existing case-manager/admin policies on these tables, gated by `is_org_admin_of(auth.uid(), <row's org>)`:
+## Tracking & Sync
+- Realtime: existing dashboards already query `support_requests` / `appointments` — no changes needed; new rows simply carry `qr_session_id`.
+- Admin QR analytics page shows: total scans, unique sessions, % auth completed, % action started, % action completed, breakdown by request vs meeting.
 
-- `profiles` — view profiles where `profiles.organization_id` is in their orgs
-- `support_requests` — view + update (status, assignment) where the student's org is in their orgs
-- `student_assignments` — view + insert + update where student's org matches; case_manager assigned must also be in that org
-- `student_files`, `file_notes`, `intake_responses`, `post_graduation_plans`, `student_checkins`, `survey_invitations`, `appointments`, `request_updates`, `request_attachments`, `staff_messages` — view via the student's org membership
-- `organization_memberships` — view rows for their org(s)
-- `user_invitations` — insert only when `organization_id` ∈ their orgs and `invited_role` ∈ ('student','case_manager'); view their own invites
-- `user_roles` — read-only for users in their org(s); **no insert/update/delete**
-- Explicitly **not extended**: `site_settings`, `training_organizations` (write), `bulk_invite_jobs` admin tools, user-deletion edge function
+## Security
+- Rate-limit scan event inserts via simple per-session debounce (client) + DB unique on `(session_id, event_type, action_kind)` where applicable to prevent log spam.
+- QR code slug is non-guessable but not secret (it's printed on a poster); auth is still required for any action.
+- "Remember this device" uses Supabase's built-in session persistence — no custom token storage.
+- No new secrets needed.
 
-## Frontend changes
+## Out of Scope
+- Per-student personal QR codes (decided: org-wide only).
+- Magic-link auto-login from QR.
+- Editing the existing request/meeting forms beyond reading one sessionStorage value.
 
-- `useUserRole` / role hook: surface `isOrgAdmin` and `orgAdminOrgIds[]`
-- New layout role guard: `org_admin` is treated as "staff" for MFA enforcement and sidebar
-- Sidebar (org_admin): Dashboard, Requests, Students, Assignments, Surveys, Analytics, Invitations, Messages — hide Site Settings, Training Orgs, Danger Zone, Admin Notifications, Bulk Tools
-- Reuse existing Admin pages but auto-apply an `organization_id IN orgAdminOrgIds` filter at the hook layer (`useGlobalFilters`, `useStudents`, `useRequests`, `useWorkloadAnalytics`, `useSurveyResponses`, `useAssignments`)
-- Invitation form: lock organization picker to their org(s); hide Admin/Org-Admin role options
-- Assignment UI: case-manager dropdown filtered to CMs in the same org as the student
-
-## Admin UX for managing Org Admins
-
-In `/admin/users` (Admin only):
-- New "Org Admin" role chip on user rows
-- "Assign as Org Admin" action → opens dialog to pick one or more organizations → writes to `org_admins`
-- Manage / revoke org assignments from the same dialog
-
-## Security notes
-- All scoping enforced in RLS — the UI filters are convenience only
-- MFA: extend the existing staff MFA gate to include `org_admin` (must enroll + use AAL2)
-- New helper functions are `SECURITY DEFINER` with explicit `search_path=public` to prevent recursion and search-path attacks
-- Org Admins cannot escalate: no policies grant them write access to `user_roles` or `org_admins`
-
-## Out of scope
-- Admins-of-admins, cross-org reporting for org admins
-- Org-admin-managed billing or org settings (training_organizations CRUD stays Admin-only)
-- Bulk invite jobs UI for org admins (can be added later)
-
-## Files likely touched
-- New migration: enum value, `org_admins` table + RLS, helper functions, extended policies on ~12 tables
-- `src/hooks/useUserRole.ts`, `useGlobalFilters.ts`, students/requests/analytics/assignments/surveys hooks
-- `src/components/SidebarLayout.tsx`, MFA gate component
-- `src/pages/admin/Users.tsx` (+ new `OrgAdminAssignmentDialog`)
-- Invitation form and assignment dropdowns
+## Technical Details
+- New dep: `qrcode` (~50KB) for client-side QR PNG generation; `jspdf` already commonly used or we use browser print for poster PDF.
+- Migration adds: `qr_codes`, `qr_scan_events` tables + `qr_session_id` columns + RLS policies + indexes on `(qr_code_id, created_at)` and `(session_id)`.
+- All new UI uses existing Forest Green / Sage tokens and `rounded-full` pill style per brand memory.
