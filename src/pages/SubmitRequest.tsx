@@ -68,6 +68,12 @@ export default function SubmitRequest() {
   const { user, profile } = useAuth();
   const submitRequest = useSubmitRequest();
 
+  useEffect(() => {
+    if (getQRSession().sessionId) {
+      logQREvent({ eventType: 'action_started', actionKind: 'request' });
+    }
+  }, []);
+
   const form = useForm<RequestFormData>({
     resolver: zodResolver(requestSchema),
     defaultValues: {
