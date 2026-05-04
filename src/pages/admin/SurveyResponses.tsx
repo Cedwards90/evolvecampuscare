@@ -42,14 +42,28 @@ function cmp(a: string | null | undefined, b: string | null | undefined) {
 export default function SurveyResponses() {
   const [search, setSearch] = useState('');
   const [previewType, setPreviewType] = useState<'checkin' | 'post_grad' | null>(null);
+  const [checkView, setCheckView] = useState<'completed' | 'pending'>('completed');
+  const [planView, setPlanView] = useState<'completed' | 'pending'>('completed');
   const { data: checkIns, isLoading: loadingCheckIns } = useAllCheckIns();
   const { data: plans, isLoading: loadingPlans } = useAllPostGradPlans();
+  const { data: pendingCheckIns, isLoading: loadingPendingCheck } = usePendingCheckIns();
+  const { data: pendingPlans, isLoading: loadingPendingPlan } = usePendingPostGradPlans();
   const { filters } = useGlobalFilters();
 
   const [checkSort, setCheckSort] = useState<{ key: CheckSortKey; dir: 'asc' | 'desc' }>({ key: 'date', dir: 'desc' });
   const [planSort, setPlanSort] = useState<{ key: PlanSortKey; dir: 'asc' | 'desc' }>({ key: 'date', dir: 'desc' });
 
   const orgFilter = filters.organizationId;
+
+  const filterPending = (list: PendingStudent[] | undefined) =>
+    (list || []).filter((s) => {
+      if (!(s.student_name || s.student_email).toLowerCase().includes(search.toLowerCase())) return false;
+      if (orgFilter.length && (!s.organization_id || !orgFilter.includes(s.organization_id))) return false;
+      return true;
+    });
+  const filteredPendingCheck = useMemo(() => filterPending(pendingCheckIns), [pendingCheckIns, search, orgFilter]);
+  const filteredPendingPlans = useMemo(() => filterPending(pendingPlans), [pendingPlans, search, orgFilter]);
+
 
   const filteredCheckIns = useMemo(() => {
     const list = (checkIns || []).filter(c => {
