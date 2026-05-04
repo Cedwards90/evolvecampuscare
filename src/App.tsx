@@ -92,6 +92,8 @@ function App() {
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/qr/:code" element={<QRLanding />} />
+                  <Route path="/qr/:code/request" element={<QRStandaloneRequest />} />
+                  <Route path="/qr/:code/request/success" element={<QRRequestSuccess />} />
                   <Route path="/shared/request/:token" element={<PublicSharedRequest />} />
                   
                   {/* Protected routes - All authenticated users */}
