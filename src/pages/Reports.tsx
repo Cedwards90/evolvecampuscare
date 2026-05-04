@@ -179,7 +179,7 @@ export default function Reports() {
             </Card>
 
             <ReportPreview
-              data={data}
+              data={filteredData}
               isLoading={isLoading && !!selectedCmId}
               isFetching={isFetching}
               error={error}
