@@ -340,6 +340,7 @@ export default function Auth() {
             </TabsList>
 
             <TabsContent value="login">
+              <GoogleButton label="Continue with Google" />
               <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
