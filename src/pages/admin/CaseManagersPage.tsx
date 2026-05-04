@@ -103,7 +103,7 @@ export default function CaseManagersPage() {
         return true;
       })
       .sort((a, b) => b.assigned_students - a.assigned_students);
-  }, [caseManagers, cmSearch, workloadFilter]);
+  }, [caseManagers, cmSearch, workloadFilter, globalFilters]);
 
   // Auto-select first CM
   const effectiveSelectedId =
