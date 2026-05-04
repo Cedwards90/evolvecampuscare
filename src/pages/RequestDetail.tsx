@@ -142,10 +142,20 @@ export default function RequestDetail() {
             {/* Request Details Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Request Details</CardTitle>
-                <div className="flex gap-2 mt-2">
-                  <PriorityBadge priority={request.priority} />
-                  <CategoryBadge category={request.category} />
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <CardTitle>Request Details</CardTitle>
+                    <div className="flex gap-2 mt-2">
+                      <PriorityBadge priority={request.priority} />
+                      <CategoryBadge category={request.category} />
+                    </div>
+                  </div>
+                  {canStudentEdit && (
+                    <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
