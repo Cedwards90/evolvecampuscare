@@ -1,97 +1,43 @@
+# Fix the "email rate limit" on signup
 
-# Global Filters & Sorting
+## What's actually happening
 
-A single, app-wide filter bar that controls every staff list, table, dashboard, report, and count. Selections persist per user across devices and survive refreshes. RLS continues to enforce permissions — filters only narrow what a user is already allowed to see.
+The "email rate limit" message comes from the default Lovable Cloud email sender, which is capped at a small number of signups per hour. New users only fall back to that default sender when the project's own custom email pipeline can't accept the message.
 
-## Filters included
+On inspection, the project is in exactly that state:
 
-- **Cohort** — derived from `profiles.cohort_start_date` year (e.g. "Class of 2025")
-- **Year of study** — `profiles.year_of_study` (Freshman, Sophomore, Junior, Senior, Other)
-- **Organization** — `training_organizations`
-- **Status** — `support_requests.status` (submitted, in_progress, escalated, resolved, etc.)
-- **Role** — `user_roles.role` (student, case_manager, admin) — only shown on user-list pages
-- **Assigned Case Manager** — `support_requests.assigned_case_manager_id` / `student_assignments.case_manager_id`
+- The custom sender domain `notify.evolvefoundation.us` is **verified and ready**.
+- The custom `auth-email-hook` Edge Function is deployed and tries to enqueue every signup email into a managed queue.
+- But the queue itself is **missing in the database**: there is no `email_send_log`, no `enqueue_email` function, and no `process-email-queue` cron job.
 
-Each filter is multi-select with a "Clear" chip. A "Reset all" button clears the bar.
+So every signup attempt fails inside the hook, the platform falls back to the default sender, and a few signups later everyone hits the shared rate limit.
 
-## Where the bar appears
+## Plan
 
-Admin Dashboard, Manage Requests, Reports, Analytics Dashboard, Student Folders, Case Managers, Case Manager Detail, User Management, Training Organizations, Survey Responses, Pending Invitations, and the case-manager-facing My Students view. Each page only shows the subset of filters that's relevant to its data (e.g. Users page hides Status; Reports hides Role).
+### 1. Re-provision the email queue infrastructure
+Run the managed email infrastructure setup. This creates:
+- `email_send_log`, `email_send_state`, `suppressed_emails`, `email_unsubscribe_tokens`
+- `enqueue_email` RPC and the `auth_emails` / `transactional_emails` queues
+- The `process-email-queue` Edge Function and its 5-second cron job
+- A vault secret so cron can authenticate
 
-## Persistence
+This is the actual fix — once it's in place, signup emails go out via `notify.evolvefoundation.us` instead of the rate-limited default sender.
 
-Three layers, in priority order:
-1. **URL query string** (e.g. `?org=abc&status=submitted,escalated`) — shareable, deep-linkable, wins on load
-2. **Per-user database row** — saved to a new `user_filter_preferences` table so the bar restores on any device
-3. **In-memory React context** — keeps state synced as the user navigates between pages
+### 2. Re-deploy the auth email hook
+After the queue exists, redeploy `auth-email-hook` so it picks up a clean environment and we can verify it logs successful enqueues for new signups.
 
-When a user changes a filter: URL updates immediately; a debounced write (~500ms) syncs the preference to the database.
+### 3. Temporary fallback: auto-confirm new signups
+Per your choice, while step 1 propagates we'll flip auth to **auto-confirm email signups**. New users can sign in immediately without a verification email, which sidesteps the rate limit entirely until delivery is healthy.
 
-## Permissions
+### 4. Verify, then turn auto-confirm back off
+After a real test signup we'll:
+- Confirm a `sent` row appears in `email_send_log` for `template_name = 'signup'`.
+- Confirm the email arrives from `noreply@evolvefoundation.us`.
+- Then re-enable mandatory email verification (auto-confirm OFF) so the production flow returns to normal.
 
-- RLS is the source of truth — filters are layered on top of what the user can already query.
-- Case Managers see Organization/Cohort/Year/Status filters scoped to their assigned students. The Role filter and "all case managers" picker are hidden for them.
-- Admins see every filter, every value.
-- Students do not see this bar (out of scope per your answer).
-
-## Layout
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ [Cohort ▾] [Year ▾] [Org ▾] [Status ▾] [CM ▾]   Reset all  │
-├─────────────────────────────────────────────────────────────┤
-│ active chips: × Class of 2025  × Submitted  × Acme Corp     │
-└─────────────────────────────────────────────────────────────┘
-```
-
-Pill-shaped, Forest Green active state, collapses to a single "Filters (3)" button under 768px that opens a sheet.
-
----
-
-## Technical details
-
-**New table** `user_filter_preferences`
-- `user_id uuid PK` (FK to auth.users implicit via RLS)
-- `filters jsonb` — `{ cohort: [...], yearOfStudy: [...], organizationId: [...], status: [...], role: [...], assignedCaseManagerId: [...] }`
-- `updated_at timestamptz`
-- RLS: users can select/insert/update/delete only their own row.
-
-**New module** `src/contexts/GlobalFiltersContext.tsx`
-- Hydrates from URL → DB → defaults on mount.
-- Exposes `{ filters, setFilter, clearFilter, resetAll, activeCount }`.
-- Debounces DB writes; updates URL via `useSearchParams`.
-
-**New components**
-- `src/components/filters/GlobalFilterBar.tsx` — desktop bar + mobile sheet. Accepts a `visible` prop listing which filters to render per page.
-- `src/components/filters/FilterMultiSelect.tsx` — generic multi-select popover used by every dimension.
-- `src/components/filters/ActiveFilterChips.tsx` — removable chips below the bar.
-
-**New hook** `src/hooks/useFilteredQuery.ts`
-- Wraps React Query keys with the current filter object so caches don't bleed across filter states.
-- Provides helpers `applyToSupportRequests(query, filters)`, `applyToProfiles(query, filters)`, `applyToInvitations(query, filters)` that translate the filter object into Supabase `.in()` / `.eq()` clauses.
-
-**Touched files** (existing data hooks updated to consume `useGlobalFilters` and forward to query keys):
-- `src/hooks/useRequests.ts`
-- `src/hooks/useUsers.ts`
-- `src/hooks/useStudentAssignments.ts`
-- `src/hooks/useMyStudents.ts`
-- `src/hooks/useCaseManagerStats.ts`
-- `src/hooks/useAnalyticsData.ts`
-- `src/hooks/useStudentProgressReport.ts`
-- `src/hooks/useInvitations.ts`
-- `src/hooks/useSurveyInvitations.ts` / `useSurveyResponses.ts`
-- `src/hooks/useStudentFolders.ts`
-
-**Pages updated** to mount `<GlobalFilterBar />` with the appropriate `visible` set:
-- `Dashboard.tsx`, `AdminDashboard.tsx`, `ManageRequests.tsx`, `Reports.tsx`
-- `admin/AnalyticsDashboard.tsx`, `admin/UserManagementPage.tsx`, `admin/CaseManagersPage.tsx`, `admin/TrainingOrganizations.tsx`, `admin/SurveyResponses.tsx`
-- `StudentFolders.tsx`, `CaseManagerDetail.tsx`
-- `components/admin/PendingInvitationsSection.tsx`, `components/casemanager/MyStudentsSection.tsx`
-
-**Existing per-page filters** (priority chip on Manage Requests, status filter on Folders, etc.) are migrated into the global bar so behavior stays identical but the state is shared.
-
-**Migration**: one new table + RLS policies. No changes to existing tables.
+I'll let you know once step 4 is ready so you can decide when to flip verification back on.
 
 ## Out of scope
-- Sort controls inside this rollout — the request mentions sorting, but each page keeps its existing column-sort UI. If you want a global default-sort selector too, I'll add it as a follow-up.
-- Student-facing pages.
+- No template/branding changes — current signup template is kept as-is.
+- No third-party email service (Resend, SendGrid) — we stay on Lovable Emails since the domain is already delegated to Lovable's nameservers.
+- No changes to MFA, social login, or invitation flows.
