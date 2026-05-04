@@ -42,7 +42,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { Pencil } from 'lucide-react';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
+import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
 import { useRequests } from '@/hooks/useRequests';
 import { useMyAppointments } from '@/hooks/useMyAppointments';
 import { useAuth } from '@/contexts/AuthContext';
