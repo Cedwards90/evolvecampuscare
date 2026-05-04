@@ -15,6 +15,7 @@ export interface Invitation {
   auto_assign_case_manager: string | null;
   notes: string | null;
   created_at: string;
+  organization_id?: string | null;
 }
 
 export function useInvitations() {
