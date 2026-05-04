@@ -182,6 +182,8 @@ export default function CaseManagersPage() {
           description="Monitor case manager workloads and reassign students between case managers."
         />
 
+        <GlobalFilterBar visible={['organizationId', 'assignedCaseManagerId']} />
+
         {isLoading ? (
           <div className="flex justify-center py-16">
             <LoadingSpinner />
