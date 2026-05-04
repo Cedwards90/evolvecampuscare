@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { QrCode } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -64,15 +66,36 @@ type RequestFormData = z.infer<typeof requestSchema>;
 export default function SubmitRequest() {
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const qrCodeParam = searchParams.get('qr');
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const submitRequest = useSubmitRequest();
+  const [qrContext, setQrContext] = useState<{ title: string; description: string | null } | null>(null);
 
   useEffect(() => {
     if (getQRSession().sessionId) {
       logQREvent({ eventType: 'action_started', actionKind: 'request' });
     }
   }, []);
+
+  // Load QR context (title/description/prefill) if arrived via QR
+  useEffect(() => {
+    if (!qrCodeParam) return;
+    (async () => {
+      const { data } = await supabase
+        .from('qr_codes')
+        .select('title,label,description,prefill_category,is_active')
+        .eq('code', qrCodeParam)
+        .maybeSingle();
+      if (!data || !data.is_active) return;
+      setQrContext({ title: data.title || data.label, description: data.description });
+      if (data.prefill_category && !form.getValues('category')) {
+        form.setValue('category', data.prefill_category as RequestCategory);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrCodeParam]);
 
   const form = useForm<RequestFormData>({
     resolver: zodResolver(requestSchema),
@@ -119,7 +142,7 @@ export default function SubmitRequest() {
     }
 
     try {
-      await submitRequest.mutateAsync({
+      const result = await submitRequest.mutateAsync({
         category: data.category,
         title: data.title,
         description: data.description,
@@ -129,13 +152,15 @@ export default function SubmitRequest() {
         studentName: profile?.full_name || 'Unknown Student',
         requestedAmount: data.category === 'financial' ? data.requestedAmount : undefined,
       });
-      
+
       toast({
         title: 'Request submitted successfully!',
         description: 'A case manager will review your request shortly.',
       });
-      
-      navigate('/student-tracking-request-status-scheduling-meeting');
+
+      const newId = (result as any)?.id;
+      if (newId) navigate(`/requests/${newId}`);
+      else navigate('/student-tracking-request-status-scheduling-meeting');
     } catch (error) {
       console.error('Error submitting request:', error);
       toast({
@@ -153,6 +178,18 @@ export default function SubmitRequest() {
           title="Submit a Support Request"
           description="Tell us how we can help you. Your request will be reviewed by a dedicated case manager."
         />
+
+        {qrContext && (
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 flex items-start gap-3">
+            <QrCode className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <div className="font-semibold">Submitting via {qrContext.title}</div>
+              {qrContext.description && (
+                <div className="text-muted-foreground text-xs mt-0.5">{qrContext.description}</div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Progress Indicator */}
         <div className="flex items-center justify-between">

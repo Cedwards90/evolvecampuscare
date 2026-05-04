@@ -1,46 +1,79 @@
-# Live site not updating after publish
+## Goal
 
-## Diagnosis
+Make each QR code admin-editable (destination, title, description, active state) and route students to a single universal request form. Allow either authenticated submission or guest email verification, then attach the request to the matching student profile.
 
-The published app registers a full PWA service worker (`vite-plugin-pwa` with `registerType: "autoUpdate"`, `skipWaiting`, `clientsClaim`, plus runtime caching for HTML, fonts, etc.). For returning visitors:
+## Scope guardrails
 
-1. The browser has an old service worker installed from a previous publish.
-2. That SW serves the cached HTML/JS shell on the next visit. `autoUpdate` only kicks in *after* the page has loaded with the old assets, then triggers a background SW update — the user still sees the old build until they reload again (often a second visit later).
-3. There's also a path collision risk: this project ships `public/sw.js` (the kill-switch we added for the editor preview) **and** `vite-plugin-pwa` generates its own `sw.js`. In production builds the plugin's generated worker wins, so the kill-switch never reaches end users.
-4. Lovable's hosting proxy already serves `index.html` with `no-cache` — but a service worker installed in the browser short-circuits the network entirely, so that header doesn't help.
+- Only QR-flow files change: `qr_codes` table, `QRLanding.tsx`, `QRCodesPage.tsx`, `SubmitRequest.tsx` (read-only QR-context wiring), and one new Edge Function.
+- No changes to messaging, dashboards, RLS for support_requests, case-manager logic, or notification routing.
+- Existing `/qr/<code>` links keep working — new columns get safe defaults via migration.
 
-Net effect: **publishing a new version doesn't reach already-installed users until they refresh twice (or wait long enough for the SW skip-waiting cycle to land).**
+## 1. Database (migration)
 
-## Fix (frontend only — no backend, no DB, no business-logic edits)
+Add columns to `qr_codes` (all nullable / defaulted so existing rows stay valid):
 
-### A. Remove the runtime-caching PWA from the published site
-In `vite.config.ts`, drop the `VitePWA(...)` plugin call entirely. The published app then has **no service worker registered for new visitors**, which means every page load fetches fresh `index.html` from Lovable's hosting (which already sends `no-cache`), and Vite's hashed asset filenames handle JS/CSS cache-busting automatically.
+- `destination_type text NOT NULL DEFAULT 'request'` — one of `request`, `meeting`, `external`
+- `destination_url text NULL` — used only when `destination_type = 'external'`
+- `title text NULL` — overrides default landing headline
+- `description text NULL` — overrides default landing subtext
+- `prefill_category request_category NULL` — optional default for the universal form
+- (keep existing `label`, `is_active`, `organization_id`)
 
-Trade-off: the app is no longer installable as a PWA / no offline shell. Per project memory `[PWA Offline Support]`, PWA is currently disabled in the editor preview anyway, and the offline-draft feature uses IndexedDB — it does not depend on a SW.
+Backfill: set `destination_type='request'`, copy `label` into `title` where `title` is null. RLS unchanged (admin/org-admin manage; authenticated read active).
 
-### B. Keep `public/sw.js` as a permanent kill-switch
-This file already self-destructs (skipWaiting → claim → delete all caches → unregister). With VitePWA removed, our `sw.js` is the only worker shipped, so any browser that previously installed the old VitePWA worker will pick up our kill-switch the next time the browser checks for an update at `/sw.js`, wipe its caches, and reload once — getting the latest published version.
+## 2. Admin editor (`/admin/qr-codes`)
 
-### C. Update `src/main.tsx`
-Currently it only unregisters when on a Lovable preview/iframe host. After this change we want to also unregister on the **published** domain so old PWA installs are cleaned up on the very first visit after deploy.
-- Run the unregister + cache-wipe + one-time reload code on **all** hosts, not just preview. Already idempotent via the `__sw_cleaned` sessionStorage flag.
+Extend the existing create dialog and add an **Edit** dialog for the selected QR card:
 
-### D. Manifest tag in `index.html`
-If `index.html` references `manifest.webmanifest` (auto-injected by VitePWA), remove that link tag too so we don't 404. Verify and clean up.
+- Title, description (textarea), destination type (radio: Request form / Schedule meeting / External URL), external URL (shown only for external), prefill category (select, optional), active toggle (already present).
+- Validate: external URL required and `https://` when type = external; title ≤ 80 chars; description ≤ 280.
+- Save updates `qr_codes` and invalidates `qr-codes` query. Existing funnel analytics block unchanged.
 
-## What we are NOT changing
-- No DB / RLS / edge functions.
-- No realtime/query code (already shipped this session).
-- No app routing, auth, or feature code.
-- The offline-draft feature continues to work (it uses IndexedDB, not the SW).
+## 3. QR landing (`/qr/:code`)
 
-## Verification
-1. Publish, then open the live site in a browser that already had the old PWA installed:
-   - DevTools → Application → Service Workers: the old SW is replaced by `sw.js` (kill-switch), runs once, then unregisters.
-   - One automatic reload happens (guarded so it doesn't loop).
-   - Page now shows the freshly published build.
-2. Publish a *second* update. Visit again: no SW is registered, the new HTML is fetched directly, new build appears immediately.
-3. Confirm `Application → Cache Storage` is empty after the cleanup.
+- Fetch new fields. Render `title`/`description` if present (fallback to current copy).
+- If `destination_type = 'external'` → log `action_selected` then `window.location.replace(destination_url)`.
+- If `request` → single primary CTA "Submit a request" → `/student/support-request?source=qr&qr=<code>` (carries category prefill via query).
+- If `meeting` → existing schedule flow.
+- Staff-block behavior preserved.
+- Guest path (no user): show two options on the landing — **Sign in** or **Continue with email** (magic link). New "Continue with email" calls a new Edge Function `qr-guest-start` (see §5) and shows "Check your email" state. Email link returns to `/qr/<code>` authenticated; existing `auth_completed` logging continues.
 
-## Out of scope (ask before doing)
-- Re-introducing PWA installability with a manifest-only setup (no SW). Tell me if you want this — it's a small follow-up.
+## 4. Universal form (`SubmitRequest.tsx`)
+
+Minimal additions only:
+
+- Read `qr` query param; if present, fetch the QR row (id, title, description, prefill_category) and:
+  - Show a small banner "Submitting via {title}".
+  - Preselect category from `prefill_category` (user can change).
+- After successful submit (existing `useSubmitRequest` already records `qr_session_id`): redirect to `/track-requests/<id>` (existing route) instead of dashboard, so the student lands on their own request status page.
+- No business-logic changes; assignment + visibility flow unchanged (existing RLS already attaches the row to `auth.uid()` as `student_id`, which case managers and reports already consume).
+
+## 5. Guest email verification (Edge Function `qr-guest-start`)
+
+- Public function (verify_jwt = false), strict CORS, Zod validation on `{ email, qrCode }`.
+- Looks up active QR by `code`. Rejects if not active.
+- Calls `supabase.auth.admin.generateLink({ type: 'magiclink', email, options: { redirectTo: `${SITE_URL}/qr/${qrCode}?verified=1` } })`.
+- Sends the link via the project's built-in transactional email (`send-transactional-email`) with subject "Verify your email to submit a request". No new secrets.
+- Logs a `qr_scan_events` row with `event_type='auth_required', action_kind='request'`.
+- On magic-link return, the existing `handle_new_user` trigger creates the profile + student role, so the universal form binds the request to the new account automatically.
+
+## 6. Backwards compatibility
+
+- All existing QR codes continue to work (defaults to `request` destination, same UI).
+- Old funnel analytics keep functioning (no event-type changes).
+- No support_requests schema or RLS changes — case-manager dashboards, reports, and student tracking automatically pick up new submissions.
+
+## Verification checklist
+
+1. Existing `/qr/<old-code>` still loads and routes to request flow.
+2. Admin edits title/description/destination → landing updates immediately.
+3. External destination redirects out cleanly and logs `action_selected`.
+4. Logged-in student submits via QR → request appears in their `/track-requests`, in assigned case manager's queue, and in admin reports with `qr_session_id` set.
+5. Guest "Continue with email" → magic link → returns authenticated → submits → request bound to new student profile.
+6. Staff scanning still blocked from the request CTA.
+
+## Out of scope (explicit)
+
+- Per-QR custom field schemas (the universal form stays single-source).
+- Changes to messaging, scheduling, notifications, or RLS on support_requests.
+- PWA/service-worker behavior.
