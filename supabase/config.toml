@@ -1,31 +1,25 @@
 project_id = "kxhykddsllizazoqxevu"
 
-[functions.send-assignment-notification]
-verify_jwt = false
-
-[functions.notify-new-request]
-verify_jwt = false
-
-[functions.notify-status-change]
-verify_jwt = false
-
-[functions.weekly-case-manager-summary]
-verify_jwt = false
-
-[functions.send-user-invitation]
-verify_jwt = false
-
-[functions.create-calendar-event]
-verify_jwt = false
-
-[functions.generate-invitation-token]
-verify_jwt = false
-
-[functions.delete-user]
-verify_jwt = false
-
-[functions.delete-own-account]
-verify_jwt = false
-
-[functions.student-progress-summary]
-verify_jwt = false
+[functions]
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.create-calendar-event]
+    verify_jwt = false
+  [functions.delete-own-account]
+    verify_jwt = false
+  [functions.delete-user]
+    verify_jwt = false
+  [functions.generate-invitation-token]
+    verify_jwt = false
+  [functions.notify-new-request]
+    verify_jwt = false
+  [functions.notify-status-change]
+    verify_jwt = false
+  [functions.send-assignment-notification]
+    verify_jwt = false
+  [functions.send-user-invitation]
+    verify_jwt = false
+  [functions.student-progress-summary]
+    verify_jwt = false
+  [functions.weekly-case-manager-summary]
+    verify_jwt = false
