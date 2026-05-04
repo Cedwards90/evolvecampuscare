@@ -57,6 +57,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useRequests } from '@/hooks/useRequests';
 import { useCaseManagers } from '@/hooks/useCaseManagerStats';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { applyToRequests } from '@/lib/applyGlobalFilters';
 import { 
   BarChart, 
   Bar, 
