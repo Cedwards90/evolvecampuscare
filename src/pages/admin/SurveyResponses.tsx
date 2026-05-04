@@ -13,6 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye } from 'lucide-react';
 import { SurveyPreviewDialog } from '@/components/admin/SurveyPreviewDialog';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 
 function MoodBadge({ rating }: { rating: number }) {
   const colors = rating >= 4 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
