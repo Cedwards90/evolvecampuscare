@@ -10,9 +10,11 @@ import {
   Phone,
   Clock,
   FileText,
-  Pencil
+  Pencil,
+  Share2
 } from 'lucide-react';
 import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
+import { SharePdfDialog } from '@/components/requests/SharePdfDialog';
 import { formatDistanceToNow, format } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { Button } from '@/components/ui/button';
