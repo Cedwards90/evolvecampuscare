@@ -1,51 +1,46 @@
-# QR Flow → Protected Student Support-Request Route
+# Live site not updating after publish
 
-## Goal
-QR scans land students on a protected `/student/support-request?source=qr` route. Auth is required first; after login, the student is returned to *their own* support-request page (scoped to their authenticated `auth.uid()`). Staff are blocked. QR usage stays tracked end-to-end and submitted requests sync everywhere via the realtime layer that already exists.
+## Diagnosis
 
-## Current state (verified)
-- `/qr/:code` (`src/pages/QRLanding.tsx`) shows a picker, then routes the "Submit a Request" CTA to `/student-submitting-a-support-request`.
-- That target route is already `<ProtectedRoute allowedRoles={['student']}>` → `SubmitRequest` page.
-- `Auth.tsx` already honors `?redirect=…` after login/signup.
-- QR usage is tracked via `useQRSession` (sessionStorage UUID + `qr_scan_events` insert) and `useSubmitRequest` already attaches `qr_session_id` to the new `support_requests` row and logs `action_completed`.
-- Realtime sync for `support_requests` was just shipped, so any new request appears in CM/admin/reports views automatically.
+The published app registers a full PWA service worker (`vite-plugin-pwa` with `registerType: "autoUpdate"`, `skipWaiting`, `clientsClaim`, plus runtime caching for HTML, fonts, etc.). For returning visitors:
 
-## Plan (frontend only — no DB / business-logic changes)
+1. The browser has an old service worker installed from a previous publish.
+2. That SW serves the cached HTML/JS shell on the next visit. `autoUpdate` only kicks in *after* the page has loaded with the old assets, then triggers a background SW update — the user still sees the old build until they reload again (often a second visit later).
+3. There's also a path collision risk: this project ships `public/sw.js` (the kill-switch we added for the editor preview) **and** `vite-plugin-pwa` generates its own `sw.js`. In production builds the plugin's generated worker wins, so the kill-switch never reaches end users.
+4. Lovable's hosting proxy already serves `index.html` with `no-cache` — but a service worker installed in the browser short-circuits the network entirely, so that header doesn't help.
 
-### 1. Add the new protected route alias
-`src/App.tsx`: register `/student/support-request` pointing at the existing `SubmitRequest` page, wrapped in `<ProtectedRoute allowedRoles={['student']}>`. Keeps the old URL working for bookmarks/back-compat.
+Net effect: **publishing a new version doesn't reach already-installed users until they refresh twice (or wait long enough for the SW skip-waiting cycle to land).**
 
-### 2. Update QR landing CTA
-`src/pages/QRLanding.tsx`:
-- "Submit a Request" handler now targets `/student/support-request?source=qr`.
-- For the not-logged-in branch, build the redirect as `/auth?redirect=${encodeURIComponent('/student/support-request?source=qr')}&remember=1` so the user lands on the new protected route after auth.
-- Staff branch: instead of silently redirecting to `/dashboard`, show an inline access-denied message ("This page is for students only") with a "Go to dashboard" button. (Per your answer.)
+## Fix (frontend only — no backend, no DB, no business-logic edits)
 
-### 3. Lock the page to the authenticated student
-`src/pages/SubmitRequest.tsx` already uses `user.id` from `AuthContext` for the insert (verified via `useSubmitRequest`). Two small hardenings:
-- Read `source` from `useSearchParams`; if `source === 'qr'` and no QR session exists in sessionStorage, log it and proceed normally (don't break flow, just won't attribute).
-- Confirm the page never reads any `studentId` from URL — all writes use `user.id` only. (It already does; we'll add a code comment so this stays true.)
+### A. Remove the runtime-caching PWA from the published site
+In `vite.config.ts`, drop the `VitePWA(...)` plugin call entirely. The published app then has **no service worker registered for new visitors**, which means every page load fetches fresh `index.html` from Lovable's hosting (which already sends `no-cache`), and Vite's hashed asset filenames handle JS/CSS cache-busting automatically.
 
-### 4. ProtectedRoute behavior
-Verify `ProtectedRoute` preserves the original URL (including `?source=qr`) when redirecting to `/auth`. If it doesn't already, pass `redirect=${location.pathname + location.search}` so QR attribution survives the auth bounce.
+Trade-off: the app is no longer installable as a PWA / no offline shell. Per project memory `[PWA Offline Support]`, PWA is currently disabled in the editor preview anyway, and the offline-draft feature uses IndexedDB — it does not depend on a SW.
 
-### 5. QR tracking continuity
-No schema changes. `startQRSession` is called on `/qr/:code` → sessionStorage holds it across the auth round-trip → `useSubmitRequest` reads `getQRSession()` and stamps `qr_session_id` on the new request → `clearQRSession()` after `action_completed` (already implemented). Confirmed end-to-end.
+### B. Keep `public/sw.js` as a permanent kill-switch
+This file already self-destructs (skipWaiting → claim → delete all caches → unregister). With VitePWA removed, our `sw.js` is the only worker shipped, so any browser that previously installed the old VitePWA worker will pick up our kill-switch the next time the browser checks for an update at `/sw.js`, wipe its caches, and reload once — getting the latest published version.
 
-### 6. Sync to CM / admin / reports
-Already covered by the realtime publication on `support_requests` shipped earlier this session — no new work. Submitted request appears immediately in:
-- CM "My Requests" (filtered by `assigned_case_manager_id` via RLS + auto-assign on insert)
-- Admin "All Requests" and unassigned alert
-- Workload analytics / reports queries (invalidated by `useRealtimeRequests`)
+### C. Update `src/main.tsx`
+Currently it only unregisters when on a Lovable preview/iframe host. After this change we want to also unregister on the **published** domain so old PWA installs are cleaned up on the very first visit after deploy.
+- Run the unregister + cache-wipe + one-time reload code on **all** hosts, not just preview. Already idempotent via the `__sw_cleaned` sessionStorage flag.
 
-## Out of scope (per your instruction)
-- No edits to `useSubmitRequest`, RLS policies, schema, or any non-QR pages.
-- No change to the "Schedule a Meeting" CTA target.
-- No new tables; QR session tracking already lives in `qr_scan_events`.
+### D. Manifest tag in `index.html`
+If `index.html` references `manifest.webmanifest` (auto-injected by VitePWA), remove that link tag too so we don't 404. Verify and clean up.
+
+## What we are NOT changing
+- No DB / RLS / edge functions.
+- No realtime/query code (already shipped this session).
+- No app routing, auth, or feature code.
+- The offline-draft feature continues to work (it uses IndexedDB, not the SW).
 
 ## Verification
-1. Log out. Open `/qr/<code>` → click "Submit a Request" → bounced to `/auth?redirect=/student/support-request%3Fsource%3Dqr` → log in → land on `/student/support-request?source=qr`.
-2. Submit the form → row appears with `qr_session_id` set; `qr_scan_events` shows `scan → auth_required → auth_completed → action_selected → action_completed` with the same `session_id`.
-3. CM dashboard updates instantly (realtime) without refresh.
-4. Try `/student/support-request` as a case manager → access-denied (ProtectedRoute already enforces `allowedRoles`).
-5. URL tampering: try injecting `?studentId=<other-uuid>` → ignored; insert uses `user.id` from auth context, RLS rejects mismatches.
+1. Publish, then open the live site in a browser that already had the old PWA installed:
+   - DevTools → Application → Service Workers: the old SW is replaced by `sw.js` (kill-switch), runs once, then unregisters.
+   - One automatic reload happens (guarded so it doesn't loop).
+   - Page now shows the freshly published build.
+2. Publish a *second* update. Visit again: no SW is registered, the new HTML is fetched directly, new build appears immediately.
+3. Confirm `Application → Cache Storage` is empty after the cleanup.
+
+## Out of scope (ask before doing)
+- Re-introducing PWA installability with a manifest-only setup (no SW). Tell me if you want this — it's a small follow-up.
