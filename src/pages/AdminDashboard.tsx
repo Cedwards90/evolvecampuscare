@@ -193,6 +193,8 @@ export default function AdminDashboard() {
           description="Monitor system performance and manage request assignments"
         />
 
+        <GlobalFilterBar />
+
         {/* Unassigned Requests Alert Banner */}
         {unassignedRequests.length > 0 && (
           <div
