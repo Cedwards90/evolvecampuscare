@@ -276,6 +276,8 @@ export default function Settings() {
               </CardContent>
             </Card>
 
+            {role === 'student' && <StudentQRShortcut />}
+
             {/* Danger Zone - Account Deletion */}
             <AccountDeletionCard />
           </TabsContent>
