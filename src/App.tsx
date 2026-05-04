@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useRealtimeRequests } from "@/hooks/useRealtimeRequests";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
