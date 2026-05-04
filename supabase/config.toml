@@ -25,3 +25,9 @@ project_id = "kxhykddsllizazoqxevu"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
+  [functions.generate-request-pdf]
+    verify_jwt = false
+  [functions.share-request-pdf]
+    verify_jwt = false
+  [functions.public-request-pdf]
+    verify_jwt = false

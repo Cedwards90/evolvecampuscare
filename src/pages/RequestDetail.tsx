@@ -10,9 +10,11 @@ import {
   Phone,
   Clock,
   FileText,
-  Pencil
+  Pencil,
+  Share2
 } from 'lucide-react';
 import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
+import { SharePdfDialog } from '@/components/requests/SharePdfDialog';
 import { formatDistanceToNow, format } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { Button } from '@/components/ui/button';
@@ -39,8 +41,10 @@ export default function RequestDetail() {
   const { user, role } = useAuth();
   const { data: request, isLoading, error } = useRequest(id);
   const [editOpen, setEditOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const isStaff = role === 'case_manager' || role === 'admin';
+  const canShare = role === 'case_manager' || role === 'admin' || role === 'org_admin';
   const canTakeActions = isStaff && (
     role === 'admin' || 
     request?.assigned_case_manager_id === user?.id
@@ -113,7 +117,7 @@ export default function RequestDetail() {
               <span className="truncate">Created {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}</span>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
             <StatusBadge status={request.status} />
             <span className="text-xs text-muted-foreground whitespace-nowrap">
               {(() => {
@@ -126,6 +130,12 @@ export default function RequestDetail() {
                 return eta[request.priority] || '';
               })()}
             </span>
+            {canShare && (
+              <Button variant="outline" size="sm" className="rounded-full" onClick={() => setShareOpen(true)}>
+                <Share2 className="h-4 w-4 mr-2" />
+                Share as PDF
+              </Button>
+            )}
           </div>
         </div>
 
@@ -420,6 +430,14 @@ export default function RequestDetail() {
       </div>
       {canStudentEdit && (
         <EditRequestDialog request={request} open={editOpen} onOpenChange={setEditOpen} />
+      )}
+      {canShare && (
+        <SharePdfDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          requestId={request.id}
+          requestTitle={request.title}
+        />
       )}
     </SidebarLayout>
   );

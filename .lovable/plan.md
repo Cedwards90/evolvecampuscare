@@ -1,62 +1,95 @@
-# QR Code Access for Student Actions
+# Share Support Request as PDF
 
-## Goal
-Let organizations print a QR poster that students scan to quickly submit a request or schedule a meeting on mobile, with secure login and full funnel analytics.
+Add a staff-only "Share as PDF" feature on each support request with download, email, and tokenized secure link options. Includes audit logging and link expiration.
+
+## Scope
+
+- Add **Share as PDF** button on the request detail page, visible only to Admin / Case Manager / Org Admin (subject to existing access).
+- PDF includes the **full** request details (staff-only mode):
+  - Title, description, category, priority, status
+  - Student name, email, organization
+  - Assigned case manager
+  - Monetary fields (requested/approved amounts)
+  - Timestamps (created, updated, resolved, escalated)
+  - Full timeline (including internal notes)
+  - Attachment filenames (no file contents)
+- Three sharing actions in a single dialog:
+  1. **Download PDF** — generated server-side, returned as a download.
+  2. **Email PDF** — sends via existing Lovable email infrastructure to one or more recipients.
+  3. **Secure link** — tokenized public URL with expiration (1h / 24h / 7d / 30d), revocable.
+- All actions are **audit-logged** (who, when, action, recipients, IP, user-agent).
+- Secure link uses **token-only** access (anyone with the link can view until expiration or revocation).
 
 ## User Flow
-1. Admin generates an org QR (or student opens their personal QR shortcut in Settings) → downloads PNG/PDF.
-2. Student scans poster → lands on `/qr/:code` (mobile-optimized action page with two big buttons: **Submit a Request** / **Schedule a Meeting**).
-3. If not logged in → redirect to `/auth?redirect=/qr/:code` with "Remember this device for 30 days" checkbox. After login, returns to action page.
-4. Student picks an action → routed to existing `/submit-request` or meeting scheduler, with a hidden `qr_session_id` carried through so the resulting request/meeting is tagged.
-5. Submissions/meetings appear in dashboards as today, plus a QR origin badge.
 
-## Data Model (new migration)
+1. Staff opens a request → clicks **Share as PDF** in the actions area.
+2. Dialog opens with three tabs: Download / Email / Secure Link.
+3. **Download** — clicks button → PDF streams down.
+4. **Email** — enters recipient email(s) + optional message → sends.
+5. **Secure Link** — picks expiration → generates link, copy-to-clipboard. Existing links shown with status (active/expired/revoked) and a revoke button.
+6. External recipient opens link → lightweight public page that streams the PDF (no app login).
 
-**`qr_codes`** — one row per generated code
-- `code` (text, unique short slug for URL), `organization_id` (nullable for global), `label`, `created_by`, `is_active`, `created_at`
+## Technical Section
 
-**`qr_scan_events`** — full funnel
-- `qr_code_id`, `session_id` (uuid generated client-side, persisted in localStorage for the scan), `user_id` (nullable until login), `event_type` enum: `scan` | `auth_required` | `auth_completed` | `action_selected` | `action_started` | `action_completed`, `action_kind` (`request` | `meeting`, nullable), `target_id` (uuid of created request/appointment, nullable), `user_agent`, `created_at`
+### Database (new migration)
 
-**Tagging** — add `qr_session_id uuid` nullable to `support_requests` and `appointments` so we can join back to the funnel without changing existing flows.
+- `request_share_links`
+  - `id`, `request_id`, `token` (unguessable, 32-byte base64url, unique, indexed)
+  - `created_by`, `created_at`, `expires_at`, `revoked_at`
+  - `last_accessed_at`, `access_count`
+- `request_share_audit`
+  - `id`, `request_id`, `actor_id`, `action` (`download` | `email` | `link_created` | `link_revoked` | `link_accessed`)
+  - `recipients` (text[] for email), `share_link_id` (nullable)
+  - `ip`, `user_agent`, `created_at`
 
-**RLS:**
-- `qr_codes`: Admins manage all; Org admins manage own org's codes; authenticated users can SELECT active codes (needed for landing page lookup).
-- `qr_scan_events`: anyone authenticated can INSERT their own session events; Admins/Org admins SELECT scoped to their org's qr_codes; users can SELECT their own events.
+RLS:
+- `request_share_links` and `request_share_audit`: SELECT/INSERT for staff (admin / case_manager assigned to request / org_admin in scope). Reuses existing `has_role` and `user_in_org_admin_scope` helpers.
+- Public access happens through Edge Function only (service-role); tables remain locked down.
 
-## Frontend
+### Edge Functions (new, all under `supabase/functions/`)
 
-**New files only** (no edits to existing pages beyond two narrowly-scoped additions):
-- `src/pages/QRLanding.tsx` — route `/qr/:code`. Mobile-first, large pill buttons, Evolve branding. Logs `scan` then `action_selected` events. Stores `qr_session_id` in sessionStorage.
-- `src/pages/admin/QRCodesPage.tsx` — list/create/deactivate codes, preview, download PNG and printable PDF poster, view per-code analytics (scans, conversion to submission/meeting, top times).
-- `src/components/qr/QRPosterPreview.tsx` — printable poster with logo + instructions + QR.
-- `src/components/qr/StudentQRShortcut.tsx` — small card shown in `Settings.tsx` letting a student view/save the org QR for their own phone.
-- `src/hooks/useQRSession.ts` — reads/writes `qr_session_id` from sessionStorage and exposes a `logEvent` helper.
-- `src/lib/qr.ts` — generate QR via `qrcode` library (already a tiny dep to add).
+1. **`generate-request-pdf`** (auth required)
+   - Validates caller has staff access to the `request_id` (via `auth.getUser()` + RLS read attempt).
+   - Builds PDF using `pdf-lib` (Deno-compatible) with brand colors (Forest Green / Sage), logo header, and structured sections.
+   - Returns `application/pdf` stream. Logs `download` to audit.
 
-**Minimal additions to existing files** (only what's strictly required to wire it up):
-- `src/App.tsx` — add `/qr/:code` and `/admin/qr-codes` routes.
-- `src/pages/Auth.tsx` — honor `?redirect=` param and "Remember this device" checkbox (sets longer session via `supabase.auth.setSession` persistence flag in localStorage).
-- `src/pages/SubmitRequest.tsx` and the meeting scheduler — read `qr_session_id` from sessionStorage on mount, include it on insert, then log `action_completed` with `target_id`. (One-line additions, no logic changes.)
-- `src/pages/Settings.tsx` — render `<StudentQRShortcut />` if student role.
-- Admin sidebar — add link to QR Codes page (org admins see only their org's codes).
+2. **`share-request-pdf`** (auth required)
+   - Body: `{ request_id, mode: 'email' | 'create_link' | 'revoke_link', recipients?, expires_in_hours?, link_id? }`.
+   - For `email`: generates PDF in-memory, sends via existing transactional email path with PDF attachment (one recipient per send), logs `email`.
+   - For `create_link`: inserts row into `request_share_links` with crypto-random token; returns full URL. Logs `link_created`.
+   - For `revoke_link`: sets `revoked_at`. Logs `link_revoked`.
+   - Strict CORS, Zod validation, `sanitizeError` (matches existing edge function security memory).
 
-## Tracking & Sync
-- Realtime: existing dashboards already query `support_requests` / `appointments` — no changes needed; new rows simply carry `qr_session_id`.
-- Admin QR analytics page shows: total scans, unique sessions, % auth completed, % action started, % action completed, breakdown by request vs meeting.
+3. **`public-request-pdf`** (public, `verify_jwt = false`)
+   - Path: `/?token=...`.
+   - Looks up token (service-role); rejects if missing, revoked, or expired.
+   - Increments `access_count` / `last_accessed_at`. Logs `link_accessed` with IP/UA.
+   - Streams PDF (same generator as #1 but called internally).
 
-## Security
-- Rate-limit scan event inserts via simple per-session debounce (client) + DB unique on `(session_id, event_type, action_kind)` where applicable to prevent log spam.
-- QR code slug is non-guessable but not secret (it's printed on a poster); auth is still required for any action.
-- "Remember this device" uses Supabase's built-in session persistence — no custom token storage.
-- No new secrets needed.
+### Frontend (only new files, plus a single tightly-scoped addition to the request detail page)
 
-## Out of Scope
-- Per-student personal QR codes (decided: org-wide only).
-- Magic-link auto-login from QR.
-- Editing the existing request/meeting forms beyond reading one sessionStorage value.
+New files:
+- `src/components/requests/SharePdfDialog.tsx` — tabbed dialog (Download / Email / Secure Link).
+- `src/components/requests/ShareLinksList.tsx` — table of existing links inside the dialog with revoke button + copy.
+- `src/hooks/useRequestSharing.ts` — wraps the three Edge Function calls + react-query.
+- `src/pages/PublicSharedRequest.tsx` — minimal mobile-friendly page shown when opening a secure link; embeds the PDF.
 
-## Technical Details
-- New dep: `qrcode` (~50KB) for client-side QR PNG generation; `jspdf` already commonly used or we use browser print for poster PDF.
-- Migration adds: `qr_codes`, `qr_scan_events` tables + `qr_session_id` columns + RLS policies + indexes on `(qr_code_id, created_at)` and `(session_id)`.
-- All new UI uses existing Forest Green / Sage tokens and `rounded-full` pill style per brand memory.
+Minimal additions to existing files (no behavioral changes elsewhere):
+- `src/pages/RequestDetail.tsx` — add **Share as PDF** button (staff-only) that opens `SharePdfDialog`.
+- `src/App.tsx` — add public route `/shared/request/:token` → `PublicSharedRequest`.
+
+### Security & privacy
+
+- Generation always re-checks access server-side. Frontend role check is UX only.
+- Tokens: 256-bit, base64url, unique index. Default expiration: **24h**. Max: **30d**.
+- Public page sets `X-Robots-Tag: noindex` and a Content-Security-Policy that disallows external embeds.
+- Audit table is append-only; no UPDATE/DELETE policies for end users.
+- Email sends use the existing transactional infrastructure (no new provider).
+- No changes to existing RLS policies on `support_requests`, profiles, or related tables.
+
+### Out of scope
+
+- Editing existing request, attachment, or notification logic.
+- Recipient identity verification (no OTP gating — by your choice "Token-only").
+- Bulk export (per-request only).
+- Storing generated PDFs in Storage (generated on demand each time).
