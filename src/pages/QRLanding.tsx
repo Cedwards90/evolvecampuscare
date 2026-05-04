@@ -182,6 +182,9 @@ export default function QRLanding() {
               </a>
             </Button>
           </div>
+        ) : isRequestOnly && !user && !isStaff ? (
+          // Standalone-request flow: skip the chooser; the email-verify card below handles entry.
+          null
         ) : (
           <div className="space-y-4">
             {!isMeetingOnly && (
