@@ -117,7 +117,7 @@ export default function RequestDetail() {
               <span className="truncate">Created {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}</span>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
             <StatusBadge status={request.status} />
             <span className="text-xs text-muted-foreground whitespace-nowrap">
               {(() => {
@@ -130,6 +130,12 @@ export default function RequestDetail() {
                 return eta[request.priority] || '';
               })()}
             </span>
+            {canShare && (
+              <Button variant="outline" size="sm" className="rounded-full" onClick={() => setShareOpen(true)}>
+                <Share2 className="h-4 w-4 mr-2" />
+                Share as PDF
+              </Button>
+            )}
           </div>
         </div>
 
