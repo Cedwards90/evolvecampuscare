@@ -209,6 +209,7 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
                     <TableHead>Created</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead>Student</TableHead>
+                    <TableHead>Organization</TableHead>
                     <TableHead>Priority</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
@@ -219,6 +220,7 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
                       <TableCell className="whitespace-nowrap text-xs">{format(new Date(req.created_at), 'PP')}</TableCell>
                       <TableCell className="max-w-[280px] truncate">{req.title}</TableCell>
                       <TableCell>{req.student?.full_name || '—'}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{(req.student as any)?.organization_name || '—'}</TableCell>
                       <TableCell><Badge variant="outline">{req.priority}</Badge></TableCell>
                       <TableCell><Badge>{req.status}</Badge></TableCell>
                     </TableRow>
