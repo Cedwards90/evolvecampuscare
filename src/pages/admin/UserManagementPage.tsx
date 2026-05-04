@@ -24,6 +24,7 @@ import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
 import { PendingInvitationsSection } from '@/components/admin/PendingInvitationsSection';
+import { OrgAdminAssignmentDialog } from '@/components/admin/OrgAdminAssignmentDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
