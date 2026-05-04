@@ -113,34 +113,34 @@ function App() {
                   
                   {/* Case Manager routes */}
                   <Route path="/case-manager-managing-student-requests" element={
-                    <ProtectedRoute allowedRoles={['case_manager']}>
+                    <ProtectedRoute allowedRoles={['case_manager', 'org_admin']}>
                       <ManageRequests />
                     </ProtectedRoute>
                   } />
                   <Route path="/reports" element={
-                    <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                    <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
                       <Reports />
                     </ProtectedRoute>
                   } />
                   <Route path="/reports/student" element={
-                    <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                    <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
                       <StudentProgressReportPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/reports/student/:studentId" element={
-                    <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                    <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
                       <StudentProgressReportPage />
                     </ProtectedRoute>
                   } />
                   
                   {/* Admin routes */}
             <Route path="/admin-monitoring-reassigning-requests" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <AdminDashboard />
               </ProtectedRoute>
             } />
             <Route path="/admin/analytics" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <AnalyticsDashboard />
               </ProtectedRoute>
             } />
@@ -150,7 +150,7 @@ function App() {
                     </ProtectedRoute>
                   } />
             <Route path="/admin/case-managers" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <CaseManagersPage />
               </ProtectedRoute>
             } />
@@ -165,7 +165,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/admin/surveys" element={
-              <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+              <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
                 <SurveyResponses />
               </ProtectedRoute>
             } />
@@ -194,19 +194,19 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="/case-managers/:id" element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                   <CaseManagerDetail />
                 </ProtectedRoute>
               } />
               <Route path="/students/:id" element={
-                <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
                   <StudentDetail />
                 </ProtectedRoute>
               } />
 
               {/* Student Folders */}
               <Route path="/student-folders" element={
-                <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
                   <StudentFolders />
                 </ProtectedRoute>
               } />
