@@ -292,6 +292,17 @@ export default function QRCodesPage() {
     queryClient.invalidateQueries({ queryKey: ['qr-codes'] });
   };
 
+  const handleDelete = async (row: QRCodeRow) => {
+    const { error } = await supabase.from('qr_codes').delete().eq('id', row.id);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Could not delete', description: error.message });
+      return;
+    }
+    if (selectedId === row.id) setSelectedId(null);
+    queryClient.invalidateQueries({ queryKey: ['qr-codes'] });
+    toast({ title: 'QR code deleted', description: 'Printed copies will no longer work.' });
+  };
+
   const selected = codes?.find((c) => c.id === selectedId);
 
   return (
