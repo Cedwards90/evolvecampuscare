@@ -38,12 +38,17 @@ export default function RequestDetail() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const { data: request, isLoading, error } = useRequest(id);
+  const [editOpen, setEditOpen] = useState(false);
 
   const isStaff = role === 'case_manager' || role === 'admin';
   const canTakeActions = isStaff && (
     role === 'admin' || 
     request?.assigned_case_manager_id === user?.id
   );
+  const canStudentEdit =
+    role === 'student' &&
+    request?.student_id === user?.id &&
+    request?.status === 'submitted';
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
