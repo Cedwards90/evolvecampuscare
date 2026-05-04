@@ -61,6 +61,7 @@ function App() {
           <AuthProvider>
             <LanguageProvider>
               <OfflineProvider>
+                <GlobalFiltersProvider>
                 <TooltipProvider delayDuration={0}>
                   <Toaster />
                   <Sonner />
