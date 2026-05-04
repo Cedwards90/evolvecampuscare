@@ -42,7 +42,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { Pencil } from 'lucide-react';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
+import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
 import { useRequests } from '@/hooks/useRequests';
 import { useMyAppointments } from '@/hooks/useMyAppointments';
 import { useAuth } from '@/contexts/AuthContext';
@@ -92,6 +94,19 @@ function RequestTimeline({ request }: { request: SupportRequest }) {
         );
       })}
     </div>
+  );
+}
+
+function EditEntry({ request }: { request: SupportRequest }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="outline" className="w-full" onClick={() => setOpen(true)}>
+        <Pencil className="mr-2 h-4 w-4" />
+        Edit Request
+      </Button>
+      <EditRequestDialog request={request} open={open} onOpenChange={setOpen} />
+    </>
   );
 }
 
@@ -356,6 +371,11 @@ export default function TrackRequests() {
                             </Button>
                           }
                         />
+                      )}
+
+                      {/* Edit button — only while still pending */}
+                      {request.status === 'submitted' && request.student_id === user?.id && (
+                        <EditEntry request={request} />
                       )}
                     </div>
                   </SheetContent>

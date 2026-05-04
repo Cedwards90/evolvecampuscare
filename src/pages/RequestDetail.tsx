@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -8,8 +9,10 @@ import {
   Mail,
   Phone,
   Clock,
-  FileText
+  FileText,
+  Pencil
 } from 'lucide-react';
+import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
 import { formatDistanceToNow, format } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { Button } from '@/components/ui/button';
@@ -35,12 +38,17 @@ export default function RequestDetail() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const { data: request, isLoading, error } = useRequest(id);
+  const [editOpen, setEditOpen] = useState(false);
 
   const isStaff = role === 'case_manager' || role === 'admin';
   const canTakeActions = isStaff && (
     role === 'admin' || 
     request?.assigned_case_manager_id === user?.id
   );
+  const canStudentEdit =
+    role === 'student' &&
+    request?.student_id === user?.id &&
+    request?.status === 'submitted';
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
@@ -134,10 +142,20 @@ export default function RequestDetail() {
             {/* Request Details Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Request Details</CardTitle>
-                <div className="flex gap-2 mt-2">
-                  <PriorityBadge priority={request.priority} />
-                  <CategoryBadge category={request.category} />
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <CardTitle>Request Details</CardTitle>
+                    <div className="flex gap-2 mt-2">
+                      <PriorityBadge priority={request.priority} />
+                      <CategoryBadge category={request.category} />
+                    </div>
+                  </div>
+                  {canStudentEdit && (
+                    <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -400,6 +418,9 @@ export default function RequestDetail() {
           </div>
         </div>
       </div>
+      {canStudentEdit && (
+        <EditRequestDialog request={request} open={editOpen} onOpenChange={setEditOpen} />
+      )}
     </SidebarLayout>
   );
 }
