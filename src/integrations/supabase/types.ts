@@ -395,6 +395,30 @@ export type Database = {
         }
         Relationships: []
       }
+      org_admins: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       organization_memberships: {
         Row: {
           created_at: string
@@ -1109,6 +1133,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_org_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_org_admin_of: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -1118,6 +1147,7 @@ export type Database = {
         }
         Returns: number
       }
+      org_admin_orgs: { Args: { _user_id: string }; Returns: string[] }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -1126,9 +1156,13 @@ export type Database = {
           read_ct: number
         }[]
       }
+      user_in_org_admin_scope: {
+        Args: { _actor: string; _target_user: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      app_role: "student" | "case_manager" | "admin"
+      app_role: "student" | "case_manager" | "admin" | "org_admin"
       request_category:
         | "academic"
         | "financial"
@@ -1269,7 +1303,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["student", "case_manager", "admin"],
+      app_role: ["student", "case_manager", "admin", "org_admin"],
       request_category: [
         "academic",
         "financial",

@@ -38,6 +38,7 @@ import type { AppRole } from '@/types/database';
 
 const roleConfig: Record<AppRole, { label: string; icon: typeof Shield; color: string }> = {
   admin: { label: 'Admin', icon: Shield, color: 'bg-destructive/10 text-destructive border-destructive/20' },
+  org_admin: { label: 'Org Admin', icon: Shield, color: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20' },
   case_manager: { label: 'Case Manager', icon: Briefcase, color: 'bg-primary/10 text-primary border-primary/20' },
   student: { label: 'Student', icon: GraduationCap, color: 'bg-muted text-muted-foreground border-border' },
 };

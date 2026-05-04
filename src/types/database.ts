@@ -1,6 +1,10 @@
 // Application-level type definitions
 
-export type AppRole = 'student' | 'case_manager' | 'admin';
+export type AppRole = 'student' | 'case_manager' | 'admin' | 'org_admin';
+
+// Roles that act as staff (have admin-like permissions, MFA required, see staff UI)
+export const STAFF_ROLES: AppRole[] = ['admin', 'case_manager', 'org_admin'];
+export const PRIVILEGED_ROLES: AppRole[] = ['admin', 'case_manager', 'org_admin'];
 
 export type RequestStatus = 'submitted' | 'in_progress' | 'escalated' | 'resolved' | 'cancelled';
 

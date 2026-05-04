@@ -24,6 +24,7 @@ import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
 import { PendingInvitationsSection } from '@/components/admin/PendingInvitationsSection';
+import { OrgAdminAssignmentDialog } from '@/components/admin/OrgAdminAssignmentDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,12 +78,14 @@ const ITEMS_PER_PAGE = 10;
 const roleIcons: Record<AppRole, React.ComponentType<{ className?: string }>> = {
   student: GraduationCap,
   case_manager: UserCheck,
+  org_admin: Shield,
   admin: Shield,
 };
 
 const roleColors: Record<AppRole, string> = {
   student: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   case_manager: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  org_admin: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   admin: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
 };
 
@@ -95,6 +98,7 @@ export default function UserManagementPage() {
   const [newRole, setNewRole] = useState<AppRole | null>(null);
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string; email: string; role: AppRole } | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [orgAdminTarget, setOrgAdminTarget] = useState<{ id: string; name: string } | null>(null);
   
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
@@ -158,8 +162,10 @@ export default function UserManagementPage() {
         title: 'Role Updated',
         description: `${selectedUser.name}'s role has been changed to ${newRole.replace('_', ' ')}.`,
       });
+      const promoted = newRole === 'org_admin' ? { id: selectedUser.id, name: selectedUser.name } : null;
       setSelectedUser(null);
       setNewRole(null);
+      if (promoted) setOrgAdminTarget(promoted);
     } catch (error) {
       toast({
         title: 'Error',
@@ -447,6 +453,22 @@ export default function UserManagementPage() {
                                     Make Administrator
                                   </DropdownMenuItem>
                                 )}
+                                {user.role !== 'org_admin' && (
+                                  <DropdownMenuItem
+                                    onClick={() => openRoleDialog(user.user_id, user.full_name || 'User', user.role, 'org_admin')}
+                                  >
+                                    <Building2 className="mr-2 h-4 w-4" />
+                                    Make Org Admin
+                                  </DropdownMenuItem>
+                                )}
+                                {user.role === 'org_admin' && (
+                                  <DropdownMenuItem
+                                    onClick={() => setOrgAdminTarget({ id: user.user_id, name: user.full_name || 'User' })}
+                                  >
+                                    <Building2 className="mr-2 h-4 w-4" />
+                                    Manage organizations
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onClick={() => openDeleteDialog(user.user_id, user.full_name || 'User', user.email, user.role)}
@@ -584,6 +606,13 @@ export default function UserManagementPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <OrgAdminAssignmentDialog
+        open={!!orgAdminTarget}
+        onOpenChange={(o) => !o && setOrgAdminTarget(null)}
+        userId={orgAdminTarget?.id ?? null}
+        userName={orgAdminTarget?.name ?? ''}
+      />
     </SidebarLayout>
   );
 }
