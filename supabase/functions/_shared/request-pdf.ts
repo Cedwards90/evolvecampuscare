@@ -86,10 +86,28 @@ export async function buildRequestPdf(data: Awaited<ReturnType<typeof loadReques
 
   const ensure = (needed: number) => { if (y - needed < MARGIN + 30) newPage(); };
 
+  const sanitize = (s: string): string => {
+    if (s == null) return "";
+    return String(s)
+      .replace(/[\u2192\u27A1]/g, "->")
+      .replace(/[\u2190]/g, "<-")
+      .replace(/[\u2014\u2013]/g, "-")
+      .replace(/[\u2018\u2019\u201A\u2032]/g, "'")
+      .replace(/[\u201C\u201D\u201E\u2033]/g, '"')
+      .replace(/[\u2022\u25CF\u25E6]/g, "*")
+      .replace(/\u2026/g, "...")
+      .replace(/\u00A0/g, " ")
+      // Strip anything outside printable WinAnsi range
+      .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, "?");
+  };
+
+  const safeDraw = (p: any, str: string, opts: any) => p.drawText(sanitize(str), opts);
+
   const wrap = (text: string, f = font, size = 10): string[] => {
     if (!text) return [""];
+    const clean = sanitize(text);
     const lines: string[] = [];
-    for (const para of String(text).split(/\n/)) {
+    for (const para of clean.split(/\n/)) {
       const words = para.split(/\s+/);
       let cur = "";
       for (const w of words) {
