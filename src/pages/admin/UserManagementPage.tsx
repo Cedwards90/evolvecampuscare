@@ -162,8 +162,10 @@ export default function UserManagementPage() {
         title: 'Role Updated',
         description: `${selectedUser.name}'s role has been changed to ${newRole.replace('_', ' ')}.`,
       });
+      const promoted = newRole === 'org_admin' ? { id: selectedUser.id, name: selectedUser.name } : null;
       setSelectedUser(null);
       setNewRole(null);
+      if (promoted) setOrgAdminTarget(promoted);
     } catch (error) {
       toast({
         title: 'Error',
