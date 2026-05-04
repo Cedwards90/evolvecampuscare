@@ -42,6 +42,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRequests } from '@/hooks/useRequests';
 import { useMyStudents } from '@/hooks/useMyStudents';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { applyToRequests } from '@/lib/applyGlobalFilters';
 import type { RequestStatus, RequestPriority } from '@/types/database';
 
 export default function ManageRequests() {
@@ -75,8 +78,10 @@ export default function ManageRequests() {
     setSearchParams(searchParams);
   };
 
+  const { filters: globalFilters } = useGlobalFilters();
+
   // Filter and sort requests
-  const filteredRequests = (requests || [])
+  const filteredRequests = applyToRequests(requests || [], globalFilters)
     .filter((request) => {
       const matchesSearch = 
         request.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -116,6 +121,8 @@ export default function ManageRequests() {
           title="Manage Student Requests"
           description="Review and respond to student support requests assigned to you"
         />
+
+        <GlobalFilterBar visible={['cohort', 'yearOfStudy', 'organizationId', 'status', 'assignedCaseManagerId']} />
 
         {/* My Students Section */}
         <MyStudentsSection 

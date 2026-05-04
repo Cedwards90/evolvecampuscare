@@ -20,6 +20,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useStudentFolders } from '@/hooks/useStudentFolders';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters, getCohortFromDate } from '@/contexts/GlobalFiltersContext';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -34,11 +36,13 @@ export default function StudentFolders() {
   // Get unique orgs for filter
   const orgOptions = [...new Map((students || []).filter(s => s.organization_name).map(s => [s.organization_id, s.organization_name])).entries()];
 
+  const { filters: gf } = useGlobalFilters();
   const filtered = (students || []).filter(s => {
     const q = search.toLowerCase();
     const matchesSearch = (s.full_name || '').toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
     const matchesOrg = orgFilter === 'all' || s.organization_id === orgFilter;
-    return matchesSearch && matchesOrg;
+    const matchesGlobalOrg = gf.organizationId.length === 0 || (s.organization_id && gf.organizationId.includes(s.organization_id));
+    return matchesSearch && matchesOrg && matchesGlobalOrg;
   });
 
   return (
@@ -48,6 +52,8 @@ export default function StudentFolders() {
           title="Student Folders"
           description="Browse student files, intake responses, and request history."
         />
+
+        <GlobalFilterBar visible={['cohort', 'yearOfStudy', 'organizationId']} />
 
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-sm">

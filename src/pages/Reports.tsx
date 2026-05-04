@@ -95,6 +95,8 @@ export default function Reports() {
           description="Caseload summaries and per-student progress reports. Live data, downloadable as PDF or CSV."
         />
 
+        <GlobalFilterBar visible={['cohort', 'yearOfStudy', 'organizationId', 'status', 'assignedCaseManagerId']} />
+
         <Tabs defaultValue="caseload" className="space-y-4">
           <TabsList>
             <TabsTrigger value="caseload" className="gap-2">

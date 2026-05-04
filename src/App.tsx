@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
+import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { ProtectedRoute } from "@/components/layouts/ProtectedRoute";
 
 import Landing from "./pages/Landing";
@@ -60,6 +61,7 @@ function App() {
           <AuthProvider>
             <LanguageProvider>
               <OfflineProvider>
+                <GlobalFiltersProvider>
                 <TooltipProvider delayDuration={0}>
                   <Toaster />
                   <Sonner />
@@ -231,8 +233,9 @@ function App() {
                   {/* Catch-all route */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-              </TooltipProvider>
-            </OfflineProvider>
+                </TooltipProvider>
+                </GlobalFiltersProvider>
+              </OfflineProvider>
           </LanguageProvider>
         </AuthProvider>
       </BrowserRouter>
