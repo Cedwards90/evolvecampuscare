@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getQRSession, logQREvent, clearQRSession } from '@/hooks/useQRSession';
 
 interface ScheduleMeetingParams {
   studentId: string;
