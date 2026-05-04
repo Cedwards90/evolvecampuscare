@@ -69,6 +69,19 @@ export default function Reports() {
     to,
   });
 
+  const { filters } = useGlobalFilters();
+  const filteredData = useMemo(() => {
+    if (!data) return data;
+    const orgs = filters.organizationId;
+    if (orgs.length === 0) return data;
+    const inOrg = (s: any) => s?.organization_id && orgs.includes(s.organization_id);
+    return {
+      ...data,
+      opened: data.opened.filter((r: any) => inOrg(r.student)),
+      unresolved: data.unresolved.filter((r: any) => inOrg(r.student)),
+    };
+  }, [data, filters.organizationId]);
+
   const handleExportPdf = () => {
     if (!data) return;
     try {
