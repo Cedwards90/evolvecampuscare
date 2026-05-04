@@ -604,6 +604,13 @@ export default function UserManagementPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <OrgAdminAssignmentDialog
+        open={!!orgAdminTarget}
+        onOpenChange={(o) => !o && setOrgAdminTarget(null)}
+        userId={orgAdminTarget?.id ?? null}
+        userName={orgAdminTarget?.name ?? ''}
+      />
     </SidebarLayout>
   );
 }
