@@ -360,14 +360,19 @@ export default function QRCodesPage() {
             {selected && (
               <div className="space-y-6 lg:col-span-2">
                 <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle className="font-display">{selected.label}</CardTitle>
-                      <CardDescription>{selected.organization_id ? orgName[selected.organization_id] : 'Global access'}</CardDescription>
+                  <CardHeader className="flex flex-row items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <CardTitle className="font-display truncate">{selected.title || selected.label}</CardTitle>
+                      <CardDescription className="truncate">
+                        {selected.organization_id ? orgName[selected.organization_id] : 'Global access'} · destination: {selected.destination_type || 'request'}
+                      </CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" className="rounded-full" onClick={() => setEditOpen(true)}>
+                        <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                      </Button>
                       <Switch checked={selected.is_active} onCheckedChange={() => toggleActive(selected)} />
-                      <span className="text-xs text-muted-foreground"><Power className="h-3 w-3 inline" /> {selected.is_active ? 'Active' : 'Inactive'}</span>
+                      <span className="text-xs text-muted-foreground hidden sm:inline"><Power className="h-3 w-3 inline" /> {selected.is_active ? 'Active' : 'Inactive'}</span>
                     </div>
                   </CardHeader>
                   <CardContent>
