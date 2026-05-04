@@ -708,6 +708,78 @@ export type Database = {
           },
         ]
       }
+      request_share_audit: {
+        Row: {
+          action: Database["public"]["Enums"]["share_action"]
+          actor_id: string | null
+          created_at: string
+          id: string
+          ip: string | null
+          recipients: string[] | null
+          request_id: string
+          share_link_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["share_action"]
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          ip?: string | null
+          recipients?: string[] | null
+          request_id: string
+          share_link_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["share_action"]
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          ip?: string | null
+          recipients?: string[] | null
+          request_id?: string
+          share_link_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      request_share_links: {
+        Row: {
+          access_count: number
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          last_accessed_at: string | null
+          request_id: string
+          revoked_at: string | null
+          token: string
+        }
+        Insert: {
+          access_count?: number
+          created_at?: string
+          created_by: string
+          expires_at: string
+          id?: string
+          last_accessed_at?: string | null
+          request_id: string
+          revoked_at?: string | null
+          token: string
+        }
+        Update: {
+          access_count?: number
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          last_accessed_at?: string | null
+          request_id?: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Relationships: []
+      }
       request_updates: {
         Row: {
           created_at: string
@@ -1205,6 +1277,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_staff_access_request: {
+        Args: { _request_id: string; _user: string }
+        Returns: boolean
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1275,6 +1351,12 @@ export type Database = {
         | "escalated"
         | "resolved"
         | "cancelled"
+      share_action:
+        | "download"
+        | "email"
+        | "link_created"
+        | "link_revoked"
+        | "link_accessed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1426,6 +1508,13 @@ export const Constants = {
         "escalated",
         "resolved",
         "cancelled",
+      ],
+      share_action: [
+        "download",
+        "email",
+        "link_created",
+        "link_revoked",
+        "link_accessed",
       ],
     },
   },
