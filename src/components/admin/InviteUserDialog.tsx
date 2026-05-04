@@ -41,7 +41,7 @@ import type { AppRole } from '@/types/database';
 
 const inviteSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
-  role: z.enum(['student', 'case_manager', 'admin'] as const),
+  role: z.enum(['student', 'case_manager', 'admin', 'org_admin'] as const),
   notes: z.string().optional(),
 });
 
@@ -67,6 +67,11 @@ const roleConfig: Record<AppRole, { label: string; icon: typeof Shield; descript
     label: 'Case Manager',
     icon: UserCheck,
     description: 'Can manage student requests and provide support',
+  },
+  org_admin: {
+    label: 'Organizational Admin',
+    icon: Shield,
+    description: 'Admin powers limited to a specific organization',
   },
   admin: {
     label: 'Administrator',
