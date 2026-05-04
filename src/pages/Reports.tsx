@@ -25,6 +25,7 @@ import { ReportPreview } from '@/components/reports/ReportPreview';
 import { exportReportCsv, exportReportPdf } from '@/lib/reportExport';
 import { toast } from '@/hooks/use-toast';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 
 export default function Reports() {
   const { user, role } = useAuth();
