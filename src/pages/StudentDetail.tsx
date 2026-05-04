@@ -454,6 +454,11 @@ export default function StudentDetail() {
             <StudentFileTab studentId={id!} requests={student.requests} />
           </TabsContent>
 
+          {/* Case Notes Tab */}
+          <TabsContent value="case-notes" className="space-y-4">
+            <StudentCaseNotesTab studentId={id!} />
+          </TabsContent>
+
           {/* Check-Ins Tab */}
           <TabsContent value="checkins" className="space-y-4">
             <StudentCheckInsTab studentId={id!} />
