@@ -639,50 +639,7 @@ function StudentFileTab({ studentId, requests }: { studentId: string; requests: 
         </CardContent>
       </Card>
 
-      {/* Progress Notes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <PenLine className="h-4 w-4" />
-            Progress Notes
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Add Note */}
-          <div className="space-y-2">
-            <Textarea
-              placeholder="Add a progress note..."
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              className="min-h-[80px]"
-            />
-            <Button size="sm" onClick={handleAddNote} disabled={addingNote || !newNote.trim()}>
-              {addingNote ? 'Adding...' : 'Add Note'}
-            </Button>
-          </div>
-
-          {/* Notes Timeline */}
-          {notesLoading ? (
-            <p className="text-sm text-muted-foreground">Loading notes...</p>
-          ) : notes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No progress notes yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {notes.map((note) => (
-                <div key={note.id} className="border-l-2 border-muted pl-3 py-1">
-                  <p className="text-sm">{note.content}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
-                    {note.note_type !== 'general' && (
-                      <Badge variant="outline" className="ml-2 text-xs">{note.note_type}</Badge>
-                    )}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Case notes are managed in the dedicated Case Notes tab */}
     </div>
   );
 }
