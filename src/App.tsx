@@ -46,12 +46,20 @@ import Reports from "./pages/Reports";
 import StudentProgressReportPage from "./pages/StudentProgressReport";
 import NotFound from "./pages/NotFound";
 
-// Create query client outside component to ensure stable reference
+// Create query client outside component to ensure stable reference.
+// Defaults tuned to avoid stale UI after mutations or returning to a tab,
+// while still keeping React Query's dedupe/cache benefits.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,
+      staleTime: 30 * 1000,
+      gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
       retry: 1,
+    },
+    mutations: {
+      retry: 0,
     },
   },
 });
