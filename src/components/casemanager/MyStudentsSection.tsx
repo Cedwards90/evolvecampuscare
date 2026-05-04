@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/EmptyState';
 import { InviteStudentDialog } from '@/components/casemanager/InviteStudentDialog';
 import type { MyStudent } from '@/hooks/useMyStudents';
+import { useGlobalFilters, getCohortFromDate } from '@/contexts/GlobalFiltersContext';
 
 interface MyStudentsSectionProps {
   students: MyStudent[];
@@ -19,7 +20,18 @@ function getInitials(name: string | null): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
-export function MyStudentsSection({ students, isLoading }: MyStudentsSectionProps) {
+export function MyStudentsSection({ students: rawStudents, isLoading }: MyStudentsSectionProps) {
+  const { filters: f } = useGlobalFilters();
+  const students = rawStudents.filter((s) => {
+    const p: any = s.student;
+    if (f.organizationId.length && (!p?.organization_id || !f.organizationId.includes(p.organization_id))) return false;
+    if (f.cohort.length) {
+      const c = getCohortFromDate(p?.cohort_start_date);
+      if (!c || !f.cohort.includes(c)) return false;
+    }
+    if (f.yearOfStudy.length && (!p?.year_of_study || !f.yearOfStudy.includes(p.year_of_study))) return false;
+    return true;
+  });
   if (isLoading) {
     return (
       <section className="space-y-4">
