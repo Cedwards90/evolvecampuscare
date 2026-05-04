@@ -66,15 +66,36 @@ type RequestFormData = z.infer<typeof requestSchema>;
 export default function SubmitRequest() {
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const qrCodeParam = searchParams.get('qr');
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const submitRequest = useSubmitRequest();
+  const [qrContext, setQrContext] = useState<{ title: string; description: string | null } | null>(null);
 
   useEffect(() => {
     if (getQRSession().sessionId) {
       logQREvent({ eventType: 'action_started', actionKind: 'request' });
     }
   }, []);
+
+  // Load QR context (title/description/prefill) if arrived via QR
+  useEffect(() => {
+    if (!qrCodeParam) return;
+    (async () => {
+      const { data } = await supabase
+        .from('qr_codes')
+        .select('title,label,description,prefill_category,is_active')
+        .eq('code', qrCodeParam)
+        .maybeSingle();
+      if (!data || !data.is_active) return;
+      setQrContext({ title: data.title || data.label, description: data.description });
+      if (data.prefill_category && !form.getValues('category')) {
+        form.setValue('category', data.prefill_category as RequestCategory);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrCodeParam]);
 
   const form = useForm<RequestFormData>({
     resolver: zodResolver(requestSchema),
