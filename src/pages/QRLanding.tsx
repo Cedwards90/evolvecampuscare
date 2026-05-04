@@ -43,20 +43,27 @@ export default function QRLanding() {
     }
   }, [qrCode, user, isLoading]);
 
+  const isStaff = !!role && role !== 'student';
+
   const handleAction = async (kind: 'request' | 'meeting') => {
     await logQREvent({ eventType: 'action_selected', actionKind: kind });
+    // Staff are not permitted to submit a request via the student flow.
+    if (kind === 'request' && user && isStaff) {
+      return;
+    }
     if (!user) {
       await logQREvent({ eventType: 'auth_required', actionKind: kind });
-      const next = kind === 'request' ? '/student-submitting-a-support-request' : '/dashboard?action=schedule';
+      const next = kind === 'request'
+        ? '/student/support-request?source=qr'
+        : '/dashboard?action=schedule';
       navigate(`/auth?redirect=${encodeURIComponent(next)}&remember=1`);
       return;
     }
-    if (role && role !== 'student') {
-      // Staff scanning their own poster — just send to dashboard
+    if (kind === 'meeting' && isStaff) {
       navigate('/dashboard');
       return;
     }
-    if (kind === 'request') navigate('/student-submitting-a-support-request');
+    if (kind === 'request') navigate('/student/support-request?source=qr');
     else navigate('/dashboard?action=schedule');
   };
 

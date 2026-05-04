@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import type { AppRole } from '@/types/database';
@@ -10,6 +10,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, role, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -20,7 +21,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    // Preserve the originally requested URL (path + query) so flows like
+    // QR scans land back on the right page after authentication.
+    const next = `${location.pathname}${location.search}`;
+    const redirect = next && next !== '/' ? `?redirect=${encodeURIComponent(next)}` : '';
+    return <Navigate to={`/auth${redirect}`} replace />;
   }
 
   if (allowedRoles && role && !allowedRoles.includes(role)) {
