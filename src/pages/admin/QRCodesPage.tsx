@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Plus, QrCode, Power, BarChart3, Pencil } from 'lucide-react';
+import { Loader2, Plus, QrCode, Power, BarChart3, Pencil, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
@@ -281,6 +292,17 @@ export default function QRCodesPage() {
     queryClient.invalidateQueries({ queryKey: ['qr-codes'] });
   };
 
+  const handleDelete = async (row: QRCodeRow) => {
+    const { error } = await supabase.from('qr_codes').delete().eq('id', row.id);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Could not delete', description: error.message });
+      return;
+    }
+    if (selectedId === row.id) setSelectedId(null);
+    queryClient.invalidateQueries({ queryKey: ['qr-codes'] });
+    toast({ title: 'QR code deleted', description: 'Printed copies will no longer work.' });
+  };
+
   const selected = codes?.find((c) => c.id === selectedId);
 
   return (
@@ -371,6 +393,30 @@ export default function QRCodesPage() {
                       <Button size="sm" variant="outline" className="rounded-full" onClick={() => setEditOpen(true)}>
                         <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
                       </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="sm" variant="outline" className="rounded-full text-destructive hover:text-destructive">
+                            <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete this QR code?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              "{selected.label}" will be permanently removed. Existing printed copies will stop working. Past scan history will be retained for analytics.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={() => handleDelete(selected)}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                       <Switch checked={selected.is_active} onCheckedChange={() => toggleActive(selected)} />
                       <span className="text-xs text-muted-foreground hidden sm:inline"><Power className="h-3 w-3 inline" /> {selected.is_active ? 'Active' : 'Inactive'}</span>
                     </div>
