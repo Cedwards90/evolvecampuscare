@@ -104,21 +104,23 @@ export default function UserManagementPage() {
   const updateRole = useUpdateUserRole();
   const deleteUser = useDeleteUser();
 
+  const { filters: globalFilters } = useGlobalFilters();
+
   // Filter and paginate users
   const filteredUsers = useMemo(() => {
     if (!users) return [];
-    
-    return users.filter(user => {
-      const matchesSearch = 
+    const globallyFiltered = applyToProfiles(users as any, globalFilters);
+    return globallyFiltered.filter((user: any) => {
+      const matchesSearch =
         user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
       const matchesOrg = orgFilter === 'all' || user.organization_id === orgFilter;
-      
+
       return matchesSearch && matchesRole && matchesOrg;
     });
-  }, [users, searchQuery, roleFilter, orgFilter]);
+  }, [users, searchQuery, roleFilter, orgFilter, globalFilters]);
 
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = filteredUsers.slice(
