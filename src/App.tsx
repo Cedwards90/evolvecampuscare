@@ -172,8 +172,11 @@ function App() {
                 <SurveyResponses />
               </ProtectedRoute>
             } />
-                  
-                  {/* Messages - All authenticated users */}
+            <Route path="/admin/qr-codes" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                <QRCodesPage />
+              </ProtectedRoute>
+            } />
                   <Route path="/messages" element={
                     <ProtectedRoute>
                       <Messages />
