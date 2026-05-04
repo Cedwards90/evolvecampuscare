@@ -142,7 +142,7 @@ export default function SubmitRequest() {
     }
 
     try {
-      await submitRequest.mutateAsync({
+      const result = await submitRequest.mutateAsync({
         category: data.category,
         title: data.title,
         description: data.description,
@@ -152,13 +152,15 @@ export default function SubmitRequest() {
         studentName: profile?.full_name || 'Unknown Student',
         requestedAmount: data.category === 'financial' ? data.requestedAmount : undefined,
       });
-      
+
       toast({
         title: 'Request submitted successfully!',
         description: 'A case manager will review your request shortly.',
       });
-      
-      navigate('/student-tracking-request-status-scheduling-meeting');
+
+      const newId = (result as any)?.id;
+      if (newId) navigate(`/requests/${newId}`);
+      else navigate('/student-tracking-request-status-scheduling-meeting');
     } catch (error) {
       console.error('Error submitting request:', error);
       toast({
