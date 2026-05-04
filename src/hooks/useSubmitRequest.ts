@@ -36,6 +36,7 @@ export function useSubmitRequest() {
         .maybeSingle();
 
       const hasAssignedCM = assignment?.case_manager_id;
+      const { sessionId: qrSessionId } = getQRSession();
 
       // Insert request into database with auto-assignment if student has a case manager
       const { data, error } = await supabase
@@ -50,11 +51,16 @@ export function useSubmitRequest() {
           status: hasAssignedCM ? 'in_progress' : 'submitted',
           assigned_case_manager_id: hasAssignedCM || null,
           requested_amount: requestedAmount || null,
+          qr_session_id: qrSessionId || null,
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      if (qrSessionId) {
+        logQREvent({ eventType: 'action_completed', actionKind: 'request', targetId: data.id }).finally(() => clearQRSession());
+      }
 
       // Always notify about the new request (notifies admins and/or assigned case manager)
       supabase.functions.invoke('notify-new-request', {
