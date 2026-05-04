@@ -86,10 +86,27 @@ export async function buildRequestPdf(data: Awaited<ReturnType<typeof loadReques
 
   const ensure = (needed: number) => { if (y - needed < MARGIN + 30) newPage(); };
 
+  const sanitize = (s: string): string => {
+    if (s == null) return "";
+    return String(s)
+      .replace(/[\u2192\u27A1]/g, "->")
+      .replace(/[\u2190]/g, "<-")
+      .replace(/[\u2014\u2013]/g, "-")
+      .replace(/[\u2018\u2019\u201A\u2032]/g, "'")
+      .replace(/[\u201C\u201D\u201E\u2033]/g, '"')
+      .replace(/[\u2022\u25CF\u25E6]/g, "*")
+      .replace(/\u2026/g, "...")
+      .replace(/\u00A0/g, " ")
+      // Strip anything outside printable WinAnsi range
+      .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, "?");
+  };
+
+
   const wrap = (text: string, f = font, size = 10): string[] => {
     if (!text) return [""];
+    const clean = sanitize(text);
     const lines: string[] = [];
-    for (const para of String(text).split(/\n/)) {
+    for (const para of clean.split(/\n/)) {
       const words = para.split(/\s+/);
       let cur = "";
       for (const w of words) {
@@ -111,7 +128,7 @@ export async function buildRequestPdf(data: Awaited<ReturnType<typeof loadReques
     const lines = wrap(s, f, size);
     for (const line of lines) {
       ensure(size + 4);
-      page.drawText(line, { x: MARGIN + (opts.indent || 0), y, size, font: f, color });
+      page.drawText(sanitize(line), { x: MARGIN + (opts.indent || 0), y, size, font: f, color });
       y -= size + 4;
     }
   };
@@ -119,7 +136,7 @@ export async function buildRequestPdf(data: Awaited<ReturnType<typeof loadReques
   const heading = (s: string) => {
     ensure(28);
     y -= 6;
-    page.drawText(s, { x: MARGIN, y, size: 13, font: bold, color: FOREST });
+    page.drawText(sanitize(s), { x: MARGIN, y, size: 13, font: bold, color: FOREST });
     y -= 6;
     page.drawLine({
       start: { x: MARGIN, y }, end: { x: PAGE_W - MARGIN, y },
@@ -130,23 +147,23 @@ export async function buildRequestPdf(data: Awaited<ReturnType<typeof loadReques
 
   const kv = (k: string, v: string) => {
     ensure(16);
-    page.drawText(k, { x: MARGIN, y, size: 9, font: bold, color: GREY });
+    page.drawText(sanitize(k), { x: MARGIN, y, size: 9, font: bold, color: GREY });
     const lines = wrap(v || "—", font, 10);
-    page.drawText(lines[0], { x: MARGIN + 140, y, size: 10, font, color: DARK });
+    page.drawText(sanitize(lines[0]), { x: MARGIN + 140, y, size: 10, font, color: DARK });
     y -= 14;
     for (let i = 1; i < lines.length; i++) {
       ensure(14);
-      page.drawText(lines[i], { x: MARGIN + 140, y, size: 10, font, color: DARK });
+      page.drawText(sanitize(lines[i]), { x: MARGIN + 140, y, size: 10, font, color: DARK });
       y -= 14;
     }
   };
 
   const drawHeader = () => {
     page.drawRectangle({ x: 0, y: PAGE_H - 36, width: PAGE_W, height: 36, color: FOREST });
-    page.drawText("Evolve Foundation — Campus Care", {
+    page.drawText(sanitize("Evolve Foundation — Campus Care"), {
       x: MARGIN, y: PAGE_H - 23, size: 12, font: bold, color: rgb(1, 1, 1),
     });
-    page.drawText("CONFIDENTIAL", {
+    page.drawText(sanitize("CONFIDENTIAL"), {
       x: PAGE_W - MARGIN - 70, y: PAGE_H - 23, size: 9, font: bold, color: rgb(1, 1, 1),
     });
     y = PAGE_H - 50;
@@ -211,9 +228,9 @@ export async function buildRequestPdf(data: Awaited<ReturnType<typeof loadReques
       ensure(40);
       const stamp = fmtDate(u.created_at);
       const tag = u.is_internal ? " [INTERNAL]" : "";
-      page.drawText(`${stamp}${tag}`, { x: MARGIN, y, size: 9, font: bold, color: u.is_internal ? rgb(0.7, 0.4, 0) : FOREST });
+      page.drawText(sanitize(`${stamp}${tag}`), { x: MARGIN, y, size: 9, font: bold, color: u.is_internal ? rgb(0.7, 0.4, 0) : FOREST });
       y -= 12;
-      page.drawText(`by ${u.author}`, { x: MARGIN, y, size: 8, font, color: GREY });
+      page.drawText(sanitize(`by ${u.author}`), { x: MARGIN, y, size: 8, font, color: GREY });
       y -= 12;
       if (u.previous_status && u.new_status) {
         text(`Status: ${u.previous_status} → ${u.new_status}`, { size: 9, color: GREY, indent: 8 });
@@ -237,10 +254,10 @@ export async function buildRequestPdf(data: Awaited<ReturnType<typeof loadReques
   // Footer on every page
   const pages = pdf.getPages();
   pages.forEach((p, i) => {
-    p.drawText(`Confidential — Page ${i + 1} of ${pages.length}`, {
+    p.drawText(sanitize(`Confidential — Page ${i + 1} of ${pages.length}`), {
       x: MARGIN, y: 24, size: 8, font, color: GREY,
     });
-    p.drawText(`Request ID: ${data.request.id}`, {
+    p.drawText(sanitize(`Request ID: ${data.request.id}`), {
       x: PAGE_W - MARGIN - 200, y: 24, size: 8, font, color: GREY,
     });
   });
