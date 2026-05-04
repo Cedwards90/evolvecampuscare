@@ -359,6 +359,11 @@ export default function TrackRequests() {
                           }
                         />
                       )}
+
+                      {/* Edit button — only while still pending */}
+                      {request.status === 'submitted' && request.student_id === user?.id && (
+                        <EditEntry request={request} />
+                      )}
                     </div>
                   </SheetContent>
                 </Sheet>
