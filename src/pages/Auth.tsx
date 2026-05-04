@@ -178,7 +178,7 @@ export default function Auth() {
           title: 'Account created!',
           description: 'Welcome! You can now access your dashboard.',
         });
-        navigate('/dashboard', { replace: true });
+        navigate(searchParams.get('redirect') || '/dashboard', { replace: true });
       }
     } catch (err) {
       toast({
