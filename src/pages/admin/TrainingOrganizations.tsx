@@ -129,6 +129,8 @@ export default function TrainingOrganizations() {
           </Button>
         </div>
 
+        <GlobalFilterBar visible={['organizationId']} />
+
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
