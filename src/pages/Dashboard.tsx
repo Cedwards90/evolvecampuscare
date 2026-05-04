@@ -44,6 +44,9 @@ import { useCaseManagers } from '@/hooks/useCaseManagerStats';
 import { useMyAssignment } from '@/hooks/useMyAssignment';
 import { format, subDays } from 'date-fns';
 import { usePendingSurveys } from '@/hooks/useSurveyInvitations';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { applyToRequests } from '@/lib/applyGlobalFilters';
 
 export default function Dashboard() {
   const { role, user, profile } = useAuth();
