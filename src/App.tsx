@@ -73,6 +73,7 @@ function App() {
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/qr/:code" element={<QRLanding />} />
                   
                   {/* Protected routes - All authenticated users */}
                   <Route path="/dashboard" element={
