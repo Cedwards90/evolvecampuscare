@@ -30,6 +30,8 @@ import {
 } from '@/hooks/useTrainingOrganizations';
 import { useUsers } from '@/hooks/useUsers';
 import { BulkAssignOrgDialog } from '@/components/admin/BulkAssignOrgDialog';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 export default function TrainingOrganizations() {
   const { data: orgs, isLoading } = useTrainingOrganizations();
   const { data: users } = useUsers();
