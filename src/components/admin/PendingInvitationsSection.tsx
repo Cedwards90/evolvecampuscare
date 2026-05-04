@@ -53,9 +53,17 @@ const roleColors: Record<AppRole, string> = {
 
 export function PendingInvitationsSection() {
   const { toast } = useToast();
-  const { data: pendingInvitations, isLoading } = usePendingInvitations();
+  const { data: rawPendingInvitations, isLoading } = usePendingInvitations();
   const revokeInvitation = useRevokeInvitation();
   const [invitationToRevoke, setInvitationToRevoke] = useState<Invitation | null>(null);
+  const { filters: globalFilters } = useGlobalFilters();
+  const pendingInvitations = (rawPendingInvitations || []).filter((inv) => {
+    if (globalFilters.role.length && !globalFilters.role.includes(inv.invited_role)) return false;
+    if (globalFilters.organizationId.length) {
+      if (!inv.organization_id || !globalFilters.organizationId.includes(inv.organization_id)) return false;
+    }
+    return true;
+  });
 
   // Live-refresh the pending list when the signup trigger flips accepted_at,
   // or when another admin revokes/sends an invite.
