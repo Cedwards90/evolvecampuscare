@@ -393,6 +393,15 @@ export default function QRCodesPage() {
             )}
           </div>
         )}
+                </Card>
+              </div>
+            )}
+          </div>
+        )}
+
+        {selected && (
+          <EditQRDialog row={selected} open={editOpen} onOpenChange={setEditOpen} />
+        )}
       </div>
     </SidebarLayout>
   );
