@@ -69,15 +69,17 @@ export default function Dashboard() {
   }, [role, latestCheckIn]);
   
   // Filter requests based on role
+  const { filters: globalFilters } = useGlobalFilters();
   const requests = useMemo(() => {
+    let base = allRequests;
     if (role === 'student') {
-      return allRequests.filter(r => r.student_id === user?.id);
+      return base.filter(r => r.student_id === user?.id);
     } else if (role === 'case_manager') {
-      return allRequests.filter(r => r.assigned_case_manager_id === user?.id);
+      base = base.filter(r => r.assigned_case_manager_id === user?.id);
     }
-    return allRequests;
-  }, [allRequests, role, user?.id]);
-  
+    return applyToRequests(base, globalFilters);
+  }, [allRequests, role, user?.id, globalFilters]);
+
   // Calculate stats from real data
   const stats = useMemo(() => ({
     totalRequests: requests.length,
