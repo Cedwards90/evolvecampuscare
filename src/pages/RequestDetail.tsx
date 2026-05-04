@@ -418,6 +418,9 @@ export default function RequestDetail() {
           </div>
         </div>
       </div>
+      {canStudentEdit && (
+        <EditRequestDialog request={request} open={editOpen} onOpenChange={setEditOpen} />
+      )}
     </SidebarLayout>
   );
 }
