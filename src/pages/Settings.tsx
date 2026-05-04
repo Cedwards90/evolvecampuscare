@@ -38,6 +38,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useMFA } from '@/hooks/useMFA';
 import { MFAEnrollment } from '@/components/auth/MFAEnrollment';
+import { StudentQRShortcut } from '@/components/qr/StudentQRShortcut';
 
 const profileSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
