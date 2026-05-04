@@ -68,7 +68,7 @@ export default function Auth() {
     
     if (user && role) {
       // Check if privileged user needs MFA enrollment (first time setup)
-      const isPrivilegedRole = role === 'admin' || role === 'case_manager';
+      const isPrivilegedRole = role === 'admin' || role === 'case_manager' || role === 'org_admin';
       if (isPrivilegedRole && !isEnrolled && !isLoading) {
         setShowMFAEnrollment(true);
         return;

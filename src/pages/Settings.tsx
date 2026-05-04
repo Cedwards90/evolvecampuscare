@@ -142,7 +142,7 @@ export default function Settings() {
   const [showMFAEnrollment, setShowMFAEnrollment] = useState(false);
   const { isEnrolled, factors, unenroll, checkMFAStatus, isLoading: mfaLoading } = useMFA();
   
-  const isPrivilegedRole = role === 'admin' || role === 'case_manager';
+  const isPrivilegedRole = role === 'admin' || role === 'case_manager' || role === 'org_admin';
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
