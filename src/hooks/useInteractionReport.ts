@@ -207,13 +207,19 @@ export function useInteractionReport({ caseManagerId, from, to }: InteractionRep
           [...opened, ...unresolved].map((r) => r.student_id).filter(Boolean) as string[],
         ),
       );
-      let studentMap = new Map<string, Profile>();
+      let studentMap = new Map<string, Profile & { organization_name?: string | null }>();
       if (studentIds.length > 0) {
-        const { data: studentProfiles } = await supabase
-          .from('profiles')
-          .select('*')
-          .in('user_id', studentIds);
-        studentMap = new Map((studentProfiles || []).map((p) => [p.user_id, p as Profile]));
+        const [{ data: studentProfiles }, { data: orgs }] = await Promise.all([
+          supabase.from('profiles').select('*').in('user_id', studentIds),
+          supabase.from('training_organizations').select('id, name'),
+        ]);
+        const orgMap = new Map((orgs || []).map((o) => [o.id, o.name as string]));
+        studentMap = new Map(
+          (studentProfiles || []).map((p) => [
+            p.user_id,
+            { ...(p as Profile), organization_name: p.organization_id ? orgMap.get(p.organization_id) || null : null },
+          ]),
+        );
       }
       const hydrate = (r: SupportRequest) => ({ ...r, student: studentMap.get(r.student_id) });
 

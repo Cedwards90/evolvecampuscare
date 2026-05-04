@@ -25,6 +25,7 @@ import { ReportPreview } from '@/components/reports/ReportPreview';
 import { exportReportCsv, exportReportPdf } from '@/lib/reportExport';
 import { toast } from '@/hooks/use-toast';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 
 export default function Reports() {
   const { user, role } = useAuth();
@@ -67,6 +68,18 @@ export default function Reports() {
     from,
     to,
   });
+
+  const { filters } = useGlobalFilters();
+  const filteredData = useMemo(() => {
+    if (!data) return data;
+    const orgs = filters.organizationId;
+    if (orgs.length === 0) return data;
+    const inOrg = (s: any) => s?.organization_id && orgs.includes(s.organization_id);
+    return {
+      ...data,
+      unresolved: data.unresolved.filter((r: any) => inOrg(r.student)),
+    };
+  }, [data, filters.organizationId]);
 
   const handleExportPdf = () => {
     if (!data) return;
@@ -166,7 +179,7 @@ export default function Reports() {
             </Card>
 
             <ReportPreview
-              data={data}
+              data={filteredData}
               isLoading={isLoading && !!selectedCmId}
               isFetching={isFetching}
               error={error}
