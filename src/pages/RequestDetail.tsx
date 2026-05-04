@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -8,8 +9,10 @@ import {
   Mail,
   Phone,
   Clock,
-  FileText
+  FileText,
+  Pencil
 } from 'lucide-react';
+import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
 import { formatDistanceToNow, format } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { Button } from '@/components/ui/button';
