@@ -1,47 +1,50 @@
-# Fix: "Share as PDF" crashes with reference error
+# Plan: Instant push updates (no lag)
 
-## Root cause
+## Goal
+All updates to requests, notifications, and lists appear immediately for every connected user — no 30-second wait, no manual refresh.
 
-The Edge Function logs for `generate-request-pdf` and `share-request-pdf` both show the same error:
+## What's currently slow
+1. React Query caches data for 30s (`staleTime: 30 * 1000`), so even after a mutation refresh, peer users only see updates on focus or after 30s.
+2. Realtime is enabled only for `notifications`, `staff_messages`, `user_invitations`. The core tables — `support_requests`, `request_updates`, `request_attachments` — are **not** in the `supabase_realtime` publication, so changes by one user never push to others.
+3. There is no central "subscribe and invalidate" hook for requests/lists.
 
-```
-WinAnsi cannot encode "→" (0x2192)
-  at wrap (functions/_shared/request-pdf.ts:97)
-  at text (functions/_shared/request-pdf.ts:110)
-  at buildRequestPdf (functions/_shared/request-pdf.ts:282)
-```
+## Changes
 
-`pdf-lib`'s built-in `StandardFonts.Helvetica` uses the **WinAnsi** encoding, which only supports a limited Latin-1 character set. The timeline section renders status transitions like `submitted → in_progress` using the Unicode arrow `→` (U+2192), which WinAnsi cannot encode — so the entire PDF build throws and the user sees the generic `Reference: 0f1c9af4` error.
+### 1. Database migration
+Add to the realtime publication and ensure full row payloads:
+- `ALTER PUBLICATION supabase_realtime ADD TABLE public.support_requests, public.request_updates, public.request_attachments;`
+- `ALTER TABLE ... REPLICA IDENTITY FULL;` for each (so DELETEs and updates carry full old-row data for filtering by RLS).
 
-The same crash will also happen for any other non-WinAnsi character that ends up in request data — em dashes (`—`), curly quotes (`'` `"`), bullets (`•`), accented names outside Latin-1, emojis, etc. — so a one-off fix for `→` is not enough.
+### 2. React Query defaults (`src/App.tsx`)
+- `staleTime: 0` — every mount/focus/realtime nudge refetches.
+- Keep `gcTime: 5 * 60 * 1000`, `refetchOnWindowFocus: true`, `refetchOnReconnect: true`.
 
-## Fix (scoped to the PDF generation only)
+### 3. New hook: `src/hooks/useRealtimeRequests.ts`
+Single global subscription mounted once at app root. Subscribes to:
+- `support_requests` (INSERT/UPDATE/DELETE)
+- `request_updates` (INSERT/UPDATE/DELETE)
+- `request_attachments` (INSERT/DELETE)
 
-Single file change: `supabase/functions/_shared/request-pdf.ts`
+On any event, invalidate the relevant query keys:
+- `['request', id]`, `['requests']`, `['my-requests']`, `['my-students']`,
+  `['case-manager-stats']`, `['analytics']`, `['filter-options']`,
+  `['student-detail', studentId]`.
 
-1. Replace the hard-coded `→` arrow with the ASCII `->` in the timeline rendering.
-2. Add a small `sanitizeForWinAnsi(text)` helper that:
-   - Maps common typographic characters to ASCII equivalents
-     (`→`/`←` → `->` / `<-`, `—`/`–` → `-`, `'`/`'` → `'`,
-     `"`/`"` → `"`, `•` → `*`, `…` → `...`, non-breaking space → space).
-   - Strips any remaining characters outside the WinAnsi range
-     (replaces them with `?`) so unexpected input (emoji, CJK, etc.)
-     can never crash the build.
-3. Pipe every dynamic string through `sanitizeForWinAnsi` at the single
-   `text(...)` / `wrap(...)` choke point in the renderer (titles, descriptions,
-   notes, names, emails, status labels, attachment filenames, org name).
+Mounted inside `AuthProvider` so it only runs for authenticated users; RLS filters which rows the user actually receives.
 
-No other files, no schema changes, no edge-function signature changes.
+### 4. Notifications hook
+`useNotifications` already subscribes — confirm it invalidates on every event (no debounce) so the bell badge updates instantly.
 
-## Verification
-
-After the edit:
-- Redeploy `generate-request-pdf` and `share-request-pdf`.
-- Trigger "Share as PDF" → Download from `RequestDetail` on a request that has a timeline entry (the failing case).
-- Confirm a PDF is returned (HTTP 200, `application/pdf` body) and the timeline reads `submitted -> in_progress`.
-- Re-check `supabase--edge_function_logs` for `generate-request-pdf` to confirm the `WinAnsi cannot encode` error is gone.
+### 5. Mutations
+Already call `invalidateQueries`. No changes needed — realtime now handles peer-to-peer pushes; local mutator sees its own change immediately via optimistic invalidation.
 
 ## Out of scope
+- Offline-mode behavior (unchanged — sync still happens on reconnect).
+- Per-row optimistic updates (we rely on quick refetch instead, which is simpler and consistent).
+- Messaging realtime (already working via `useRealtimeMessages`).
 
-- Switching to a Unicode-capable font (e.g. embedding a TrueType font via `pdf-lib` + `fontkit`). That would preserve the original glyphs but adds ~300 KB of font bytes per render and requires `registerFontkit`. Happy to do it as a follow-up if you want true Unicode rendering instead of ASCII fallback — just say the word.
-- Any change to the share dialog, link/email flow, RLS, or audit logging.
+## Verification
+- Open the same request in two browser windows (admin + student). Status change in one reflects in the other within ~1s without refresh.
+- Submit a new request as a student → appears in case manager's list instantly.
+- Add a note → timeline updates in the other window immediately.
+- Notification bell increments live.
