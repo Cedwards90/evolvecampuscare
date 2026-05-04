@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Plus, QrCode, Power, BarChart3 } from 'lucide-react';
+import { Loader2, Plus, QrCode, Power, BarChart3, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
@@ -15,11 +16,14 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { QRPosterPreview } from '@/components/qr/QRPosterPreview';
 import { makeShortCode } from '@/lib/qr';
+
+type DestinationType = 'request' | 'meeting' | 'external';
 
 interface QRCodeRow {
   id: string;
@@ -28,6 +32,11 @@ interface QRCodeRow {
   organization_id: string | null;
   is_active: boolean;
   created_at: string;
+  destination_type: DestinationType;
+  destination_url: string | null;
+  title: string | null;
+  description: string | null;
+  prefill_category: string | null;
 }
 
 interface FunnelStats {
@@ -39,7 +48,6 @@ interface FunnelStats {
   requestCompleted: number;
   meetingCompleted: number;
 }
-
 function useQRStats(qrCodeId: string) {
   return useQuery({
     queryKey: ['qr-stats', qrCodeId],
