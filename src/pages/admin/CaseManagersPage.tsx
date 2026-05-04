@@ -38,6 +38,8 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { useCaseManagers } from '@/hooks/useCaseManagerStats';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 import { useStudentAssignments } from '@/hooks/useStudentAssignments';
 import { useRequests } from '@/hooks/useRequests';
 import { ReassignStudentDialog } from '@/components/admin/ReassignStudentDialog';
