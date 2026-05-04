@@ -395,6 +395,7 @@ export default function Auth() {
             </TabsContent>
 
             <TabsContent value="signup">
+              <GoogleButton label="Sign up with Google" />
               <form onSubmit={signupForm.handleSubmit(onSignup)} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Full Name</Label>
