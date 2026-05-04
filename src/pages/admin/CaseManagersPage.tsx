@@ -78,6 +78,8 @@ export default function CaseManagersPage() {
     fromCaseManagerName: string;
   } | null>(null);
 
+  const { filters: globalFilters } = useGlobalFilters();
+
   // Filter case managers
   const filteredCMs = useMemo(() => {
     if (!caseManagers) return [];
