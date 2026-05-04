@@ -20,6 +20,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useStudentFolders } from '@/hooks/useStudentFolders';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters, getCohortFromDate } from '@/contexts/GlobalFiltersContext';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
