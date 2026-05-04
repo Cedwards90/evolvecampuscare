@@ -98,6 +98,7 @@ export default function UserManagementPage() {
   const [newRole, setNewRole] = useState<AppRole | null>(null);
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string; email: string; role: AppRole } | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [orgAdminTarget, setOrgAdminTarget] = useState<{ id: string; name: string } | null>(null);
   
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
@@ -448,6 +449,22 @@ export default function UserManagementPage() {
                                   >
                                     <Shield className="mr-2 h-4 w-4" />
                                     Make Administrator
+                                  </DropdownMenuItem>
+                                )}
+                                {user.role !== 'org_admin' && (
+                                  <DropdownMenuItem
+                                    onClick={() => openRoleDialog(user.user_id, user.full_name || 'User', user.role, 'org_admin')}
+                                  >
+                                    <Building2 className="mr-2 h-4 w-4" />
+                                    Make Org Admin
+                                  </DropdownMenuItem>
+                                )}
+                                {user.role === 'org_admin' && (
+                                  <DropdownMenuItem
+                                    onClick={() => setOrgAdminTarget({ id: user.user_id, name: user.full_name || 'User' })}
+                                  >
+                                    <Building2 className="mr-2 h-4 w-4" />
+                                    Manage organizations
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuSeparator />
