@@ -63,11 +63,18 @@ const requestSchema = z.object({
 
 type RequestFormData = z.infer<typeof requestSchema>;
 
-export default function SubmitRequest() {
+interface SubmitRequestProps {
+  /** Renders without the app sidebar (used in standalone QR flow). */
+  standalone?: boolean;
+  /** Override QR code from path param when route doesn't pass it via query. */
+  qrCodeOverride?: string;
+}
+
+export default function SubmitRequest({ standalone = false, qrCodeOverride }: SubmitRequestProps = {}) {
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const qrCodeParam = searchParams.get('qr');
+  const qrCodeParam = qrCodeOverride ?? searchParams.get('qr');
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const submitRequest = useSubmitRequest();
