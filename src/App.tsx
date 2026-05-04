@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useRealtimeRequests } from "@/hooks/useRealtimeRequests";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
@@ -52,7 +53,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30 * 1000,
+      staleTime: 0,
       gcTime: 5 * 60 * 1000,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
@@ -64,12 +65,18 @@ const queryClient = new QueryClient({
   },
 });
 
+function RealtimeBridge() {
+  useRealtimeRequests();
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <BrowserRouter>
           <AuthProvider>
+            <RealtimeBridge />
             <LanguageProvider>
               <OfflineProvider>
                 <GlobalFiltersProvider>
