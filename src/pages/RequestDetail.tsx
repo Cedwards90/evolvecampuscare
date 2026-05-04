@@ -43,7 +43,8 @@ export default function RequestDetail() {
   const [editOpen, setEditOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
-  const isStaff = role === 'case_manager' || role === 'admin' || role === 'org_admin';
+  const isStaff = role === 'case_manager' || role === 'admin';
+  const canShare = role === 'case_manager' || role === 'admin' || role === 'org_admin';
   const canTakeActions = isStaff && (
     role === 'admin' || 
     request?.assigned_case_manager_id === user?.id
