@@ -375,3 +375,114 @@ function PlanCard({ plan }: { plan: ReturnType<typeof useAllPostGradPlans>['data
     </Collapsible>
   );
 }
+
+function ViewToggle({
+  value,
+  onChange,
+  pendingCount,
+  completedCount,
+}: {
+  value: 'completed' | 'pending';
+  onChange: (v: 'completed' | 'pending') => void;
+  pendingCount: number;
+  completedCount: number;
+}) {
+  return (
+    <div className="mb-4">
+      <ToggleGroup
+        type="single"
+        value={value}
+        onValueChange={(v) => v && onChange(v as 'completed' | 'pending')}
+        className="rounded-full border bg-muted p-1"
+      >
+        <ToggleGroupItem value="completed" className="rounded-full px-4 text-sm data-[state=on]:bg-background data-[state=on]:shadow-sm">
+          Completed ({completedCount})
+        </ToggleGroupItem>
+        <ToggleGroupItem value="pending" className="rounded-full px-4 text-sm data-[state=on]:bg-background data-[state=on]:shadow-sm">
+          Not completed ({pendingCount})
+        </ToggleGroupItem>
+      </ToggleGroup>
+    </div>
+  );
+}
+
+function PendingTable({
+  loading,
+  rows,
+  surveyType,
+  showLastSubmitted,
+  overdueAfterDays,
+  emptyText,
+}: {
+  loading: boolean;
+  rows: PendingStudent[];
+  surveyType: 'checkin' | 'post_graduation_plan';
+  showLastSubmitted: boolean;
+  overdueAfterDays?: number;
+  emptyText: string;
+}) {
+  if (loading) return <LoadingSpinner />;
+  if (rows.length === 0) {
+    return <Card><CardContent className="py-8 text-center text-muted-foreground">{emptyText}</CardContent></Card>;
+  }
+  return (
+    <Card>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Student</TableHead>
+            <TableHead>Organization</TableHead>
+            {showLastSubmitted && <TableHead>Last submitted</TableHead>}
+            {showLastSubmitted && <TableHead>Days overdue</TableHead>}
+            <TableHead className="text-right">Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((s) => {
+            const overdueBy =
+              showLastSubmitted && overdueAfterDays != null && s.days_since != null
+                ? Math.max(0, s.days_since - overdueAfterDays)
+                : null;
+            return (
+              <TableRow key={s.student_id}>
+                <TableCell>
+                  <Link to={`/students/${s.student_id}`} className="font-medium text-primary hover:underline">
+                    {s.student_name || s.student_email}
+                  </Link>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{s.organization_name || '—'}</TableCell>
+                {showLastSubmitted && (
+                  <TableCell className="text-sm text-muted-foreground">
+                    {s.last_submitted_at
+                      ? `${s.days_since} day${s.days_since === 1 ? '' : 's'} ago`
+                      : 'Never'}
+                  </TableCell>
+                )}
+                {showLastSubmitted && (
+                  <TableCell>
+                    {overdueBy != null && overdueBy > 0 ? (
+                      <Badge variant="destructive">{overdueBy}d</Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    )}
+                  </TableCell>
+                )}
+                <TableCell className="text-right">
+                  <SendSurveyDialog
+                    studentId={s.student_id}
+                    studentName={s.student_name || s.student_email}
+                    trigger={
+                      <Button variant="outline" size="sm" className="rounded-full">
+                        Send reminder
+                      </Button>
+                    }
+                  />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </Card>
+  );
+}
