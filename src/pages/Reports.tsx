@@ -77,7 +77,6 @@ export default function Reports() {
     const inOrg = (s: any) => s?.organization_id && orgs.includes(s.organization_id);
     return {
       ...data,
-      opened: data.opened.filter((r: any) => inOrg(r.student)),
       unresolved: data.unresolved.filter((r: any) => inOrg(r.student)),
     };
   }, [data, filters.organizationId]);
