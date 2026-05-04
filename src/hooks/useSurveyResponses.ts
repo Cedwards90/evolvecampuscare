@@ -12,6 +12,8 @@ export interface CheckInWithStudent {
   created_at: string;
   student_name: string | null;
   student_email: string;
+  organization_id: string | null;
+  organization_name: string | null;
 }
 
 export interface PostGradPlanWithStudent {
@@ -33,6 +35,13 @@ export interface PostGradPlanWithStudent {
   updated_at: string;
   student_name: string | null;
   student_email: string;
+  organization_id: string | null;
+  organization_name: string | null;
+}
+
+async function loadOrgMap() {
+  const { data } = await supabase.from('training_organizations').select('id, name');
+  return new Map((data || []).map((o) => [o.id, o.name as string]));
 }
 
 export function useAllCheckIns() {
@@ -46,18 +55,26 @@ export function useAllCheckIns() {
       if (checkinsError) throw checkinsError;
 
       const studentIds = [...new Set(checkins.map(c => c.student_id))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, email')
-        .in('user_id', studentIds);
+      const [{ data: profiles }, orgMap] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('user_id, full_name, email, organization_id')
+          .in('user_id', studentIds),
+        loadOrgMap(),
+      ]);
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-      return checkins.map(c => ({
-        ...c,
-        student_name: profileMap.get(c.student_id)?.full_name || null,
-        student_email: profileMap.get(c.student_id)?.email || '',
-      })) as CheckInWithStudent[];
+      return checkins.map(c => {
+        const p = profileMap.get(c.student_id);
+        return {
+          ...c,
+          student_name: p?.full_name || null,
+          student_email: p?.email || '',
+          organization_id: p?.organization_id || null,
+          organization_name: p?.organization_id ? orgMap.get(p.organization_id) || null : null,
+        };
+      }) as CheckInWithStudent[];
     },
   });
 }
@@ -73,18 +90,26 @@ export function useAllPostGradPlans() {
       if (error) throw error;
 
       const studentIds = [...new Set(plans.map(p => p.student_id))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, email')
-        .in('user_id', studentIds);
+      const [{ data: profiles }, orgMap] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('user_id, full_name, email, organization_id')
+          .in('user_id', studentIds),
+        loadOrgMap(),
+      ]);
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-      return plans.map(p => ({
-        ...p,
-        student_name: profileMap.get(p.student_id)?.full_name || null,
-        student_email: profileMap.get(p.student_id)?.email || '',
-      })) as PostGradPlanWithStudent[];
+      return plans.map(p => {
+        const prof = profileMap.get(p.student_id);
+        return {
+          ...p,
+          student_name: prof?.full_name || null,
+          student_email: prof?.email || '',
+          organization_id: prof?.organization_id || null,
+          organization_name: prof?.organization_id ? orgMap.get(prof.organization_id) || null : null,
+        };
+      }) as PostGradPlanWithStudent[];
     },
   });
 }
