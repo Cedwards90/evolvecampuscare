@@ -30,6 +30,7 @@ import { CategoryBadge } from '@/components/CategoryBadge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubmitRequest } from '@/hooks/useSubmitRequest';
+import { logQREvent, getQRSession } from '@/hooks/useQRSession';
 import { cn } from '@/lib/utils';
 import { ContextualFaqTips } from '@/components/requests/ContextualFaqTips';
 import type { RequestCategory, RequestPriority } from '@/types/database';
