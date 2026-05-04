@@ -144,57 +144,71 @@ export default function SurveyResponses() {
         </TabsList>
 
         <TabsContent value="checkins">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Sort by</span>
-            <Select value={`${checkSort.key}-${checkSort.dir}`} onValueChange={(v) => {
-              const [key, dir] = v.split('-') as [CheckSortKey, 'asc' | 'desc'];
-              setCheckSort({ key, dir });
-            }}>
-              <SelectTrigger className="w-[220px] rounded-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date-desc">Date (newest)</SelectItem>
-                <SelectItem value="date-asc">Date (oldest)</SelectItem>
-                <SelectItem value="student-asc">Student A–Z</SelectItem>
-                <SelectItem value="student-desc">Student Z–A</SelectItem>
-                <SelectItem value="organization-asc">Organization A–Z</SelectItem>
-                <SelectItem value="organization-desc">Organization Z–A</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {loadingCheckIns ? <LoadingSpinner /> : filteredCheckIns.length === 0 ? (
-            <Card><CardContent className="py-8 text-center text-muted-foreground">No check-ins found.</CardContent></Card>
+          <ViewToggle value={checkView} onChange={setCheckView} pendingCount={filteredPendingCheck.length} completedCount={filteredCheckIns.length} />
+          {checkView === 'pending' ? (
+            <PendingTable
+              loading={loadingPendingCheck}
+              rows={filteredPendingCheck}
+              surveyType="checkin"
+              showLastSubmitted
+              overdueAfterDays={21}
+              emptyText="Everyone is up to date on check-ins."
+            />
           ) : (
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>
-                      <button className={`inline-flex items-center cursor-pointer hover:text-primary ${checkSort.key === 'student' ? 'font-semibold text-foreground' : ''}`} onClick={() => toggleCheckSort('student')}>
-                        Student <SortIcon active={checkSort.key === 'student'} dir={checkSort.dir} />
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button className={`inline-flex items-center cursor-pointer hover:text-primary ${checkSort.key === 'organization' ? 'font-semibold text-foreground' : ''}`} onClick={() => toggleCheckSort('organization')}>
-                        Organization <SortIcon active={checkSort.key === 'organization'} dir={checkSort.dir} />
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button className={`inline-flex items-center cursor-pointer hover:text-primary ${checkSort.key === 'date' ? 'font-semibold text-foreground' : ''}`} onClick={() => toggleCheckSort('date')}>
-                        Date <SortIcon active={checkSort.key === 'date'} dir={checkSort.dir} />
-                      </button>
-                    </TableHead>
-                    <TableHead>Mood</TableHead>
-                    <TableHead>Progress</TableHead>
-                    <TableHead className="w-10"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCheckIns.map(c => (
-                    <CheckInRow key={c.id} checkIn={c} />
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
+            <>
+              <div className="mb-3 flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Sort by</span>
+                <Select value={`${checkSort.key}-${checkSort.dir}`} onValueChange={(v) => {
+                  const [key, dir] = v.split('-') as [CheckSortKey, 'asc' | 'desc'];
+                  setCheckSort({ key, dir });
+                }}>
+                  <SelectTrigger className="w-[220px] rounded-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date-desc">Date (newest)</SelectItem>
+                    <SelectItem value="date-asc">Date (oldest)</SelectItem>
+                    <SelectItem value="student-asc">Student A–Z</SelectItem>
+                    <SelectItem value="student-desc">Student Z–A</SelectItem>
+                    <SelectItem value="organization-asc">Organization A–Z</SelectItem>
+                    <SelectItem value="organization-desc">Organization Z–A</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {loadingCheckIns ? <LoadingSpinner /> : filteredCheckIns.length === 0 ? (
+                <Card><CardContent className="py-8 text-center text-muted-foreground">No check-ins found.</CardContent></Card>
+              ) : (
+                <Card>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>
+                          <button className={`inline-flex items-center cursor-pointer hover:text-primary ${checkSort.key === 'student' ? 'font-semibold text-foreground' : ''}`} onClick={() => toggleCheckSort('student')}>
+                            Student <SortIcon active={checkSort.key === 'student'} dir={checkSort.dir} />
+                          </button>
+                        </TableHead>
+                        <TableHead>
+                          <button className={`inline-flex items-center cursor-pointer hover:text-primary ${checkSort.key === 'organization' ? 'font-semibold text-foreground' : ''}`} onClick={() => toggleCheckSort('organization')}>
+                            Organization <SortIcon active={checkSort.key === 'organization'} dir={checkSort.dir} />
+                          </button>
+                        </TableHead>
+                        <TableHead>
+                          <button className={`inline-flex items-center cursor-pointer hover:text-primary ${checkSort.key === 'date' ? 'font-semibold text-foreground' : ''}`} onClick={() => toggleCheckSort('date')}>
+                            Date <SortIcon active={checkSort.key === 'date'} dir={checkSort.dir} />
+                          </button>
+                        </TableHead>
+                        <TableHead>Mood</TableHead>
+                        <TableHead>Progress</TableHead>
+                        <TableHead className="w-10"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredCheckIns.map(c => (
+                        <CheckInRow key={c.id} checkIn={c} />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Card>
+              )}
+            </>
           )}
         </TabsContent>
 
