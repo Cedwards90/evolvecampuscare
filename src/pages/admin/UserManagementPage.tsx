@@ -109,7 +109,7 @@ export default function UserManagementPage() {
   // Filter and paginate users
   const filteredUsers = useMemo(() => {
     if (!users) return [];
-    const globallyFiltered = applyToProfiles(users as any, globalFilters);
+    const globallyFiltered = applyToProfiles(users, globalFilters);
     return globallyFiltered.filter((user: any) => {
       const matchesSearch =
         user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
