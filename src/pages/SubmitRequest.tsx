@@ -179,6 +179,18 @@ export default function SubmitRequest() {
           description="Tell us how we can help you. Your request will be reviewed by a dedicated case manager."
         />
 
+        {qrContext && (
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 flex items-start gap-3">
+            <QrCode className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <div className="font-semibold">Submitting via {qrContext.title}</div>
+              {qrContext.description && (
+                <div className="text-muted-foreground text-xs mt-0.5">{qrContext.description}</div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Progress Indicator */}
         <div className="flex items-center justify-between">
           {[1, 2, 3, 4].map((s) => (
