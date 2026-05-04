@@ -535,10 +535,6 @@ export default function StudentDetail() {
 
 // ---- Student File Tab Component ----
 function StudentFileTab({ studentId, requests }: { studentId: string; requests: import('@/types/database').SupportRequest[] }) {
-  const { notes, isLoading: notesLoading, addNote } = useFileNotes(studentId);
-  const [newNote, setNewNote] = useState('');
-  const [addingNote, setAddingNote] = useState(false);
-
   const { data: intakeResponses = [], isLoading: intakeLoading } = useQuery({
     queryKey: ['intake-responses-admin', studentId],
     queryFn: async () => {
@@ -551,17 +547,6 @@ function StudentFileTab({ studentId, requests }: { studentId: string; requests: 
       return data;
     },
   });
-
-  const handleAddNote = async () => {
-    if (!newNote.trim()) return;
-    setAddingNote(true);
-    try {
-      await addNote.mutateAsync({ content: newNote });
-      setNewNote('');
-    } finally {
-      setAddingNote(false);
-    }
-  };
 
   const sectionLabels: Record<string, string> = {
     about_you: 'About You',
