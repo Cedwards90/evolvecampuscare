@@ -163,8 +163,8 @@ export default function QRCodesPage() {
         <PageHeader
           title="QR Code Access"
           description="Generate printable QR codes that let students submit requests or schedule meetings from their phone."
-          actions={
-            <Dialog open={open} onOpenChange={setOpen}>
+        >
+          <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button className="rounded-full"><Plus className="mr-2 h-4 w-4" /> New QR Code</Button>
               </DialogTrigger>
