@@ -79,6 +79,104 @@ export function useAllCheckIns() {
   });
 }
 
+export interface PendingStudent {
+  student_id: string;
+  student_name: string | null;
+  student_email: string;
+  organization_id: string | null;
+  organization_name: string | null;
+  last_submitted_at: string | null;
+  days_since: number | null;
+}
+
+async function loadStudentsWithProfiles() {
+  const { data: roles } = await supabase
+    .from('user_roles')
+    .select('user_id')
+    .eq('role', 'student');
+  const ids = [...new Set((roles || []).map((r) => r.user_id))];
+  if (ids.length === 0) return { students: [] as any[], orgMap: new Map<string, string>() };
+  const [{ data: profiles }, orgMap] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('user_id, full_name, email, organization_id')
+      .in('user_id', ids),
+    loadOrgMap(),
+  ]);
+  return { students: profiles || [], orgMap };
+}
+
+const CHECKIN_WINDOW_DAYS = 21;
+
+export function usePendingCheckIns() {
+  return useQuery({
+    queryKey: ['pending-checkins'],
+    queryFn: async () => {
+      const { students, orgMap } = await loadStudentsWithProfiles();
+      const studentIds = students.map((s: any) => s.user_id);
+      if (studentIds.length === 0) return [] as PendingStudent[];
+
+      const { data: checkins } = await supabase
+        .from('student_checkins')
+        .select('student_id, created_at')
+        .in('student_id', studentIds)
+        .order('created_at', { ascending: false });
+
+      const latest = new Map<string, string>();
+      (checkins || []).forEach((c) => {
+        if (!latest.has(c.student_id)) latest.set(c.student_id, c.created_at);
+      });
+
+      const cutoff = Date.now() - CHECKIN_WINDOW_DAYS * 86400000;
+      const pending: PendingStudent[] = [];
+      for (const s of students as any[]) {
+        const last = latest.get(s.user_id) || null;
+        const lastTs = last ? new Date(last).getTime() : null;
+        if (lastTs !== null && lastTs >= cutoff) continue;
+        pending.push({
+          student_id: s.user_id,
+          student_name: s.full_name || null,
+          student_email: s.email || '',
+          organization_id: s.organization_id || null,
+          organization_name: s.organization_id ? orgMap.get(s.organization_id) || null : null,
+          last_submitted_at: last,
+          days_since: lastTs ? Math.floor((Date.now() - lastTs) / 86400000) : null,
+        });
+      }
+      return pending;
+    },
+  });
+}
+
+export function usePendingPostGradPlans() {
+  return useQuery({
+    queryKey: ['pending-postgrad-plans'],
+    queryFn: async () => {
+      const { students, orgMap } = await loadStudentsWithProfiles();
+      const studentIds = students.map((s: any) => s.user_id);
+      if (studentIds.length === 0) return [] as PendingStudent[];
+
+      const { data: plans } = await supabase
+        .from('post_graduation_plans')
+        .select('student_id')
+        .in('student_id', studentIds);
+
+      const has = new Set((plans || []).map((p) => p.student_id));
+      return (students as any[])
+        .filter((s) => !has.has(s.user_id))
+        .map((s) => ({
+          student_id: s.user_id,
+          student_name: s.full_name || null,
+          student_email: s.email || '',
+          organization_id: s.organization_id || null,
+          organization_name: s.organization_id ? orgMap.get(s.organization_id) || null : null,
+          last_submitted_at: null,
+          days_since: null,
+        })) as PendingStudent[];
+    },
+  });
+}
+
 export function useAllPostGradPlans() {
   return useQuery({
     queryKey: ['all-postgrad-plans'],
