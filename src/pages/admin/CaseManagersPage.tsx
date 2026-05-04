@@ -86,6 +86,7 @@ export default function CaseManagersPage() {
     const q = cmSearch.trim().toLowerCase();
     return caseManagers
       .filter((cm) => {
+        if (globalFilters.assignedCaseManagerId.length && !globalFilters.assignedCaseManagerId.includes(cm.user_id)) return false;
         if (q) {
           const name = (cm.full_name || '').toLowerCase();
           const email = (cm.email || '').toLowerCase();
