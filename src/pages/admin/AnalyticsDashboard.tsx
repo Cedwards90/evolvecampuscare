@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAnalyticsData } from '@/hooks/useAnalyticsData';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
