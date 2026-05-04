@@ -118,7 +118,7 @@ export default function QRCodesPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from('qr_codes')
-        .select('id,code,label,organization_id,is_active,created_at')
+        .select('id,code,label,organization_id,is_active,created_at,destination_type,destination_url,title,description,prefill_category')
         .order('created_at', { ascending: false });
       return (data || []) as QRCodeRow[];
     },
