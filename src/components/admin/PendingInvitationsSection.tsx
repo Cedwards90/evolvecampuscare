@@ -37,6 +37,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePendingInvitations, useRevokeInvitation, useInvitationsRealtime, type Invitation } from '@/hooks/useInvitations';
 import type { AppRole } from '@/types/database';
 import { cn } from '@/lib/utils';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 
 const roleIcons: Record<AppRole, React.ComponentType<{ className?: string }>> = {
   student: GraduationCap,
