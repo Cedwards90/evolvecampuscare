@@ -1,79 +1,59 @@
+
 ## Goal
 
-Make each QR code admin-editable (destination, title, description, active state) and route students to a single universal request form. Allow either authenticated submission or guest email verification, then attach the request to the matching student profile.
+Make QR codes (destination_type = `request`) open a clean, standalone support-request page with no app chrome. Guests verify by email (magic link), then submit. Once submitted, the request is attached to that student's account/folder and they see a confirmation screen with a "View status" link.
 
-## Scope guardrails
+## What changes
 
-- Only QR-flow files change: `qr_codes` table, `QRLanding.tsx`, `QRCodesPage.tsx`, `SubmitRequest.tsx` (read-only QR-context wiring), and one new Edge Function.
-- No changes to messaging, dashboards, RLS for support_requests, case-manager logic, or notification routing.
-- Existing `/qr/<code>` links keep working — new columns get safe defaults via migration.
+### 1. New route: `/qr/:code/request`
+Standalone, chrome-less page (no sidebar, no top nav). Renders the existing `SubmitRequest` wizard inside a minimal layout with just the Evolve logo + QR title/description banner.
 
-## 1. Database (migration)
+### 2. QR landing routing (`/qr/:code`)
+- If `destination_type = 'request'` and user IS signed in as a student → auto-redirect to `/qr/:code/request`.
+- If `destination_type = 'request'` and user is NOT signed in → show only the email-verification card (magic link). No "Submit a Request / Schedule" chooser.
+- If signed in as staff → keep existing "this is for students" message.
+- `meeting` and `external` destinations: unchanged.
 
-Add columns to `qr_codes` (all nullable / defaulted so existing rows stay valid):
+### 3. Magic-link return flow
+Magic link redirects back to `/qr/:code?verified=1`. After Supabase auth completes, the QRLanding effect detects authenticated student + `destination_type='request'` and forwards to `/qr/:code/request`.
 
-- `destination_type text NOT NULL DEFAULT 'request'` — one of `request`, `meeting`, `external`
-- `destination_url text NULL` — used only when `destination_type = 'external'`
-- `title text NULL` — overrides default landing headline
-- `description text NULL` — overrides default landing subtext
-- `prefill_category request_category NULL` — optional default for the universal form
-- (keep existing `label`, `is_active`, `organization_id`)
+`handle_new_user` already creates the profile + student role + student_file for brand-new accounts, so the request will attach to the new student's folder automatically.
 
-Backfill: set `destination_type='request'`, copy `label` into `title` where `title` is null. RLS unchanged (admin/org-admin manage; authenticated read active).
+### 4. Standalone form page
+- Reuses the existing `SubmitRequest` component (no business-logic changes).
+- Wrapped in a new `QRStandaloneLayout` (logo, QR title/description banner, no nav).
+- Reads `?qr=<code>` to prefill category from `qr_codes.prefill_category` (already supported).
+- Logs `qr_scan_events` with `event_type='action_selected', action_kind='request'` and `event_type='request_submitted', target_id=<request.id>` (event types already exist).
 
-## 2. Admin editor (`/admin/qr-codes`)
+### 5. Confirmation screen
+After submit, instead of redirecting to `/requests/:id`, show a chrome-less success screen on `/qr/:code/request/success?id=<request_id>`:
+- "Request submitted" headline
+- Short ID and category
+- Two buttons: **View status** → `/requests/:id` (auth-gated, lands them in app), and **Submit another** → back to the form.
 
-Extend the existing create dialog and add an **Edit** dialog for the selected QR card:
+### 6. Route registration
+Add to `src/App.tsx` (public routes block, no `ProtectedRoute`):
+- `/qr/:code/request` → `QRStandaloneRequest`
+- `/qr/:code/request/success` → `QRRequestSuccess`
 
-- Title, description (textarea), destination type (radio: Request form / Schedule meeting / External URL), external URL (shown only for external), prefill category (select, optional), active toggle (already present).
-- Validate: external URL required and `https://` when type = external; title ≤ 80 chars; description ≤ 280.
-- Save updates `qr_codes` and invalidates `qr-codes` query. Existing funnel analytics block unchanged.
+The form itself still requires an authenticated session to insert into `support_requests` (RLS), so the page guards: if no user, bounce back to `/qr/:code` to verify email first.
 
-## 3. QR landing (`/qr/:code`)
+## Files touched
 
-- Fetch new fields. Render `title`/`description` if present (fallback to current copy).
-- If `destination_type = 'external'` → log `action_selected` then `window.location.replace(destination_url)`.
-- If `request` → single primary CTA "Submit a request" → `/student/support-request?source=qr&qr=<code>` (carries category prefill via query).
-- If `meeting` → existing schedule flow.
-- Staff-block behavior preserved.
-- Guest path (no user): show two options on the landing — **Sign in** or **Continue with email** (magic link). New "Continue with email" calls a new Edge Function `qr-guest-start` (see §5) and shows "Check your email" state. Email link returns to `/qr/<code>` authenticated; existing `auth_completed` logging continues.
+- `src/App.tsx` — add 2 public routes.
+- `src/pages/QRLanding.tsx` — auto-redirect signed-in students to `/qr/:code/request` when destination is `request`; hide the chooser in that case.
+- `src/pages/QRStandaloneRequest.tsx` — NEW. Chrome-less wrapper that renders `SubmitRequest` with a QR-aware success handler.
+- `src/pages/QRRequestSuccess.tsx` — NEW. Confirmation screen.
+- `src/pages/SubmitRequest.tsx` — small addition: accept an `onSubmitted(requestId)` prop (or detect `?qr=` and route to `/qr/:code/request/success`). No business-logic change.
 
-## 4. Universal form (`SubmitRequest.tsx`)
+## Out of scope
 
-Minimal additions only:
+- Schema changes (none needed).
+- Changes to `support_requests` RLS, assignment routing, notifications, or the wizard's business logic.
+- The existing `/student/support-request` flow remains the primary in-app path.
 
-- Read `qr` query param; if present, fetch the QR row (id, title, description, prefill_category) and:
-  - Show a small banner "Submitting via {title}".
-  - Preselect category from `prefill_category` (user can change).
-- After successful submit (existing `useSubmitRequest` already records `qr_session_id`): redirect to `/track-requests/<id>` (existing route) instead of dashboard, so the student lands on their own request status page.
-- No business-logic changes; assignment + visibility flow unchanged (existing RLS already attaches the row to `auth.uid()` as `student_id`, which case managers and reports already consume).
+## Backwards compatibility
 
-## 5. Guest email verification (Edge Function `qr-guest-start`)
-
-- Public function (verify_jwt = false), strict CORS, Zod validation on `{ email, qrCode }`.
-- Looks up active QR by `code`. Rejects if not active.
-- Calls `supabase.auth.admin.generateLink({ type: 'magiclink', email, options: { redirectTo: `${SITE_URL}/qr/${qrCode}?verified=1` } })`.
-- Sends the link via the project's built-in transactional email (`send-transactional-email`) with subject "Verify your email to submit a request". No new secrets.
-- Logs a `qr_scan_events` row with `event_type='auth_required', action_kind='request'`.
-- On magic-link return, the existing `handle_new_user` trigger creates the profile + student role, so the universal form binds the request to the new account automatically.
-
-## 6. Backwards compatibility
-
-- All existing QR codes continue to work (defaults to `request` destination, same UI).
-- Old funnel analytics keep functioning (no event-type changes).
-- No support_requests schema or RLS changes — case-manager dashboards, reports, and student tracking automatically pick up new submissions.
-
-## Verification checklist
-
-1. Existing `/qr/<old-code>` still loads and routes to request flow.
-2. Admin edits title/description/destination → landing updates immediately.
-3. External destination redirects out cleanly and logs `action_selected`.
-4. Logged-in student submits via QR → request appears in their `/track-requests`, in assigned case manager's queue, and in admin reports with `qr_session_id` set.
-5. Guest "Continue with email" → magic link → returns authenticated → submits → request bound to new student profile.
-6. Staff scanning still blocked from the request CTA.
-
-## Out of scope (explicit)
-
-- Per-QR custom field schemas (the universal form stays single-source).
-- Changes to messaging, scheduling, notifications, or RLS on support_requests.
-- PWA/service-worker behavior.
+- Existing `/qr/:code` URLs still work; `meeting` / `external` destinations behave exactly as today.
+- No database migration.
+- Old printed QR posters with `destination_type='request'` now go through the cleaner standalone flow automatically.
