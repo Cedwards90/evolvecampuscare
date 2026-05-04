@@ -16,7 +16,10 @@ import {
   Briefcase,
   Pencil,
 } from 'lucide-react';
-import { StickyNote, PenLine, Building2 } from 'lucide-react';
+import { StickyNote, PenLine, Building2, NotebookPen, Trash2, X, Save } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -285,6 +288,10 @@ export default function StudentDetail() {
               <StickyNote className="h-4 w-4" />
               Student File
             </TabsTrigger>
+            <TabsTrigger value="case-notes" className="gap-2">
+              <NotebookPen className="h-4 w-4" />
+              Case Notes
+            </TabsTrigger>
             <TabsTrigger value="checkins" className="gap-2">
               <Smile className="h-4 w-4" />
               Check-Ins
@@ -447,6 +454,11 @@ export default function StudentDetail() {
             <StudentFileTab studentId={id!} requests={student.requests} />
           </TabsContent>
 
+          {/* Case Notes Tab */}
+          <TabsContent value="case-notes" className="space-y-4">
+            <StudentCaseNotesTab studentId={id!} />
+          </TabsContent>
+
           {/* Check-Ins Tab */}
           <TabsContent value="checkins" className="space-y-4">
             <StudentCheckInsTab studentId={id!} />
@@ -523,10 +535,6 @@ export default function StudentDetail() {
 
 // ---- Student File Tab Component ----
 function StudentFileTab({ studentId, requests }: { studentId: string; requests: import('@/types/database').SupportRequest[] }) {
-  const { notes, isLoading: notesLoading, addNote } = useFileNotes(studentId);
-  const [newNote, setNewNote] = useState('');
-  const [addingNote, setAddingNote] = useState(false);
-
   const { data: intakeResponses = [], isLoading: intakeLoading } = useQuery({
     queryKey: ['intake-responses-admin', studentId],
     queryFn: async () => {
@@ -539,17 +547,6 @@ function StudentFileTab({ studentId, requests }: { studentId: string; requests: 
       return data;
     },
   });
-
-  const handleAddNote = async () => {
-    if (!newNote.trim()) return;
-    setAddingNote(true);
-    try {
-      await addNote.mutateAsync({ content: newNote });
-      setNewNote('');
-    } finally {
-      setAddingNote(false);
-    }
-  };
 
   const sectionLabels: Record<string, string> = {
     about_you: 'About You',
@@ -642,46 +639,228 @@ function StudentFileTab({ studentId, requests }: { studentId: string; requests: 
         </CardContent>
       </Card>
 
-      {/* Progress Notes */}
+      {/* Case notes are managed in the dedicated Case Notes tab */}
+    </div>
+  );
+}
+
+// ---- Case Notes Tab Component ----
+const NOTE_TYPES: { value: string; label: string }[] = [
+  { value: 'case_note', label: 'Case Note' },
+  { value: 'general', label: 'General' },
+  { value: 'meeting', label: 'Meeting' },
+  { value: 'follow_up', label: 'Follow-up' },
+];
+
+function StudentCaseNotesTab({ studentId }: { studentId: string }) {
+  const { user, role } = useAuth();
+  const { toast } = useToast();
+  const { notes, isLoading, addNote, updateNote, deleteNote } = useFileNotes(studentId);
+  const [content, setContent] = useState('');
+  const [title, setTitle] = useState('');
+  const [noteType, setNoteType] = useState('case_note');
+  const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editType, setEditType] = useState('case_note');
+
+  const handleAdd = async () => {
+    if (!content.trim()) return;
+    setSubmitting(true);
+    try {
+      await addNote.mutateAsync({ content: content.trim(), noteType, title });
+      setContent('');
+      setTitle('');
+      setNoteType('case_note');
+      toast({ title: 'Note added' });
+    } catch (err: any) {
+      toast({ title: 'Could not add note', description: err.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const startEdit = (note: any) => {
+    setEditingId(note.id);
+    setEditContent(note.content);
+    setEditTitle(note.title || '');
+    setEditType(note.note_type || 'case_note');
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditContent('');
+    setEditTitle('');
+  };
+
+  const handleUpdate = async (id: string) => {
+    if (!editContent.trim()) return;
+    try {
+      await updateNote.mutateAsync({ id, content: editContent.trim(), noteType: editType, title: editTitle });
+      cancelEdit();
+      toast({ title: 'Note updated' });
+    } catch (err: any) {
+      toast({ title: 'Could not update note', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteNote.mutateAsync(id);
+      toast({ title: 'Note deleted' });
+    } catch (err: any) {
+      toast({ title: 'Could not delete note', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const canModify = (note: any) =>
+    role === 'admin' || (note.author_id === user?.id);
+
+  return (
+    <div className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <PenLine className="h-4 w-4" />
-            Progress Notes
+            <NotebookPen className="h-4 w-4" />
+            Add Case Note
           </CardTitle>
+          <CardDescription>
+            Notes are visible to admins and the assigned case manager only.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Add Note */}
-          <div className="space-y-2">
+        <CardContent className="space-y-3">
+          <div className="grid sm:grid-cols-[180px_1fr] gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Type</Label>
+              <Select value={noteType} onValueChange={setNoteType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {NOTE_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Title <span className="text-muted-foreground">(optional)</span></Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short summary..." maxLength={120} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Note</Label>
             <Textarea
-              placeholder="Add a progress note..."
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              className="min-h-[80px]"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Document the conversation, decisions, action items, or context..."
+              className="min-h-[140px]"
+              maxLength={5000}
             />
-            <Button size="sm" onClick={handleAddNote} disabled={addingNote || !newNote.trim()}>
-              {addingNote ? 'Adding...' : 'Add Note'}
+            <p className="text-xs text-muted-foreground text-right">{content.length}/5000</p>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={handleAdd} disabled={submitting || !content.trim()} className="rounded-full">
+              {submitting ? 'Saving...' : 'Save Note'}
             </Button>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Notes Timeline */}
-          {notesLoading ? (
-            <p className="text-sm text-muted-foreground">Loading notes...</p>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Case Note History</CardTitle>
+          <CardDescription>{notes.length} note{notes.length !== 1 ? 's' : ''}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <LoadingSpinner />
           ) : notes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No progress notes yet.</p>
+            <EmptyState
+              icon={NotebookPen}
+              title="No case notes yet"
+              description="Add the first note to start documenting this student's case."
+            />
           ) : (
             <div className="space-y-3">
-              {notes.map((note) => (
-                <div key={note.id} className="border-l-2 border-muted pl-3 py-1">
-                  <p className="text-sm">{note.content}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
-                    {note.note_type !== 'general' && (
-                      <Badge variant="outline" className="ml-2 text-xs">{note.note_type}</Badge>
+              {notes.map((note: any) => {
+                const isEditing = editingId === note.id;
+                const typeLabel = NOTE_TYPES.find((t) => t.value === note.note_type)?.label || note.note_type;
+                return (
+                  <div key={note.id} className="border border-border/60 rounded-lg p-4 space-y-2 bg-card">
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <div className="grid sm:grid-cols-[180px_1fr] gap-2">
+                          <Select value={editType} onValueChange={setEditType}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {NOTE_TYPES.map((t) => (
+                                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Title (optional)" maxLength={120} />
+                        </div>
+                        <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="min-h-[120px]" maxLength={5000} />
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="outline" onClick={cancelEdit} className="rounded-full">
+                            <X className="h-3 w-3 mr-1" /> Cancel
+                          </Button>
+                          <Button size="sm" onClick={() => handleUpdate(note.id)} disabled={!editContent.trim()} className="rounded-full">
+                            <Save className="h-3 w-3 mr-1" /> Save
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="secondary" className="text-xs">{typeLabel}</Badge>
+                              {note.title && <p className="font-medium text-sm">{note.title}</p>}
+                            </div>
+                          </div>
+                          {canModify(note) && (
+                            <div className="flex items-center gap-1">
+                              <Button size="sm" variant="ghost" onClick={() => startEdit(note)} className="h-7 w-7 p-0">
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete this case note?</AlertDialogTitle>
+                                    <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(note.id)}>Delete</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+                          <span className="font-medium">{note.author_name}</span>
+                          <span>•</span>
+                          <span>{format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}</span>
+                          {note.updated_at && note.updated_at !== note.created_at && (
+                            <>
+                              <span>•</span>
+                              <span className="italic">edited {formatDistanceToNow(new Date(note.updated_at), { addSuffix: true })}</span>
+                            </>
+                          )}
+                        </div>
+                      </>
                     )}
-                  </p>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

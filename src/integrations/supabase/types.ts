@@ -286,6 +286,8 @@ export type Database = {
           id: string
           note_type: string
           student_id: string
+          title: string | null
+          updated_at: string
         }
         Insert: {
           author_id: string
@@ -294,6 +296,8 @@ export type Database = {
           id?: string
           note_type?: string
           student_id: string
+          title?: string | null
+          updated_at?: string
         }
         Update: {
           author_id?: string
@@ -302,6 +306,8 @@ export type Database = {
           id?: string
           note_type?: string
           student_id?: string
+          title?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
