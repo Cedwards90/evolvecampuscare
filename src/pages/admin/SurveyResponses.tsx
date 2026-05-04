@@ -213,31 +213,44 @@ export default function SurveyResponses() {
         </TabsContent>
 
         <TabsContent value="plans">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Sort by</span>
-            <Select value={`${planSort.key}-${planSort.dir}`} onValueChange={(v) => {
-              const [key, dir] = v.split('-') as [PlanSortKey, 'asc' | 'desc'];
-              setPlanSort({ key, dir });
-            }}>
-              <SelectTrigger className="w-[200px] rounded-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date-desc">Date (newest)</SelectItem>
-                <SelectItem value="date-asc">Date (oldest)</SelectItem>
-                <SelectItem value="student-asc">Student A–Z</SelectItem>
-                <SelectItem value="student-desc">Student Z–A</SelectItem>
-                <SelectItem value="organization-asc">Organization A–Z</SelectItem>
-                <SelectItem value="organization-desc">Organization Z–A</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {loadingPlans ? <LoadingSpinner /> : filteredPlans.length === 0 ? (
-            <Card><CardContent className="py-8 text-center text-muted-foreground">No plans found.</CardContent></Card>
+          <ViewToggle value={planView} onChange={setPlanView} pendingCount={filteredPendingPlans.length} completedCount={filteredPlans.length} />
+          {planView === 'pending' ? (
+            <PendingTable
+              loading={loadingPendingPlan}
+              rows={filteredPendingPlans}
+              surveyType="post_graduation_plan"
+              showLastSubmitted={false}
+              emptyText="All students have submitted a post-graduation plan."
+            />
           ) : (
-            <div className="space-y-3">
-              {filteredPlans.map(p => (
-                <PlanCard key={p.id} plan={p} />
-              ))}
-            </div>
+            <>
+              <div className="mb-3 flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Sort by</span>
+                <Select value={`${planSort.key}-${planSort.dir}`} onValueChange={(v) => {
+                  const [key, dir] = v.split('-') as [PlanSortKey, 'asc' | 'desc'];
+                  setPlanSort({ key, dir });
+                }}>
+                  <SelectTrigger className="w-[200px] rounded-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date-desc">Date (newest)</SelectItem>
+                    <SelectItem value="date-asc">Date (oldest)</SelectItem>
+                    <SelectItem value="student-asc">Student A–Z</SelectItem>
+                    <SelectItem value="student-desc">Student Z–A</SelectItem>
+                    <SelectItem value="organization-asc">Organization A–Z</SelectItem>
+                    <SelectItem value="organization-desc">Organization Z–A</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {loadingPlans ? <LoadingSpinner /> : filteredPlans.length === 0 ? (
+                <Card><CardContent className="py-8 text-center text-muted-foreground">No plans found.</CardContent></Card>
+              ) : (
+                <div className="space-y-3">
+                  {filteredPlans.map(p => (
+                    <PlanCard key={p.id} plan={p} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
       </Tabs>
