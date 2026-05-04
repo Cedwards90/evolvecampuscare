@@ -41,8 +41,9 @@ export default function RequestDetail() {
   const { user, role } = useAuth();
   const { data: request, isLoading, error } = useRequest(id);
   const [editOpen, setEditOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
-  const isStaff = role === 'case_manager' || role === 'admin';
+  const isStaff = role === 'case_manager' || role === 'admin' || role === 'org_admin';
   const canTakeActions = isStaff && (
     role === 'admin' || 
     request?.assigned_case_manager_id === user?.id
