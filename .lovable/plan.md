@@ -1,50 +1,37 @@
-# Plan: Instant push updates (no lag)
+# Fix: Lovable preview not reflecting code changes
 
-## Goal
-All updates to requests, notifications, and lists appear immediately for every connected user — no 30-second wait, no manual refresh.
+## Diagnosis
 
-## What's currently slow
-1. React Query caches data for 30s (`staleTime: 30 * 1000`), so even after a mutation refresh, peer users only see updates on focus or after 30s.
-2. Realtime is enabled only for `notifications`, `staff_messages`, `user_invitations`. The core tables — `support_requests`, `request_updates`, `request_attachments` — are **not** in the `supabase_realtime` publication, so changes by one user never push to others.
-3. There is no central "subscribe and invalidate" hook for requests/lists.
+The project has `vite-plugin-pwa` enabled (`vite.config.ts`) with `registerType: "autoUpdate"`. `src/main.tsx` already calls `unregister()` for service workers on preview/iframe hosts, but two gaps remain that explain why your preview keeps showing stale code:
 
-## Changes
+1. **Caches aren't cleared on unregister.** Calling `registration.unregister()` only stops future control — the existing `caches` storage (HTML, JS, CSS) stays on disk and the *current* page is still controlled by the old SW until a hard reload. So even after we unregister, the iframe keeps serving the cached shell from before the fix.
+2. **No kill-switch worker.** Browsers that registered an old SW before `devOptions.enabled = false` was set keep that SW until a newer worker at the same path replaces it. There's no `public/sw.js` shipped to take over and clean up.
 
-### 1. Database migration
-Add to the realtime publication and ensure full row payloads:
-- `ALTER PUBLICATION supabase_realtime ADD TABLE public.support_requests, public.request_updates, public.request_attachments;`
-- `ALTER TABLE ... REPLICA IDENTITY FULL;` for each (so DELETEs and updates carry full old-row data for filtering by RLS).
+## Fix (frontend only, no backend changes)
 
-### 2. React Query defaults (`src/App.tsx`)
-- `staleTime: 0` — every mount/focus/realtime nudge refetches.
-- Keep `gcTime: 5 * 60 * 1000`, `refetchOnWindowFocus: true`, `refetchOnReconnect: true`.
+### A. `src/main.tsx` — clear caches and force one reload after unregister
+When in preview/iframe:
+- `await` all `registration.unregister()` calls.
+- Then `await Promise.all(caches.keys().map(caches.delete))`.
+- If at least one SW was actually unregistered, do a single `location.reload()` guarded by a `sessionStorage` flag (`__sw_cleaned`) so we never loop.
 
-### 3. New hook: `src/hooks/useRealtimeRequests.ts`
-Single global subscription mounted once at app root. Subscribes to:
-- `support_requests` (INSERT/UPDATE/DELETE)
-- `request_updates` (INSERT/UPDATE/DELETE)
-- `request_attachments` (INSERT/DELETE)
+### B. Ship a kill-switch worker at `public/sw.js`
+A tiny static file that:
+- `skipWaiting` + `clients.claim` immediately
+- Deletes every cache it finds
+- Calls `self.registration.unregister()` so it removes itself
 
-On any event, invalidate the relevant query keys:
-- `['request', id]`, `['requests']`, `['my-requests']`, `['my-students']`,
-  `['case-manager-stats']`, `['analytics']`, `['filter-options']`,
-  `['student-detail', studentId]`.
+Any browser that still has an old PWA worker registered will pick this up on next visit, wipe its caches, and self-destruct.
 
-Mounted inside `AuthProvider` so it only runs for authenticated users; RLS filters which rows the user actually receives.
-
-### 4. Notifications hook
-`useNotifications` already subscribes — confirm it invalidates on every event (no debounce) so the bell badge updates instantly.
-
-### 5. Mutations
-Already call `invalidateQueries`. No changes needed — realtime now handles peer-to-peer pushes; local mutator sees its own change immediately via optimistic invalidation.
+### C. Add a build-time cache-bust signal
+Inject Vite's `import.meta.env.VITE_BUILD_ID` (timestamp) into a `<meta name="build-id">` so we can detect when a different build than the cached one is running, and trigger reload + cache wipe in the preview iframe.
 
 ## Out of scope
-- Offline-mode behavior (unchanged — sync still happens on reconnect).
-- Per-row optimistic updates (we rely on quick refetch instead, which is simpler and consistent).
-- Messaging realtime (already working via `useRealtimeMessages`).
+- Removing `vite-plugin-pwa` entirely. We're keeping it for the published app (it's already configured to skip preview), just neutering its leftover effects.
+- Any backend, RLS, or schema changes.
+- Real-time data syncing — that was already shipped in the previous turn.
 
 ## Verification
-- Open the same request in two browser windows (admin + student). Status change in one reflects in the other within ~1s without refresh.
-- Submit a new request as a student → appears in case manager's list instantly.
-- Add a note → timeline updates in the other window immediately.
-- Notification bell increments live.
+1. Open the preview, then `chrome://inspect → Application → Service Workers`: confirm none are registered after page load.
+2. `Application → Cache Storage`: confirm empty after the cleanup reload.
+3. Make a trivial code edit (e.g., change a header label). The preview should reflect it on the next HMR push without a manual refresh, and a hard refresh always shows fresh code.
