@@ -78,8 +78,10 @@ export default function ManageRequests() {
     setSearchParams(searchParams);
   };
 
+  const { filters: globalFilters } = useGlobalFilters();
+
   // Filter and sort requests
-  const filteredRequests = (requests || [])
+  const filteredRequests = applyToRequests(requests || [], globalFilters)
     .filter((request) => {
       const matchesSearch = 
         request.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
