@@ -30,6 +30,7 @@ import OrganizationDetail from "./pages/admin/OrganizationDetail";
 import SurveyResponses from "./pages/admin/SurveyResponses";
 import QRCodesPage from "./pages/admin/QRCodesPage";
 import QRLanding from "./pages/QRLanding";
+import PublicSharedRequest from "./pages/PublicSharedRequest";
 import RequestDetail from "./pages/RequestDetail";
 import RequestsList from "./pages/RequestsList";
 import CaseManagerDetail from "./pages/CaseManagerDetail";
