@@ -87,7 +87,7 @@ export default function AdminDashboard() {
   const { toast } = useToast();
 
   // Fetch real data
-  const { data: requests: rawRequests = [], isLoading: requestsLoading } = useRequests({});
+  const { data: rawRequests = [], isLoading: requestsLoading } = useRequests({});
   const { data: caseManagers = [], isLoading: caseManagersLoading } = useCaseManagers();
   const { filters: globalFilters } = useGlobalFilters();
   const requests = useMemo(() => applyToRequests(rawRequests, globalFilters), [rawRequests, globalFilters]);
