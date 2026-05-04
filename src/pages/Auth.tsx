@@ -75,7 +75,8 @@ export default function Auth() {
       }
       
       // If we get here, user is fully authenticated
-      navigate('/dashboard', { replace: true });
+      const redirect = searchParams.get('redirect');
+      navigate(redirect || '/dashboard', { replace: true });
     }
   }, [user, role, isEnrolled, isLoading, showMFAVerification, showMFAEnrollment, navigate]);
 
