@@ -393,6 +393,30 @@ export default function QRCodesPage() {
                       <Button size="sm" variant="outline" className="rounded-full" onClick={() => setEditOpen(true)}>
                         <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
                       </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="sm" variant="outline" className="rounded-full text-destructive hover:text-destructive">
+                            <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete this QR code?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              "{selected.label}" will be permanently removed. Existing printed copies will stop working. Past scan history will be retained for analytics.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={() => handleDelete(selected)}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                       <Switch checked={selected.is_active} onCheckedChange={() => toggleActive(selected)} />
                       <span className="text-xs text-muted-foreground hidden sm:inline"><Power className="h-3 w-3 inline" /> {selected.is_active ? 'Active' : 'Inactive'}</span>
                     </div>
