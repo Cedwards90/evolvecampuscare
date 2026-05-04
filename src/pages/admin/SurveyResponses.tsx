@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -10,10 +10,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Eye, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { SurveyPreviewDialog } from '@/components/admin/SurveyPreviewDialog';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 
 function MoodBadge({ rating }: { rating: number }) {
   const colors = rating >= 4 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
@@ -22,19 +24,64 @@ function MoodBadge({ rating }: { rating: number }) {
   return <Badge className={colors}>{rating}/5</Badge>;
 }
 
+type CheckSortKey = 'student' | 'date' | 'organization';
+type PlanSortKey = 'student' | 'date' | 'organization';
+
+function cmp(a: string | null | undefined, b: string | null | undefined) {
+  return (a || '').localeCompare(b || '');
+}
+
 export default function SurveyResponses() {
   const [search, setSearch] = useState('');
   const [previewType, setPreviewType] = useState<'checkin' | 'post_grad' | null>(null);
   const { data: checkIns, isLoading: loadingCheckIns } = useAllCheckIns();
   const { data: plans, isLoading: loadingPlans } = useAllPostGradPlans();
+  const { filters } = useGlobalFilters();
 
-  const filteredCheckIns = checkIns?.filter(c =>
-    (c.student_name || c.student_email).toLowerCase().includes(search.toLowerCase())
-  ) || [];
+  const [checkSort, setCheckSort] = useState<{ key: CheckSortKey; dir: 'asc' | 'desc' }>({ key: 'date', dir: 'desc' });
+  const [planSort, setPlanSort] = useState<{ key: PlanSortKey; dir: 'asc' | 'desc' }>({ key: 'date', dir: 'desc' });
 
-  const filteredPlans = plans?.filter(p =>
-    (p.student_name || p.student_email).toLowerCase().includes(search.toLowerCase())
-  ) || [];
+  const orgFilter = filters.organizationId;
+
+  const filteredCheckIns = useMemo(() => {
+    const list = (checkIns || []).filter(c => {
+      if (!(c.student_name || c.student_email).toLowerCase().includes(search.toLowerCase())) return false;
+      if (orgFilter.length && (!c.organization_id || !orgFilter.includes(c.organization_id))) return false;
+      return true;
+    });
+    const sorted = [...list].sort((a, b) => {
+      let r = 0;
+      if (checkSort.key === 'student') r = cmp(a.student_name || a.student_email, b.student_name || b.student_email);
+      else if (checkSort.key === 'organization') r = cmp(a.organization_name, b.organization_name);
+      else r = a.created_at.localeCompare(b.created_at);
+      return checkSort.dir === 'asc' ? r : -r;
+    });
+    return sorted;
+  }, [checkIns, search, orgFilter, checkSort]);
+
+  const filteredPlans = useMemo(() => {
+    const list = (plans || []).filter(p => {
+      if (!(p.student_name || p.student_email).toLowerCase().includes(search.toLowerCase())) return false;
+      if (orgFilter.length && (!p.organization_id || !orgFilter.includes(p.organization_id))) return false;
+      return true;
+    });
+    const sorted = [...list].sort((a, b) => {
+      let r = 0;
+      if (planSort.key === 'student') r = cmp(a.student_name || a.student_email, b.student_name || b.student_email);
+      else if (planSort.key === 'organization') r = cmp(a.organization_name, b.organization_name);
+      else r = a.created_at.localeCompare(b.created_at);
+      return planSort.dir === 'asc' ? r : -r;
+    });
+    return sorted;
+  }, [plans, search, orgFilter, planSort]);
+
+  const toggleCheckSort = (key: CheckSortKey) => {
+    setCheckSort((s) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'date' ? 'desc' : 'asc' });
+  };
+
+  const SortIcon = ({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) =>
+    !active ? <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-50" /> :
+    dir === 'asc' ? <ArrowUp className="ml-1 inline h-3 w-3" /> : <ArrowDown className="ml-1 inline h-3 w-3" />;
 
   return (
     <SidebarLayout>
@@ -82,8 +129,21 @@ export default function SurveyResponses() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead>
+                      <button className="inline-flex items-center" onClick={() => toggleCheckSort('student')}>
+                        Student <SortIcon active={checkSort.key === 'student'} dir={checkSort.dir} />
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button className="inline-flex items-center" onClick={() => toggleCheckSort('organization')}>
+                        Organization <SortIcon active={checkSort.key === 'organization'} dir={checkSort.dir} />
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button className="inline-flex items-center" onClick={() => toggleCheckSort('date')}>
+                        Date <SortIcon active={checkSort.key === 'date'} dir={checkSort.dir} />
+                      </button>
+                    </TableHead>
                     <TableHead>Mood</TableHead>
                     <TableHead>Progress</TableHead>
                     <TableHead className="w-10"></TableHead>
@@ -100,6 +160,23 @@ export default function SurveyResponses() {
         </TabsContent>
 
         <TabsContent value="plans">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Sort by</span>
+            <Select value={`${planSort.key}-${planSort.dir}`} onValueChange={(v) => {
+              const [key, dir] = v.split('-') as [PlanSortKey, 'asc' | 'desc'];
+              setPlanSort({ key, dir });
+            }}>
+              <SelectTrigger className="w-[200px] rounded-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date-desc">Date (newest)</SelectItem>
+                <SelectItem value="date-asc">Date (oldest)</SelectItem>
+                <SelectItem value="student-asc">Student A–Z</SelectItem>
+                <SelectItem value="student-desc">Student Z–A</SelectItem>
+                <SelectItem value="organization-asc">Organization A–Z</SelectItem>
+                <SelectItem value="organization-desc">Organization Z–A</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           {loadingPlans ? <LoadingSpinner /> : filteredPlans.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">No plans found.</CardContent></Card>
           ) : (
@@ -127,6 +204,9 @@ function CheckInRow({ checkIn }: { checkIn: ReturnType<typeof useAllCheckIns>['d
             {checkIn.student_name || checkIn.student_email}
           </Link>
         </TableCell>
+        <TableCell className="text-sm text-muted-foreground">
+          {checkIn.organization_name || '—'}
+        </TableCell>
         <TableCell className="text-muted-foreground text-sm">
           {new Date(checkIn.created_at).toLocaleDateString()}
         </TableCell>
@@ -138,7 +218,7 @@ function CheckInRow({ checkIn }: { checkIn: ReturnType<typeof useAllCheckIns>['d
       </TableRow>
       {open && hasDetails && (
         <TableRow>
-          <TableCell colSpan={5} className="bg-muted/30 px-6 py-4">
+          <TableCell colSpan={6} className="bg-muted/30 px-6 py-4">
             <div className="grid gap-3 md:grid-cols-3 text-sm">
               {checkIn.wins && (
                 <div>
@@ -197,6 +277,7 @@ function PlanCard({ plan }: { plan: ReturnType<typeof useAllPostGradPlans>['data
                     </Link>
                   </CardTitle>
                   <p className="text-sm text-muted-foreground mt-0.5">
+                    {plan.organization_name && <><span className="font-medium">{plan.organization_name}</span> · </>}
                     Submitted {new Date(plan.created_at).toLocaleDateString()}
                     {plan.graduation_date && ` · Graduation: ${new Date(plan.graduation_date).toLocaleDateString()}`}
                   </p>
