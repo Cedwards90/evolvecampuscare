@@ -233,8 +233,9 @@ function App() {
                   {/* Catch-all route */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-              </TooltipProvider>
-            </OfflineProvider>
+                </TooltipProvider>
+                </GlobalFiltersProvider>
+              </OfflineProvider>
           </LanguageProvider>
         </AuthProvider>
       </BrowserRouter>
