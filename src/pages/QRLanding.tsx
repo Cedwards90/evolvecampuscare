@@ -60,8 +60,15 @@ export default function QRLanding() {
     if (!qrCode || isLoading) return;
     if (user) {
       logQREvent({ eventType: 'auth_completed' });
+      // Auto-forward signed-in students to the standalone request page.
+      if (
+        qrCode.destination_type === 'request' &&
+        (!role || role === 'student')
+      ) {
+        navigate(`/qr/${qrCode.code}/request`, { replace: true });
+      }
     }
-  }, [qrCode, user, isLoading]);
+  }, [qrCode, user, role, isLoading, navigate]);
 
   const isStaff = !!role && role !== 'student';
 
