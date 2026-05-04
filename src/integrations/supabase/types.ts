@@ -587,30 +587,51 @@ export type Database = {
           code: string
           created_at: string
           created_by: string
+          description: string | null
+          destination_type: string
+          destination_url: string | null
           id: string
           is_active: boolean
           label: string
           organization_id: string | null
+          prefill_category:
+            | Database["public"]["Enums"]["request_category"]
+            | null
+          title: string | null
           updated_at: string
         }
         Insert: {
           code: string
           created_at?: string
           created_by: string
+          description?: string | null
+          destination_type?: string
+          destination_url?: string | null
           id?: string
           is_active?: boolean
           label: string
           organization_id?: string | null
+          prefill_category?:
+            | Database["public"]["Enums"]["request_category"]
+            | null
+          title?: string | null
           updated_at?: string
         }
         Update: {
           code?: string
           created_at?: string
           created_by?: string
+          description?: string | null
+          destination_type?: string
+          destination_url?: string | null
           id?: string
           is_active?: boolean
           label?: string
           organization_id?: string | null
+          prefill_category?:
+            | Database["public"]["Enums"]["request_category"]
+            | null
+          title?: string | null
           updated_at?: string
         }
         Relationships: [
