@@ -43,20 +43,27 @@ export default function QRLanding() {
     }
   }, [qrCode, user, isLoading]);
 
+  const isStaff = !!role && role !== 'student';
+
   const handleAction = async (kind: 'request' | 'meeting') => {
     await logQREvent({ eventType: 'action_selected', actionKind: kind });
+    // Staff are not permitted to submit a request via the student flow.
+    if (kind === 'request' && user && isStaff) {
+      return;
+    }
     if (!user) {
       await logQREvent({ eventType: 'auth_required', actionKind: kind });
-      const next = kind === 'request' ? '/student-submitting-a-support-request' : '/dashboard?action=schedule';
+      const next = kind === 'request'
+        ? '/student/support-request?source=qr'
+        : '/dashboard?action=schedule';
       navigate(`/auth?redirect=${encodeURIComponent(next)}&remember=1`);
       return;
     }
-    if (role && role !== 'student') {
-      // Staff scanning their own poster — just send to dashboard
+    if (kind === 'meeting' && isStaff) {
       navigate('/dashboard');
       return;
     }
-    if (kind === 'request') navigate('/student-submitting-a-support-request');
+    if (kind === 'request') navigate('/student/support-request?source=qr');
     else navigate('/dashboard?action=schedule');
   };
 
@@ -95,11 +102,18 @@ export default function QRLanding() {
           {qrCode && <p className="text-sm text-muted-foreground">{qrCode.label}</p>}
         </div>
 
+        {isStaff && (
+          <div className="rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-900 dark:text-amber-100 text-center">
+            Submitting a support request is for students only. You're signed in as staff.
+          </div>
+        )}
+
         <div className="space-y-4">
           <Button
             size="lg"
-            className="w-full h-auto py-6 rounded-full text-base flex flex-col items-center gap-2"
+            className="w-full h-auto py-6 rounded-full text-base flex flex-col items-center gap-2 disabled:opacity-50"
             onClick={() => handleAction('request')}
+            disabled={isStaff}
           >
             <FileText className="h-7 w-7" />
             <span className="font-semibold">Submit a Request</span>
@@ -116,6 +130,16 @@ export default function QRLanding() {
             <span className="font-semibold">Schedule a Meeting</span>
             <span className="text-xs font-normal text-muted-foreground">Book time with your case manager</span>
           </Button>
+
+          {isStaff && (
+            <Button
+              variant="ghost"
+              className="w-full rounded-full"
+              onClick={() => navigate('/dashboard')}
+            >
+              Go to dashboard
+            </Button>
+          )}
         </div>
 
         {!user && (
