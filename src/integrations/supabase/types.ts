@@ -60,6 +60,7 @@ export type Database = {
           duration_minutes: number
           id: string
           meeting_link: string | null
+          qr_session_id: string | null
           request_id: string | null
           scheduled_at: string
           status: string | null
@@ -74,6 +75,7 @@ export type Database = {
           duration_minutes?: number
           id?: string
           meeting_link?: string | null
+          qr_session_id?: string | null
           request_id?: string | null
           scheduled_at: string
           status?: string | null
@@ -88,6 +90,7 @@ export type Database = {
           duration_minutes?: number
           id?: string
           meeting_link?: string | null
+          qr_session_id?: string | null
           request_id?: string | null
           scheduled_at?: string
           status?: string | null
@@ -579,6 +582,91 @@ export type Database = {
           },
         ]
       }
+      qr_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          label: string
+          organization_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          label: string
+          organization_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          organization_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_codes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "training_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qr_scan_events: {
+        Row: {
+          action_kind: Database["public"]["Enums"]["qr_action_kind"] | null
+          created_at: string
+          event_type: Database["public"]["Enums"]["qr_event_type"]
+          id: string
+          qr_code_id: string
+          session_id: string
+          target_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_kind?: Database["public"]["Enums"]["qr_action_kind"] | null
+          created_at?: string
+          event_type: Database["public"]["Enums"]["qr_event_type"]
+          id?: string
+          qr_code_id: string
+          session_id: string
+          target_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_kind?: Database["public"]["Enums"]["qr_action_kind"] | null
+          created_at?: string
+          event_type?: Database["public"]["Enums"]["qr_event_type"]
+          id?: string
+          qr_code_id?: string
+          session_id?: string
+          target_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_scan_events_qr_code_id_fkey"
+            columns: ["qr_code_id"]
+            isOneToOne: false
+            referencedRelation: "qr_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       request_attachments: {
         Row: {
           created_at: string
@@ -878,6 +966,7 @@ export type Database = {
           id: string
           is_emergency: boolean | null
           priority: Database["public"]["Enums"]["request_priority"]
+          qr_session_id: string | null
           requested_amount: number | null
           resolved_at: string | null
           status: Database["public"]["Enums"]["request_status"]
@@ -895,6 +984,7 @@ export type Database = {
           id?: string
           is_emergency?: boolean | null
           priority?: Database["public"]["Enums"]["request_priority"]
+          qr_session_id?: string | null
           requested_amount?: number | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["request_status"]
@@ -912,6 +1002,7 @@ export type Database = {
           id?: string
           is_emergency?: boolean | null
           priority?: Database["public"]["Enums"]["request_priority"]
+          qr_session_id?: string | null
           requested_amount?: number | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["request_status"]
@@ -1163,6 +1254,14 @@ export type Database = {
     }
     Enums: {
       app_role: "student" | "case_manager" | "admin" | "org_admin"
+      qr_action_kind: "request" | "meeting"
+      qr_event_type:
+        | "scan"
+        | "auth_required"
+        | "auth_completed"
+        | "action_selected"
+        | "action_started"
+        | "action_completed"
       request_category:
         | "academic"
         | "financial"
@@ -1304,6 +1403,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["student", "case_manager", "admin", "org_admin"],
+      qr_action_kind: ["request", "meeting"],
+      qr_event_type: [
+        "scan",
+        "auth_required",
+        "auth_completed",
+        "action_selected",
+        "action_started",
+        "action_completed",
+      ],
       request_category: [
         "academic",
         "financial",
