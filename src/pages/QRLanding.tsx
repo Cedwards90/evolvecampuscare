@@ -60,8 +60,15 @@ export default function QRLanding() {
     if (!qrCode || isLoading) return;
     if (user) {
       logQREvent({ eventType: 'auth_completed' });
+      // Auto-forward signed-in students to the standalone request page.
+      if (
+        qrCode.destination_type === 'request' &&
+        (!role || role === 'student')
+      ) {
+        navigate(`/qr/${qrCode.code}/request`, { replace: true });
+      }
     }
-  }, [qrCode, user, isLoading]);
+  }, [qrCode, user, role, isLoading, navigate]);
 
   const isStaff = !!role && role !== 'student';
 
@@ -175,6 +182,9 @@ export default function QRLanding() {
               </a>
             </Button>
           </div>
+        ) : isRequestOnly && !user && !isStaff ? (
+          // Standalone-request flow: skip the chooser; the email-verify card below handles entry.
+          null
         ) : (
           <div className="space-y-4">
             {!isMeetingOnly && (

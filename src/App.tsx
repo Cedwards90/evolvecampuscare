@@ -31,6 +31,8 @@ import OrganizationDetail from "./pages/admin/OrganizationDetail";
 import SurveyResponses from "./pages/admin/SurveyResponses";
 import QRCodesPage from "./pages/admin/QRCodesPage";
 import QRLanding from "./pages/QRLanding";
+import QRStandaloneRequest from "./pages/QRStandaloneRequest";
+import QRRequestSuccess from "./pages/QRRequestSuccess";
 import PublicSharedRequest from "./pages/PublicSharedRequest";
 import RequestDetail from "./pages/RequestDetail";
 import RequestsList from "./pages/RequestsList";
@@ -90,6 +92,8 @@ function App() {
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/qr/:code" element={<QRLanding />} />
+                  <Route path="/qr/:code/request" element={<QRStandaloneRequest />} />
+                  <Route path="/qr/:code/request/success" element={<QRRequestSuccess />} />
                   <Route path="/shared/request/:token" element={<PublicSharedRequest />} />
                   
                   {/* Protected routes - All authenticated users */}
