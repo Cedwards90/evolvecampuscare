@@ -97,6 +97,19 @@ function RequestTimeline({ request }: { request: SupportRequest }) {
   );
 }
 
+function EditEntry({ request }: { request: SupportRequest }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="outline" className="w-full" onClick={() => setOpen(true)}>
+        <Pencil className="mr-2 h-4 w-4" />
+        Edit Request
+      </Button>
+      <EditRequestDialog request={request} open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
 export default function TrackRequests() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all');
