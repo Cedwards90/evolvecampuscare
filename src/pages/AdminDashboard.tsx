@@ -57,6 +57,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useRequests } from '@/hooks/useRequests';
 import { useCaseManagers } from '@/hooks/useCaseManagerStats';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { applyToRequests } from '@/lib/applyGlobalFilters';
 import { 
   BarChart, 
   Bar, 
@@ -84,8 +87,11 @@ export default function AdminDashboard() {
   const { toast } = useToast();
 
   // Fetch real data
-  const { data: requests = [], isLoading: requestsLoading } = useRequests({});
+  const { data: rawRequests = [], isLoading: requestsLoading } = useRequests({});
   const { data: caseManagers = [], isLoading: caseManagersLoading } = useCaseManagers();
+  const { filters: globalFilters } = useGlobalFilters();
+  const requests = useMemo(() => applyToRequests(rawRequests, globalFilters), [rawRequests, globalFilters]);
+
 
   // Calculate stats from real data
   const stats = useMemo(() => ({
@@ -186,6 +192,8 @@ export default function AdminDashboard() {
           title="Admin Dashboard"
           description="Monitor system performance and manage request assignments"
         />
+
+        <GlobalFilterBar />
 
         {/* Unassigned Requests Alert Banner */}
         {unassignedRequests.length > 0 && (

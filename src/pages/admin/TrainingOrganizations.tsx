@@ -30,6 +30,8 @@ import {
 } from '@/hooks/useTrainingOrganizations';
 import { useUsers } from '@/hooks/useUsers';
 import { BulkAssignOrgDialog } from '@/components/admin/BulkAssignOrgDialog';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 export default function TrainingOrganizations() {
   const { data: orgs, isLoading } = useTrainingOrganizations();
   const { data: users } = useUsers();
@@ -43,9 +45,11 @@ export default function TrainingOrganizations() {
   const [form, setForm] = useState({ name: '', description: '', contact_name: '', contact_email: '' });
   const [bulkAssignOrg, setBulkAssignOrg] = useState<TrainingOrganization | null>(null);
 
+  const { filters: globalFilters } = useGlobalFilters();
   const filtered = (orgs || []).filter(o =>
-    o.name.toLowerCase().includes(search.toLowerCase()) ||
-    (o.contact_name || '').toLowerCase().includes(search.toLowerCase())
+    (o.name.toLowerCase().includes(search.toLowerCase()) ||
+    (o.contact_name || '').toLowerCase().includes(search.toLowerCase())) &&
+    (globalFilters.organizationId.length === 0 || globalFilters.organizationId.includes(o.id))
   );
 
   // Count members per org using resolved organization_id (includes membership fallback)
@@ -124,6 +128,8 @@ export default function TrainingOrganizations() {
             Add Organization
           </Button>
         </div>
+
+        <GlobalFilterBar visible={['organizationId']} />
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

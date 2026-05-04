@@ -13,6 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Search, ChevronDown, ChevronRight, ExternalLink, Smile, TrendingUp, Eye } from 'lucide-react';
 import { SurveyPreviewDialog } from '@/components/admin/SurveyPreviewDialog';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 
 function MoodBadge({ rating }: { rating: number }) {
   const colors = rating >= 4 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
@@ -38,6 +39,8 @@ export default function SurveyResponses() {
   return (
     <SidebarLayout>
       <PageHeader title="Survey Responses" description="View all student check-ins and post-graduation plans" />
+
+      <GlobalFilterBar visible={['cohort', 'yearOfStudy', 'organizationId']} />
 
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative max-w-sm flex-1">

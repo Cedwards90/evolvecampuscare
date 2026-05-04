@@ -24,6 +24,7 @@ import { ReportRangePicker } from '@/components/reports/ReportRangePicker';
 import { ReportPreview } from '@/components/reports/ReportPreview';
 import { exportReportCsv, exportReportPdf } from '@/lib/reportExport';
 import { toast } from '@/hooks/use-toast';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 
 export default function Reports() {
   const { user, role } = useAuth();

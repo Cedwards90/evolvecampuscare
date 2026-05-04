@@ -38,6 +38,8 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { useCaseManagers } from '@/hooks/useCaseManagerStats';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 import { useStudentAssignments } from '@/hooks/useStudentAssignments';
 import { useRequests } from '@/hooks/useRequests';
 import { ReassignStudentDialog } from '@/components/admin/ReassignStudentDialog';
@@ -76,12 +78,15 @@ export default function CaseManagersPage() {
     fromCaseManagerName: string;
   } | null>(null);
 
+  const { filters: globalFilters } = useGlobalFilters();
+
   // Filter case managers
   const filteredCMs = useMemo(() => {
     if (!caseManagers) return [];
     const q = cmSearch.trim().toLowerCase();
     return caseManagers
       .filter((cm) => {
+        if (globalFilters.assignedCaseManagerId.length && !globalFilters.assignedCaseManagerId.includes(cm.user_id)) return false;
         if (q) {
           const name = (cm.full_name || '').toLowerCase();
           const email = (cm.email || '').toLowerCase();
@@ -98,7 +103,7 @@ export default function CaseManagersPage() {
         return true;
       })
       .sort((a, b) => b.assigned_students - a.assigned_students);
-  }, [caseManagers, cmSearch, workloadFilter]);
+  }, [caseManagers, cmSearch, workloadFilter, globalFilters]);
 
   // Auto-select first CM
   const effectiveSelectedId =
@@ -176,6 +181,8 @@ export default function CaseManagersPage() {
           title="Case Managers"
           description="Monitor case manager workloads and reassign students between case managers."
         />
+
+        <GlobalFilterBar visible={['organizationId', 'assignedCaseManagerId']} />
 
         {isLoading ? (
           <div className="flex justify-center py-16">

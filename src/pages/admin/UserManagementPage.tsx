@@ -66,6 +66,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUsers, useUpdateUserRole, useDeleteUser } from '@/hooks/useUsers';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { applyToProfiles } from '@/lib/applyGlobalFilters';
 import { useTrainingOrganizations } from '@/hooks/useTrainingOrganizations';
 import type { AppRole } from '@/types/database';
 
@@ -101,21 +104,23 @@ export default function UserManagementPage() {
   const updateRole = useUpdateUserRole();
   const deleteUser = useDeleteUser();
 
+  const { filters: globalFilters } = useGlobalFilters();
+
   // Filter and paginate users
   const filteredUsers = useMemo(() => {
     if (!users) return [];
-    
-    return users.filter(user => {
-      const matchesSearch = 
+    const globallyFiltered = applyToProfiles(users as any, globalFilters) as typeof users;
+    return globallyFiltered.filter((user) => {
+      const matchesSearch =
         user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
       const matchesOrg = orgFilter === 'all' || user.organization_id === orgFilter;
-      
+
       return matchesSearch && matchesRole && matchesOrg;
     });
-  }, [users, searchQuery, roleFilter, orgFilter]);
+  }, [users, searchQuery, roleFilter, orgFilter, globalFilters]);
 
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = filteredUsers.slice(
@@ -212,6 +217,8 @@ export default function UserManagementPage() {
             <InviteUserDialog />
           </div>
         </div>
+
+        <GlobalFilterBar visible={['cohort', 'yearOfStudy', 'organizationId', 'role']} />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
