@@ -12,8 +12,17 @@ export async function generateQRDataURL(text: string, opts?: { size?: number; da
   });
 }
 
+// Always point QR codes at the public production domain so scans never land
+// on the Lovable preview/editor (which requires a Lovable login).
+export const QR_PUBLIC_BASE_URL = 'https://evolvecampuscare.lovable.app';
+
 export function qrLandingUrl(code: string) {
-  return `${window.location.origin}/qr/${code}`;
+  const base =
+    typeof window !== 'undefined' &&
+    /^(localhost|127\.|.*\.lovable\.dev$)/.test(window.location.hostname)
+      ? QR_PUBLIC_BASE_URL
+      : QR_PUBLIC_BASE_URL; // always use production base for shareable QR codes
+  return `${base}/qr/${code}`;
 }
 
 export function makeShortCode(length = 8) {
