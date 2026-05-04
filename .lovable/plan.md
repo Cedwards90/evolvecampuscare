@@ -1,38 +1,37 @@
-# Fix: QR scan shows "Unavailable"
+# Show students who haven't completed surveys
 
-## Problem
-The QR landing page (`/qr/:code`) queries `qr_codes` to look up the scanned code. The current SELECT RLS policy only allows `authenticated` users, so anyone scanning a QR code without already being signed in gets an empty result and sees the "QR Code Unavailable" error. Same issue blocks `qr_scan_events` inserts from anonymous scanners.
+Add a "Not Completed" view to the admin Survey Responses page (`/admin/surveys`) for each survey type.
 
-## Fix
+## Definitions
+- **Check-In not completed**: student has no `student_checkins` row in the last 21 days (matches the 3-week recurring cadence). Includes students who never submitted one.
+- **Post-Graduation Plan not completed**: student has no `post_graduation_plans` row at all.
 
-### 1. RLS migration on `qr_codes`
-Add a public SELECT policy limited to active codes and only the columns the landing page needs (already non-sensitive: id, code, label, org id, destination type/url, title, description, prefill_category, is_active).
+Pool of "students" = profiles with role `student` (respects existing global org/cohort/year filters and the search box).
 
-```sql
-CREATE POLICY "Anyone can view active qr codes"
-ON public.qr_codes
-FOR SELECT
-TO anon, authenticated
-USING (is_active = true);
+## UI
+In `src/pages/admin/SurveyResponses.tsx`, change each tab into a 2-state toggle:
+
 ```
-Then drop the old `Authenticated users can view active qr codes` policy (now redundant). Admin/org-admin ALL policies remain unchanged.
-
-### 2. RLS on `qr_scan_events`
-Allow anonymous inserts so we still capture scan analytics before sign-in:
-
-```sql
-CREATE POLICY "Anyone can insert scan events"
-ON public.qr_scan_events
-FOR INSERT
-TO anon, authenticated
-WITH CHECK (user_id IS NULL OR user_id = auth.uid());
+[ Check-Ins (12 completed · 8 pending) ]   [ Post-Grad Plans (4 · 16 pending) ]
+   ( Completed | Pending )
 ```
-(Replaces the existing authenticated-only insert policy.)
+
+A small segmented control under each tab switches between the existing completed table and a new "Pending" table:
+
+| Student | Organization | Last submitted | Days overdue | Action |
+|---|---|---|---|---|
+| Jane Doe | Evolve Cohort 4 | 28 days ago (or "Never") | 7 | Send reminder |
+
+"Send reminder" reuses the existing `SendSurveyDialog` pre-targeted at that student.
+
+## Data
+New hooks in `src/hooks/useSurveyResponses.ts`:
+- `usePendingCheckIns()` — left-join students to their latest check-in; return rows where `max(created_at) < now() - 21 days` or null.
+- `usePendingPostGradPlans()` — students with no plan row.
+
+Implemented as two queries (students, then aggregate latest dates) joined client-side, mirroring the existing hook style. Org/cohort filters applied client-side like today.
 
 ## Out of scope
-- No changes to QR landing UI, routing, deletion, or admin pages.
-- No new columns or data exposed beyond what the landing page already reads.
-- Does not change auth flow — scanners still must sign in (magic link) to actually submit a request.
-
-## Risk
-Low. `qr_codes` rows contain no PII; `code` values are already shareable URLs. Inactive codes remain hidden.
+- No schema changes, no new RLS policies (admin already reads profiles, check-ins, plans).
+- No change to thresholds or scheduling logic.
+- No bulk reminder send (single-row reminder only).
