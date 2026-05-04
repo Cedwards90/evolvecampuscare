@@ -430,14 +430,14 @@ export default function RequestDetail() {
       </div>
       {canStudentEdit && (
         <EditRequestDialog request={request} open={editOpen} onOpenChange={setEditOpen} />
-        {canShare && (
-          <SharePdfDialog
-            open={shareOpen}
-            onOpenChange={setShareOpen}
-            requestId={request.id}
-            requestTitle={request.title}
-          />
-        )}
+      )}
+      {canShare && (
+        <SharePdfDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          requestId={request.id}
+          requestTitle={request.title}
+        />
       )}
     </SidebarLayout>
   );
