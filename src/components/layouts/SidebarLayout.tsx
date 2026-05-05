@@ -28,6 +28,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useOffline } from '@/contexts/OfflineContext';
 import { useUnreadCount } from '@/hooks/useMessages';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
+import { useRealtimeStudentAssignments } from '@/hooks/useRealtimeStudentAssignments';
 import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -91,6 +92,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   
   // Enable real-time message notifications for staff
   useRealtimeMessages();
+  useRealtimeStudentAssignments(role === 'case_manager' ? user?.id : undefined);
 
   // Minimum-safe nav items shown when a user has no role yet (or role lookup failed).
   // Keeps the user from being stranded on a blank shell.

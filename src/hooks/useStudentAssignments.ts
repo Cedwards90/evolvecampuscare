@@ -178,6 +178,9 @@ export function useAssignStudent() {
       queryClient.invalidateQueries({ queryKey: ['requests'] });
       queryClient.invalidateQueries({ queryKey: ['case-managers'] });
       queryClient.invalidateQueries({ queryKey: ['case-manager-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['my-students'] });
+      queryClient.invalidateQueries({ queryKey: ['student-folders'] });
+      queryClient.invalidateQueries({ queryKey: ['my-assignment'] });
       toast({
         title: 'Student assigned',
         description: 'The student has been assigned to the case manager.',
@@ -210,6 +213,10 @@ export function useRemoveStudentAssignment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-assignments'] });
       queryClient.invalidateQueries({ queryKey: ['unassigned-students'] });
+      queryClient.invalidateQueries({ queryKey: ['my-students'] });
+      queryClient.invalidateQueries({ queryKey: ['student-folders'] });
+      queryClient.invalidateQueries({ queryKey: ['my-assignment'] });
+      queryClient.invalidateQueries({ queryKey: ['case-manager-stats'] });
       toast({
         title: 'Assignment removed',
         description: 'The student assignment has been removed.',
@@ -274,6 +281,9 @@ export function useBulkAssignStudents() {
       queryClient.invalidateQueries({ queryKey: ['requests'] });
       queryClient.invalidateQueries({ queryKey: ['case-managers'] });
       queryClient.invalidateQueries({ queryKey: ['case-manager-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['my-students'] });
+      queryClient.invalidateQueries({ queryKey: ['student-folders'] });
+      queryClient.invalidateQueries({ queryKey: ['my-assignment'] });
       toast({
         title: 'Students assigned',
         description: `${variables.studentIds.length} student(s) have been assigned to the case manager.`,
