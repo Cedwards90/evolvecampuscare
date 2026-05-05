@@ -134,13 +134,11 @@ export default function AdminNda() {
       <PageHeader
         title="NDA Management"
         description="Manage the platform's Non-Disclosure Agreement and view acceptance records."
-        icon={FileText}
-        actions={
-          <Button className="rounded-full" onClick={() => setPublishOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Publish new version
-          </Button>
-        }
-      />
+      >
+        <Button className="rounded-full" onClick={() => setPublishOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Publish new version
+        </Button>
+      </PageHeader>
 
       <Tabs defaultValue="current" className="mt-6">
         <TabsList>
