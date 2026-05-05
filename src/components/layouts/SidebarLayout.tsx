@@ -92,6 +92,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   
   // Enable real-time message notifications for staff
   useRealtimeMessages();
+  useRealtimeStudentAssignments(role === 'case_manager' ? user?.id : undefined);
 
   // Minimum-safe nav items shown when a user has no role yet (or role lookup failed).
   // Keeps the user from being stranded on a blank shell.
