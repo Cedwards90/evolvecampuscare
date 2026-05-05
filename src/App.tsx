@@ -48,6 +48,8 @@ import PostGraduationPlan from "./pages/PostGraduationPlan";
 import Reports from "./pages/Reports";
 import StudentProgressReportPage from "./pages/StudentProgressReport";
 import NotFound from "./pages/NotFound";
+import AcceptNda from "./pages/AcceptNda";
+import AdminNda from "./pages/admin/AdminNda";
 
 // Create query client outside component to ensure stable reference.
 // Defaults tuned to avoid stale UI after mutations or returning to a tab,
@@ -95,6 +97,9 @@ function App() {
                   <Route path="/qr/:code/request" element={<QRStandaloneRequest />} />
                   <Route path="/qr/:code/request/success" element={<QRRequestSuccess />} />
                   <Route path="/shared/request/:token" element={<PublicSharedRequest />} />
+
+                  {/* NDA acceptance gate (requires login but bypasses NDA gate itself) */}
+                  <Route path="/accept-nda" element={<AcceptNda />} />
                   
                   {/* Protected routes - All authenticated users */}
                   <Route path="/dashboard" element={
@@ -202,6 +207,11 @@ function App() {
             <Route path="/admin/qr-codes" element={
               <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <QRCodesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/nda" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminNda />
               </ProtectedRoute>
             } />
                   <Route path="/messages" element={
