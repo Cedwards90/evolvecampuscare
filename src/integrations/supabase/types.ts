@@ -338,6 +338,77 @@ export type Database = {
         }
         Relationships: []
       }
+      nda_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          ip_address: string | null
+          nda_document_id: string
+          user_agent: string | null
+          user_id: string
+          version: number
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          nda_document_id: string
+          user_agent?: string | null
+          user_id: string
+          version: number
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          nda_document_id?: string
+          user_agent?: string | null
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nda_acceptances_nda_document_id_fkey"
+            columns: ["nda_document_id"]
+            isOneToOne: false
+            referencedRelation: "nda_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nda_documents: {
+        Row: {
+          body_markdown: string
+          created_at: string
+          created_by: string | null
+          effective_at: string
+          id: string
+          is_current: boolean
+          title: string
+          version: number
+        }
+        Insert: {
+          body_markdown: string
+          created_at?: string
+          created_by?: string | null
+          effective_at?: string
+          id?: string
+          is_current?: boolean
+          title: string
+          version: number
+        }
+        Update: {
+          body_markdown?: string
+          created_at?: string
+          created_by?: string | null
+          effective_at?: string
+          id?: string
+          is_current?: boolean
+          title?: string
+          version?: number
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string | null
