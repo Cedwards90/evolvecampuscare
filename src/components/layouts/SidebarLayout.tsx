@@ -28,6 +28,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useOffline } from '@/contexts/OfflineContext';
 import { useUnreadCount } from '@/hooks/useMessages';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
+import { useRealtimeStudentAssignments } from '@/hooks/useRealtimeStudentAssignments';
 import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
