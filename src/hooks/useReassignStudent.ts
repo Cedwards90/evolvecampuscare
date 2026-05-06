@@ -37,7 +37,9 @@ export function useReassignStudent() {
       reassignOpenRequests = true,
     }: ReassignStudentParams) => {
       if (!user) throw new Error('You must be signed in.');
-      if (role !== 'admin') throw new Error('Only administrators can reassign students.');
+      if (role !== 'admin' && role !== 'org_admin') {
+        throw new Error('Only administrators or organizational admins can reassign students.');
+      }
       if (!toCaseManagerId) throw new Error('A target case manager is required.');
       if (toCaseManagerId === fromCaseManagerId) {
         throw new Error('Target case manager must differ from the current one.');

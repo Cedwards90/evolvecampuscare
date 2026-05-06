@@ -55,6 +55,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRequests } from '@/hooks/useRequests';
 import { useCaseManagers } from '@/hooks/useCaseManagerStats';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
@@ -78,6 +79,8 @@ import type { RequestStatus, SupportRequest } from '@/types/database';
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--warning))', 'hsl(var(--destructive))', 'hsl(var(--success))', 'hsl(var(--muted))'];
 
 export default function AdminDashboard() {
+  const { role } = useAuth();
+  const isFullAdmin = role === 'admin';
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all');
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
@@ -189,8 +192,8 @@ export default function AdminDashboard() {
     <SidebarLayout>
       <div className="space-y-6">
         <PageHeader
-          title="Admin Dashboard"
-          description="Monitor system performance and manage request assignments"
+          title={isFullAdmin ? 'Admin Dashboard' : 'Organization Dashboard'}
+          description={isFullAdmin ? 'Monitor system performance and manage request assignments' : 'Monitor your organization and manage caseload assignments'}
         />
 
         <GlobalFilterBar />
@@ -682,14 +685,16 @@ export default function AdminDashboard() {
           </Card>
         </section>
 
-        {/* System Settings Section */}
-        <section className="space-y-4">
-          <h2 className="font-display text-h3">System Settings</h2>
-          <NotificationSettings />
-        </section>
+        {/* System Settings Section — full admin only */}
+        {isFullAdmin && (
+          <section className="space-y-4">
+            <h2 className="font-display text-h3">System Settings</h2>
+            <NotificationSettings />
+          </section>
+        )}
 
-        {/* User Management Section */}
-        <UserManagement />
+        {/* User Management Section — full admin only */}
+        {isFullAdmin && <UserManagement />}
 
         {/* Single Assignment Dialog */}
         <AssignCaseManagerDialog
