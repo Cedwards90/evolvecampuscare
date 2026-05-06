@@ -59,7 +59,13 @@ export function useAcceptNda() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, ndaDocumentId) => {
+      if (user?.id) {
+        qc.setQueryData(
+          ["nda", "acceptance", user.id, ndaDocumentId],
+          { id: "optimistic", accepted_at: new Date().toISOString(), version: 0 },
+        );
+      }
       qc.invalidateQueries({ queryKey: ["nda", "acceptance", user?.id] });
     },
   });

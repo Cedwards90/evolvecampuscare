@@ -1,40 +1,70 @@
-## Goal
+## Why the NDA appears twice
 
-Ensure every user who joins an organization (via invitation, QR code, or manual membership) is visible to that organization's Org Admins — and stays visible — by treating `organization_memberships` as the source of truth.
+The NDA gate in `ProtectedRoute` checks `useMyNdaAcceptance(...)` and redirects to `/accept-nda` when `acceptance` is null. After the user clicks "I Accept":
 
-## Changes
+1. `useAcceptNda` calls the edge function and on success calls `qc.invalidateQueries(["nda","acceptance", user?.id])`.
+2. `AcceptNda.tsx` immediately `navigate(redirect, { replace: true })` — usually `/dashboard`.
+3. The destination page renders `ProtectedRoute`, which re-runs `useMyNdaAcceptance`. Because the previous query already returned `null` (cached), React Query's `isLoading` is `false` even while it's refetching after the invalidate. The gate sees `acceptance == null` and bounces the user back to `/accept-nda`.
+4. Moments later the refetch returns the new acceptance row, and the gate finally lets them through — so the user sees the NDA screen a second time before landing on the dashboard.
 
-### 1. Backfill `profiles.organization_id`
-For any user who has an active `organization_memberships` row but a NULL `profiles.organization_id`, set the profile's `organization_id` from their most recent active membership. This immediately makes Israel Pettis, Traville Smith, and any similarly affected user visible to their Org Admin.
+This is a pure client-side race between "navigate" and "refetch". The DB and edge function are correct (the row is inserted on the first accept).
 
-### 2. Auto-sync trigger on `organization_memberships`
-Add an `AFTER INSERT OR UPDATE` trigger that keeps `profiles.organization_id` in sync whenever a membership is created or its `left_at` changes. New active membership → profile gets that org. Membership ended (`left_at` set) → if it was the user's current org, fall back to another active membership or NULL.
+## Fix (frontend only, ~3 small edits)
 
-### 3. Belt-and-suspenders RLS on `profiles`
-Add a second Org Admin SELECT policy that also matches via `organization_memberships`, so even if `profiles.organization_id` is briefly stale, an Org Admin can still see members of their org. Keep the existing policy intact.
+### 1. `src/hooks/useNda.ts` — write the acceptance into the cache immediately
 
-### 4. Mirror RLS on related tables (read-only)
-The same membership-based fallback is applied to the existing org-scoped SELECT policies on:
-- `student_assignments`
-- `file_notes`
-- `intake_responses`
-- `student_files`
-- `student_checkins`
-- `post_graduation_plans`
-- `staff_messages`
-- `appointments`
-- `request_attachments`
-- `request_updates`
+In `useAcceptNda.onSuccess`, before invalidating, seed the cached acceptance so any consumer that re-renders sees the user as accepted:
 
-This is done via a small helper `user_in_org_admin_scope_v2(actor, target)` that returns true if the target user shares an org with the actor through `profiles.organization_id` **OR** an active `organization_memberships` row. Policies are updated to call the new helper. No write policies are loosened.
+```ts
+onSuccess: (_data, ndaDocumentId) => {
+  if (user?.id) {
+    qc.setQueryData(
+      ["nda", "acceptance", user.id, ndaDocumentId],
+      { id: "optimistic", accepted_at: new Date().toISOString(), version: 0 },
+    );
+  }
+  qc.invalidateQueries({ queryKey: ["nda", "acceptance", user?.id] });
+},
+```
+
+The mutation's argument is the `ndaDocumentId`, so we can use it as the second arg of `onSuccess`.
+
+### 2. `src/pages/AcceptNda.tsx` — wait for the cache update before navigating
+
+Change `handleAccept` to await one tick after the mutation resolves so the cache write above is observed by the next route's `ProtectedRoute`:
+
+```ts
+await accept.mutateAsync(nda.id);
+toast.success("Agreement accepted");
+// allow react-query cache write to flush before route change
+await Promise.resolve();
+navigate(redirect, { replace: true });
+```
+
+### 3. `src/components/layouts/ProtectedRoute.tsx` — treat "fetching after invalidate" as loading
+
+Belt-and-suspenders: also wait while React Query is actively refetching the acceptance, so even a future code path that invalidates without seeding can't double-prompt:
+
+```ts
+const { data: acceptance, isLoading: accLoading, isFetching: accFetching }
+  = useMyNdaAcceptance(nda?.id);
+...
+if (ndaLoading || accLoading || accFetching) {
+  return <spinner />;
+}
+```
+
+(Only this one block changes; the rest of the gate stays.)
 
 ## Out of scope
-- No UI changes.
-- No changes to invitation flow itself.
-- No changes to admin-only or case-manager policies.
 
-## Technical notes
-- Trigger runs as `SECURITY DEFINER` with `search_path = public`, mirroring existing functions.
-- "Active membership" = `left_at IS NULL`.
-- Backfill picks the most recent active membership (`ORDER BY joined_at DESC LIMIT 1`) when a user has multiple.
-- The new helper is `STABLE SECURITY DEFINER` and is the only function added; no recursive RLS risk because it queries `organization_memberships` and `profiles` directly without referencing policies on those tables that call back into it.
+- No DB / RLS / edge-function changes — `record-nda-acceptance` already writes the row correctly on the first click.
+- No change to the NDA copy, signup flow, or any other route.
+- No change to the admin NDA management page.
+
+## Verification
+
+After the change, signing up a new test user and accepting the NDA should land directly on `/dashboard` (or the original redirect target) without the NDA screen reappearing. Confirmed by:
+1. Sign up → land on `/accept-nda`.
+2. Scroll, agree, click "I Accept".
+3. Should go straight to `/dashboard` — no second `/accept-nda` flash.
