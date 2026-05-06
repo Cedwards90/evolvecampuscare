@@ -461,12 +461,12 @@ export default function StudentDetail() {
 
           {/* Check-Ins Tab */}
           <TabsContent value="checkins" className="space-y-4">
-            <StudentCheckInsTab studentId={id!} />
+            <StudentCheckInsTab studentId={id!} studentName={student.profile?.full_name || null} />
           </TabsContent>
 
           {/* Post-Graduation Plan Tab */}
           <TabsContent value="grad-plan" className="space-y-4">
-            <PostGradPlanTab studentId={id!} />
+            <PostGradPlanTab studentId={id!} studentName={student.profile?.full_name || null} />
           </TabsContent>
         </Tabs>
 
