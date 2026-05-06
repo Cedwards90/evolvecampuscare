@@ -40,6 +40,7 @@ export default function StudentCheckIn() {
         blockers: blockers.trim() || undefined,
         additional_notes: additionalNotes.trim() || undefined,
       });
+      setSubmittedAt(new Date().toISOString());
       setSubmitted(true);
       toast.success('Check-in submitted! Thank you for sharing.');
       // Mark any pending survey invitation as complete
