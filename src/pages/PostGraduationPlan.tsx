@@ -124,6 +124,7 @@ export default function PostGraduationPlan() {
             </Button>
             <Button onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
           </div>
+        </div>
       </SidebarLayout>
     );
   }
