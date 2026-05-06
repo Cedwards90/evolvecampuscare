@@ -165,7 +165,7 @@ export default function Auth() {
   const onSignup = async (data: SignupFormData) => {
     setIsSubmitting(true);
     try {
-      const { error } = await signUp(data.email, data.password, data.fullName);
+      const { error } = await signUp(data.email, data.password, data.fullName, data.phone);
       if (error) {
         let errorMessage = error.message;
         if (error.message.includes('already registered')) {
