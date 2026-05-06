@@ -53,6 +53,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { OrgBadgeInline } from '@/components/OrgBadgeInline';
 import { useStudentPlans } from '@/hooks/usePostGraduationPlan';
 import { Smile, Frown, Meh, TrendingUp as TrendUp, TrendingDown } from 'lucide-react';
+import { downloadCheckInPdf, downloadCheckInsPdf, downloadPlanPdf } from '@/lib/wellbeingExport';
 import { SendSurveyDialog } from '@/components/admin/SendSurveyDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
