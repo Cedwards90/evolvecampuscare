@@ -192,8 +192,8 @@ export default function AdminDashboard() {
     <SidebarLayout>
       <div className="space-y-6">
         <PageHeader
-          title="Admin Dashboard"
-          description="Monitor system performance and manage request assignments"
+          title={isFullAdmin ? 'Admin Dashboard' : 'Organization Dashboard'}
+          description={isFullAdmin ? 'Monitor system performance and manage request assignments' : 'Monitor your organization and manage caseload assignments'}
         />
 
         <GlobalFilterBar />
