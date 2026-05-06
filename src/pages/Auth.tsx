@@ -437,6 +437,21 @@ export default function Auth() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="signup-phone">Phone Number</Label>
+                  <Input
+                    id="signup-phone"
+                    type="tel"
+                    autoComplete="tel"
+                    placeholder="+1 555 123 4567"
+                    {...signupForm.register('phone')}
+                    aria-invalid={!!signupForm.formState.errors.phone}
+                  />
+                  {signupForm.formState.errors.phone && (
+                    <p className="text-sm text-destructive">{signupForm.formState.errors.phone.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
                   <div className="relative">
                     <Input
