@@ -76,6 +76,7 @@ export default function PostGraduationPlan() {
         month_10_12_actions: month1012,
         additional_notes: additionalNotes,
       });
+      setSubmittedAt(new Date().toISOString());
       setSubmitted(true);
       toast({ title: 'Plan submitted!', description: 'Your 12-month post-graduation plan has been saved.' });
       markComplete.mutate('post_graduation_plan');
