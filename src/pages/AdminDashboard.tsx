@@ -685,14 +685,16 @@ export default function AdminDashboard() {
           </Card>
         </section>
 
-        {/* System Settings Section */}
-        <section className="space-y-4">
-          <h2 className="font-display text-h3">System Settings</h2>
-          <NotificationSettings />
-        </section>
+        {/* System Settings Section — full admin only */}
+        {isFullAdmin && (
+          <section className="space-y-4">
+            <h2 className="font-display text-h3">System Settings</h2>
+            <NotificationSettings />
+          </section>
+        )}
 
-        {/* User Management Section */}
-        <UserManagement />
+        {/* User Management Section — full admin only */}
+        {isFullAdmin && <UserManagement />}
 
         {/* Single Assignment Dialog */}
         <AssignCaseManagerDialog
