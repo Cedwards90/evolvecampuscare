@@ -78,6 +78,8 @@ import type { RequestStatus, SupportRequest } from '@/types/database';
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--warning))', 'hsl(var(--destructive))', 'hsl(var(--success))', 'hsl(var(--muted))'];
 
 export default function AdminDashboard() {
+  const { role } = useAuth();
+  const isFullAdmin = role === 'admin';
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all');
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
