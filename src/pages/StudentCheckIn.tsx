@@ -63,9 +63,32 @@ export default function StudentCheckIn() {
               <p className="text-muted-foreground">
                 Your check-in has been recorded. Your case manager will be able to review your progress.
               </p>
-              <Button onClick={() => navigate('/dashboard')} className="mt-4">
-                Back to Dashboard
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center mt-4">
+                <Button
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() =>
+                    downloadCheckInPdf(
+                      {
+                        id: 'local',
+                        student_id: '',
+                        mood_rating: moodRating,
+                        progress_rating: progressRating,
+                        wins: wins.trim() || null,
+                        blockers: blockers.trim() || null,
+                        additional_notes: additionalNotes.trim() || null,
+                        created_at: submittedAt || new Date().toISOString(),
+                      },
+                      profile?.full_name,
+                    )
+                  }
+                >
+                  <Download className="mr-2 h-4 w-4" /> Download PDF
+                </Button>
+                <Button onClick={() => navigate('/dashboard')}>
+                  Back to Dashboard
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
