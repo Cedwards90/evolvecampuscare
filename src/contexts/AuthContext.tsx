@@ -11,7 +11,7 @@ interface AuthContextType {
   roleError: string | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, phone?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -102,19 +102,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error as Error | null };
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, phone?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
+          phone: phone ?? null,
         },
       },
     });
+
+    // Persist phone to profile (handle_new_user trigger only stores full_name/email)
+    if (!error && phone && signUpData?.user?.id) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ phone })
+          .eq('user_id', signUpData.user.id);
+      } catch (e) {
+        // non-fatal; user can edit phone later in settings
+        console.warn('Failed to persist phone on signup', e);
+      }
+    }
+
     return { error: error as Error | null };
   };
 

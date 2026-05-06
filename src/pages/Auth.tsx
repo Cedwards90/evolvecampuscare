@@ -28,6 +28,8 @@ const loginSchema = z.object({
 const signupSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
+  phone: z.string().trim().min(7, 'Please enter a valid phone number').max(20, 'Phone number is too long')
+    .regex(/^[+\d][\d\s().-]{5,}$/, 'Please enter a valid phone number'),
   password: z.string().min(8, 'Password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
@@ -101,6 +103,7 @@ export default function Auth() {
     defaultValues: {
       fullName: '',
       email: '',
+      phone: '',
       password: '',
       confirmPassword: '',
       termsAccepted: false as any,
@@ -162,7 +165,7 @@ export default function Auth() {
   const onSignup = async (data: SignupFormData) => {
     setIsSubmitting(true);
     try {
-      const { error } = await signUp(data.email, data.password, data.fullName);
+      const { error } = await signUp(data.email, data.password, data.fullName, data.phone);
       if (error) {
         let errorMessage = error.message;
         if (error.message.includes('already registered')) {
@@ -430,6 +433,21 @@ export default function Auth() {
                   )}
                   {signupForm.formState.errors.email && (
                     <p className="text-sm text-destructive">{signupForm.formState.errors.email.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone">Phone Number</Label>
+                  <Input
+                    id="signup-phone"
+                    type="tel"
+                    autoComplete="tel"
+                    placeholder="+1 555 123 4567"
+                    {...signupForm.register('phone')}
+                    aria-invalid={!!signupForm.formState.errors.phone}
+                  />
+                  {signupForm.formState.errors.phone && (
+                    <p className="text-sm text-destructive">{signupForm.formState.errors.phone.message}</p>
                   )}
                 </div>
 
