@@ -42,6 +42,7 @@ export default function AcceptNda() {
     try {
       await accept.mutateAsync(nda.id);
       toast.success("Agreement accepted");
+      await Promise.resolve();
       navigate(redirect, { replace: true });
     } catch (e: any) {
       toast.error(e?.message || "Could not record acceptance");
