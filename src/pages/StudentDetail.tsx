@@ -953,7 +953,7 @@ function StudentCheckInsTab({ studentId, studentName }: { studentId: string; stu
   );
 }
 
-function PostGradPlanTab({ studentId }: { studentId: string }) {
+function PostGradPlanTab({ studentId, studentName }: { studentId: string; studentName?: string | null }) {
   const { data: plans = [], isLoading } = useStudentPlans(studentId);
 
   if (isLoading) return <LoadingSpinner />;
@@ -973,15 +973,25 @@ function PostGradPlanTab({ studentId }: { studentId: string }) {
       {plans.map((plan) => (
         <Card key={plan.id} className="border border-border/50">
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
               <CardTitle className="text-base">
                 Plan submitted {format(new Date(plan.created_at), 'PPP')}
               </CardTitle>
-              {plan.graduation_date && (
-                <Badge variant="outline">
-                  Graduation: {format(new Date(plan.graduation_date), 'MMM yyyy')}
-                </Badge>
-              )}
+              <div className="flex items-center gap-2">
+                {plan.graduation_date && (
+                  <Badge variant="outline">
+                    Graduation: {format(new Date(plan.graduation_date), 'MMM yyyy')}
+                  </Badge>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => downloadPlanPdf(plan as any, studentName)}
+                >
+                  <Download className="mr-2 h-4 w-4" /> Download PDF
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
