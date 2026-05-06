@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, GraduationCap, Home, DollarSign, Heart, Target, ChevronRight, ChevronLeft, CheckCircle } from 'lucide-react';
+import { Briefcase, GraduationCap, Home, DollarSign, Heart, Target, ChevronRight, ChevronLeft, CheckCircle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
