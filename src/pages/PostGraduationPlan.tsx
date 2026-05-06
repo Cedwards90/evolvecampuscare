@@ -26,8 +26,10 @@ export default function PostGraduationPlan() {
   const { toast } = useToast();
   const submitPlan = useSubmitPlan();
   const markComplete = useMarkSurveyComplete();
+  const { profile } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedAt, setSubmittedAt] = useState<string | null>(null);
 
   // Form state
   const [graduationDate, setGraduationDate] = useState('');
