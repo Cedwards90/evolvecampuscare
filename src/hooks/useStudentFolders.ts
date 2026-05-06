@@ -134,6 +134,6 @@ export function useStudentFolders() {
         };
       }).sort((a, b) => (b.last_activity || '').localeCompare(a.last_activity || ''));
     },
-    enabled: !!user && (role === 'admin' || role === 'case_manager'),
+    enabled: !!user && (role === 'admin' || role === 'case_manager' || role === 'org_admin'),
   });
 }
