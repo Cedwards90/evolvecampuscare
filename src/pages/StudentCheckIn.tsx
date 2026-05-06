@@ -22,12 +22,14 @@ export default function StudentCheckIn() {
   const navigate = useNavigate();
   const submitCheckIn = useSubmitCheckIn();
   const markComplete = useMarkSurveyComplete();
+  const { profile } = useAuth();
   const [moodRating, setMoodRating] = useState(3);
   const [progressRating, setProgressRating] = useState(3);
   const [wins, setWins] = useState('');
   const [blockers, setBlockers] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submittedAt, setSubmittedAt] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     try {
