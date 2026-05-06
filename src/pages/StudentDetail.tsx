@@ -15,6 +15,7 @@ import {
   CalendarDays,
   Briefcase,
   Pencil,
+  Download,
 } from 'lucide-react';
 import { StickyNote, PenLine, Building2, NotebookPen, Trash2, X, Save } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
