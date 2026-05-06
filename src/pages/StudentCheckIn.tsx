@@ -10,8 +10,10 @@ import { Slider } from '@/components/ui/slider';
 import { useSubmitCheckIn } from '@/hooks/useStudentCheckIns';
 import { useMarkSurveyComplete } from '@/hooks/useSurveyInvitations';
 import { toast } from 'sonner';
-import { CheckCircle, ArrowLeft } from 'lucide-react';
+import { CheckCircle, ArrowLeft, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { downloadCheckInPdf } from '@/lib/wellbeingExport';
+import { useAuth } from '@/contexts/AuthContext';
 
 const moodLabels = ['😔 Struggling', '😕 Not Great', '😐 Okay', '🙂 Good', '😊 Great'];
 const progressLabels = ['Struggling', 'Behind', 'On Track', 'Progressing Well', 'Thriving'];
