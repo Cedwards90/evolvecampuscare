@@ -76,7 +76,22 @@ export function useMarkNotificationRead() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (notificationId: string) => {
+      const key = ['notifications', user?.id];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<Notification[]>(key);
+      if (previous) {
+        queryClient.setQueryData<Notification[]>(
+          key,
+          previous.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n)),
+        );
+      }
+      return { previous };
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(['notifications', user?.id], ctx.previous);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['notifications-unread-count', user?.id] });
     },
@@ -99,9 +114,26 @@ export function useMarkAllNotificationsRead() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async () => {
+      const key = ['notifications', user?.id];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<Notification[]>(key);
+      if (previous) {
+        queryClient.setQueryData<Notification[]>(
+          key,
+          previous.map((n) => ({ ...n, is_read: true })),
+        );
+      }
+      queryClient.setQueryData(['notifications-unread-count', user?.id], 0);
+      return { previous };
+    },
+    onError: (_err, _v, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(['notifications', user?.id], ctx.previous);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['notifications-unread-count', user?.id] });
     },
   });
 }
+
