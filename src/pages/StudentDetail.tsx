@@ -870,7 +870,7 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
 }
 
 // ---- Check-Ins Tab Component ----
-function StudentCheckInsTab({ studentId }: { studentId: string }) {
+function StudentCheckInsTab({ studentId, studentName }: { studentId: string; studentName?: string | null }) {
   const { data: checkIns = [], isLoading } = useStudentCheckIns(studentId);
 
   const moodEmojis = ['😔', '😕', '😐', '🙂', '😊'];
@@ -890,10 +890,20 @@ function StudentCheckInsTab({ studentId }: { studentId: string }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-full"
+          onClick={() => downloadCheckInsPdf(checkIns, studentName)}
+        >
+          <Download className="mr-2 h-4 w-4" /> Download all (PDF)
+        </Button>
+      </div>
       {checkIns.map((checkIn) => (
         <Card key={checkIn.id} className="border border-border/50">
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
               <CardTitle className="text-base">
                 {format(new Date(checkIn.created_at), 'PPP')}
               </CardTitle>
@@ -904,6 +914,14 @@ function StudentCheckInsTab({ studentId }: { studentId: string }) {
                 <span title="Progress" className="text-muted-foreground">
                   📈 {progressLabels[checkIn.progress_rating - 1]}
                 </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full h-8"
+                  onClick={() => downloadCheckInPdf(checkIn, studentName)}
+                >
+                  <Download className="mr-1 h-3.5 w-3.5" /> PDF
+                </Button>
               </div>
             </div>
           </CardHeader>
