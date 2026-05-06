@@ -1,0 +1,179 @@
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
+import type { StudentCheckIn } from '@/hooks/useStudentCheckIns';
+
+const moodLabels = ['Struggling', 'Not Great', 'Okay', 'Good', 'Great'];
+const progressLabels = ['Struggling', 'Behind', 'On Track', 'Progressing Well', 'Thriving'];
+
+const slug = (s: string | null | undefined, fallback = 'student') =>
+  (s || fallback).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || fallback;
+
+function downloadPdf(doc: jsPDF, filename: string) {
+  doc.save(filename);
+}
+
+function header(doc: jsPDF, title: string, subtitle?: string) {
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text('Evolve Foundation', 40, 50);
+  doc.setFontSize(13);
+  doc.text(title, 40, 72);
+  if (subtitle) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(110);
+    doc.text(subtitle, 40, 88);
+    doc.setTextColor(0);
+  }
+}
+
+export function checkInFilename(c: { created_at: string }, name?: string | null) {
+  return `evolve-checkin_${slug(name)}_${format(new Date(c.created_at), 'yyyy-MM-dd')}.pdf`;
+}
+
+export function checkInsFilename(name?: string | null) {
+  return `evolve-checkins_${slug(name)}_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+}
+
+export function planFilename(p: { created_at: string }, name?: string | null) {
+  return `evolve-postgrad-plan_${slug(name)}_${format(new Date(p.created_at), 'yyyy-MM-dd')}.pdf`;
+}
+
+export function downloadCheckInPdf(checkIn: StudentCheckIn, studentName?: string | null) {
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  header(
+    doc,
+    'Student Check-In',
+    `${studentName ? studentName + ' · ' : ''}${format(new Date(checkIn.created_at), 'PPP p')}`,
+  );
+
+  autoTable(doc, {
+    startY: 110,
+    head: [['Field', 'Value']],
+    body: [
+      ['Mood', `${moodLabels[checkIn.mood_rating - 1] || checkIn.mood_rating} (${checkIn.mood_rating}/5)`],
+      ['Progress', `${progressLabels[checkIn.progress_rating - 1] || checkIn.progress_rating} (${checkIn.progress_rating}/5)`],
+      ['What\'s going well', checkIn.wins || '—'],
+      ['Blockers', checkIn.blockers || '—'],
+      ['Additional notes', checkIn.additional_notes || '—'],
+    ],
+    styles: { fontSize: 10, cellPadding: 8, valign: 'top' },
+    headStyles: { fillColor: [5, 77, 59] },
+    columnStyles: { 0: { cellWidth: 140, fontStyle: 'bold' } },
+  });
+
+  downloadPdf(doc, checkInFilename(checkIn, studentName));
+}
+
+export function downloadCheckInsPdf(checkIns: StudentCheckIn[], studentName?: string | null) {
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  header(
+    doc,
+    'Student Check-Ins',
+    `${studentName ? studentName + ' · ' : ''}${checkIns.length} entries`,
+  );
+
+  let y = 110;
+  for (let i = 0; i < checkIns.length; i++) {
+    const c = checkIns[i];
+    autoTable(doc, {
+      startY: y,
+      head: [[`Check-in · ${format(new Date(c.created_at), 'PPP')}`, '']],
+      body: [
+        ['Mood', `${moodLabels[c.mood_rating - 1] || c.mood_rating} (${c.mood_rating}/5)`],
+        ['Progress', `${progressLabels[c.progress_rating - 1] || c.progress_rating} (${c.progress_rating}/5)`],
+        ['What\'s going well', c.wins || '—'],
+        ['Blockers', c.blockers || '—'],
+        ['Additional notes', c.additional_notes || '—'],
+      ],
+      styles: { fontSize: 10, cellPadding: 6, valign: 'top' },
+      headStyles: { fillColor: [5, 77, 59] },
+      columnStyles: { 0: { cellWidth: 140, fontStyle: 'bold' } },
+    });
+    // @ts-expect-error lastAutoTable injected by plugin
+    y = doc.lastAutoTable.finalY + 18;
+    if (y > 700 && i < checkIns.length - 1) {
+      doc.addPage();
+      y = 50;
+    }
+  }
+
+  downloadPdf(doc, checkInsFilename(studentName));
+}
+
+export interface PlanLike {
+  id: string;
+  created_at: string;
+  graduation_date: string | null;
+  career_goals: string;
+  education_goals: string;
+  housing_plan: string;
+  financial_plan: string;
+  health_wellness: string;
+  support_needed: string;
+  month_1_3_actions: string;
+  month_4_6_actions: string;
+  month_7_9_actions: string;
+  month_10_12_actions: string;
+  additional_notes: string | null;
+}
+
+export function downloadPlanPdf(plan: PlanLike, studentName?: string | null) {
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  header(
+    doc,
+    '12-Month Post-Graduation Plan',
+    `${studentName ? studentName + ' · ' : ''}Submitted ${format(new Date(plan.created_at), 'PPP')}${
+      plan.graduation_date ? ` · Graduation ${format(new Date(plan.graduation_date), 'PPP')}` : ''
+    }`,
+  );
+
+  autoTable(doc, {
+    startY: 110,
+    head: [['Goals & Plans', '']],
+    body: [
+      ['Career Goals', plan.career_goals || '—'],
+      ['Education Goals', plan.education_goals || '—'],
+      ['Housing Plan', plan.housing_plan || '—'],
+      ['Financial Plan', plan.financial_plan || '—'],
+      ['Health & Wellness', plan.health_wellness || '—'],
+      ['Support Needed', plan.support_needed || '—'],
+    ],
+    styles: { fontSize: 10, cellPadding: 8, valign: 'top' },
+    headStyles: { fillColor: [5, 77, 59] },
+    columnStyles: { 0: { cellWidth: 160, fontStyle: 'bold' } },
+  });
+
+  // @ts-expect-error lastAutoTable injected by plugin
+  let y = doc.lastAutoTable.finalY + 18;
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Quarterly Milestones', '']],
+    body: [
+      ['Months 1–3', plan.month_1_3_actions || '—'],
+      ['Months 4–6', plan.month_4_6_actions || '—'],
+      ['Months 7–9', plan.month_7_9_actions || '—'],
+      ['Months 10–12', plan.month_10_12_actions || '—'],
+    ],
+    styles: { fontSize: 10, cellPadding: 8, valign: 'top' },
+    headStyles: { fillColor: [136, 169, 140] },
+    columnStyles: { 0: { cellWidth: 160, fontStyle: 'bold' } },
+  });
+
+  if (plan.additional_notes) {
+    // @ts-expect-error lastAutoTable injected by plugin
+    y = doc.lastAutoTable.finalY + 18;
+    autoTable(doc, {
+      startY: y,
+      head: [['Additional Notes', '']],
+      body: [['Notes', plan.additional_notes]],
+      styles: { fontSize: 10, cellPadding: 8, valign: 'top' },
+      headStyles: { fillColor: [136, 169, 140] },
+      columnStyles: { 0: { cellWidth: 160, fontStyle: 'bold' } },
+    });
+  }
+
+  downloadPdf(doc, planFilename(plan, studentName));
+}

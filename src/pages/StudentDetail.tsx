@@ -15,6 +15,7 @@ import {
   CalendarDays,
   Briefcase,
   Pencil,
+  Download,
 } from 'lucide-react';
 import { StickyNote, PenLine, Building2, NotebookPen, Trash2, X, Save } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -52,6 +53,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { OrgBadgeInline } from '@/components/OrgBadgeInline';
 import { useStudentPlans } from '@/hooks/usePostGraduationPlan';
 import { Smile, Frown, Meh, TrendingUp as TrendUp, TrendingDown } from 'lucide-react';
+import { downloadCheckInPdf, downloadCheckInsPdf, downloadPlanPdf } from '@/lib/wellbeingExport';
 import { SendSurveyDialog } from '@/components/admin/SendSurveyDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -461,12 +463,12 @@ export default function StudentDetail() {
 
           {/* Check-Ins Tab */}
           <TabsContent value="checkins" className="space-y-4">
-            <StudentCheckInsTab studentId={id!} />
+            <StudentCheckInsTab studentId={id!} studentName={student.profile?.full_name || null} />
           </TabsContent>
 
           {/* Post-Graduation Plan Tab */}
           <TabsContent value="grad-plan" className="space-y-4">
-            <PostGradPlanTab studentId={id!} />
+            <PostGradPlanTab studentId={id!} studentName={student.profile?.full_name || null} />
           </TabsContent>
         </Tabs>
 
@@ -870,7 +872,7 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
 }
 
 // ---- Check-Ins Tab Component ----
-function StudentCheckInsTab({ studentId }: { studentId: string }) {
+function StudentCheckInsTab({ studentId, studentName }: { studentId: string; studentName?: string | null }) {
   const { data: checkIns = [], isLoading } = useStudentCheckIns(studentId);
 
   const moodEmojis = ['😔', '😕', '😐', '🙂', '😊'];
@@ -890,10 +892,20 @@ function StudentCheckInsTab({ studentId }: { studentId: string }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-full"
+          onClick={() => downloadCheckInsPdf(checkIns, studentName)}
+        >
+          <Download className="mr-2 h-4 w-4" /> Download all (PDF)
+        </Button>
+      </div>
       {checkIns.map((checkIn) => (
         <Card key={checkIn.id} className="border border-border/50">
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
               <CardTitle className="text-base">
                 {format(new Date(checkIn.created_at), 'PPP')}
               </CardTitle>
@@ -904,6 +916,14 @@ function StudentCheckInsTab({ studentId }: { studentId: string }) {
                 <span title="Progress" className="text-muted-foreground">
                   📈 {progressLabels[checkIn.progress_rating - 1]}
                 </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full h-8"
+                  onClick={() => downloadCheckInPdf(checkIn, studentName)}
+                >
+                  <Download className="mr-1 h-3.5 w-3.5" /> PDF
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -933,7 +953,7 @@ function StudentCheckInsTab({ studentId }: { studentId: string }) {
   );
 }
 
-function PostGradPlanTab({ studentId }: { studentId: string }) {
+function PostGradPlanTab({ studentId, studentName }: { studentId: string; studentName?: string | null }) {
   const { data: plans = [], isLoading } = useStudentPlans(studentId);
 
   if (isLoading) return <LoadingSpinner />;
@@ -953,15 +973,25 @@ function PostGradPlanTab({ studentId }: { studentId: string }) {
       {plans.map((plan) => (
         <Card key={plan.id} className="border border-border/50">
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
               <CardTitle className="text-base">
                 Plan submitted {format(new Date(plan.created_at), 'PPP')}
               </CardTitle>
-              {plan.graduation_date && (
-                <Badge variant="outline">
-                  Graduation: {format(new Date(plan.graduation_date), 'MMM yyyy')}
-                </Badge>
-              )}
+              <div className="flex items-center gap-2">
+                {plan.graduation_date && (
+                  <Badge variant="outline">
+                    Graduation: {format(new Date(plan.graduation_date), 'MMM yyyy')}
+                  </Badge>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => downloadPlanPdf(plan as any, studentName)}
+                >
+                  <Download className="mr-2 h-4 w-4" /> Download PDF
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, GraduationCap, Home, DollarSign, Heart, Target, ChevronRight, ChevronLeft, CheckCircle } from 'lucide-react';
+import { Briefcase, GraduationCap, Home, DollarSign, Heart, Target, ChevronRight, ChevronLeft, CheckCircle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useSubmitPlan } from '@/hooks/usePostGraduationPlan';
 import { useMarkSurveyComplete } from '@/hooks/useSurveyInvitations';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
+import { downloadPlanPdf } from '@/lib/wellbeingExport';
+import { useAuth } from '@/contexts/AuthContext';
 
 const STEPS = [
   { key: 'goals', title: 'Career & Education', icon: GraduationCap, description: 'Your career and education goals for the first year after graduation.' },
@@ -24,8 +26,10 @@ export default function PostGraduationPlan() {
   const { toast } = useToast();
   const submitPlan = useSubmitPlan();
   const markComplete = useMarkSurveyComplete();
+  const { profile } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedAt, setSubmittedAt] = useState<string | null>(null);
 
   // Form state
   const [graduationDate, setGraduationDate] = useState('');
@@ -72,6 +76,7 @@ export default function PostGraduationPlan() {
         month_10_12_actions: month1012,
         additional_notes: additionalNotes,
       });
+      setSubmittedAt(new Date().toISOString());
       setSubmitted(true);
       toast({ title: 'Plan submitted!', description: 'Your 12-month post-graduation plan has been saved.' });
       markComplete.mutate('post_graduation_plan');
@@ -89,7 +94,36 @@ export default function PostGraduationPlan() {
           </div>
           <h1 className="font-display text-h2 font-bold">Plan Submitted!</h1>
           <p className="text-muted-foreground">Your 12-month post-graduation plan has been saved. Your case manager can now view it.</p>
-          <Button onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={() =>
+                downloadPlanPdf(
+                  {
+                    id: 'local',
+                    created_at: submittedAt || new Date().toISOString(),
+                    graduation_date: graduationDate || null,
+                    career_goals: careerGoals,
+                    education_goals: educationGoals,
+                    housing_plan: housingPlan,
+                    financial_plan: financialPlan,
+                    health_wellness: healthWellness,
+                    support_needed: supportNeeded,
+                    month_1_3_actions: month13,
+                    month_4_6_actions: month46,
+                    month_7_9_actions: month79,
+                    month_10_12_actions: month1012,
+                    additional_notes: additionalNotes || null,
+                  },
+                  profile?.full_name,
+                )
+              }
+            >
+              <Download className="mr-2 h-4 w-4" /> Download PDF
+            </Button>
+            <Button onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
+          </div>
         </div>
       </SidebarLayout>
     );

@@ -10,8 +10,10 @@ import { Slider } from '@/components/ui/slider';
 import { useSubmitCheckIn } from '@/hooks/useStudentCheckIns';
 import { useMarkSurveyComplete } from '@/hooks/useSurveyInvitations';
 import { toast } from 'sonner';
-import { CheckCircle, ArrowLeft } from 'lucide-react';
+import { CheckCircle, ArrowLeft, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { downloadCheckInPdf } from '@/lib/wellbeingExport';
+import { useAuth } from '@/contexts/AuthContext';
 
 const moodLabels = ['😔 Struggling', '😕 Not Great', '😐 Okay', '🙂 Good', '😊 Great'];
 const progressLabels = ['Struggling', 'Behind', 'On Track', 'Progressing Well', 'Thriving'];
@@ -20,12 +22,14 @@ export default function StudentCheckIn() {
   const navigate = useNavigate();
   const submitCheckIn = useSubmitCheckIn();
   const markComplete = useMarkSurveyComplete();
+  const { profile } = useAuth();
   const [moodRating, setMoodRating] = useState(3);
   const [progressRating, setProgressRating] = useState(3);
   const [wins, setWins] = useState('');
   const [blockers, setBlockers] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submittedAt, setSubmittedAt] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     try {
@@ -36,6 +40,7 @@ export default function StudentCheckIn() {
         blockers: blockers.trim() || undefined,
         additional_notes: additionalNotes.trim() || undefined,
       });
+      setSubmittedAt(new Date().toISOString());
       setSubmitted(true);
       toast.success('Check-in submitted! Thank you for sharing.');
       // Mark any pending survey invitation as complete
@@ -58,9 +63,32 @@ export default function StudentCheckIn() {
               <p className="text-muted-foreground">
                 Your check-in has been recorded. Your case manager will be able to review your progress.
               </p>
-              <Button onClick={() => navigate('/dashboard')} className="mt-4">
-                Back to Dashboard
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center mt-4">
+                <Button
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() =>
+                    downloadCheckInPdf(
+                      {
+                        id: 'local',
+                        student_id: '',
+                        mood_rating: moodRating,
+                        progress_rating: progressRating,
+                        wins: wins.trim() || null,
+                        blockers: blockers.trim() || null,
+                        additional_notes: additionalNotes.trim() || null,
+                        created_at: submittedAt || new Date().toISOString(),
+                      },
+                      profile?.full_name,
+                    )
+                  }
+                >
+                  <Download className="mr-2 h-4 w-4" /> Download PDF
+                </Button>
+                <Button onClick={() => navigate('/dashboard')}>
+                  Back to Dashboard
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
