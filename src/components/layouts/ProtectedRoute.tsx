@@ -32,7 +32,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   // NDA gate — every signed-in user must accept the current NDA before
   // accessing any protected page. Excludes /accept-nda itself.
-  if (ndaLoading || accLoading) {
+  if (ndaLoading || accLoading || accFetching) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <LoadingSpinner size="lg" />
