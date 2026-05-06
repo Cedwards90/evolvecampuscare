@@ -143,6 +143,8 @@ export function invalidateForChange(
     case 'user_invitations': {
       inv(['invitations']);
       inv(['pending-invitations']);
+      inv(['users-with-roles']);
+      inv(['users']);
       break;
     }
     case 'scheduled_survey_distributions': {
@@ -154,6 +156,7 @@ export function invalidateForChange(
       inv(['messages']);
       inv(['conversations']);
       inv(['messages-unread']);
+      if (row.student_id) inv(['student-progress-report', row.student_id]);
       break;
     }
     case 'notifications': {
