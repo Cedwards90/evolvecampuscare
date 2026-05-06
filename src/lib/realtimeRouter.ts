@@ -152,6 +152,7 @@ export function invalidateForChange(
     }
     case 'notifications': {
       if (row.user_id) inv(['notifications', row.user_id]);
+      if (row.user_id) inv(['notifications-unread-count', row.user_id]);
       inv(['notifications']);
       break;
     }
