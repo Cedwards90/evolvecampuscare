@@ -36,30 +36,8 @@ export function useNotifications() {
     enabled: !!user,
   });
 
-  // Set up realtime subscription
-  useEffect(() => {
-    if (!user) return;
+  // Realtime invalidation handled centrally by useRealtimeBridge.
 
-    const channel = supabase
-      .channel('notifications-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, queryClient]);
 
   return query;
 }
