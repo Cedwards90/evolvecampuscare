@@ -35,13 +35,16 @@ export function invalidateForChange(
       inv(['analytics']);
       inv(['workload-analytics']);
       inv(['filter-options']);
+      inv(['student-progress-report']);
       studentIds.forEach((id) => inv(['student-detail', id]));
+      studentIds.forEach((id) => inv(['student-progress-report', id]));
       break;
     }
     case 'request_updates': {
       inv(['request', row.request_id]);
       inv(['requests']);
       inv(['interaction-report']);
+      inv(['student-progress-report']);
       break;
     }
     case 'request_attachments': {
@@ -70,6 +73,7 @@ export function invalidateForChange(
       if (row.case_manager_id) inv(['appointments', row.case_manager_id]);
       if (row.student_id) inv(['appointments', row.student_id]);
       studentIds.forEach((id) => inv(['student-detail', id]));
+      studentIds.forEach((id) => inv(['student-progress-report', id]));
       inv(['interaction-report']);
       break;
     }
@@ -77,6 +81,7 @@ export function invalidateForChange(
       inv(['file-notes']);
       studentIds.forEach((id) => inv(['file-notes', id]));
       studentIds.forEach((id) => inv(['student-detail', id]));
+      studentIds.forEach((id) => inv(['student-progress-report', id]));
       inv(['interaction-report']);
       break;
     }
@@ -84,6 +89,7 @@ export function invalidateForChange(
       inv(['student-checkins']);
       studentIds.forEach((id) => inv(['student-checkins', id]));
       studentIds.forEach((id) => inv(['student-detail', id]));
+      studentIds.forEach((id) => inv(['student-progress-report', id]));
       break;
     }
     case 'intake_responses': {
