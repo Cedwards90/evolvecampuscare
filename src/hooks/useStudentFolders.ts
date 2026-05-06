@@ -38,6 +38,37 @@ export function useStudentFolders() {
           .eq('case_manager_id', user!.id);
         if (error) throw error;
         studentIds = (assignments || []).map(a => a.student_id);
+      } else if (role === 'org_admin') {
+        // Get org(s) this user administers
+        const { data: orgRows, error: orgErr } = await supabase
+          .from('org_admins')
+          .select('organization_id')
+          .eq('user_id', user!.id);
+        if (orgErr) throw orgErr;
+        const orgIds = (orgRows || []).map(r => r.organization_id);
+        if (orgIds.length === 0) {
+          studentIds = [];
+        } else {
+          // Profiles in those orgs
+          const { data: orgProfiles, error: profErr } = await supabase
+            .from('profiles')
+            .select('user_id')
+            .in('organization_id', orgIds);
+          if (profErr) throw profErr;
+          const candidateIds = (orgProfiles || []).map(p => p.user_id);
+          if (candidateIds.length === 0) {
+            studentIds = [];
+          } else {
+            // Filter to those with the student role
+            const { data: studentRoleRows, error: roleErr } = await supabase
+              .from('user_roles')
+              .select('user_id')
+              .eq('role', 'student')
+              .in('user_id', candidateIds);
+            if (roleErr) throw roleErr;
+            studentIds = (studentRoleRows || []).map(r => r.user_id);
+          }
+        }
       }
 
       if (studentIds.length === 0) return [];
