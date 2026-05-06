@@ -14,7 +14,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   const location = useLocation();
 
   const { data: nda, isLoading: ndaLoading } = useCurrentNda();
-  const { data: acceptance, isLoading: accLoading } = useMyNdaAcceptance(nda?.id);
+  const { data: acceptance, isLoading: accLoading, isFetching: accFetching } = useMyNdaAcceptance(nda?.id);
 
   if (isLoading) {
     return (
