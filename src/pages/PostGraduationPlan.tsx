@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useSubmitPlan } from '@/hooks/usePostGraduationPlan';
 import { useMarkSurveyComplete } from '@/hooks/useSurveyInvitations';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
+import { downloadPlanPdf } from '@/lib/wellbeingExport';
+import { useAuth } from '@/contexts/AuthContext';
 
 const STEPS = [
   { key: 'goals', title: 'Career & Education', icon: GraduationCap, description: 'Your career and education goals for the first year after graduation.' },
