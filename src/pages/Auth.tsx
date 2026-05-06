@@ -103,6 +103,7 @@ export default function Auth() {
     defaultValues: {
       fullName: '',
       email: '',
+      phone: '',
       password: '',
       confirmPassword: '',
       termsAccepted: false as any,
