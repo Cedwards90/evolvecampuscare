@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -116,101 +116,8 @@ export function useStudentProgressReport({
 
   const queryKey = ['student-progress-report', studentId, fromIso, toIso] as const;
 
-  // Realtime invalidation, scoped to this student
-  useEffect(() => {
-    if (!permitted || !studentId) return;
-    const channel = supabase
-      .channel(`student-progress-${studentId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'support_requests' },
-        (p) => {
-          const row = (p.new ?? p.old) as { student_id?: string } | null;
-          if (row?.student_id === studentId) {
-            queryClient.invalidateQueries({
-              queryKey: ['student-progress-report', studentId],
-            });
-          }
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'request_updates' },
-        () => {
-          // request_updates doesn't carry student_id; conservatively invalidate
-          queryClient.invalidateQueries({
-            queryKey: ['student-progress-report', studentId],
-          });
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'file_notes' },
-        (p) => {
-          const row = (p.new ?? p.old) as { student_id?: string } | null;
-          if (row?.student_id === studentId) {
-            queryClient.invalidateQueries({
-              queryKey: ['student-progress-report', studentId],
-            });
-          }
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'appointments' },
-        (p) => {
-          const row = (p.new ?? p.old) as { student_id?: string } | null;
-          if (row?.student_id === studentId) {
-            queryClient.invalidateQueries({
-              queryKey: ['student-progress-report', studentId],
-            });
-          }
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'student_checkins' },
-        (p) => {
-          const row = (p.new ?? p.old) as { student_id?: string } | null;
-          if (row?.student_id === studentId) {
-            queryClient.invalidateQueries({
-              queryKey: ['student-progress-report', studentId],
-            });
-          }
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'staff_messages' },
-        (p) => {
-          const row = (p.new ?? p.old) as {
-            sender_id?: string;
-            recipient_id?: string;
-          } | null;
-          if (row?.sender_id === studentId || row?.recipient_id === studentId) {
-            queryClient.invalidateQueries({
-              queryKey: ['student-progress-report', studentId],
-            });
-          }
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'survey_invitations' },
-        (p) => {
-          const row = (p.new ?? p.old) as { student_id?: string } | null;
-          if (row?.student_id === studentId) {
-            queryClient.invalidateQueries({
-              queryKey: ['student-progress-report', studentId],
-            });
-          }
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [studentId, permitted, queryClient]);
+  // Realtime invalidation handled centrally by useRealtimeBridge.
+
 
   return useQuery({
     queryKey,

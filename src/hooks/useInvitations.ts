@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -193,29 +193,11 @@ export function useValidateInvitation(token: string | null) {
 }
 
 /**
- * Subscribes to realtime changes on user_invitations and invalidates the
- * relevant React Query caches so the pending list and user table reflect
- * trigger-driven updates (e.g. accepted_at flipped on signup) without a
- * manual refresh. Mount once in any page that displays invitation state.
+ * Deprecated: realtime invalidation for user_invitations is now handled
+ * centrally by useRealtimeBridge. This hook is a no-op and kept for backward
+ * compatibility with any pages that still call it.
  */
 export function useInvitationsRealtime() {
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('user_invitations_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'user_invitations' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['invitations'] });
-          queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  // no-op
 }
+

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -73,40 +73,8 @@ export function useInteractionReport({ caseManagerId, from, to }: InteractionRep
 
   const queryKey = ['interaction-report', caseManagerId, fromIso, toIso] as const;
 
-  // Realtime invalidation
-  useEffect(() => {
-    if (!permitted || !caseManagerId) return;
-    const channel = supabase
-      .channel(`report-${caseManagerId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_requests' }, (p) => {
-        const row = (p.new ?? p.old) as { assigned_case_manager_id?: string } | null;
-        if (row?.assigned_case_manager_id === caseManagerId) {
-          queryClient.invalidateQueries({ queryKey: ['interaction-report', caseManagerId] });
-        }
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'request_updates' }, (p) => {
-        const row = (p.new ?? p.old) as { user_id?: string } | null;
-        if (row?.user_id === caseManagerId) {
-          queryClient.invalidateQueries({ queryKey: ['interaction-report', caseManagerId] });
-        }
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'file_notes' }, (p) => {
-        const row = (p.new ?? p.old) as { author_id?: string } | null;
-        if (row?.author_id === caseManagerId) {
-          queryClient.invalidateQueries({ queryKey: ['interaction-report', caseManagerId] });
-        }
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, (p) => {
-        const row = (p.new ?? p.old) as { case_manager_id?: string } | null;
-        if (row?.case_manager_id === caseManagerId) {
-          queryClient.invalidateQueries({ queryKey: ['interaction-report', caseManagerId] });
-        }
-      })
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [caseManagerId, permitted, queryClient]);
+  // Realtime invalidation handled centrally by useRealtimeBridge.
+
 
   return useQuery({
     queryKey,
