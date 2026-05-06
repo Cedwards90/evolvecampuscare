@@ -1419,6 +1419,10 @@ export type Database = {
         Args: { _actor: string; _target_user: string }
         Returns: boolean
       }
+      user_in_org_admin_scope_v2: {
+        Args: { _actor: string; _target_user: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "student" | "case_manager" | "admin" | "org_admin"
