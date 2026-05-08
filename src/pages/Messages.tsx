@@ -2,6 +2,7 @@ import { useParams } from 'react-router-dom';
 import { MessageSquare } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
+import { PageNav } from '@/components/navigation/PageNav';
 import { Card, CardContent } from '@/components/ui/card';
 import { MessageList } from '@/components/messages/MessageList';
 import { MessageThread } from '@/components/messages/MessageThread';
@@ -25,6 +26,9 @@ export default function Messages() {
   return (
     <SidebarLayout>
       <div className="space-y-6">
+        {userId && (
+          <PageNav fallback="/messages" backLabel="All conversations" />
+        )}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <PageHeader
             title="Messages"
