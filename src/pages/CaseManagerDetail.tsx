@@ -15,6 +15,7 @@ import {
   Users
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
+import { PageNav } from '@/components/navigation/PageNav';
 import { StatusBadge } from '@/components/StatusBadge';
 import { PriorityBadge } from '@/components/PriorityBadge';
 import { CategoryBadge } from '@/components/CategoryBadge';
@@ -119,12 +120,16 @@ export default function CaseManagerDetail() {
 
   return (
     <SidebarLayout>
+      <PageNav
+        fallback="/admin/case-managers"
+        crumbs={[
+          { label: 'Case Managers', to: '/admin/case-managers' },
+          { label: caseManager.full_name || 'Case Manager' },
+        ]}
+      />
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
           <div className="flex-1">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">

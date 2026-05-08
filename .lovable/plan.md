@@ -1,70 +1,102 @@
-## Why the NDA appears twice
+## Goal
 
-The NDA gate in `ProtectedRoute` checks `useMyNdaAcceptance(...)` and redirects to `/accept-nda` when `acceptance` is null. After the user clicks "I Accept":
+Introduce a consistent, reusable "back" navigation system across every nested page in the app — without altering the existing sidebar, header, role guards, or route definitions in `App.tsx`.
 
-1. `useAcceptNda` calls the edge function and on success calls `qc.invalidateQueries(["nda","acceptance", user?.id])`.
-2. `AcceptNda.tsx` immediately `navigate(redirect, { replace: true })` — usually `/dashboard`.
-3. The destination page renders `ProtectedRoute`, which re-runs `useMyNdaAcceptance`. Because the previous query already returned `null` (cached), React Query's `isLoading` is `false` even while it's refetching after the invalidate. The gate sees `acceptance == null` and bounces the user back to `/accept-nda`.
-4. Moments later the refetch returns the new acceptance row, and the gate finally lets them through — so the user sees the NDA screen a second time before landing on the dashboard.
+## What exists today
 
-This is a pure client-side race between "navigate" and "refetch". The DB and edge function are correct (the row is inserted on the first accept).
+- `SidebarLayout.tsx` already renders a single-segment "breadcrumb" label in the header (just the current page name). It will be left alone.
+- `src/components/ui/breadcrumb.tsx` (shadcn) is available but unused.
+- `src/components/PageHeader.tsx` is the standard title block on most pages.
+- Several pages already call `useNavigate()` ad-hoc (e.g. `RequestDetail`, `StudentDetail`, `CaseManagerDetail`, `OrganizationDetail`, `StudentProgressReport`, `Messages` thread). These are inconsistent — some use `navigate(-1)`, some hardcode a parent route, some have no back affordance at all.
+- `GlobalFiltersContext` already persists filters in URL + DB; `RequestsList`/admin tables read filters from `useSearchParams`. So filter preservation is mostly a matter of **navigating with the original query string intact**.
 
-## Fix (frontend only, ~3 small edits)
+## Design
 
-### 1. `src/hooks/useNda.ts` — write the acceptance into the cache immediately
+### 1. New utility: `src/lib/navigationHistory.ts`
+A tiny in-memory stack (module singleton) that records the last N (e.g. 20) in-app locations: `{ pathname, search, scrollY, timestamp }`. Updated by a top-level `<NavigationTracker />` component that subscribes to `useLocation()` inside `BrowserRouter`. It also captures `window.scrollY` on each navigation away (via a `useEffect` cleanup + a `beforeunload`/`popstate`-aware push).
 
-In `useAcceptNda.onSuccess`, before invalidating, seed the cached acceptance so any consumer that re-renders sees the user as accepted:
+Exports:
+- `recordNavigation(loc)`
+- `getPreviousEntry(currentPath): Entry | null` — returns most recent entry whose pathname differs from current.
+- `popTo(entry)` helper used by the back button.
 
-```ts
-onSuccess: (_data, ndaDocumentId) => {
-  if (user?.id) {
-    qc.setQueryData(
-      ["nda", "acceptance", user.id, ndaDocumentId],
-      { id: "optimistic", accepted_at: new Date().toISOString(), version: 0 },
-    );
-  }
-  qc.invalidateQueries({ queryKey: ["nda", "acceptance", user?.id] });
-},
+This avoids relying solely on `navigate(-1)`, which breaks when the user landed via a deep link or external referrer.
+
+### 2. New component: `src/components/navigation/BackButton.tsx`
+Props: `{ fallback?: string; label?: string; className?: string }`.
+Behavior:
+- If `getPreviousEntry()` returns an in-app entry, navigate to `entry.pathname + entry.search` (preserves filters/search/pagination/tab query params) and restore `scrollY` after paint.
+- Otherwise navigate to `fallback` (defaults to `/dashboard`).
+- Renders a pill-shaped, ghost-variant button with `ArrowLeft` icon, sized for both desktop and mobile (icon-only ≤sm, icon+label ≥sm).
+
+Accessibility: `aria-label="Go back"`, focus ring via existing tokens.
+
+### 3. New component: `src/components/navigation/PageBreadcrumbs.tsx`
+Props: `{ items: Array<{ label: string; to?: string }> }`. Renders the shadcn `Breadcrumb` primitive. Last item is the current page (no link). Hidden on `<sm` to keep mobile clean (BackButton remains).
+
+### 4. New component: `src/components/navigation/PageNav.tsx`
+Convenience wrapper that combines `BackButton` + `PageBreadcrumbs` in a single row above `PageHeader`. This is the primary API page authors will use:
+
+```tsx
+<PageNav
+  fallback="/admin/organizations"
+  crumbs={[
+    { label: 'Admin', to: '/admin-monitoring-reassigning-requests' },
+    { label: 'Organizations', to: '/admin/organizations' },
+    { label: org.name },
+  ]}
+/>
+<PageHeader title={org.name} ... />
 ```
 
-The mutation's argument is the `ndaDocumentId`, so we can use it as the second arg of `onSuccess`.
+### 5. Scroll + filter preservation
+- Filters/search/pagination/tabs already live in the URL query string on the pages that support them. `BackButton` preserves the full `search` string from the recorded entry, which is sufficient.
+- For pages where tab state lives in `useState` (e.g. `StudentDetail`, `RequestDetail`), wire those to `?tab=` so they survive round-trips. **Limited to read/write of a `tab` query param** — no behavior changes.
+- Scroll: `NavigationTracker` saves `scrollY` of the main scroll container (`window`) on every `location` change; `BackButton` restores it via `requestAnimationFrame` after navigation.
 
-### 2. `src/pages/AcceptNda.tsx` — wait for the cache update before navigating
+### 6. Mount points (no route changes)
+- Add `<NavigationTracker />` once inside `<BrowserRouter>` in `App.tsx` (a single import + one self-closing tag — no route restructuring).
+- Add `<PageNav />` to nested/detail pages only. Top-level sidebar destinations (Dashboard, Manage Requests, Admin Dashboard, etc.) get **no** back button — they are sidebar roots.
 
-Change `handleAccept` to await one tick after the mutation resolves so the cache write above is observed by the next route's `ProtectedRoute`:
+### Pages that will receive `<PageNav />`
+Detail / nested pages:
+- `RequestDetail`, `StudentDetail`, `CaseManagerDetail`
+- `admin/OrganizationDetail`, `admin/QRCodesPage` (when drilled in), `admin/SurveyResponses`
+- `StudentProgressReport`, `Reports` sub-views
+- `Messages/:userId` thread view
+- `IntakeSurvey`, `CompleteProfile`, `AcceptNda` (fallback to `/dashboard`)
+- `StudentCheckIn`, `PostGraduationPlan`, `OfflineDraft`, `SubmitRequest`
+- `SupportCenter` article views
 
-```ts
-await accept.mutateAsync(nda.id);
-toast.success("Agreement accepted");
-// allow react-query cache write to flush before route change
-await Promise.resolve();
-navigate(redirect, { replace: true });
-```
+Sidebar root pages (`/dashboard`, `/settings`, list pages) are **not** touched.
 
-### 3. `src/components/layouts/ProtectedRoute.tsx` — treat "fetching after invalidate" as loading
+### Role / route safety
+- `BackButton` only navigates within the SPA via React Router. Existing `<ProtectedRoute>` guards run on the destination, so role enforcement is automatic — no bypass risk.
+- If the previous entry is on a route the user no longer has access to (e.g. role changed mid-session), `<ProtectedRoute>` will redirect; `BackButton` does not need its own role logic.
+- Public routes (`/`, `/auth`, `/qr/*`, `/shared/*`) get **no** back button to avoid leaking authenticated paths.
 
-Belt-and-suspenders: also wait while React Query is actively refetching the acceptance, so even a future code path that invalidates without seeding can't double-prompt:
+### Mobile
+- `BackButton` is icon-only on `<sm`, sits flush-left above the page title.
+- Breadcrumbs hidden `<sm`. The sidebar's existing mobile drawer is untouched.
 
-```ts
-const { data: acceptance, isLoading: accLoading, isFetching: accFetching }
-  = useMyNdaAcceptance(nda?.id);
-...
-if (ndaLoading || accLoading || accFetching) {
-  return <spinner />;
-}
-```
+## Files to add
+- `src/lib/navigationHistory.ts`
+- `src/components/navigation/NavigationTracker.tsx`
+- `src/components/navigation/BackButton.tsx`
+- `src/components/navigation/PageBreadcrumbs.tsx`
+- `src/components/navigation/PageNav.tsx`
 
-(Only this one block changes; the rest of the gate stays.)
+## Files to edit (additive only)
+- `src/App.tsx` — add `<NavigationTracker />` mount (one line inside `BrowserRouter`).
+- Each nested page listed above — add a single `<PageNav .../>` line above the existing `<PageHeader />`. No logic, styling, or data-fetch changes.
 
-## Out of scope
+## Out of scope (will not touch without further approval)
+- Sidebar nav items, header layout, route definitions, role guards.
+- Any business logic, hooks, or data-fetching code.
+- Visual redesign of `PageHeader` itself.
 
-- No DB / RLS / edge-function changes — `record-nda-acceptance` already writes the row correctly on the first click.
-- No change to the NDA copy, signup flow, or any other route.
-- No change to the admin NDA management page.
-
-## Verification
-
-After the change, signing up a new test user and accepting the NDA should land directly on `/dashboard` (or the original redirect target) without the NDA screen reappearing. Confirmed by:
-1. Sign up → land on `/accept-nda`.
-2. Scroll, agree, click "I Accept".
-3. Should go straight to `/dashboard` — no second `/accept-nda` flash.
+## Acceptance checks
+- Going Admin → Organizations (with filter `?org=abc`) → Organization Detail → Back returns to the filtered list at the same scroll position.
+- Student tapping a request from Track Requests → Request Detail → Back returns to Track Requests with the same tab/filter.
+- Deep-linking directly to `/requests/:id` shows BackButton that falls back to `/dashboard` (or role-appropriate root).
+- No new console errors; existing routes, role guards, and sidebar behavior unchanged.

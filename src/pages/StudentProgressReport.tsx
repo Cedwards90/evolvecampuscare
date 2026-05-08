@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { CalendarIcon, Download, FileText, Loader2, Users } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
+import { PageNav } from '@/components/navigation/PageNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -443,6 +444,13 @@ export default function StudentProgressReportPage() {
   return (
     <SidebarLayout>
       <div className="space-y-6">
+        <PageNav
+          fallback="/reports"
+          crumbs={[
+            { label: 'Reports', to: '/reports' },
+            { label: 'Student Progress' },
+          ]}
+        />
         <PageHeader
           title="Student Progress Reports"
           description="Live, per-student summary of activity, risks, and recommended actions. Exports include only real data — no fabricated insights."

@@ -24,6 +24,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { format, formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
+import { PageNav } from '@/components/navigation/PageNav';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { StatusBadge } from '@/components/StatusBadge';
 import { PriorityBadge } from '@/components/PriorityBadge';
@@ -143,13 +144,14 @@ export default function StudentDetail() {
 
   return (
     <SidebarLayout>
+      <PageNav
+        fallback="/student-folders"
+        crumbs={[
+          { label: 'Students', to: '/student-folders' },
+          { label: student.profile?.full_name || 'Student' },
+        ]}
+      />
       <div className="space-y-6">
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/case-manager-managing-student-requests">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Link>
-        </Button>
 
         {/* Profile Header */}
         <Card className="border border-border/50">

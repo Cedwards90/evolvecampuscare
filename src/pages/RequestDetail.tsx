@@ -34,6 +34,7 @@ import { CategoryBadge } from '@/components/CategoryBadge';
 import { useRequest } from '@/hooks/useRequest';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrgBadgeInline } from '@/components/OrgBadgeInline';
+import { PageNav } from '@/components/navigation/PageNav';
 
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
@@ -79,16 +80,13 @@ export default function RequestDetail() {
   if (error || !request) {
     return (
       <SidebarLayout>
+        <PageNav fallback="/requests" />
         <div className="flex flex-col items-center justify-center py-12">
           <FileText className="h-12 w-12 text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold mb-2">Request Not Found</h2>
           <p className="text-muted-foreground mb-4">
             The request you're looking for doesn't exist or you don't have access to it.
           </p>
-          <Button onClick={() => navigate(-1)}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Go Back
-          </Button>
         </div>
       </SidebarLayout>
     );
@@ -96,12 +94,17 @@ export default function RequestDetail() {
 
   return (
     <SidebarLayout>
+      <PageNav
+        fallback="/requests"
+        crumbs={[
+          { label: 'Requests', to: '/requests' },
+          { label: request.title },
+        ]}
+      />
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-start gap-3 sm:gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="flex-shrink-0">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <div className="flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-bold break-words">{request.title}</h1>

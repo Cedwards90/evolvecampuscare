@@ -11,6 +11,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { ProtectedRoute } from "@/components/layouts/ProtectedRoute";
+import { NavigationTracker } from "@/components/navigation/NavigationTracker";
 
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -80,6 +81,7 @@ function App() {
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <BrowserRouter>
           <AuthProvider>
+            <NavigationTracker />
             <RealtimeBridge />
             <LanguageProvider>
               <OfflineProvider>

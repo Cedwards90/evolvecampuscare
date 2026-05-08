@@ -3,6 +3,7 @@ import { ArrowLeft, Building2, Users, Mail, User, GraduationCap, UserCheck, Shie
 import { format } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
+import { PageNav } from '@/components/navigation/PageNav';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -36,9 +37,13 @@ export default function OrganizationDetail() {
     return (
       <SidebarLayout>
         <div className="space-y-6">
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/admin/organizations"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link>
-          </Button>
+          <PageNav
+            fallback="/admin/organizations"
+            crumbs={[
+              { label: 'Organizations', to: '/admin/organizations' },
+              { label: 'Not found' },
+            ]}
+          />
           <EmptyState icon={Building2} title="Organization not found" description="This organization doesn't exist or you don't have access." />
         </div>
       </SidebarLayout>
@@ -82,9 +87,13 @@ export default function OrganizationDetail() {
   return (
     <SidebarLayout>
       <div className="space-y-6">
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/admin/organizations"><ArrowLeft className="mr-2 h-4 w-4" />Back to Organizations</Link>
-        </Button>
+        <PageNav
+          fallback="/admin/organizations"
+          crumbs={[
+            { label: 'Organizations', to: '/admin/organizations' },
+            { label: organization.name },
+          ]}
+        />
 
         {/* Header */}
         <Card>
