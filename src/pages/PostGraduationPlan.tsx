@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSubmitPlan } from '@/hooks/usePostGraduationPlan';
 import { useMarkSurveyComplete } from '@/hooks/useSurveyInvitations';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
+import { PageNav } from '@/components/navigation/PageNav';
 import { downloadPlanPdf } from '@/lib/wellbeingExport';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -132,6 +133,7 @@ export default function PostGraduationPlan() {
   return (
     <SidebarLayout>
       <div className="max-w-2xl mx-auto space-y-6">
+        <PageNav fallback="/dashboard" />
         <div>
           <h1 className="font-display text-h2 font-bold">12-Month Post-Graduation Plan</h1>
           <p className="text-muted-foreground">Plan your first year after graduation across career, housing, finances, and more.</p>

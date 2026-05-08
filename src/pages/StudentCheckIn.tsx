@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
+import { PageNav } from '@/components/navigation/PageNav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -99,12 +100,7 @@ export default function StudentCheckIn() {
   return (
     <SidebarLayout>
       <div className="space-y-6 max-w-2xl mx-auto">
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/dashboard">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Link>
-        </Button>
+        <PageNav fallback="/dashboard" />
 
         <PageHeader
           title="3-Week Check-In"
