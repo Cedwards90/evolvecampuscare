@@ -273,7 +273,13 @@ export default function StudentDetail() {
           </CardContent>
         </Card>
 
-        <GenerateStudentReportCard studentId={id} />
+        <div className="grid gap-4 md:grid-cols-2">
+          <GenerateStudentReportCard studentId={id} />
+          <FolderSummaryButton
+            studentId={id!}
+            studentName={student.profile?.full_name || student.profile?.email || 'Student'}
+          />
+        </div>
 
         {/* Tabs */}
         <Tabs defaultValue="requests" className="space-y-4">
