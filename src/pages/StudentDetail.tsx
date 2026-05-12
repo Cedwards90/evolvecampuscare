@@ -304,6 +304,10 @@ export default function StudentDetail() {
               <GraduationCap className="h-4 w-4" />
               Post-Grad Plan
             </TabsTrigger>
+            <TabsTrigger value="certifications" className="gap-2">
+              <Award className="h-4 w-4" />
+              Certifications
+            </TabsTrigger>
           </TabsList>
 
           {/* Requests Tab */}
