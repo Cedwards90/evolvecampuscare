@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useTheme } from 'next-themes';
-import { Loader2, User, Bell, Globe, Palette, Shield, Trash2, AlertTriangle } from 'lucide-react';
+import { Loader2, User, Bell, Globe, Palette, Shield, Trash2, AlertTriangle, Award } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -39,6 +39,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useMFA } from '@/hooks/useMFA';
 import { MFAEnrollment } from '@/components/auth/MFAEnrollment';
 import { StudentQRShortcut } from '@/components/qr/StudentQRShortcut';
+import { CertificationCatalogManager } from '@/components/admin/CertificationCatalogManager';
 
 const profileSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -193,7 +194,7 @@ export default function Settings() {
         />
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 max-w-2xl">
+          <TabsList className={`grid w-full max-w-3xl ${(role === 'admin' || role === 'org_admin') ? 'grid-cols-6' : 'grid-cols-5'}`}>
             <TabsTrigger value="profile" className="gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
@@ -214,6 +215,12 @@ export default function Settings() {
               <Palette className="h-4 w-4" />
               <span className="hidden sm:inline">Appearance</span>
             </TabsTrigger>
+            {(role === 'admin' || role === 'org_admin') && (
+              <TabsTrigger value="catalog" className="gap-2">
+                <Award className="h-4 w-4" />
+                <span className="hidden sm:inline">Certifications</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="profile" className="space-y-6">
