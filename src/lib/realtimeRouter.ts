@@ -211,4 +211,6 @@ export const REALTIME_TABLES = [
   'notifications',
   'nda_documents',
   'nda_acceptances',
+  'certification_catalog',
+  'student_certifications',
 ] as const;
