@@ -172,6 +172,18 @@ export function invalidateForChange(
       inv(['nda-current']);
       break;
     }
+    case 'certification_catalog': {
+      inv(['certification-catalog']);
+      break;
+    }
+    case 'student_certifications': {
+      inv(['student-certifications']);
+      studentIds.forEach((id) => inv(['student-certifications', id]));
+      studentIds.forEach((id) => inv(['student-detail', id]));
+      studentIds.forEach((id) => inv(['student-progress-report', id]));
+      inv(['expiring-certifications']);
+      break;
+    }
   }
 }
 
@@ -199,4 +211,6 @@ export const REALTIME_TABLES = [
   'notifications',
   'nda_documents',
   'nda_acceptances',
+  'certification_catalog',
+  'student_certifications',
 ] as const;

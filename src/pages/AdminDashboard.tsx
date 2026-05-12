@@ -56,6 +56,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { ExpiringCertificationsCard } from '@/components/certifications/ExpiringCertificationsCard';
 import { useRequests } from '@/hooks/useRequests';
 import { useCaseManagers } from '@/hooks/useCaseManagerStats';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
@@ -94,7 +95,7 @@ export default function AdminDashboard() {
   const { data: caseManagers = [], isLoading: caseManagersLoading } = useCaseManagers();
   const { filters: globalFilters } = useGlobalFilters();
   const requests = useMemo(() => applyToRequests(rawRequests, globalFilters), [rawRequests, globalFilters]);
-
+        {/* System Settings Section — full admin only */}
 
   // Calculate stats from real data
   const stats = useMemo(() => ({
@@ -684,6 +685,8 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </section>
+
+        <ExpiringCertificationsCard />
 
         {/* System Settings Section — full admin only */}
         {isFullAdmin && (

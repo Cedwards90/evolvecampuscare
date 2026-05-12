@@ -194,6 +194,45 @@ export type Database = {
         }
         Relationships: []
       }
+      certification_catalog: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string | null
+          default_validity_months: number | null
+          id: string
+          is_active: boolean
+          issuing_organization: string | null
+          name: string
+          organization_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_validity_months?: number | null
+          id?: string
+          is_active?: boolean
+          issuing_organization?: string | null
+          name: string
+          organization_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_validity_months?: number | null
+          id?: string
+          is_active?: boolean
+          issuing_organization?: string | null
+          name?: string
+          organization_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -1062,6 +1101,74 @@ export type Database = {
         }
         Relationships: []
       }
+      student_certifications: {
+        Row: {
+          catalog_id: string | null
+          completion_date: string | null
+          created_at: string
+          created_by: string | null
+          credential_id: string | null
+          custom_name: string | null
+          expiration_date: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          issuing_organization: string | null
+          mime_type: string | null
+          notes: string | null
+          status: Database["public"]["Enums"]["certification_status"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          catalog_id?: string | null
+          completion_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          credential_id?: string | null
+          custom_name?: string | null
+          expiration_date?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          issuing_organization?: string | null
+          mime_type?: string | null
+          notes?: string | null
+          status?: Database["public"]["Enums"]["certification_status"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          catalog_id?: string | null
+          completion_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          credential_id?: string | null
+          custom_name?: string | null
+          expiration_date?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          issuing_organization?: string | null
+          mime_type?: string | null
+          notes?: string | null
+          status?: Database["public"]["Enums"]["certification_status"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_certifications_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "certification_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_checkins: {
         Row: {
           additional_notes: string | null
@@ -1373,6 +1480,10 @@ export type Database = {
         Args: { _request_id: string; _user: string }
         Returns: boolean
       }
+      can_staff_manage_student: {
+        Args: { _actor: string; _student: string }
+        Returns: boolean
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1426,6 +1537,7 @@ export type Database = {
     }
     Enums: {
       app_role: "student" | "case_manager" | "admin" | "org_admin"
+      certification_status: "in_progress" | "completed" | "expired" | "revoked"
       qr_action_kind: "request" | "meeting"
       qr_event_type:
         | "scan"
@@ -1581,6 +1693,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["student", "case_manager", "admin", "org_admin"],
+      certification_status: ["in_progress", "completed", "expired", "revoked"],
       qr_action_kind: ["request", "meeting"],
       qr_event_type: [
         "scan",
