@@ -166,8 +166,8 @@ serve(async (req) => {
       userClient.from("file_notes").select("id, note_type, title, content, created_at").eq("student_id", studentId).order("created_at", { ascending: false }),
       userClient.from("student_certifications").select("id, custom_name, status, completion_date, expiration_date, issuing_organization, file_name, credential_id, notes, catalog_id, created_at").eq("student_id", studentId).order("created_at", { ascending: false }),
       userClient.from("appointments").select("id, title, scheduled_at, status, duration_minutes").eq("student_id", studentId).order("scheduled_at", { ascending: false }),
-      // student_check_ins table may not exist in all envs — guard
-      userClient.from("student_check_ins").select("id, mood_rating, progress_rating, wins, blockers, created_at").eq("student_id", studentId).order("created_at", { ascending: false }).limit(50).then((r) => r, () => ({ data: [], error: null })),
+      // student_checkins table may not exist in all envs — guard
+      userClient.from("student_checkins").select("id, mood_rating, progress_rating, wins, blockers, created_at").eq("student_id", studentId).order("created_at", { ascending: false }).limit(50).then((r) => r, () => ({ data: [], error: null })),
       userClient.from("post_graduation_plans").select("id, graduation_date, career_goals, education_goals, housing_plan, financial_plan, health_wellness, support_needed, additional_notes, updated_at").eq("student_id", studentId).maybeSingle(),
     ]);
 
