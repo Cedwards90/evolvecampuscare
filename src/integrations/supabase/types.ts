@@ -353,6 +353,36 @@ export type Database = {
         }
         Relationships: []
       }
+      folder_summary_audit: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          evidence_counts: Json
+          id: string
+          section_counts: Json
+          student_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          evidence_counts?: Json
+          id?: string
+          section_counts?: Json
+          student_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          evidence_counts?: Json
+          id?: string
+          section_counts?: Json
+          student_id?: string
+        }
+        Relationships: []
+      }
       intake_responses: {
         Row: {
           created_at: string

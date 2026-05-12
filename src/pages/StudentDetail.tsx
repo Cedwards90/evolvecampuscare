@@ -47,6 +47,7 @@ import {
 import { useStudentDetail } from '@/hooks/useStudentDetail';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
 import { GenerateStudentReportCard } from '@/components/reports/GenerateStudentReportCard';
+import { FolderSummaryButton } from '@/components/reports/FolderSummaryButton';
 import { useFileNotes } from '@/hooks/useFileNotes';
 import { useStudentCheckIns } from '@/hooks/useStudentCheckIns';
 import { Textarea } from '@/components/ui/textarea';
@@ -273,7 +274,13 @@ export default function StudentDetail() {
           </CardContent>
         </Card>
 
-        <GenerateStudentReportCard studentId={id} />
+        <div className="grid gap-4 md:grid-cols-2">
+          <GenerateStudentReportCard studentId={id} />
+          <FolderSummaryButton
+            studentId={id!}
+            studentName={student.profile?.full_name || student.profile?.email || 'Student'}
+          />
+        </div>
 
         {/* Tabs */}
         <Tabs defaultValue="requests" className="space-y-4">

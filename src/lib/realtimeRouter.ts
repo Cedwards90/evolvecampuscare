@@ -213,4 +213,5 @@ export const REALTIME_TABLES = [
   'nda_acceptances',
   'certification_catalog',
   'student_certifications',
+  'folder_summary_audit',
 ] as const;
