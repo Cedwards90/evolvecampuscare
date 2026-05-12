@@ -47,6 +47,7 @@ import {
 import { useStudentDetail } from '@/hooks/useStudentDetail';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
 import { GenerateStudentReportCard } from '@/components/reports/GenerateStudentReportCard';
+import { FolderSummaryButton } from '@/components/reports/FolderSummaryButton';
 import { useFileNotes } from '@/hooks/useFileNotes';
 import { useStudentCheckIns } from '@/hooks/useStudentCheckIns';
 import { Textarea } from '@/components/ui/textarea';
