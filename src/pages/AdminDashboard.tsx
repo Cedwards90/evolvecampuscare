@@ -686,6 +686,8 @@ export default function AdminDashboard() {
           </Card>
         </section>
 
+        <ExpiringCertificationsCard />
+
         {/* System Settings Section — full admin only */}
         {isFullAdmin && (
           <section className="space-y-4">
