@@ -16,6 +16,7 @@ import {
   Briefcase,
   Pencil,
   Download,
+  Award,
 } from 'lucide-react';
 import { StickyNote, PenLine, Building2, NotebookPen, Trash2, X, Save } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -63,6 +64,7 @@ import { Calendar as CalendarPicker } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { CertificationsSection } from '@/components/certifications/CertificationsSection';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -475,6 +477,11 @@ export default function StudentDetail() {
           {/* Post-Graduation Plan Tab */}
           <TabsContent value="grad-plan" className="space-y-4">
             <PostGradPlanTab studentId={id!} studentName={student.profile?.full_name || null} />
+          </TabsContent>
+
+          {/* Certifications Tab */}
+          <TabsContent value="certifications" className="space-y-4">
+            <CertificationsSection studentId={id!} canManage={role !== 'student'} />
           </TabsContent>
         </Tabs>
 
