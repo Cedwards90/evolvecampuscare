@@ -16,6 +16,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
 import { GenerateReportCard } from '@/components/reports/GenerateReportCard';
 import { GenerateStudentReportCard } from '@/components/reports/GenerateStudentReportCard';
+import { ExpiringCertificationsCard } from '@/components/certifications/ExpiringCertificationsCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
