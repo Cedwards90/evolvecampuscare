@@ -533,6 +533,12 @@ export default function Settings() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {(role === 'admin' || role === 'org_admin') && (
+            <TabsContent value="catalog" className="space-y-6">
+              <CertificationCatalogManager />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </SidebarLayout>
