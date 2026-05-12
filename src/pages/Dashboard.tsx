@@ -499,6 +499,8 @@ export default function Dashboard() {
               <GenerateStudentReportCard />
             </section>
 
+            <ExpiringCertificationsCard />
+
             {/* AI Insights */}
             <section className="space-y-4">
               <div className="flex items-center gap-2">
