@@ -222,6 +222,36 @@ function App() {
                 <AdminNda />
               </ProtectedRoute>
             } />
+            <Route path="/impact" element={
+              <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
+                <ImpactDashboardPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/impact/funding" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                <FundingGoalsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/impact/reports" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                <DonorReportsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/impact/surveys" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <SurveyTemplatesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/surveys/impact" element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentImpactSurveysPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/surveys/impact/:slug" element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentImpactSurveyTakePage />
+              </ProtectedRoute>
+            } />
                   <Route path="/messages" element={
                     <ProtectedRoute>
                       <Messages />
