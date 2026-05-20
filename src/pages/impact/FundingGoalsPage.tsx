@@ -19,12 +19,11 @@ export default function FundingGoalsPage() {
       <PageHeader
         title="Funding Goals"
         description="Targets that roll up into Impact dashboards."
-        actions={
-          <Button onClick={() => { setEditing(null); setOpen(true); }} className="rounded-full">
-            <Plus className="mr-2 h-4 w-4" /> New goal
-          </Button>
-        }
-      />
+      >
+        <Button onClick={() => { setEditing(null); setOpen(true); }} className="rounded-full">
+          <Plus className="mr-2 h-4 w-4" /> New goal
+        </Button>
+      </PageHeader>
       <div className="space-y-3">
         {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
         {goals.map((g) => (
