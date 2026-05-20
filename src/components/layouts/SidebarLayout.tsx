@@ -21,7 +21,10 @@ import {
   ClipboardList,
   UserCog,
   FileBarChart,
-  QrCode
+  QrCode,
+  TrendingUp,
+  Target,
+  Award
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
