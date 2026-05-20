@@ -20,7 +20,7 @@ export function useImpactSurveyTemplates(activeOnly = false) {
       if (activeOnly) q = q.eq("is_active", true);
       const { data, error } = await q;
       if (error) throw error;
-      return (data || []) as ImpactSurveyTemplate[];
+      return (data || []) as unknown as ImpactSurveyTemplate[];
     },
   });
 }
@@ -36,7 +36,7 @@ export function useImpactSurveyTemplate(slug: string | undefined) {
         .eq("slug", slug)
         .maybeSingle();
       if (error) throw error;
-      return data as ImpactSurveyTemplate | null;
+      return data as unknown as ImpactSurveyTemplate | null;
     },
     enabled: !!slug,
   });
