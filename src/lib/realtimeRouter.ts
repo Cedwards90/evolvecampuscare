@@ -183,8 +183,25 @@ export function invalidateForChange(
       studentIds.forEach((id) => inv(['student-progress-report', id]));
       inv(['expiring-certifications']);
       break;
+    case 'participant_outcomes':
+    case 'impact_survey_templates':
+    case 'impact_survey_responses':
+    case 'impact_survey_assignments':
+    case 'participant_demographics':
+    case 'funding_goals':
+    case 'donor_report_templates':
+    case 'impact_report_audit': {
+      inv(['impact-metrics']);
+      inv(['funding-goals']);
+      inv(['impact-surveys']);
+      inv(['impact-survey-assignments']);
+      inv(['participant-outcomes']);
+      inv(['donor-report-templates']);
+      studentIds.forEach((id) => inv(['student-detail', id]));
+      break;
     }
   }
+}
 }
 
 export const REALTIME_TABLES = [
