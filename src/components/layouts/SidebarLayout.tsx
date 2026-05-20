@@ -21,7 +21,10 @@ import {
   ClipboardList,
   UserCog,
   FileBarChart,
-  QrCode
+  QrCode,
+  TrendingUp,
+  Target,
+  Award
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -74,6 +77,11 @@ const navItems: NavItem[] = [
   { label: 'QR Codes', href: '/admin/qr-codes', icon: QrCode, roles: ['admin', 'org_admin'] },
   { label: 'NDA', href: '/admin/nda', icon: FileText, roles: ['admin'] },
   { label: 'Reports', href: '/reports', icon: FileBarChart, roles: ['case_manager', 'admin', 'org_admin'] },
+  { label: 'Impact Dashboard', href: '/impact', icon: TrendingUp, roles: ['case_manager', 'admin', 'org_admin'] },
+  { label: 'Funding Goals', href: '/impact/funding', icon: Target, roles: ['admin', 'org_admin'] },
+  { label: 'Donor Reports', href: '/impact/reports', icon: Award, roles: ['admin', 'org_admin'] },
+  { label: 'Impact Surveys', href: '/impact/surveys', icon: ClipboardList, roles: ['admin'] },
+  { label: 'My Impact Surveys', href: '/surveys/impact', icon: ClipboardList, roles: ['student'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
 ];
 

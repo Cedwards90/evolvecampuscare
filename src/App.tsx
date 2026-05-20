@@ -51,6 +51,12 @@ import StudentProgressReportPage from "./pages/StudentProgressReport";
 import NotFound from "./pages/NotFound";
 import AcceptNda from "./pages/AcceptNda";
 import AdminNda from "./pages/admin/AdminNda";
+import ImpactDashboardPage from "./pages/impact/ImpactDashboardPage";
+import FundingGoalsPage from "./pages/impact/FundingGoalsPage";
+import DonorReportsPage from "./pages/impact/DonorReportsPage";
+import SurveyTemplatesPage from "./pages/impact/SurveyTemplatesPage";
+import StudentImpactSurveysPage from "./pages/impact/StudentImpactSurveysPage";
+import StudentImpactSurveyTakePage from "./pages/impact/StudentImpactSurveyTakePage";
 
 // Create query client outside component to ensure stable reference.
 // Defaults tuned to avoid stale UI after mutations or returning to a tab,
@@ -214,6 +220,36 @@ function App() {
             <Route path="/admin/nda" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminNda />
+              </ProtectedRoute>
+            } />
+            <Route path="/impact" element={
+              <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
+                <ImpactDashboardPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/impact/funding" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                <FundingGoalsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/impact/reports" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                <DonorReportsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/impact/surveys" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <SurveyTemplatesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/surveys/impact" element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentImpactSurveysPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/surveys/impact/:slug" element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentImpactSurveyTakePage />
               </ProtectedRoute>
             } />
                   <Route path="/messages" element={
