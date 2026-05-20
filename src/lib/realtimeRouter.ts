@@ -183,6 +183,7 @@ export function invalidateForChange(
       studentIds.forEach((id) => inv(['student-progress-report', id]));
       inv(['expiring-certifications']);
       break;
+    }
     case 'participant_outcomes':
     case 'impact_survey_templates':
     case 'impact_survey_responses':
