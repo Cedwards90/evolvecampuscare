@@ -201,7 +201,10 @@ export function invalidateForChange(
       studentIds.forEach((id) => inv(['student-detail', id]));
       break;
     }
+  }
 }
+
+
 
 
 
