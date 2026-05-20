@@ -51,6 +51,12 @@ import StudentProgressReportPage from "./pages/StudentProgressReport";
 import NotFound from "./pages/NotFound";
 import AcceptNda from "./pages/AcceptNda";
 import AdminNda from "./pages/admin/AdminNda";
+import ImpactDashboardPage from "./pages/impact/ImpactDashboardPage";
+import FundingGoalsPage from "./pages/impact/FundingGoalsPage";
+import DonorReportsPage from "./pages/impact/DonorReportsPage";
+import SurveyTemplatesPage from "./pages/impact/SurveyTemplatesPage";
+import StudentImpactSurveysPage from "./pages/impact/StudentImpactSurveysPage";
+import StudentImpactSurveyTakePage from "./pages/impact/StudentImpactSurveyTakePage";
 
 // Create query client outside component to ensure stable reference.
 // Defaults tuned to avoid stale UI after mutations or returning to a tab,
