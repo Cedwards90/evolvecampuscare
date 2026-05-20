@@ -235,4 +235,12 @@ export const REALTIME_TABLES = [
   'certification_catalog',
   'student_certifications',
   'folder_summary_audit',
+  'participant_outcomes',
+  'impact_survey_templates',
+  'impact_survey_responses',
+  'impact_survey_assignments',
+  'participant_demographics',
+  'funding_goals',
+  'donor_report_templates',
+  'impact_report_audit',
 ] as const;
