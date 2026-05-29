@@ -42,7 +42,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
-import { OrgSuspendedBanner } from '@/components/OrgSuspendedBanner';
 import { cn } from '@/lib/utils';
 import type { AppRole } from '@/types/database';
 
@@ -71,7 +70,6 @@ const navItems: NavItem[] = [
   { label: 'User Management', href: '/admin/users', icon: Shield, roles: ['admin'] },
   { label: 'Case Managers', href: '/admin/case-managers', icon: UserCog, roles: ['admin', 'org_admin'] },
   { label: 'Organizations', href: '/admin/organizations', icon: Building2, roles: ['admin'] },
-  { label: 'Access Status', href: '/admin/access-status', icon: Shield, roles: ['admin'] },
   { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: ['case_manager', 'admin', 'org_admin'] },
   { label: 'QR Codes', href: '/admin/qr-codes', icon: QrCode, roles: ['admin', 'org_admin'] },
   { label: 'NDA', href: '/admin/nda', icon: FileText, roles: ['admin'] },
@@ -424,7 +422,6 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
         {/* Page Content */}
         <main className="p-3 sm:p-4 md:p-6 min-w-0 max-w-full overflow-x-hidden safe-content">
-          <div className="mb-4"><OrgSuspendedBanner /></div>
           {children}
         </main>
       </div>

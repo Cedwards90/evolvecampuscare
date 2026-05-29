@@ -22,7 +22,6 @@ import {
 import { useStudentFolders } from '@/hooks/useStudentFolders';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters, getCohortFromDate } from '@/contexts/GlobalFiltersContext';
-import { SuspendedOrgBadge } from '@/components/SuspendedOrgBadge';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -125,13 +124,10 @@ export default function StudentFolders() {
                     </TableCell>
                     <TableCell>
                       {student.organization_name ? (
-                        <div className="flex flex-wrap items-center gap-1">
-                          <Badge variant="outline" className="gap-1 text-xs">
-                            <Building2 className="h-3 w-3" />
-                            {student.organization_name}
-                          </Badge>
-                          <SuspendedOrgBadge organizationId={student.organization_id} />
-                        </div>
+                        <Badge variant="outline" className="gap-1 text-xs">
+                          <Building2 className="h-3 w-3" />
+                          {student.organization_name}
+                        </Badge>
                       ) : (
                         <span className="text-muted-foreground text-xs">—</span>
                       )}

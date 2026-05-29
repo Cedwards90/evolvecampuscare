@@ -1,6 +1,5 @@
-import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Building2, Users, Mail, User, GraduationCap, UserCheck, Shield, FileText, Ban, RotateCcw, History } from 'lucide-react';
+import { ArrowLeft, Building2, Users, Mail, User, GraduationCap, UserCheck, Shield, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -13,10 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useOrganizationDetail } from '@/hooks/useOrganizationDetail';
-import { useAuth } from '@/contexts/AuthContext';
-import { useMyOrgAdminOrgs } from '@/hooks/useOrgAdmins';
-import { useOrgSuspensionAudit } from '@/hooks/useOrgSuspension';
-import { SuspendOrgDialog } from '@/components/admin/SuspendOrgDialog';
 
 const roleIcons: Record<string, typeof GraduationCap> = {
   student: GraduationCap,
@@ -33,16 +28,6 @@ const roleLabels: Record<string, string> = {
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
   const { org, members, stats } = useOrganizationDetail(id);
-  const { role } = useAuth();
-  const { data: myOrgAdminOrgs } = useMyOrgAdminOrgs();
-  const audit = useOrgSuspensionAudit(id);
-  const [suspendOpen, setSuspendOpen] = useState(false);
-  const isAdmin = role === 'admin';
-  const isOrgAdminHere = !!id && (myOrgAdminOrgs ?? []).includes(id);
-  // Org admins lose all write ability once a platform admin suspends the org.
-  // Only platform admins can reinstate.
-  const canManageSuspension = isAdmin || (isOrgAdminHere && !org.data?.suspended_at);
-  const canViewAudit = isAdmin || isOrgAdminHere;
 
   if (org.isLoading) {
     return <SidebarLayout><LoadingSpinner /></SidebarLayout>;
@@ -111,22 +96,18 @@ export default function OrganizationDetail() {
         />
 
         {/* Header */}
-        <Card className={organization.suspended_at ? 'border-destructive/50' : undefined}>
+        <Card>
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-start gap-4">
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div className="h-14 w-14 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Building2 className="h-7 w-7 text-primary" />
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-3">
                   <h1 className="font-display text-h2 font-bold">{organization.name}</h1>
-                  {organization.suspended_at ? (
-                    <Badge variant="destructive" className="gap-1"><Ban className="h-3 w-3" />Suspended</Badge>
-                  ) : (
-                    <Badge variant={organization.is_active ? 'default' : 'secondary'}>
-                      {organization.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                  )}
+                  <Badge variant={organization.is_active ? 'default' : 'secondary'}>
+                    {organization.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
                 </div>
                 {organization.description && <p className="text-muted-foreground mt-1">{organization.description}</p>}
                 {organization.contact_name && (
@@ -134,34 +115,6 @@ export default function OrganizationDetail() {
                     <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" />{organization.contact_name}</span>
                     {organization.contact_email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{organization.contact_email}</span>}
                   </div>
-                )}
-                {organization.suspended_at && (
-                  <div className="mt-3 rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm">
-                    <p className="font-medium text-destructive">
-                      Suspended on {format(new Date(organization.suspended_at), 'MMM d, yyyy')}
-                    </p>
-                    {organization.suspension_reason && (
-                      <p className="text-destructive/90 mt-0.5">Reason: {organization.suspension_reason}</p>
-                    )}
-                  </div>
-                )}
-                {canManageSuspension && (
-                  <div className="mt-3">
-                    {organization.suspended_at ? (
-                      <Button size="sm" variant="outline" onClick={() => setSuspendOpen(true)}>
-                        <RotateCcw className="h-4 w-4 mr-2" />Reinstate access
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="destructive" onClick={() => setSuspendOpen(true)}>
-                        <Ban className="h-4 w-4 mr-2" />Suspend access
-                      </Button>
-                    )}
-                  </div>
-                )}
-                {!canManageSuspension && organization.suspended_at && isOrgAdminHere && (
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Only a platform administrator can reinstate this organization.
-                  </p>
                 )}
               </div>
               <div className="grid grid-cols-3 gap-4">
@@ -194,11 +147,6 @@ export default function OrganizationDetail() {
             <TabsTrigger value="stats" className="gap-2">
               <FileText className="h-4 w-4" />Request Stats
             </TabsTrigger>
-            {canViewAudit && (
-              <TabsTrigger value="audit" className="gap-2">
-                <History className="h-4 w-4" />Suspension Log
-              </TabsTrigger>
-            )}
           </TabsList>
 
           <TabsContent value="current">
@@ -270,54 +218,7 @@ export default function OrganizationDetail() {
               </Card>
             </div>
           </TabsContent>
-
-          {canViewAudit && (
-            <TabsContent value="audit">
-              {(audit.data ?? []).length === 0 ? (
-                <EmptyState icon={History} title="No suspension events" description="This organization has not been suspended or reinstated." />
-              ) : (
-                <Card>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>When</TableHead>
-                          <TableHead>Action</TableHead>
-                          <TableHead>Reason</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {audit.data!.map((a) => (
-                          <TableRow key={a.id}>
-                            <TableCell className="whitespace-nowrap text-sm">
-                              {format(new Date(a.created_at), 'MMM d, yyyy h:mm a')}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={a.action === 'suspended' ? 'destructive' : 'default'}>
-                                {a.action}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{a.reason || '—'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </Card>
-              )}
-            </TabsContent>
-          )}
         </Tabs>
-
-        {canManageSuspension && (
-          <SuspendOrgDialog
-            open={suspendOpen}
-            onOpenChange={setSuspendOpen}
-            orgId={organization.id}
-            orgName={organization.name}
-            mode={organization.suspended_at ? 'reinstate' : 'suspend'}
-          />
-        )}
       </div>
     </SidebarLayout>
   );
