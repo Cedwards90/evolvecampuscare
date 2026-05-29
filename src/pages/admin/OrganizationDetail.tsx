@@ -262,7 +262,54 @@ export default function OrganizationDetail() {
               </Card>
             </div>
           </TabsContent>
+
+          {canManageSuspension && (
+            <TabsContent value="audit">
+              {(audit.data ?? []).length === 0 ? (
+                <EmptyState icon={History} title="No suspension events" description="This organization has not been suspended or reinstated." />
+              ) : (
+                <Card>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>When</TableHead>
+                          <TableHead>Action</TableHead>
+                          <TableHead>Reason</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {audit.data!.map((a) => (
+                          <TableRow key={a.id}>
+                            <TableCell className="whitespace-nowrap text-sm">
+                              {format(new Date(a.created_at), 'MMM d, yyyy h:mm a')}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={a.action === 'suspended' ? 'destructive' : 'default'}>
+                                {a.action}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{a.reason || '—'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Card>
+              )}
+            </TabsContent>
+          )}
         </Tabs>
+
+        {canManageSuspension && (
+          <SuspendOrgDialog
+            open={suspendOpen}
+            onOpenChange={setSuspendOpen}
+            orgId={organization.id}
+            orgName={organization.name}
+            mode={organization.suspended_at ? 'reinstate' : 'suspend'}
+          />
+        )}
       </div>
     </SidebarLayout>
   );
