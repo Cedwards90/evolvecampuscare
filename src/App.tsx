@@ -202,6 +202,11 @@ function App() {
                 <OrganizationDetail />
               </ProtectedRoute>
             } />
+            <Route path="/admin/access-status" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AccessStatus />
+              </ProtectedRoute>
+            } />
             <Route path="/admin/surveys" element={
               <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
                 <SurveyResponses />
