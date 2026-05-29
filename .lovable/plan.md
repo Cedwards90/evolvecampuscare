@@ -1,130 +1,46 @@
-# Student Folder Summary
+## Suspend Organization Access
 
-Adds a one-click "Generate Folder Summary" action on every student profile/folder. It pulls everything the caller is authorized to see (profile, intake survey, support requests + updates, case/file notes, certifications, appointments, check-ins, post-graduation plan, uploaded attachments metadata) and produces a strictly-grounded AI summary organized into fixed sections, with on-screen preview, PDF download, audit logging, and live updates.
+Adds the ability for Admins and Org Admins to suspend an organization. When suspended: the org's data is hidden from staff (dashboards, reports, lists) and members of that org see an in-app banner that disables write actions. Data is preserved; reinstating restores everything.
 
-## Scope
+### Database
 
-- Reuses the existing grounded-AI pattern from `student-progress-summary` — no new AI provider, no new secrets.
-- Reuses `jspdf` (already in use via `studentProgressExport.ts`) for PDF export.
-- New backend artifacts: 1 edge function + 1 audit table.
-- Frontend changes limited to: 1 new button/dialog component, mounted in `StudentDetail.tsx` next to the existing `GenerateStudentReportCard`. No other pages touched.
+New migration:
+- Add `suspended_at timestamptz`, `suspended_by uuid`, `suspension_reason text` to `public.training_organizations` (keep existing `is_active` untouched — it's used elsewhere for archival).
+- Helper SQL function `public.is_org_suspended(_org_id uuid)` (SECURITY DEFINER, stable).
+- Helper `public.is_user_org_suspended(_user_id uuid)` — true if the user's `profiles.organization_id` is suspended OR any active membership is in a suspended org.
+- Audit table `org_suspension_audit` (id, organization_id, actor_id, action `'suspended' | 'reinstated'`, reason, created_at) with GRANTs + RLS (admins + org admins of that org can view/insert).
+- Update RLS hide-rules: extend `can_staff_manage_student`, `user_in_org_admin_scope_v2`, and the org-scoped SELECT policies on `profiles`, `support_requests`, `appointments`, `file_notes`, `intake_responses`, `post_graduation_plans`, `student_certifications`, `organization_memberships` to additionally require `NOT is_user_org_suspended(student_id/user_id)`. Admin-role policies remain unrestricted so Admins can still see and reinstate.
 
-## What it covers (folder evidence)
+### Backend permissions
 
-Pulled server-side, only what the caller's RLS already permits:
+- Only Admin or Org Admin of that specific org can update suspension columns (enforced via existing `Admins manage all` + a new policy `Org admins can suspend own org`).
 
-- Profile basics (name, cohort, graduation date, org, assigned CM)
-- Intake survey responses (`intake_responses`)
-- Support requests + `request_updates` + attachment metadata (filenames only, no file contents)
-- Case/file notes (`file_notes`)
-- Certifications (`student_certifications` joined to `certification_catalog`)
-- Appointments (past + upcoming, status)
-- Student check-ins (mood, progress, wins, blockers)
-- Post-graduation plan (if any)
+### Frontend
 
-If a section has no evidence, the AI is instructed (and JSON-schema constrained) to return `"No data available."` for that section — never invented content.
+**Suspension controls (Admins + Org Admins of that org):**
+- `src/pages/admin/OrganizationDetail.tsx`: Add a "Suspend access" / "Reinstate access" button in the header card, with a confirm dialog that captures a reason. Show a red "Suspended" badge next to the org name and a banner summarizing who/when/why with a link to audit history (new tab).
+- `src/pages/admin/TrainingOrganizations.tsx`: Show suspended state badge in the list and quick suspend/reinstate action.
+- New hook `src/hooks/useOrgSuspension.ts` (`useSuspendOrg`, `useReinstateOrg`, `useOrgSuspensionAudit`) — invalidates org, member, student, request, analytics queries.
 
-## Output sections (fixed)
+**Member-facing banner:**
+- New hook `src/hooks/useMyOrgSuspension.ts` — returns `{ suspended, orgName, reason, suspendedAt }` for the current user.
+- New component `src/components/OrgSuspendedBanner.tsx` — persistent banner shown inside `SidebarLayout` when suspended.
+- New context `src/contexts/OrgSuspensionContext.tsx` providing a `isSuspended` flag.
+- Guard write actions: small helper `useWriteGuard()` returning a disabled state + tooltip ("Your organization's access is suspended"). Apply to the primary submit buttons in: `SubmitRequest.tsx`, `ComposeMessage.tsx`, `ScheduleMeetingDialog.tsx`, `StudentCheckIn.tsx`, `PostGraduationPlan.tsx`, `CertificationDialog.tsx`, `IntakeSurvey.tsx`. (Server-side RLS is the real enforcement; this is UX.)
+- Org Admins of a suspended org continue to see admin pages but their org's member data is hidden by RLS — they still see the suspend/reinstate controls because that lives on `training_organizations`, which remains visible.
 
-1. Key updates (last 30 days)
-2. Completed items
-3. Missing documents / gaps
-4. Risks & red flags
-5. Areas of improvement
-6. Achievements
-7. Recommended next steps
+### Realtime
 
-Each section returns an array of short bullet strings + an evidence reference list (ids of the records that grounded each bullet) so the UI can show "based on N items".
+- Add `training_organizations` and `org_suspension_audit` to `REALTIME_TABLES` in `src/lib/realtimeRouter.ts` so banners and badges update instantly when toggled.
 
-## Permissions
+### Out of scope
 
-Same model already enforced everywhere else:
-- Admin: any student
-- Case Manager: only assigned students (`student_assignments`)
-- Org Admin: students in their org scope (`user_in_org_admin_scope_v2`)
-- Students: **cannot** generate (button hidden, edge function rejects)
+- Login blocking (members can still sign in; only writes are gated + data hidden). Confirmed per your "Banner inside app" choice.
+- Deleting or archiving any data.
+- Bulk suspension across multiple orgs.
 
-Reuses `can_staff_manage_student(actor, student)` SQL function for the auth check inside the edge function.
+### Files
 
-## Audit logging
+**Created:** migration, `src/hooks/useOrgSuspension.ts`, `src/hooks/useMyOrgSuspension.ts`, `src/contexts/OrgSuspensionContext.tsx`, `src/components/OrgSuspendedBanner.tsx`, `src/components/admin/SuspendOrgDialog.tsx`.
 
-New table `folder_summary_audit`:
-
-| column | type |
-|---|---|
-| id | uuid pk |
-| student_id | uuid |
-| actor_id | uuid |
-| action | text  (`generated` / `downloaded_pdf`) |
-| section_counts | jsonb (per-section bullet counts) |
-| evidence_counts | jsonb (notes/requests/checkins/etc.) |
-| created_at | timestamptz |
-
-RLS:
-- INSERT: actor_id = auth.uid() AND `can_staff_manage_student(auth.uid(), student_id)`
-- SELECT: admin, or staff who can manage that student
-- No UPDATE / DELETE
-
-Edge function inserts a `generated` row on every successful summary; the frontend posts a `downloaded_pdf` row when the user clicks Download PDF.
-
-## Real-time syncing
-
-Add `folder_summary_audit` to `REALTIME_TABLES` in `realtimeRouter.ts` so the StudentDetail view's "last generated" indicator refreshes live. The summary itself is regenerated on demand (not cached), so it always reflects current folder contents.
-
-## "No fabrication" guardrails
-
-- AI call uses tool/JSON-schema response (same as `student-progress-summary`) — model cannot return free-form prose outside the defined section arrays.
-- System prompt: "Only use facts present in the supplied evidence JSON. If a section has no relevant evidence, return exactly `[\"No data available.\"]`. Do not infer, extrapolate, or invent names, dates, diagnoses, or outcomes."
-- Each bullet must include `evidence_ids: string[]` referencing supplied evidence; bullets with empty evidence arrays are filtered out client-side before render/PDF.
-- Empty folder → entire response is "No data available." per section, plus a banner in the UI.
-
-## UI
-
-New component `src/components/reports/FolderSummaryButton.tsx` — a card identical in style to `GenerateStudentReportCard`:
-- Title: "Folder summary"
-- Description: "AI-generated overview of this student's full folder, grounded only in stored records."
-- Primary button: "Generate folder summary"
-- Opens a dialog (`FolderSummaryDialog.tsx`) showing:
-  - Loading skeleton while edge function runs
-  - 7 collapsible sections with bullets and per-bullet evidence chips ("3 sources")
-  - Footer: `Download PDF` (logs `downloaded_pdf`) + `Regenerate` + `Close`
-  - Empty-state banner when all sections are "No data available."
-
-Mounted in `StudentDetail.tsx` directly below the existing `GenerateStudentReportCard` (single line addition). Hidden when current user is the student themselves.
-
-## PDF export
-
-New helper `src/lib/folderSummaryPdf.ts` using `jspdf` + `jspdf-autotable` (already installed). Layout matches existing student progress PDF header/footer for visual consistency:
-- Header: Evolve Foundation logo, student name, "Folder Summary", generated timestamp, generated-by name
-- One section per heading with bulleted lines
-- Footer: "AI-generated. Grounded in folder records as of {timestamp}. Verify before acting."
-- Filename: `evolve-folder-summary_{studentSlug}_{yyyy-mm-dd}.pdf`
-
-## Files
-
-**New**
-- `supabase/migrations/<ts>_folder_summary_audit.sql` — table + RLS
-- `supabase/functions/generate-folder-summary/index.ts` — modelled on `student-progress-summary`
-- `src/components/reports/FolderSummaryButton.tsx`
-- `src/components/reports/FolderSummaryDialog.tsx`
-- `src/hooks/useFolderSummary.ts` — invokes edge function, exposes `generate()` + `lastGeneratedAt`
-- `src/lib/folderSummaryPdf.ts`
-
-**Edited (minimal, additive only)**
-- `src/pages/StudentDetail.tsx` — one extra `<FolderSummaryButton studentId={id} />` next to the existing report card
-- `src/lib/realtimeRouter.ts` — add `folder_summary_audit` to `REALTIME_TABLES`
-
-No other pages, no schema changes outside the new table, no changes to existing edge functions.
-
-## Technical details
-
-- Edge function CORS / sanitizeError / `auth.getUser()` follow the project security pattern (same as `student-progress-summary`).
-- Model: `google/gemini-2.5-flash` (cheap, fast, tool-call capable) via Lovable AI Gateway — already used in `student-progress-summary`.
-- Evidence payload trimmed: max 50 most-recent records per category; bullets capped at 6 per section to keep the PDF to 1–2 pages.
-- Memory: add `mem://features/folder-summary-v1` after build.
-
-## Out of scope (explicit, ask before adding)
-
-- Caching/storing the generated summary text (regenerated each click as requested for real-time accuracy)
-- Sharing summary via tokenized public link (PDF sharing already covered by existing `share-request-pdf` pattern; can be added later)
-- Including raw file contents from the `student-certifications` storage bucket (only filenames are referenced)
+**Edited:** `src/pages/admin/OrganizationDetail.tsx`, `src/pages/admin/TrainingOrganizations.tsx`, `src/components/layouts/SidebarLayout.tsx` (mount banner + provider), `src/lib/realtimeRouter.ts`, plus minimal `disabled` wiring on the listed write surfaces. New memory entry `mem://features/org-suspension-v1`.
