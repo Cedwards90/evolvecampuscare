@@ -20,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useStudentFolders } from '@/hooks/useStudentFolders';
+import { useActiveOrganizations } from '@/hooks/useTrainingOrganizations';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters, getCohortFromDate } from '@/contexts/GlobalFiltersContext';
 
@@ -30,11 +31,14 @@ function getInitials(name: string | null): string {
 
 export default function StudentFolders() {
   const { data: students, isLoading } = useStudentFolders();
+  const { data: allOrgs } = useActiveOrganizations();
   const [search, setSearch] = useState('');
   const [orgFilter, setOrgFilter] = useState<string>('all');
 
-  // Get unique orgs for filter
-  const orgOptions = [...new Map((students || []).filter(s => s.organization_name).map(s => [s.organization_id, s.organization_name])).entries()];
+  // Show every active org in the dropdown, even if it has no students yet
+  const orgOptions: Array<[string, string]> = (allOrgs || [])
+    .map((o) => [o.id, o.name] as [string, string])
+    .sort((a, b) => a[1].localeCompare(b[1]));
 
   const { filters: gf } = useGlobalFilters();
   const filtered = (students || []).filter(s => {
