@@ -158,6 +158,11 @@ export default function OrganizationDetail() {
                     )}
                   </div>
                 )}
+                {!canManageSuspension && organization.suspended_at && isOrgAdminHere && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Only a platform administrator can reinstate this organization.
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-3 rounded-lg bg-muted/50">
