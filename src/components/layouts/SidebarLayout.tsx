@@ -42,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
+import { OrgSuspendedBanner } from '@/components/OrgSuspendedBanner';
 import { cn } from '@/lib/utils';
 import type { AppRole } from '@/types/database';
 
@@ -422,6 +423,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
         {/* Page Content */}
         <main className="p-3 sm:p-4 md:p-6 min-w-0 max-w-full overflow-x-hidden safe-content">
+          <div className="mb-4"><OrgSuspendedBanner /></div>
           {children}
         </main>
       </div>

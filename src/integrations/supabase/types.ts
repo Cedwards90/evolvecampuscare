@@ -779,6 +779,33 @@ export type Database = {
         }
         Relationships: []
       }
+      org_suspension_audit: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          id: string
+          organization_id: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       organization_memberships: {
         Row: {
           created_at: string
@@ -1728,6 +1755,9 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          suspended_at: string | null
+          suspended_by: string | null
+          suspension_reason: string | null
           updated_at: string
         }
         Insert: {
@@ -1738,6 +1768,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
           updated_at?: string
         }
         Update: {
@@ -1748,6 +1781,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1881,6 +1917,8 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      is_org_suspended: { Args: { _org_id: string }; Returns: boolean }
+      is_user_org_suspended: { Args: { _user_id: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string

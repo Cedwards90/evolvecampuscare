@@ -8,6 +8,9 @@ export interface TrainingOrganization {
   contact_name: string | null;
   contact_email: string | null;
   is_active: boolean;
+  suspended_at: string | null;
+  suspended_by: string | null;
+  suspension_reason: string | null;
   created_at: string;
   updated_at: string;
 }

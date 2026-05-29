@@ -122,8 +122,15 @@ export function invalidateForChange(
     }
     case 'training_organizations': {
       inv(['training-orgs']);
+      inv(['training-organizations']);
+      inv(['organization-detail', row.id]);
       inv(['org', row.id]);
       inv(['org-name', row.id]);
+      inv(['my-org-suspension']);
+      break;
+    }
+    case 'org_suspension_audit': {
+      inv(['org-suspension-audit', row.organization_id]);
       break;
     }
     case 'qr_codes': {
@@ -214,4 +221,5 @@ export const REALTIME_TABLES = [
   'certification_catalog',
   'student_certifications',
   'folder_summary_audit',
+  'org_suspension_audit',
 ] as const;
