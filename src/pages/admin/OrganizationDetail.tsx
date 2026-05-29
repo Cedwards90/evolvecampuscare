@@ -38,7 +38,7 @@ export default function OrganizationDetail() {
   const audit = useOrgSuspensionAudit(id);
   const [suspendOpen, setSuspendOpen] = useState(false);
   const isAdmin = role === 'admin';
-  const isOrgAdminHere = !isAdmin && (myOrgAdminOrgs ?? []).some((o: any) => o.organization_id === id || o.id === id);
+  const isOrgAdminHere = !!id && (myOrgAdminOrgs ?? []).includes(id);
   const canManageSuspension = isAdmin || isOrgAdminHere;
 
   if (org.isLoading) {
