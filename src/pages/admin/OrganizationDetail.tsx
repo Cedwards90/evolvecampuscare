@@ -33,6 +33,13 @@ const roleLabels: Record<string, string> = {
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
   const { org, members, stats } = useOrganizationDetail(id);
+  const { role } = useAuth();
+  const { data: myOrgAdminOrgs } = useMyOrgAdminOrgs();
+  const audit = useOrgSuspensionAudit(id);
+  const [suspendOpen, setSuspendOpen] = useState(false);
+  const isAdmin = role === 'admin';
+  const isOrgAdminHere = !isAdmin && (myOrgAdminOrgs ?? []).some((o: any) => o.organization_id === id || o.id === id);
+  const canManageSuspension = isAdmin || isOrgAdminHere;
 
   if (org.isLoading) {
     return <SidebarLayout><LoadingSpinner /></SidebarLayout>;
