@@ -108,24 +108,51 @@ export default function OrganizationDetail() {
         />
 
         {/* Header */}
-        <Card>
+        <Card className={organization.suspended_at ? 'border-destructive/50' : undefined}>
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div className="flex flex-col md:flex-row md:items-start gap-4">
               <div className="h-14 w-14 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Building2 className="h-7 w-7 text-primary" />
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <h1 className="font-display text-h2 font-bold">{organization.name}</h1>
-                  <Badge variant={organization.is_active ? 'default' : 'secondary'}>
-                    {organization.is_active ? 'Active' : 'Inactive'}
-                  </Badge>
+                  {organization.suspended_at ? (
+                    <Badge variant="destructive" className="gap-1"><Ban className="h-3 w-3" />Suspended</Badge>
+                  ) : (
+                    <Badge variant={organization.is_active ? 'default' : 'secondary'}>
+                      {organization.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  )}
                 </div>
                 {organization.description && <p className="text-muted-foreground mt-1">{organization.description}</p>}
                 {organization.contact_name && (
                   <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" />{organization.contact_name}</span>
                     {organization.contact_email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{organization.contact_email}</span>}
+                  </div>
+                )}
+                {organization.suspended_at && (
+                  <div className="mt-3 rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm">
+                    <p className="font-medium text-destructive">
+                      Suspended on {format(new Date(organization.suspended_at), 'MMM d, yyyy')}
+                    </p>
+                    {organization.suspension_reason && (
+                      <p className="text-destructive/90 mt-0.5">Reason: {organization.suspension_reason}</p>
+                    )}
+                  </div>
+                )}
+                {canManageSuspension && (
+                  <div className="mt-3">
+                    {organization.suspended_at ? (
+                      <Button size="sm" variant="outline" onClick={() => setSuspendOpen(true)}>
+                        <RotateCcw className="h-4 w-4 mr-2" />Reinstate access
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="destructive" onClick={() => setSuspendOpen(true)}>
+                        <Ban className="h-4 w-4 mr-2" />Suspend access
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
