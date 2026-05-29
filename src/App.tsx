@@ -51,6 +51,7 @@ import StudentProgressReportPage from "./pages/StudentProgressReport";
 import NotFound from "./pages/NotFound";
 import AcceptNda from "./pages/AcceptNda";
 import AdminNda from "./pages/admin/AdminNda";
+import AccessStatus from "./pages/admin/AccessStatus";
 
 // Create query client outside component to ensure stable reference.
 // Defaults tuned to avoid stale UI after mutations or returning to a tab,
