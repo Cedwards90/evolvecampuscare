@@ -39,7 +39,10 @@ export default function OrganizationDetail() {
   const [suspendOpen, setSuspendOpen] = useState(false);
   const isAdmin = role === 'admin';
   const isOrgAdminHere = !!id && (myOrgAdminOrgs ?? []).includes(id);
-  const canManageSuspension = isAdmin || isOrgAdminHere;
+  // Org admins lose all write ability once a platform admin suspends the org.
+  // Only platform admins can reinstate.
+  const canManageSuspension = isAdmin || (isOrgAdminHere && !org.data?.suspended_at);
+  const canViewAudit = isAdmin || isOrgAdminHere;
 
   if (org.isLoading) {
     return <SidebarLayout><LoadingSpinner /></SidebarLayout>;
@@ -155,6 +158,11 @@ export default function OrganizationDetail() {
                     )}
                   </div>
                 )}
+                {!canManageSuspension && organization.suspended_at && isOrgAdminHere && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Only a platform administrator can reinstate this organization.
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-3 rounded-lg bg-muted/50">
@@ -186,7 +194,7 @@ export default function OrganizationDetail() {
             <TabsTrigger value="stats" className="gap-2">
               <FileText className="h-4 w-4" />Request Stats
             </TabsTrigger>
-            {canManageSuspension && (
+            {canViewAudit && (
               <TabsTrigger value="audit" className="gap-2">
                 <History className="h-4 w-4" />Suspension Log
               </TabsTrigger>
@@ -263,7 +271,7 @@ export default function OrganizationDetail() {
             </div>
           </TabsContent>
 
-          {canManageSuspension && (
+          {canViewAudit && (
             <TabsContent value="audit">
               {(audit.data ?? []).length === 0 ? (
                 <EmptyState icon={History} title="No suspension events" description="This organization has not been suspended or reinstated." />
