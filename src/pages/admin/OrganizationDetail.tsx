@@ -39,7 +39,10 @@ export default function OrganizationDetail() {
   const [suspendOpen, setSuspendOpen] = useState(false);
   const isAdmin = role === 'admin';
   const isOrgAdminHere = !!id && (myOrgAdminOrgs ?? []).includes(id);
-  const canManageSuspension = isAdmin || isOrgAdminHere;
+  // Org admins lose all write ability once a platform admin suspends the org.
+  // Only platform admins can reinstate.
+  const canManageSuspension = isAdmin || (isOrgAdminHere && !org.data?.suspended_at);
+  const canViewAudit = isAdmin || isOrgAdminHere;
 
   if (org.isLoading) {
     return <SidebarLayout><LoadingSpinner /></SidebarLayout>;
