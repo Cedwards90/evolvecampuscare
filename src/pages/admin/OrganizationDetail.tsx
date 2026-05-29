@@ -194,7 +194,7 @@ export default function OrganizationDetail() {
             <TabsTrigger value="stats" className="gap-2">
               <FileText className="h-4 w-4" />Request Stats
             </TabsTrigger>
-            {canManageSuspension && (
+            {canViewAudit && (
               <TabsTrigger value="audit" className="gap-2">
                 <History className="h-4 w-4" />Suspension Log
               </TabsTrigger>
@@ -271,7 +271,7 @@ export default function OrganizationDetail() {
             </div>
           </TabsContent>
 
-          {canManageSuspension && (
+          {canViewAudit && (
             <TabsContent value="audit">
               {(audit.data ?? []).length === 0 ? (
                 <EmptyState icon={History} title="No suspension events" description="This organization has not been suspended or reinstated." />
