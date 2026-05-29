@@ -1,23 +1,38 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 /**
  * Fetches options for the global filter bar selects:
  * organizations, case managers, available cohorts (years), and year-of-study values.
- * RLS already restricts what each role can see.
+ * RLS already restricts what each role can see. Platform admins additionally see
+ * suspended organizations (labelled accordingly) so they can filter to them.
  */
 export function useFilterOptions() {
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
+
   return useQuery({
-    queryKey: ['global-filter-options'],
+    queryKey: ['global-filter-options', isAdmin],
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
+      const orgQuery = supabase
+        .from('training_organizations')
+        .select('id, name, suspended_at, is_active')
+        .order('name');
+      // Non-admins keep the existing active-only behavior.
+      if (!isAdmin) orgQuery.eq('is_active', true);
+
       const [orgsRes, profilesRes, rolesRes] = await Promise.all([
-        supabase.from('training_organizations').select('id, name').eq('is_active', true).order('name'),
+        orgQuery,
         supabase.from('profiles').select('user_id, full_name, email, cohort_start_date, year_of_study'),
         supabase.from('user_roles').select('user_id, role'),
       ]);
 
-      const organizations = (orgsRes.data || []).map((o) => ({ value: o.id, label: o.name }));
+      const organizations = (orgsRes.data || []).map((o: any) => ({
+        value: o.id,
+        label: o.suspended_at ? `${o.name} (suspended)` : o.name,
+      }));
 
       const roleMap = new Map((rolesRes.data || []).map((r: any) => [r.user_id, r.role]));
       const caseManagers = (profilesRes.data || [])
