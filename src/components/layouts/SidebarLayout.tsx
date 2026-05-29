@@ -71,6 +71,7 @@ const navItems: NavItem[] = [
   { label: 'User Management', href: '/admin/users', icon: Shield, roles: ['admin'] },
   { label: 'Case Managers', href: '/admin/case-managers', icon: UserCog, roles: ['admin', 'org_admin'] },
   { label: 'Organizations', href: '/admin/organizations', icon: Building2, roles: ['admin'] },
+  { label: 'Access Status', href: '/admin/access-status', icon: Shield, roles: ['admin'] },
   { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: ['case_manager', 'admin', 'org_admin'] },
   { label: 'QR Codes', href: '/admin/qr-codes', icon: QrCode, roles: ['admin', 'org_admin'] },
   { label: 'NDA', href: '/admin/nda', icon: FileText, roles: ['admin'] },
