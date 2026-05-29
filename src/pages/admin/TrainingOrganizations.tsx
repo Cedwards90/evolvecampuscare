@@ -233,19 +233,24 @@ export default function TrainingOrganizations() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-1.5 px-2"
-                          onClick={() => toggleActive(org)}
-                          disabled={updateOrg.isPending}
-                        >
-                          {org.is_active ? (
-                            <><ToggleRight className="h-4 w-4 text-primary" /><span className="text-xs font-medium">Active</span></>
-                          ) : (
-                            <><ToggleLeft className="h-4 w-4 text-muted-foreground" /><span className="text-xs font-medium text-muted-foreground">Inactive</span></>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1.5 px-2"
+                            onClick={() => toggleActive(org)}
+                            disabled={updateOrg.isPending}
+                          >
+                            {org.is_active ? (
+                              <><ToggleRight className="h-4 w-4 text-primary" /><span className="text-xs font-medium">Active</span></>
+                            ) : (
+                              <><ToggleLeft className="h-4 w-4 text-muted-foreground" /><span className="text-xs font-medium text-muted-foreground">Inactive</span></>
+                            )}
+                          </Button>
+                          {org.suspended_at && (
+                            <Badge variant="destructive" className="text-xs">Suspended</Badge>
                           )}
-                        </Button>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
