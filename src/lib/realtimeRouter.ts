@@ -245,4 +245,5 @@ export const REALTIME_TABLES = [
   'participant_transfer_events',
   'participant_record_exports',
   'participant_record_access_log',
+  'user_status_audit',
 ] as const;
