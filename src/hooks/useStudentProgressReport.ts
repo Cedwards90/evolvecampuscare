@@ -377,6 +377,7 @@ export function useStudentProgressReport({
       return {
         student: (studentRes.data || null) as Profile | null,
         caseManager,
+        organization,
         range: { from: fromIso, to: toIso },
         generatedAt: new Date().toISOString(),
         summary: {
