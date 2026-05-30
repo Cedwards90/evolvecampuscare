@@ -71,12 +71,17 @@ export function planFilename(p: { created_at: string }, name?: string | null) {
   return `evolve-postgrad-plan_${slug(name)}_${format(new Date(p.created_at), 'yyyy-MM-dd')}.pdf`;
 }
 
-export function downloadCheckInPdf(checkIn: StudentCheckIn, studentName?: string | null) {
+export function downloadCheckInPdf(
+  checkIn: StudentCheckIn,
+  studentName?: string | null,
+  orgName?: string | null,
+) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   header(
     doc,
     'Student Check-In',
     `${studentName ? studentName + ' · ' : ''}${format(new Date(checkIn.created_at), 'PPP p')}`,
+    orgName,
   );
 
   autoTable(doc, {
