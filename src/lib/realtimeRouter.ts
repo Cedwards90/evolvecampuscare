@@ -107,9 +107,17 @@ export function invalidateForChange(
     case 'profiles': {
       inv(['profile', row.user_id]);
       inv(['users']);
+      inv(['users-with-roles']);
       inv(['student-folders']);
       inv(['my-students']);
       if (row.user_id) inv(['student-detail', row.user_id]);
+      if (row.user_id) inv(['user-status-history', row.user_id]);
+      break;
+    }
+    case 'user_status_audit': {
+      inv(['users-with-roles']);
+      if (row.user_id) inv(['user-status-history', row.user_id]);
+      if (row.user_id) inv(['profile', row.user_id]);
       break;
     }
     case 'organization_memberships':
