@@ -43,7 +43,6 @@ export default function TransitionsDashboard() {
         <PageHeader
           title="Participant Transitions"
           description="Pending and completed transfers, missing records, export history, and access logs."
-          icon={ArrowRightLeft}
         />
 
         <div className="grid gap-4 md:grid-cols-4">
