@@ -1008,8 +1008,9 @@ function StudentCheckInsTab({ studentId, studentName, orgId }: { studentId: stri
   );
 }
 
-function PostGradPlanTab({ studentId, studentName }: { studentId: string; studentName?: string | null }) {
+function PostGradPlanTab({ studentId, studentName, orgId }: { studentId: string; studentName?: string | null; orgId?: string | null }) {
   const { data: plans = [], isLoading } = useStudentPlans(studentId);
+  const orgName = useOrgName(orgId);
 
   if (isLoading) return <LoadingSpinner />;
 
