@@ -967,6 +967,190 @@ export type Database = {
         }
         Relationships: []
       }
+      participant_record_access_log: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          export_id: string
+          id: string
+          ip: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          export_id: string
+          id?: string
+          ip?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          export_id?: string
+          id?: string
+          ip?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_record_access_log_export_id_fkey"
+            columns: ["export_id"]
+            isOneToOne: false
+            referencedRelation: "participant_record_exports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      participant_record_exports: {
+        Row: {
+          actor_id: string
+          created_at: string
+          file_path: string | null
+          file_size: number | null
+          format: string
+          id: string
+          mime_type: string | null
+          notes: string | null
+          purpose: string
+          section_counts: Json
+          student_id: string
+          transfer_id: string | null
+          validation_report: Json
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          file_path?: string | null
+          file_size?: number | null
+          format: string
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          purpose?: string
+          section_counts?: Json
+          student_id: string
+          transfer_id?: string | null
+          validation_report?: Json
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          file_path?: string | null
+          file_size?: number | null
+          format?: string
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          purpose?: string
+          section_counts?: Json
+          student_id?: string
+          transfer_id?: string | null
+          validation_report?: Json
+        }
+        Relationships: []
+      }
+      participant_transfer_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          transfer_id: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          transfer_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          transfer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_transfer_events_transfer_id_fkey"
+            columns: ["transfer_id"]
+            isOneToOne: false
+            referencedRelation: "participant_transfers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      participant_transfers: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          acknowledgement_notes: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          export_id: string | null
+          from_organization_id: string | null
+          id: string
+          included_record_types: string[]
+          initiated_by: string
+          reason: string | null
+          status: string
+          student_id: string
+          to_organization_id: string
+          updated_at: string
+          validation_snapshot: Json
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          acknowledgement_notes?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          export_id?: string | null
+          from_organization_id?: string | null
+          id?: string
+          included_record_types?: string[]
+          initiated_by: string
+          reason?: string | null
+          status?: string
+          student_id: string
+          to_organization_id: string
+          updated_at?: string
+          validation_snapshot?: Json
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          acknowledgement_notes?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          export_id?: string | null
+          from_organization_id?: string | null
+          id?: string
+          included_record_types?: string[]
+          initiated_by?: string
+          reason?: string | null
+          status?: string
+          student_id?: string
+          to_organization_id?: string
+          updated_at?: string
+          validation_snapshot?: Json
+        }
+        Relationships: []
+      }
       post_graduation_plans: {
         Row: {
           additional_notes: string | null
