@@ -31,3 +31,9 @@ project_id = "kxhykddsllizazoqxevu"
     verify_jwt = false
   [functions.public-request-pdf]
     verify_jwt = false
+  [functions.generate-participant-record]
+    verify_jwt = false
+  [functions.get-participant-export-url]
+    verify_jwt = false
+  [functions.acknowledge-participant-transfer]
+    verify_jwt = false
