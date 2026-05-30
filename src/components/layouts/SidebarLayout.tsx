@@ -22,7 +22,8 @@ import {
   UserCog,
   FileBarChart,
   QrCode,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -76,6 +77,7 @@ const navItems: NavItem[] = [
   { label: 'NDA', href: '/admin/nda', icon: FileText, roles: ['admin'] },
   { label: 'Transitions', href: '/admin/transitions', icon: ArrowRightLeft, roles: ['admin', 'org_admin'] },
   { label: 'Reports', href: '/reports', icon: FileBarChart, roles: ['case_manager', 'admin', 'org_admin'] },
+  { label: 'Impact Analytics', href: '/admin/impact', icon: Sparkles, roles: ['admin', 'org_admin'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
 ];
 
