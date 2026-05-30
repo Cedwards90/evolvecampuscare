@@ -1,100 +1,48 @@
-# User Account Activation Controls
+## Goal
 
-Reversible deactivation for any user. Preserves profile, role, assignments, notes, requests, reports, and all history. No deletes.
+Add a filter panel to the Student Progress Reports page (`/reports/student/...`) that scopes which students appear in the picker and bulk export. Filters: **Organization**, **Class (cohort)**, **Year of Study**, **Assigned Case Manager**, **Student Status (Active/Inactive)**, and **Date Range** (already exists for report period). All filters respect existing RLS and update counts, picker, and export in real time.
 
-## 1. Database (migration)
+Scope is limited to the Reports area — no changes to other pages, hooks, RLS, or business logic outside this feature.
 
-**`profiles` — add status columns**
-- `deactivated_at timestamptz null`
-- `deactivated_by uuid null`
-- `deactivation_reason text null`
-- `reactivated_at timestamptz null`
-- `reactivated_by uuid null`
-- Index on `deactivated_at` for fast filtering.
+## Changes
 
-**New table `user_status_audit`** (append-only)
-- `id`, `user_id`, `actor_id`, `action` ('deactivated' | 'reactivated'), `reason text`, `created_at`.
-- RLS: admins full read; org admins read users in their org scope (using existing `user_in_org_admin_scope_v2`); inserts only via service role (edge function).
-- Added to `supabase_realtime` publication with `REPLICA IDENTITY FULL`.
+### 1. New filter hook — `src/hooks/useReportStudentFilters.ts`
+- Build the filterable student pool by joining `student_assignments` (already cached via `useStudentAssignments`) with `profiles` fields: `organization_id`, `cohort_start_date`, `year_of_study`, `deactivated_at`.
+- Pull the assigned student's organization from `profiles.organization_id` (already maintained by `sync_profile_organization` trigger).
+- Apply filters client-side over the RLS-scoped result. No new DB queries beyond fetching the needed profile columns (extend existing fetch in `useStudentAssignments` — read-only, additive).
+- Returns: `{ filteredStudents, counts: { total, matching } }`.
 
-**New helper function `public.is_user_active(_user_id uuid) returns boolean`**
-- `security definer`, returns `profiles.deactivated_at IS NULL`.
+### 2. New UI component — `src/components/reports/ReportFilters.tsx`
+- Local filter state (not the global filter context — keeps this page self-contained and avoids side effects on other pages).
+- Controls (using existing `FilterMultiSelect` + shadcn primitives):
+  - Organization (from `useFilterOptions().organizations`)
+  - Class / Cohort
+  - Year of Study
+  - Assigned Case Manager (admin/org_admin only; case managers are auto-scoped to themselves)
+  - Student Status: Active / Inactive / All (default Active)
+  - Date Range — reuses existing preset + custom popover (moved into this component for cohesion)
+- Active-filter chips with individual remove + "Reset filters" button.
+- Permission-aware: case managers see only their own caseload (CM picker hidden); org admins see only orgs they administer (filtered against `org_admin_orgs`).
 
-**Update `public.has_role(_user_id, _role)`**
-- Wrap existing logic with `AND public.is_user_active(_user_id)`.
-- Single point that automatically gates `can_staff_manage_student`, `is_org_admin`, `can_staff_access_request`, and every RLS policy that calls `has_role` — so an inactive admin/case manager/org admin instantly loses access platform-wide. Inactive students lose role-gated routes too.
-- This is the only existing function touched; no other RLS policies modified.
+### 3. Update `src/pages/StudentProgressReport.tsx`
+- Replace the inline preset bar with `<ReportFilters />`.
+- Replace `myStudents` derivation with `filteredStudents` from the new hook.
+- Update the bulk-export label/count to reflect filtered count in real time.
+- Keep single-student picker (`StudentPicker`) but feed it the filtered list (extend `StudentPicker` props to accept an optional pre-filtered student list — backward compatible).
+- Bulk export iterates only over `filteredStudents`. Range and per-student fetch logic unchanged.
+- Hard guard: if a filter produces 0 students, disable bulk buttons with a helpful empty state.
 
-**Realtime router**
-- Add `user_status_audit` and `profiles` (deactivation columns already covered by existing profiles entry) to `src/lib/realtimeRouter.ts` to invalidate `['users-with-roles']`, `['profile', userId]`, and the auth role cache key.
+### 4. Real-time sync
+- No new subscriptions needed. The existing `realtimeRouter` already invalidates `['student-assignments']`, `['profiles']`, and `['global-filter-options']` on relevant table changes. Counts and filtered list will refresh automatically when assignments, profile org/cohort, or deactivation status change.
 
-## 2. Edge function `set-user-active` (new)
+### 5. URL persistence (lightweight)
+- Serialize filter selections into `searchParams` (e.g. `?org=...&cohort=...&cm=...&status=active`) so deep links and back-navigation preserve the filtered view. Reuses the existing `useSearchParams` already in the page.
 
-Admin-only mutation endpoint. Why a function instead of a direct UPDATE: needs to (a) verify caller is admin via `auth.getUser()` + `has_role`, (b) write the audit row, (c) call `supabase.auth.admin.signOut(targetUserId, 'global')` on deactivation to immediately invalidate existing sessions, (d) timestamp atomically.
+## Out of Scope (per user's "no other changes" rule)
+- No edits to `GlobalFiltersContext`, RLS policies, edge functions, or other report types.
+- No schema changes — all needed fields already exist on `profiles`.
+- No changes to single-report fetch logic or export formats.
 
-Inputs: `{ userId, active: boolean, reason?: string }`.
-Behavior:
-- Reject self-deactivation.
-- On deactivate: set `deactivated_at = now()`, `deactivated_by = caller`, store reason, revoke all refresh tokens for that user.
-- On reactivate: clear `deactivated_at`, set `reactivated_at/by`.
-- Insert `user_status_audit` row.
-- Uses shared `sanitizeError`, strict CORS, `timingSafeEqual` patterns already in `_shared` (per existing edge-function security memory).
-
-Org Admins are intentionally **not** granted this in v1 — keeps the blast radius small and matches "administrators" wording. Can be extended later if requested.
-
-## 3. Frontend — login & session enforcement
-
-**`AuthContext.tsx`**
-- After `fetchUserData`, if `profile.deactivated_at` is set: call `supabase.auth.signOut()`, surface a `deactivated` flag, redirect to `/auth?reason=deactivated`.
-- Subscribe (via existing realtime bridge) so an admin deactivating a logged-in user kicks them on next tick — combined with the edge function's `admin.signOut` this gives near-instant termination.
-
-**`Auth.tsx`**
-- When URL has `?reason=deactivated`, show a non-revealing message: "This account is inactive. Contact your administrator."
-- No change to sign-in API call itself — `auth.admin.signOut` plus the post-login profile check handle blocking.
-
-**`ProtectedRoute.tsx`**
-- Add a guard: if `profile?.deactivated_at`, render redirect to `/auth?reason=deactivated`. Defense-in-depth against any race between login and the AuthContext sign-out.
-
-## 4. Admin UI
-
-**`useUsers` hook**
-- Select `deactivated_at`, `deactivated_by`, `deactivation_reason` from profiles. Expose `is_active` derived boolean on `UserWithRole`.
-- New `useSetUserActive()` mutation hook invoking the edge function with optimistic update and rollback.
-- New `useUserStatusHistory(userId)` hook for the audit timeline.
-
-**`src/components/admin/UserManagement.tsx`**
-- New "Status" column with an Active/Inactive `Badge`.
-- New "Status" filter (All / Active / Inactive) next to the existing role filter.
-- Row action: `Switch` (or dropdown item) to toggle status, opening a confirmation `AlertDialog` with an optional reason `Textarea`. Disable the toggle for the current user.
-- Inactive rows render with `opacity-60` and a tooltip showing who/when deactivated.
-
-**`UserManagementPage.tsx`**
-- Add a small "Account status history" drawer/section per user that shows `user_status_audit` entries (actor, action, reason, timestamp).
-
-No changes to the existing role-change flow, delete flow, or any other admin screens.
-
-## 5. Compliance & data preservation
-
-- Zero deletes. All assignments, notes, requests, files, reports, certifications, transfers, NDA acceptances, and historical activity remain intact and queryable for compliance.
-- Audit trail is append-only and protected by RLS.
-- Real-time propagation via the existing `useRealtimeBridge`.
-
-## Technical summary
-
-```text
-profiles ── deactivated_at/by/reason, reactivated_at/by  (new columns)
-user_status_audit (new, append-only)
-is_user_active() ── new SECURITY DEFINER helper
-has_role() ── wrapped with is_user_active() check  ← only existing fn modified
-set-user-active edge fn ── admin-only, revokes sessions, writes audit
-AuthContext + ProtectedRoute ── post-login + per-navigation guard
-UserManagement UI ── status column, filter, toggle w/ reason, audit history
-realtimeRouter ── publishes status changes sitewide
-```
-
-## Out of scope (will not change without approval)
-
-- Existing RLS policies on any other table.
-- Existing role-change / delete-user flows.
-- Org Admin permissions on activation (admins only for v1).
-- Sidebar, dashboards, or other non-admin pages.
+## Files
+- **Create:** `src/hooks/useReportStudentFilters.ts`, `src/components/reports/ReportFilters.tsx`
+- **Modify:** `src/pages/StudentProgressReport.tsx`, `src/components/reports/StudentPicker.tsx` (additive prop only)

@@ -1,29 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
-import { CalendarIcon, Download, FileText, Loader2, Users } from 'lucide-react';
+import { Download, FileText, Loader2, Users } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { PageNav } from '@/components/navigation/PageNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { useStudentAssignments } from '@/hooks/useStudentAssignments';
 import {
   useStudentProgressReport,
   getStudentReportPresetRange,
   type StudentReportPreset,
   type StudentProgressReport,
 } from '@/hooks/useStudentProgressReport';
+import { useReportStudentFilters } from '@/hooks/useReportStudentFilters';
 import { StudentPicker } from '@/components/reports/StudentPicker';
 import { StudentReportPreview } from '@/components/reports/StudentReportPreview';
+import { ReportFilters } from '@/components/reports/ReportFilters';
 import {
   AISummaryPanel,
 } from '@/components/reports/AISummaryPanel';
@@ -38,11 +32,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
-const PRESETS: { key: Exclude<StudentReportPreset, 'custom'>; label: string }[] = [
-  { key: 'daily', label: 'Daily' },
-  { key: 'weekly', label: 'Weekly' },
-  { key: 'monthly', label: 'Monthly' },
-];
+
 
 export default function StudentProgressReportPage() {
   const { studentId: routeStudentId } = useParams();
@@ -132,13 +122,16 @@ export default function StudentProgressReportPage() {
     }
   };
 
-  // ---- Bulk export ----
-  const { data: assignments } = useStudentAssignments();
-  const myStudents = useMemo(() => {
-    if (!user) return [];
-    if (role === 'admin') return assignments || [];
-    return (assignments || []).filter((a) => a.case_manager_id === user.id);
-  }, [assignments, user, role]);
+  // ---- Filters + bulk export pool ----
+  const {
+    filters,
+    setFilter,
+    resetFilters,
+    filteredStudents,
+    totalCount,
+    matchingCount,
+  } = useReportStudentFilters();
+  const myStudents = filteredStudents;
   const [bulkLoading, setBulkLoading] = useState(false);
 
   const fetchReportFor = async (
@@ -461,55 +454,30 @@ export default function StudentProgressReportPage() {
             <CardTitle className="text-base">Report options</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <StudentPicker value={studentId} onChange={handleStudentChange} />
+            <ReportFilters
+              filters={filters}
+              setFilter={setFilter}
+              resetFilters={resetFilters}
+              preset={preset}
+              from={from}
+              to={to}
+              onPresetChange={handlePreset}
+              onRangeChange={(f, t) => {
+                setPreset('custom');
+                setFrom(f);
+                setTo(t);
+              }}
+              totalCount={totalCount}
+              matchingCount={matchingCount}
+            />
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                {PRESETS.map((p) => (
-                  <Button
-                    key={p.key}
-                    type="button"
-                    size="sm"
-                    variant={preset === p.key ? 'default' : 'outline'}
-                    onClick={() => handlePreset(p.key)}
-                  >
-                    {p.label}
-                  </Button>
-                ))}
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={preset === 'custom' ? 'default' : 'outline'}
-                      className="gap-2"
-                    >
-                      <CalendarIcon className="h-4 w-4" />
-                      {preset === 'custom'
-                        ? `${format(from, 'PP')} – ${format(to, 'PP')}`
-                        : 'Custom range'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="range"
-                      selected={{ from, to }}
-                      onSelect={(range) => {
-                        if (range?.from && range?.to) {
-                          setPreset('custom');
-                          setFrom(range.from);
-                          setTo(range.to);
-                          setCalendarOpen(false);
-                        }
-                      }}
-                      numberOfMonths={2}
-                      className={cn('p-3 pointer-events-auto')}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+            <StudentPicker
+              value={studentId}
+              onChange={handleStudentChange}
+              students={filteredStudents}
+            />
 
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-3">
                 <Button
                   variant="outline"
                   onClick={() => refetch()}
@@ -533,13 +501,14 @@ export default function StudentProgressReportPage() {
                   <Download className="mr-2 h-4 w-4" />
                   PDF
                 </Button>
-              </div>
             </div>
+
+
 
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border/60 p-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Users className="h-4 w-4" />
-                Bulk export for {role === 'admin' ? 'all assigned students' : 'your caseload'} ({myStudents.length})
+                Bulk export for filtered students ({myStudents.length})
               </div>
               <div className="flex items-center gap-2">
                 <Button
