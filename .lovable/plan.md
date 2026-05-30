@@ -1,142 +1,100 @@
-# Participant Records Transfer & Continuity System
+# User Account Activation Controls
 
-Builds on existing Folder Summary, PDF sharing, certifications, and audit patterns. Three coordinated capabilities:
+Reversible deactivation for any user. Preserves profile, role, assignments, notes, requests, reports, and all history. No deletes.
 
-1. **Participant Record Export** (PDF + ZIP)
-2. **Transfer Workflow** (internal org → org, Admin / Org Admin initiated)
-3. **Transition Dashboard** (pending/completed transfers, validation, audit)
+## 1. Database (migration)
 
----
+**`profiles` — add status columns**
+- `deactivated_at timestamptz null`
+- `deactivated_by uuid null`
+- `deactivation_reason text null`
+- `reactivated_at timestamptz null`
+- `reactivated_by uuid null`
+- Index on `deactivated_at` for fast filtering.
 
-## 1. Database (new migration)
+**New table `user_status_audit`** (append-only)
+- `id`, `user_id`, `actor_id`, `action` ('deactivated' | 'reactivated'), `reason text`, `created_at`.
+- RLS: admins full read; org admins read users in their org scope (using existing `user_in_org_admin_scope_v2`); inserts only via service role (edge function).
+- Added to `supabase_realtime` publication with `REPLICA IDENTITY FULL`.
 
-**`participant_record_exports`** — every export attempt
-- `student_id`, `actor_id`, `format` (`pdf` | `zip`), `purpose` (`handoff` | `audit` | `grant` | `transition` | `other`), `notes`
-- `file_path` (storage), `file_size`, `mime_type`, `section_counts jsonb`, `validation_report jsonb`
-- `transfer_id` (nullable FK), `created_at`
+**New helper function `public.is_user_active(_user_id uuid) returns boolean`**
+- `security definer`, returns `profiles.deactivated_at IS NULL`.
 
-**`participant_transfers`** — one row per transfer event
-- `student_id`, `from_organization_id`, `to_organization_id`, `initiated_by`, `reason`, `status` (`pending` | `acknowledged` | `cancelled` | `completed`)
-- `included_record_types text[]` (case_notes, requests, certifications, intake, post_grad, appointments, attachments, checkins, outcomes, demographics, messages, audit)
-- `validation_snapshot jsonb` (gaps detected at initiation)
-- `chain_of_custody jsonb` (append-only event log)
-- `acknowledged_by` (Org Admin of receiving org), `acknowledged_at`, `acknowledgement_notes`
-- `cancelled_by`, `cancelled_at`, `cancellation_reason`
-- `export_id` (FK → participant_record_exports, generated bundle)
-- `created_at`, `updated_at`
+**Update `public.has_role(_user_id, _role)`**
+- Wrap existing logic with `AND public.is_user_active(_user_id)`.
+- Single point that automatically gates `can_staff_manage_student`, `is_org_admin`, `can_staff_access_request`, and every RLS policy that calls `has_role` — so an inactive admin/case manager/org admin instantly loses access platform-wide. Inactive students lose role-gated routes too.
+- This is the only existing function touched; no other RLS policies modified.
 
-**`participant_transfer_events`** — audit trail
-- `transfer_id`, `actor_id`, `event_type` (`initiated` | `record_added` | `record_removed` | `exported` | `acknowledged` | `cancelled` | `viewed` | `downloaded`), `metadata jsonb`, `created_at`
+**Realtime router**
+- Add `user_status_audit` and `profiles` (deactivation columns already covered by existing profiles entry) to `src/lib/realtimeRouter.ts` to invalidate `['users-with-roles']`, `['profile', userId]`, and the auth role cache key.
 
-**`participant_record_access_log`** — who accessed export artifacts
-- `export_id`, `actor_id`, `action` (`download` | `view_manifest`), `ip`, `user_agent`, `created_at`
+## 2. Edge function `set-user-active` (new)
 
-**Storage bucket:** `participant-exports` (private). Path: `{student_id}/{export_id}/{filename}`. Signed URLs only, 10‑minute TTL.
+Admin-only mutation endpoint. Why a function instead of a direct UPDATE: needs to (a) verify caller is admin via `auth.getUser()` + `has_role`, (b) write the audit row, (c) call `supabase.auth.admin.signOut(targetUserId, 'global')` on deactivation to immediately invalidate existing sessions, (d) timestamp atomically.
 
-**RLS:**
-- Exports/transfers/events/access logs readable by Admin globally, by Org Admin via `user_in_org_admin_scope_v2(auth.uid(), student_id)` on the from/to org, and by `can_staff_manage_student` for the assigned CM (read-only on transfers).
-- INSERT transfers: Admin OR (Org Admin of `from_organization_id` AND not suspended).
-- INSERT exports: Admin / Org Admin in scope.
-- INSERT events / access log: actor = auth.uid() with corresponding transfer/export permission.
-- Acknowledge (UPDATE status → acknowledged): Admin OR Org Admin of `to_organization_id`.
+Inputs: `{ userId, active: boolean, reason?: string }`.
+Behavior:
+- Reject self-deactivation.
+- On deactivate: set `deactivated_at = now()`, `deactivated_by = caller`, store reason, revoke all refresh tokens for that user.
+- On reactivate: clear `deactivated_at`, set `reactivated_at/by`.
+- Insert `user_status_audit` row.
+- Uses shared `sanitizeError`, strict CORS, `timingSafeEqual` patterns already in `_shared` (per existing edge-function security memory).
 
-GRANTs: SELECT/INSERT/UPDATE for authenticated; full for service_role. No anon.
+Org Admins are intentionally **not** granted this in v1 — keeps the blast radius small and matches "administrators" wording. Can be extended later if requested.
 
-Add all 4 tables to `REALTIME_TABLES` in `src/lib/realtimeRouter.ts`.
+## 3. Frontend — login & session enforcement
 
----
+**`AuthContext.tsx`**
+- After `fetchUserData`, if `profile.deactivated_at` is set: call `supabase.auth.signOut()`, surface a `deactivated` flag, redirect to `/auth?reason=deactivated`.
+- Subscribe (via existing realtime bridge) so an admin deactivating a logged-in user kicks them on next tick — combined with the edge function's `admin.signOut` this gives near-instant termination.
 
-## 2. Edge Functions
+**`Auth.tsx`**
+- When URL has `?reason=deactivated`, show a non-revealing message: "This account is inactive. Contact your administrator."
+- No change to sign-in API call itself — `auth.admin.signOut` plus the post-login profile check handle blocking.
 
-**`generate-participant-record`** (POST `{ student_id, format, include_types[], purpose, transfer_id? }`)
-- Verifies caller can manage student (`can_staff_manage_student` RPC).
-- Runs validation pass → returns `validation_report` (missing NDA, unsigned intake, open emergency requests, expired certifications, unresolved support requests, missing outcomes, etc. — warn-only).
-- Loads structured data via service client for every record type.
-- Renders PDF using existing pdf-lib pattern (reuse helpers in `_shared/request-pdf.ts`; new `_shared/participant-record-pdf.ts` for sections).
-- If `format=zip`: streams JSZip with `manifest.json`, `report.pdf`, `attachments/<request>/<file>`, `certifications/<cert>/<file>`, `intake.json`, `notes.json`, `audit.json`, `chain-of-custody.json` (if transfer).
-- Uploads to `participant-exports`, inserts `participant_record_exports` row, appends `participant_transfer_events` if `transfer_id` set, returns signed URL + export_id.
+**`ProtectedRoute.tsx`**
+- Add a guard: if `profile?.deactivated_at`, render redirect to `/auth?reason=deactivated`. Defense-in-depth against any race between login and the AuthContext sign-out.
 
-**`acknowledge-participant-transfer`** (POST `{ transfer_id, notes? }`)
-- Requires Org Admin of `to_organization_id` (or Admin).
-- Updates status, writes event, signs receipt PDF stub (small confirmation PDF stored in same bucket).
-- Sends in-app notifications to initiator + admins.
+## 4. Admin UI
 
-**`get-participant-export-url`** (GET `?export_id=…`)
-- Verifies access, logs `participant_record_access_log`, returns short-lived signed URL.
+**`useUsers` hook**
+- Select `deactivated_at`, `deactivated_by`, `deactivation_reason` from profiles. Expose `is_active` derived boolean on `UserWithRole`.
+- New `useSetUserActive()` mutation hook invoking the edge function with optimistic update and rollback.
+- New `useUserStatusHistory(userId)` hook for the audit timeline.
 
-All follow existing security pattern: strict CORS, `sanitizeError`, `auth.getUser()`, service client for privileged reads.
+**`src/components/admin/UserManagement.tsx`**
+- New "Status" column with an Active/Inactive `Badge`.
+- New "Status" filter (All / Active / Inactive) next to the existing role filter.
+- Row action: `Switch` (or dropdown item) to toggle status, opening a confirmation `AlertDialog` with an optional reason `Textarea`. Disable the toggle for the current user.
+- Inactive rows render with `opacity-60` and a tooltip showing who/when deactivated.
 
----
+**`UserManagementPage.tsx`**
+- Add a small "Account status history" drawer/section per user that shows `user_status_audit` entries (actor, action, reason, timestamp).
 
-## 3. Frontend
+No changes to the existing role-change flow, delete flow, or any other admin screens.
 
-**Hooks (new)**
-- `useParticipantExports(studentId?)` — list + create via Edge Function.
-- `useParticipantTransfers({ scope })` — `pending` / `completed` / `all` for current user's scope.
-- `useTransferValidation(studentId)` — calls validation-only edge endpoint (or computes client-side from existing hooks; backend remains source of truth).
-- `useAcknowledgeTransfer()`, `useCancelTransfer()`.
+## 5. Compliance & data preservation
 
-**Components (new)**
-- `src/components/transfers/GenerateParticipantRecordCard.tsx` — replaces nothing; mounts on `StudentDetail.tsx` under a new "Transfer & Records" tab. Format picker (PDF/ZIP), record-type multi-select, purpose dropdown, validation checklist, "Generate".
-- `src/components/transfers/InitiateTransferDialog.tsx` — pick receiving org (internal training_organizations dropdown excluding current), reason, record types, validation warnings ("Proceed anyway?"), creates transfer + auto-generates ZIP export linked to it.
-- `src/components/transfers/TransferTimeline.tsx` — chain-of-custody event log.
-- `src/components/transfers/AcknowledgeTransferDialog.tsx` — for receiving Org Admin.
-- `src/components/transfers/TransferValidationChecklist.tsx` — reusable, traffic-light per gap.
-- `src/components/transfers/ParticipantTimelineSection.tsx` — chronological merge of enrollment, requests, updates, appointments, notes, certifications, status changes, transfers; uses existing `useStudentDetail` data + new transfer events. Read-only.
+- Zero deletes. All assignments, notes, requests, files, reports, certifications, transfers, NDA acceptances, and historical activity remain intact and queryable for compliance.
+- Audit trail is append-only and protected by RLS.
+- Real-time propagation via the existing `useRealtimeBridge`.
 
-**Pages**
-- `src/pages/admin/ParticipantTransitions.tsx` — new route `/admin/transitions`. Tabs: **Pending**, **Acknowledged**, **All Transfers**, **Export History**, **Access Logs**. Tables with search/filter, links to student folder + transfer detail.
-- `src/pages/admin/TransferDetail.tsx` — route `/admin/transitions/:transferId`. Shows summary, included records, validation snapshot, chain-of-custody timeline, acknowledgement panel, signed download link.
+## Technical summary
 
-**Integration into existing pages (minimal, additive)**
-- `StudentDetail.tsx`: add new "Transfer & Records" tab containing `GenerateParticipantRecordCard`, transfer history for this student, `ParticipantTimelineSection`, and an "Initiate Transfer" button (Admin/Org Admin only).
-- Admin sidebar (existing `SidebarLayout.tsx`): add "Participant Transitions" link for Admin + Org Admin roles only.
-- `App.tsx`: register the two new routes inside the existing protected admin section.
-- `realtimeRouter.ts`: route changes for the 4 new tables to invalidate `['participant-exports']`, `['participant-transfers']`, `['transfer', id]`, `['student-detail', id]`.
+```text
+profiles ── deactivated_at/by/reason, reactivated_at/by  (new columns)
+user_status_audit (new, append-only)
+is_user_active() ── new SECURITY DEFINER helper
+has_role() ── wrapped with is_user_active() check  ← only existing fn modified
+set-user-active edge fn ── admin-only, revokes sessions, writes audit
+AuthContext + ProtectedRoute ── post-login + per-navigation guard
+UserManagement UI ── status column, filter, toggle w/ reason, audit history
+realtimeRouter ── publishes status changes sitewide
+```
 
-No other existing files touched.
+## Out of scope (will not change without approval)
 
----
-
-## 4. Permissions Summary
-
-| Action | Admin | Org Admin (from org) | Org Admin (to org) | Case Manager | Student |
-|---|---|---|---|---|---|
-| Generate export | ✓ | ✓ (own org students) | — | — | — |
-| Initiate transfer | ✓ | ✓ | — | — | — |
-| Acknowledge transfer | ✓ | — | ✓ | — | — |
-| View transitions dashboard | ✓ (all) | ✓ (own org scope) | ✓ (own org scope) | — | — |
-| Download export artifact | ✓ | ✓ (scope) | ✓ (after acknowledge, scope) | — | — |
-| View own timeline | ✓ | ✓ (scope) | ✓ (scope) | ✓ (assigned) | — |
-
----
-
-## 5. Validation Checks (warn-only, configurable)
-
-NDA unsigned · intake incomplete · no assigned case manager · open emergency requests · support requests `submitted`/`in_progress`/`escalated` · expired or expiring-30d certifications · missing participant_outcomes · missing demographics consent · post_grad_plan absent · attachments orphaned · open action items in notes.
-
-Returned as `{ key, severity: 'warn'|'info', label, count, link }[]` and persisted to `validation_snapshot` so audits can replay state at transfer time.
-
----
-
-## 6. Files
-
-**New (DB + Edge)**
-- 1 migration (4 tables + bucket + RLS + GRANTs)
-- `supabase/functions/generate-participant-record/index.ts`
-- `supabase/functions/acknowledge-participant-transfer/index.ts`
-- `supabase/functions/get-participant-export-url/index.ts`
-- `supabase/functions/_shared/participant-record-pdf.ts`
-- `supabase/functions/_shared/participant-record-validation.ts`
-
-**New (frontend)**
-- 4 hooks, 6 components, 2 pages (see above)
-
-**Modified (minimal, additive only)**
-- `src/App.tsx` — 2 routes
-- `src/components/layouts/SidebarLayout.tsx` — 1 nav link (Admin/Org Admin)
-- `src/pages/StudentDetail.tsx` — 1 new tab
-- `src/lib/realtimeRouter.ts` — 4 table mappings
-- `mem://index.md` — feature reference
-
-No other files touched. No changes to existing business logic, RLS on existing tables, or unrelated UI.
+- Existing RLS policies on any other table.
+- Existing role-change / delete-user flows.
+- Org Admin permissions on activation (admins only for v1).
+- Sidebar, dashboards, or other non-admin pages.
