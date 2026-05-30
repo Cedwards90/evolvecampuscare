@@ -296,6 +296,7 @@ function appendStudentSections(
 ) {
   const studentName = r.student?.full_name || r.student?.email || 'Unknown student';
   const cmName = r.caseManager?.full_name || r.caseManager?.email || 'Unassigned';
+  const orgName = r.organization?.name;
 
   // Student header
   doc.setFont('helvetica', 'bold');
@@ -305,11 +306,13 @@ function appendStudentSections(
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(60, 60, 60);
-  doc.text(
-    `Case manager: ${cmName}    Range: ${fmtDate(r.range.from)} – ${fmtDate(r.range.to)}`,
-    40,
-    startY + 14,
-  );
+  const meta = [
+    orgName ? `Organization: ${orgName}` : null,
+    `Case manager: ${cmName}`,
+    `Range: ${fmtDate(r.range.from)} – ${fmtDate(r.range.to)}`,
+  ].filter(Boolean).join('    ');
+  doc.text(meta, 40, startY + 14);
+
 
   autoTable(doc, {
     startY: startY + 24,
