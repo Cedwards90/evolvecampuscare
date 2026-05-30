@@ -924,8 +924,10 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
 }
 
 // ---- Check-Ins Tab Component ----
-function StudentCheckInsTab({ studentId, studentName }: { studentId: string; studentName?: string | null }) {
+function StudentCheckInsTab({ studentId, studentName, orgId }: { studentId: string; studentName?: string | null; orgId?: string | null }) {
   const { data: checkIns = [], isLoading } = useStudentCheckIns(studentId);
+  const orgName = useOrgName(orgId);
+
 
   const moodEmojis = ['😔', '😕', '😐', '🙂', '😊'];
   const progressLabels = ['Struggling', 'Behind', 'On Track', 'Progressing', 'Thriving'];
