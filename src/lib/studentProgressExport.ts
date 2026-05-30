@@ -541,8 +541,9 @@ export function exportBulkStudentProgressPdf(
   let y = 128;
   entries.forEach((e, i) => {
     const name = e.report.student?.full_name || e.report.student?.email || 'Unknown';
+    const org = e.report.organization?.name ? ` [${e.report.organization.name}]` : '';
     const risks = e.report.risks.length;
-    doc.text(`${i + 1}. ${name}  —  ${risks} risk indicator${risks === 1 ? '' : 's'}`, 40, y);
+    doc.text(`${i + 1}. ${name}${org}  —  ${risks} risk indicator${risks === 1 ? '' : 's'}`, 40, y);
     y += 14;
     if (y > 720) {
       doc.addPage();
@@ -556,9 +557,11 @@ export function exportBulkStudentProgressPdf(
       doc,
       'Student Progress Report',
       `${e.report.student?.full_name || e.report.student?.email || ''}  •  ${fmtDate(e.report.range.from)} – ${fmtDate(e.report.range.to)}`,
+      e.report.organization?.name || null,
     );
     appendStudentSections(doc, e.report, e.ai, 110);
   });
+
 
   drawFooter(doc);
   const from = format(new Date(entries[0].report.range.from), 'yyyy-MM-dd');
