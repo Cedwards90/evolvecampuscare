@@ -304,6 +304,14 @@ export default function Auth() {
   return (
     <AuthLayout>
       <Card className="border-border/50">
+        {searchParams.get('reason') === 'deactivated' && (
+          <div className="mx-6 mt-6 p-4 bg-destructive/10 rounded-lg border border-destructive/30">
+            <p className="font-medium text-destructive">Account inactive</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              This account is currently inactive. Please contact your administrator for assistance.
+            </p>
+          </div>
+        )}
         {/* Invitation Banner */}
         {invitation && (
           <div className="mx-6 mt-6 p-4 bg-primary/10 rounded-lg border border-primary/20">

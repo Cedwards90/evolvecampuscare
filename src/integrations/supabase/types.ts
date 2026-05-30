@@ -1213,6 +1213,9 @@ export type Database = {
           avatar_url: string | null
           cohort_start_date: string | null
           created_at: string
+          deactivated_at: string | null
+          deactivated_by: string | null
+          deactivation_reason: string | null
           department: string | null
           email: string
           full_name: string | null
@@ -1223,6 +1226,8 @@ export type Database = {
           placement_date: string | null
           preferred_contact: string | null
           preferred_language: string | null
+          reactivated_at: string | null
+          reactivated_by: string | null
           student_id: string | null
           updated_at: string
           user_id: string
@@ -1232,6 +1237,9 @@ export type Database = {
           avatar_url?: string | null
           cohort_start_date?: string | null
           created_at?: string
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          deactivation_reason?: string | null
           department?: string | null
           email: string
           full_name?: string | null
@@ -1242,6 +1250,8 @@ export type Database = {
           placement_date?: string | null
           preferred_contact?: string | null
           preferred_language?: string | null
+          reactivated_at?: string | null
+          reactivated_by?: string | null
           student_id?: string | null
           updated_at?: string
           user_id: string
@@ -1251,6 +1261,9 @@ export type Database = {
           avatar_url?: string | null
           cohort_start_date?: string | null
           created_at?: string
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          deactivation_reason?: string | null
           department?: string | null
           email?: string
           full_name?: string | null
@@ -1261,6 +1274,8 @@ export type Database = {
           placement_date?: string | null
           preferred_contact?: string | null
           preferred_language?: string | null
+          reactivated_at?: string | null
+          reactivated_by?: string | null
           student_id?: string | null
           updated_at?: string
           user_id?: string
@@ -2064,6 +2079,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_status_audit: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -2102,6 +2144,7 @@ export type Database = {
         Returns: boolean
       }
       is_org_suspended: { Args: { _org_id: string }; Returns: boolean }
+      is_user_active: { Args: { _user_id: string }; Returns: boolean }
       is_user_org_suspended: { Args: { _user_id: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
