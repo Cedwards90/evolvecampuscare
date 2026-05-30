@@ -121,9 +121,9 @@ export default function IntakeSurvey() {
             : null,
       };
       if (existing) {
-        await supabase.from('participant_outcomes').update(row).eq('id', existing.id);
+        await supabase.from('participant_outcomes').update(row as any).eq('id', existing.id);
       } else {
-        await supabase.from('participant_outcomes').insert(row);
+        await supabase.from('participant_outcomes').insert(row as any);
       }
     } catch (e) {
       console.warn('Could not seed participant_outcomes', e);
