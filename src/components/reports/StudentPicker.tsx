@@ -14,15 +14,18 @@ interface Props {
   onChange: (studentId: string) => void;
   /** When set, only show students assigned to this case manager */
   caseManagerId?: string;
+  /** When set, overrides the internal assignment query — use this for pre-filtered student lists. */
+  students?: { student_id: string; student?: { full_name?: string | null; email?: string | null } | null }[];
 }
 
-export function StudentPicker({ value, onChange, caseManagerId }: Props) {
+export function StudentPicker({ value, onChange, caseManagerId, students: studentsProp }: Props) {
   const { user, role } = useAuth();
   const { data: assignments, isLoading } = useStudentAssignments();
 
   const filterCm = caseManagerId ?? (role === 'case_manager' ? user?.id : undefined);
 
   const students = useMemo(() => {
+    if (studentsProp) return studentsProp;
     const list = (assignments || []).filter(
       (a) => !filterCm || a.case_manager_id === filterCm,
     );
@@ -33,7 +36,7 @@ export function StudentPicker({ value, onChange, caseManagerId }: Props) {
       seen.add(a.student_id);
       return !!a.student;
     });
-  }, [assignments, filterCm]);
+  }, [assignments, filterCm, studentsProp]);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
