@@ -47,7 +47,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRoleError(null);
       }
 
-      if (profileResult.data) setProfile(profileResult.data as Profile);
+      if (profileResult.data) {
+        const p = profileResult.data as Profile & { deactivated_at?: string | null };
+        if (p.deactivated_at) {
+          // Account is inactive — terminate the session immediately.
+          setProfile(null);
+          setRole(null);
+          await supabase.auth.signOut();
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth')) {
+            window.location.replace('/auth?reason=deactivated');
+          }
+          return;
+        }
+        setProfile(p as Profile);
+      }
       if (roleResult.data) setRole(roleResult.data as AppRole);
     } catch (error) {
       console.error('Error fetching user data:', error);
