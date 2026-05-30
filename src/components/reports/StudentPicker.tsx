@@ -41,9 +41,14 @@ export function StudentPicker({ value, onChange, caseManagerId, students: studen
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-sm text-muted-foreground">Student:</span>
-      <Select value={value} onValueChange={onChange} disabled={isLoading}>
+  const loading = !studentsProp && isLoading;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-sm text-muted-foreground">Student:</span>
+      <Select value={value} onValueChange={onChange} disabled={loading}>
         <SelectTrigger className="w-[280px]">
-          <SelectValue placeholder={isLoading ? 'Loading…' : 'Select a student'} />
+          <SelectValue placeholder={loading ? 'Loading…' : 'Select a student'} />
         </SelectTrigger>
         <SelectContent>
           {students.length === 0 && (
