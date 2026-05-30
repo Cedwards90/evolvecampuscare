@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { logFunnelEvent } from '@/lib/funnelEvents';
 
 const profileSchema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -105,6 +106,12 @@ export default function CompleteProfile() {
       if (error) throw error;
 
       await refreshProfile();
+
+      logFunnelEvent({
+        eventType: 'profile_completed',
+        userId: user.id,
+        organizationId: selectedOrgId || null,
+      });
 
       toast({
         title: 'Profile completed!',

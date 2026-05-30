@@ -212,6 +212,21 @@ export function invalidateForChange(
       inv(['participant-export-access-log', row.export_id]);
       break;
     }
+    case 'program_cost_settings': {
+      inv(['program-cost-settings']);
+      break;
+    }
+    case 'participant_funnel_events': {
+      inv(['funnel-events']);
+      break;
+    }
+    case 'participant_outcomes': {
+      inv(['participant-outcomes']);
+      studentIds.forEach((id) => inv(['participant-outcomes', id]));
+      studentIds.forEach((id) => inv(['student-detail', id]));
+      studentIds.forEach((id) => inv(['student-progress-report', id]));
+      break;
+    }
   }
 }
 
@@ -246,4 +261,7 @@ export const REALTIME_TABLES = [
   'participant_record_exports',
   'participant_record_access_log',
   'user_status_audit',
+  'program_cost_settings',
+  'participant_funnel_events',
+  'participant_outcomes',
 ] as const;

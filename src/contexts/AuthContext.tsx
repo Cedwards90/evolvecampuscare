@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { AppRole, Profile } from '@/types/database';
+import { logFunnelEvent } from '@/lib/funnelEvents';
+import { getQRSession } from '@/hooks/useQRSession';
 
 interface AuthContextType {
   user: User | null;
@@ -117,7 +119,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string, phone?: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
+    const { sessionId: qrSessionId } = getQRSession();
+
+    // Fire-and-forget pre-signup event (anon-allowed)
+    logFunnelEvent({
+      eventType: 'signup_started',
+      qrSessionId,
+      metadata: { email_domain: email.split('@')[1] || null },
+    });
+
     const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password,
@@ -141,6 +151,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // non-fatal; user can edit phone later in settings
         console.warn('Failed to persist phone on signup', e);
       }
+    }
+
+    if (!error && signUpData?.user?.id) {
+      logFunnelEvent({
+        eventType: 'signup_completed',
+        userId: signUpData.user.id,
+        qrSessionId,
+      });
     }
 
     return { error: error as Error | null };

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getQRSession, logQREvent, clearQRSession } from '@/hooks/useQRSession';
+import { logFunnelEvent } from '@/lib/funnelEvents';
 import type { RequestCategory, RequestPriority } from '@/types/database';
 
 interface SubmitRequestParams {
@@ -61,6 +62,33 @@ export function useSubmitRequest() {
       if (qrSessionId) {
         logQREvent({ eventType: 'action_completed', actionKind: 'request', targetId: data.id }).finally(() => clearQRSession());
       }
+
+      // Resolve org for funnel scoping
+      const { data: profileOrg } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      // Check if this is the student's first request
+      const { count } = await supabase
+        .from('support_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('student_id', userId);
+
+      logFunnelEvent({
+        eventType: 'request_submitted',
+        userId,
+        organizationId: (profileOrg as any)?.organization_id ?? null,
+        qrSessionId: qrSessionId ?? null,
+        metadata: {
+          request_id: data.id,
+          category,
+          priority,
+          is_first: (count ?? 1) <= 1,
+          is_emergency: isEmergency,
+        },
+      });
 
       // Always notify about the new request (notifies admins and/or assigned case manager)
       supabase.functions.invoke('notify-new-request', {
