@@ -1043,7 +1043,7 @@ function PostGradPlanTab({ studentId, studentName, orgId }: { studentId: string;
                   variant="outline"
                   size="sm"
                   className="rounded-full"
-                  onClick={() => downloadPlanPdf(plan as any, studentName)}
+                  onClick={() => downloadPlanPdf(plan as any, studentName, orgName)}
                 >
                   <Download className="mr-2 h-4 w-4" /> Download PDF
                 </Button>
