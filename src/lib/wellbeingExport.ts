@@ -102,12 +102,17 @@ export function downloadCheckInPdf(
   downloadPdf(doc, checkInFilename(checkIn, studentName));
 }
 
-export function downloadCheckInsPdf(checkIns: StudentCheckIn[], studentName?: string | null) {
+export function downloadCheckInsPdf(
+  checkIns: StudentCheckIn[],
+  studentName?: string | null,
+  orgName?: string | null,
+) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   header(
     doc,
     'Student Check-Ins',
     `${studentName ? studentName + ' · ' : ''}${checkIns.length} entries`,
+    orgName,
   );
 
   let y = 110;
