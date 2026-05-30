@@ -65,6 +65,10 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { CertificationsSection } from '@/components/certifications/CertificationsSection';
+import { GenerateParticipantRecordCard } from '@/components/transfers/GenerateParticipantRecordCard';
+import { InitiateTransferDialog } from '@/components/transfers/InitiateTransferDialog';
+import { ParticipantTransfersSection } from '@/components/transfers/ParticipantTransfersSection';
+import { ArrowRightLeft } from 'lucide-react';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -310,6 +314,12 @@ export default function StudentDetail() {
               <Award className="h-4 w-4" />
               Certifications
             </TabsTrigger>
+            {role !== 'student' && (
+              <TabsTrigger value="transfers" className="gap-2">
+                <ArrowRightLeft className="h-4 w-4" />
+                Transfer &amp; Records
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Requests Tab */}
@@ -483,6 +493,26 @@ export default function StudentDetail() {
           <TabsContent value="certifications" className="space-y-4">
             <CertificationsSection studentId={id!} canManage={role !== 'student'} />
           </TabsContent>
+
+          {/* Transfer & Records Tab */}
+          {role !== 'student' && (
+            <TabsContent value="transfers" className="space-y-4">
+              {(role === 'admin' || role === 'org_admin') && (
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <h2 className="text-lg font-semibold">Participant transfers</h2>
+                    <p className="text-sm text-muted-foreground">Chain of custody for handoffs between organizations.</p>
+                  </div>
+                  <InitiateTransferDialog
+                    studentId={id!}
+                    fromOrgId={student.profile?.organization_id ?? null}
+                  />
+                </div>
+              )}
+              <ParticipantTransfersSection studentId={id!} />
+              <GenerateParticipantRecordCard studentId={id!} />
+            </TabsContent>
+          )}
         </Tabs>
 
         {/* Edit Dates Dialog */}
