@@ -15,6 +15,7 @@ import { CheckCircle, ArrowLeft, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { downloadCheckInPdf } from '@/lib/wellbeingExport';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgName } from '@/hooks/useOrgName';
 
 const moodLabels = ['😔 Struggling', '😕 Not Great', '😐 Okay', '🙂 Good', '😊 Great'];
 const progressLabels = ['Struggling', 'Behind', 'On Track', 'Progressing Well', 'Thriving'];
@@ -24,6 +25,7 @@ export default function StudentCheckIn() {
   const submitCheckIn = useSubmitCheckIn();
   const markComplete = useMarkSurveyComplete();
   const { profile } = useAuth();
+  const orgName = useOrgName((profile as any)?.organization_id);
   const [moodRating, setMoodRating] = useState(3);
   const [progressRating, setProgressRating] = useState(3);
   const [wins, setWins] = useState('');
@@ -81,8 +83,10 @@ export default function StudentCheckIn() {
                         created_at: submittedAt || new Date().toISOString(),
                       },
                       profile?.full_name,
+                      orgName,
                     )
                   }
+
                 >
                   <Download className="mr-2 h-4 w-4" /> Download PDF
                 </Button>

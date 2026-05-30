@@ -49,6 +49,7 @@ import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDi
 import { GenerateStudentReportCard } from '@/components/reports/GenerateStudentReportCard';
 import { useFileNotes } from '@/hooks/useFileNotes';
 import { useStudentCheckIns } from '@/hooks/useStudentCheckIns';
+import { useOrgName } from '@/hooks/useOrgName';
 import { Textarea } from '@/components/ui/textarea';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -481,13 +482,22 @@ export default function StudentDetail() {
 
           {/* Check-Ins Tab */}
           <TabsContent value="checkins" className="space-y-4">
-            <StudentCheckInsTab studentId={id!} studentName={student.profile?.full_name || null} />
+            <StudentCheckInsTab
+              studentId={id!}
+              studentName={student.profile?.full_name || null}
+              orgId={student.profile?.organization_id || null}
+            />
           </TabsContent>
 
           {/* Post-Graduation Plan Tab */}
           <TabsContent value="grad-plan" className="space-y-4">
-            <PostGradPlanTab studentId={id!} studentName={student.profile?.full_name || null} />
+            <PostGradPlanTab
+              studentId={id!}
+              studentName={student.profile?.full_name || null}
+              orgId={student.profile?.organization_id || null}
+            />
           </TabsContent>
+
 
           {/* Certifications Tab */}
           <TabsContent value="certifications" className="space-y-4">
@@ -915,8 +925,10 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
 }
 
 // ---- Check-Ins Tab Component ----
-function StudentCheckInsTab({ studentId, studentName }: { studentId: string; studentName?: string | null }) {
+function StudentCheckInsTab({ studentId, studentName, orgId }: { studentId: string; studentName?: string | null; orgId?: string | null }) {
   const { data: checkIns = [], isLoading } = useStudentCheckIns(studentId);
+  const orgName = useOrgName(orgId);
+
 
   const moodEmojis = ['😔', '😕', '😐', '🙂', '😊'];
   const progressLabels = ['Struggling', 'Behind', 'On Track', 'Progressing', 'Thriving'];
@@ -940,7 +952,7 @@ function StudentCheckInsTab({ studentId, studentName }: { studentId: string; stu
           variant="outline"
           size="sm"
           className="rounded-full"
-          onClick={() => downloadCheckInsPdf(checkIns, studentName)}
+          onClick={() => downloadCheckInsPdf(checkIns, studentName, orgName)}
         >
           <Download className="mr-2 h-4 w-4" /> Download all (PDF)
         </Button>
@@ -963,7 +975,7 @@ function StudentCheckInsTab({ studentId, studentName }: { studentId: string; stu
                   variant="ghost"
                   size="sm"
                   className="rounded-full h-8"
-                  onClick={() => downloadCheckInPdf(checkIn, studentName)}
+                  onClick={() => downloadCheckInPdf(checkIn, studentName, orgName)}
                 >
                   <Download className="mr-1 h-3.5 w-3.5" /> PDF
                 </Button>
@@ -996,8 +1008,9 @@ function StudentCheckInsTab({ studentId, studentName }: { studentId: string; stu
   );
 }
 
-function PostGradPlanTab({ studentId, studentName }: { studentId: string; studentName?: string | null }) {
+function PostGradPlanTab({ studentId, studentName, orgId }: { studentId: string; studentName?: string | null; orgId?: string | null }) {
   const { data: plans = [], isLoading } = useStudentPlans(studentId);
+  const orgName = useOrgName(orgId);
 
   if (isLoading) return <LoadingSpinner />;
 
@@ -1030,7 +1043,7 @@ function PostGradPlanTab({ studentId, studentName }: { studentId: string; studen
                   variant="outline"
                   size="sm"
                   className="rounded-full"
-                  onClick={() => downloadPlanPdf(plan as any, studentName)}
+                  onClick={() => downloadPlanPdf(plan as any, studentName, orgName)}
                 >
                   <Download className="mr-2 h-4 w-4" /> Download PDF
                 </Button>

@@ -14,6 +14,7 @@ export interface InteractionReportParams {
 
 export interface InteractionReport {
   caseManager: Profile | null;
+  organization: { id: string; name: string } | null;
   range: { from: string; to: string };
   generatedAt: string;
   summary: {
@@ -240,8 +241,21 @@ export function useInteractionReport({ caseManagerId, from, to }: InteractionRep
         rows: appts,
       };
 
+      // Fetch case manager's organization for report branding
+      let organization: { id: string; name: string } | null = null;
+      const orgId = (profileRes.data as Profile | null)?.organization_id;
+      if (orgId) {
+        const { data: orgRow } = await supabase
+          .from('training_organizations')
+          .select('id, name')
+          .eq('id', orgId)
+          .maybeSingle();
+        if (orgRow) organization = { id: orgRow.id, name: orgRow.name };
+      }
+
       return {
         caseManager: (profileRes.data || null) as Profile | null,
+        organization,
         range: { from: fromIso, to: toIso },
         generatedAt: new Date().toISOString(),
         summary: {

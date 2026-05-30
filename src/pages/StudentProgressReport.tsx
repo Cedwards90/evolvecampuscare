@@ -278,6 +278,18 @@ export default function StudentProgressReportPage() {
       caseManager = cmProfile;
     }
 
+    let organization: { id: string; name: string } | null = null;
+    const orgId = (studentRes.data as any)?.organization_id;
+    if (orgId) {
+      const { data: orgRow } = await supabase
+        .from('training_organizations')
+        .select('id, name')
+        .eq('id', orgId)
+        .maybeSingle();
+      if (orgRow) organization = { id: orgRow.id, name: orgRow.name };
+    }
+
+
     const notes = notesRes.data || [];
     const messagesSent = messagesSentRes.data || [];
     const messagesReceived = messagesReceivedRes.data || [];
@@ -356,6 +368,7 @@ export default function StudentProgressReportPage() {
     return {
       student: studentRes.data,
       caseManager,
+      organization,
       range: { from: fromIso, to: toIso },
       generatedAt: new Date().toISOString(),
       summary: {

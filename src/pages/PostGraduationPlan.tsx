@@ -14,6 +14,7 @@ import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageNav } from '@/components/navigation/PageNav';
 import { downloadPlanPdf } from '@/lib/wellbeingExport';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgName } from '@/hooks/useOrgName';
 
 const STEPS = [
   { key: 'goals', title: 'Career & Education', icon: GraduationCap, description: 'Your career and education goals for the first year after graduation.' },
@@ -28,6 +29,7 @@ export default function PostGraduationPlan() {
   const submitPlan = useSubmitPlan();
   const markComplete = useMarkSurveyComplete();
   const { profile } = useAuth();
+  const orgName = useOrgName((profile as any)?.organization_id);
   const [currentStep, setCurrentStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
@@ -118,6 +120,7 @@ export default function PostGraduationPlan() {
                     additional_notes: additionalNotes || null,
                   },
                   profile?.full_name,
+                  orgName,
                 )
               }
             >
