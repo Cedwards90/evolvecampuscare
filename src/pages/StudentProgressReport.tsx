@@ -501,8 +501,9 @@ export default function StudentProgressReportPage() {
                   <Download className="mr-2 h-4 w-4" />
                   PDF
                 </Button>
-              </div>
             </div>
+
+
 
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border/60 p-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
