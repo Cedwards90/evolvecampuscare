@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logFunnelEvent } from '@/lib/funnelEvents';
 
 const SESSION_KEY = 'qr_session_id';
 const CODE_KEY = 'qr_code_id';
@@ -70,6 +71,16 @@ export async function logQREvent(params: {
     target_id: params.targetId || null,
     user_agent: navigator.userAgent.slice(0, 500),
   });
+
+  // Mirror the initial 'scan' into the unified participant funnel
+  if (params.eventType === 'scan') {
+    logFunnelEvent({
+      eventType: 'qr_scan',
+      qrSessionId: sessionId,
+      userId: userData.user?.id || null,
+      metadata: { qr_code_id: qrCodeId },
+    });
+  }
 }
 
 export function useQRSession() {

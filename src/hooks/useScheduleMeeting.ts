@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getQRSession, logQREvent, clearQRSession } from '@/hooks/useQRSession';
+import { logFunnelEvent } from '@/lib/funnelEvents';
 
 interface ScheduleMeetingParams {
   studentId: string;
@@ -42,6 +43,28 @@ export function useScheduleMeeting() {
       if (qrSessionId) {
         logQREvent({ eventType: 'action_completed', actionKind: 'meeting', targetId: appointment.id }).finally(() => clearQRSession());
       }
+
+      // Funnel event
+      const { data: profileOrg } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('user_id', params.studentId)
+        .maybeSingle();
+      const { count } = await supabase
+        .from('appointments')
+        .select('id', { count: 'exact', head: true })
+        .eq('student_id', params.studentId);
+      logFunnelEvent({
+        eventType: 'meeting_scheduled',
+        userId: params.studentId,
+        organizationId: (profileOrg as any)?.organization_id ?? null,
+        qrSessionId: qrSessionId ?? null,
+        metadata: {
+          appointment_id: appointment.id,
+          case_manager_id: params.caseManagerId,
+          is_first: (count ?? 1) <= 1,
+        },
+      });
 
       // Call edge function to create calendar event and send notifications
       const { data: calendarResult, error: calendarError } = await supabase.functions.invoke('create-calendar-event', {

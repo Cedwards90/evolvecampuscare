@@ -1,81 +1,87 @@
-# Bulk Student Access Controls by Organization
 
-Admin-only bulk action to deactivate or reactivate **all students** tied to a selected parent organization. Uses the existing per-user deactivation primitives (`profiles.deactivated_at`, `user_status_audit`, session revocation) so historical records (reports, case notes, assignments, documents) stay intact and remain visible to authorized admins exactly as today.
+# Impact Analytics — Phase 0: Data Layer
 
-## Scope (what changes)
+Scope per your answers: just the data foundation now, scoped to Admins + Org Admins, with intake-collected baseline wage + staff-entered outcomes, and admin-editable cost settings for future SROI. UI dashboards come in a later phase.
 
-Only these surfaces are touched. No other parts of the codebase are modified.
+Good news: most tables already exist (`participant_outcomes`, `participant_demographics`, `impact_survey_templates/assignments/responses`, `funding_goals`, `impact_report_audit`, `donor_report_templates`). This phase fills the remaining gaps.
 
-1. **New edge function**: `supabase/functions/bulk-set-org-students-active/index.ts`
-2. **Config**: append a `[functions.bulk-set-org-students-active]` block with `verify_jwt = false` to `supabase/config.toml` (function handles auth in-code, matching `set-user-active`).
-3. **New hook**: `src/hooks/useBulkOrgStudentStatus.ts` (preview query + mutation).
-4. **New component**: `src/components/admin/BulkOrgStudentStatusDialog.tsx`.
-5. **One mount point**: a "Bulk student access" button added to `src/pages/admin/OrganizationDetail.tsx` header (admin-only, gated by `useUserRole`). No changes to org listing, user management, or any data display logic.
+## What gets built
 
-## Edge function: `bulk-set-org-students-active`
+### 1. New tables (migration)
+- **`program_cost_settings`** — admin-editable cost inputs for SROI.
+  Columns: `id`, `organization_id` (nullable = global default), `period_start`, `period_end`, `annual_program_cost`, `cost_per_participant_override` (nullable), `avg_public_benefit_offset` (nullable, used for justice-involved / housing-insecure offsets), `currency` (default `USD`), `notes`, `created_by`, timestamps.
+  RLS: Admins manage all; Org Admins manage rows where `organization_id` is their org; all staff can SELECT.
+- **`participant_funnel_events`** — lightweight event log for the QR → signup → intake → first request → placement funnel.
+  Columns: `id`, `user_id` (nullable for pre-signup events), `qr_session_id` (nullable), `organization_id` (nullable), `event_type` (enum-ish text: `qr_scan`, `signup_started`, `signup_completed`, `nda_accepted`, `profile_completed`, `intake_completed`, `first_request_submitted`, `first_meeting_scheduled`, `placement_recorded`), `metadata` jsonb, `created_at`.
+  RLS: service role + staff SELECT scoped by org.
 
-Mirrors the security pattern of `set-user-active`:
+### 2. Intake survey extension
+- Add a baseline employment block to `src/pages/IntakeSurvey.tsx`:
+  - `currently_employed` (yes/no)
+  - `baseline_hourly_wage` (numeric, optional)
+  - `baseline_weekly_hours` (numeric, optional)
+  - `baseline_employer` (text, optional)
+- On submit, also upsert a `participant_outcomes` row with `baseline_wage` populated (the row already exists for retention tracking; this just seeds it).
+- Store the full block in `intake_responses` as today, so historical answers are preserved.
 
-- Validates `Authorization` header, loads user via anon client + `auth.getUser()`.
-- Requires `admin` role in `user_roles` (org admins are **not** allowed — explicit product decision; bulk org-wide deactivation is too destructive for org-scoped roles). Returns 403 otherwise.
-- Input (zod-style validation): `{ organizationId: string (uuid), active: boolean, reason?: string (≤500 chars), mode: 'preview' | 'apply', confirmation?: string }`.
-- For `mode: 'apply'` when `active=false`, require `confirmation === 'DEACTIVATE'` (matches existing destructive-action pattern from delete-user flow).
-- Resolves affected students as the union of:
-  - `profiles.user_id` where `organization_id = :org` AND role = `student`
-  - `organization_memberships.user_id` where `organization_id = :org AND left_at IS NULL` AND role = `student`
-  - Excludes the calling admin (defensive — admins are not students, but matches `set-user-active` self-protection).
-  - For `active=true` (reactivate): only rows currently `deactivated_at IS NOT NULL`.
-  - For `active=false` (deactivate): only rows currently `deactivated_at IS NULL`.
-- **Preview mode** returns `{ count, sample: [{ user_id, full_name, email }] (max 25), totalAffected }` with no writes.
-- **Apply mode** processes in batches of 50:
-  - Service-role `UPDATE profiles` setting the same fields `set-user-active` sets (deactivated_at/by/reason or reactivated_at/by + clears).
-  - Bulk `INSERT` into `user_status_audit` with `action='deactivated'|'reactivated'`, `reason`, and `metadata = { bulk: true, organization_id, batch_id }` where `batch_id` is a generated uuid included in the response for compliance traceability.
-  - On deactivation, iterate `admin.auth.admin.signOut(userId, 'global')` per user, wrapped in try/catch (non-fatal).
-- Returns `{ success, batchId, processed, failed, skipped, sample }`.
-- All errors funneled through `sanitizeError`.
+### 3. Staff outcomes entry UI (minimal)
+- New tab "Outcomes" on `StudentDetail.tsx` (staff-only) wired to `participant_outcomes`:
+  - Employment status, employer, job title, placement date, hourly wage, weekly hours
+  - Retention checkpoints (30/60/90/180/365) — auto-suggest dates from placement date; staff toggle "met"
+  - Program completion fields
+- Hook: `src/hooks/useParticipantOutcomes.ts` (read + upsert + realtime).
 
-No schema changes required — `user_status_audit` and the `profiles` deactivation columns already exist. The existing `has_role()` security definer already blocks deactivated users platform-wide via `is_user_active()`, so loss-of-access is immediate. RLS on student records (case notes, assignments, reports, attachments, transfers) already keys off `can_staff_manage_student` / org-admin scope, **not** on the student's active flag — so authorized admins continue to see history unchanged. Verified against current `can_staff_manage_student`, `file_notes`, `student_assignments`, `participant_*` policies in context.
+### 4. Cost settings admin page (minimal form, no dashboard yet)
+- New section in `src/pages/Settings.tsx` → "Program Costs" card, visible to Admins (global) and Org Admins (their org).
+- CRUD list of `program_cost_settings` rows by period.
+- Hook: `src/hooks/useProgramCostSettings.ts`.
 
-## Hook: `useBulkOrgStudentStatus`
+### 5. Funnel event emission
+- Edit existing flows to fire `participant_funnel_events` writes (no UI yet):
+  - `useQRSession` → `qr_scan`
+  - `AuthContext.signUp` → `signup_started` / `signup_completed`
+  - `AcceptNda` success → `nda_accepted`
+  - `CompleteProfile` save → `profile_completed`
+  - `IntakeSurvey` final submit → `intake_completed`
+  - `useSubmitRequest` first-ever request for that student → `first_request_submitted`
+  - `useScheduleMeeting` first appointment → `first_meeting_scheduled`
+  - Outcomes upsert with `placement_date` set → `placement_recorded`
+- All writes scoped by org where available; RLS allows authenticated insert of own/scoped events.
 
-- `usePreview(orgId, active)` → React Query against the edge function with `mode: 'preview'`, enabled only when dialog opens.
-- `useMutation` → calls with `mode: 'apply'`. On success, invalidates `['users']`, `['organization-detail', orgId]`, `['organization-members', orgId]`, and `['user-status-audit']` query keys (matching existing key conventions). Real-time bridge already covers profile/audit changes.
+### 6. Realtime + types
+- Add new tables to `src/lib/realtimeRouter.ts` and the `supabase_realtime` publication.
+- No changes to `types/database.ts` (auto-regenerated from Supabase).
 
-## Component: `BulkOrgStudentStatusDialog`
+## What is NOT in this phase
+- No dashboard pages, charts, SROI calculator UI, equity report, or PDF exports yet — those plug into this data layer in Phase 1.
+- No demographics consent UI changes (table already exists).
+- No changes to `impact_survey_*` tables (already in place).
 
-Single dialog with two modes (deactivate / reactivate) driven by a prop:
+## Files touched
 
-1. **Summary card**: org name + live preview count ("This will deactivate 23 active students in <Org>").
-2. **Affected students preview**: scrollable list of up to 25 names/emails, with "+N more" indicator.
-3. **Reason field** (required for deactivate, recommended for reactivate; max 500 chars).
-4. **Confirmation input**: user must type `DEACTIVATE` (deactivate flow) or `REACTIVATE` (reactivate flow) to enable submit. Matches existing destructive-action UX in admin user deletion.
-5. **Footer info**: explicit notice that "Reports, case notes, assignments, documents, and history remain visible to authorized admins. Deactivated students lose login access immediately." + timestamp of action will be recorded.
-6. **Submit** → mutation; toast with batch id + processed/failed counts; closes on success.
+```text
+supabase/migrations/<new>.sql            (new tables, RLS, grants, realtime)
+src/hooks/useParticipantOutcomes.ts      (new)
+src/hooks/useProgramCostSettings.ts      (new)
+src/hooks/useFunnelEvents.ts             (new — small helper)
+src/pages/IntakeSurvey.tsx               (add baseline employment block + outcomes seed)
+src/pages/StudentDetail.tsx              (new Outcomes tab)
+src/components/outcomes/OutcomesSection.tsx (new)
+src/components/admin/ProgramCostSettings.tsx (new)
+src/pages/Settings.tsx                   (mount cost settings for admin/org_admin)
+src/contexts/AuthContext.tsx             (signup funnel events)
+src/pages/AcceptNda.tsx                  (nda_accepted event)
+src/pages/CompleteProfile.tsx            (profile_completed event)
+src/hooks/useQRSession.ts                (qr_scan event)
+src/hooks/useSubmitRequest.ts            (first_request_submitted)
+src/hooks/useScheduleMeeting.ts          (first_meeting_scheduled)
+src/lib/realtimeRouter.ts                (register new tables)
+mem://features/impact-analytics-data-v1  (new memory)
+```
 
-Uses existing shadcn `Dialog`, `Button`, `Textarea`, `Input`, `Alert`, `ScrollArea` — no new deps.
-
-## Mount point in `OrganizationDetail.tsx`
-
-In the page header actions area, add (admin-only):
-
-- "Deactivate all students" (destructive variant) — opens dialog with `active=false`.
-- "Reactivate all students" (secondary) — opens dialog with `active=true`. Disabled when preview count = 0.
-
-No other JSX or logic in that page is altered.
-
-## Compliance & audit checklist
-
-- ✅ Confirmation: typed-string gate.
-- ✅ Permission checks: admin-only in edge function + role-gated UI.
-- ✅ Affected preview: dedicated preview mode, ≤25 sample names + total.
-- ✅ Reason: stored on `profiles.deactivation_reason` and `user_status_audit.reason`.
-- ✅ Timestamps: `deactivated_at` / `reactivated_at` already auto-set; `user_status_audit.created_at` provides immutable log.
-- ✅ Audit logging: one row per user per action, tagged with `batch_id` and `organization_id` in metadata for compliance reporting.
-- ✅ Immediate access loss: `is_user_active()` denies in `has_role()`/`is_org_admin()`; sessions revoked via `auth.admin.signOut(..., 'global')`.
-- ✅ History preserved: no deletes; staff/admin RLS on related tables is independent of student active flag.
-
-## Out of scope (no changes)
-
-- No DB migrations.
-- No edits to existing edge functions, hooks, pages, or RLS policies.
-- No changes to `UserManagement.tsx` or `TrainingOrganizations.tsx` listing pages.
+## Acceptance
+- Admin can add a `program_cost_settings` row from Settings; Org Admin can do the same scoped to their org.
+- Student intake captures baseline wage and seeds `participant_outcomes`.
+- Staff can record placement + retention + wage on a student from the new Outcomes tab.
+- Key lifecycle actions produce `participant_funnel_events` rows visible in the DB.
+- No existing flows regress; everything new is permission-scoped.

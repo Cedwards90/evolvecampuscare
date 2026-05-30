@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Home, Target, Sparkles, ChevronRight, ChevronLeft, SkipForward } from 'lucide-react';
+import { Heart, Home, Target, Sparkles, ChevronRight, ChevronLeft, SkipForward, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -9,13 +9,18 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useIntakeSurvey } from '@/hooks/useIntakeSurvey';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { logFunnelEvent } from '@/lib/funnelEvents';
 
 const STEPS = [
   { key: 'about_you', title: 'About You', icon: Home, description: 'Let us get to know you a little better.' },
   { key: 'daily_needs', title: 'Day-to-Day Needs', icon: Sparkles, description: 'Help us understand what your day-to-day looks like.' },
   { key: 'wellbeing', title: 'Your Wellbeing', icon: Heart, description: 'We want to make sure you feel supported.' },
+  { key: 'work_income', title: 'Work & Income', icon: Briefcase, description: 'A snapshot of your current work — used to measure impact over time.' },
   { key: 'goals', title: 'Your Goals', icon: Target, description: "Let's talk about what success looks like for you." },
 ];
 
@@ -23,6 +28,7 @@ export default function IntakeSurvey() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { saveSection, completeIntake } = useIntakeSurvey();
+  const { user, profile } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [saving, setSaving] = useState(false);
 
@@ -41,7 +47,13 @@ export default function IntakeSurvey() {
   const [talkSupport, setTalkSupport] = useState('');
   const [interestedResources, setInterestedResources] = useState<string[]>([]);
 
-  // Step 4 state
+  // Step 4 state (Work & Income)
+  const [currentlyEmployed, setCurrentlyEmployed] = useState('');
+  const [baselineHourlyWage, setBaselineHourlyWage] = useState<string>('');
+  const [baselineWeeklyHours, setBaselineWeeklyHours] = useState<string>('');
+  const [baselineEmployer, setBaselineEmployer] = useState('');
+
+  // Step 5 state (Goals)
   const [mainReason, setMainReason] = useState('');
   const [successVision, setSuccessVision] = useState('');
   const [anythingElse, setAnythingElse] = useState('');
@@ -70,9 +82,51 @@ export default function IntakeSurvey() {
       case 2:
         return { stress_level: stressLevel[0], talk_support: talkSupport, interested_resources: interestedResources };
       case 3:
+        return {
+          currently_employed: currentlyEmployed,
+          baseline_hourly_wage: baselineHourlyWage ? Number(baselineHourlyWage) : null,
+          baseline_weekly_hours: baselineWeeklyHours ? Number(baselineWeeklyHours) : null,
+          baseline_employer: baselineEmployer,
+        };
+      case 4:
         return { main_reason: mainReason, success_vision: successVision, anything_else: anythingElse };
       default:
         return {};
+    }
+  };
+
+  const seedParticipantOutcomes = async () => {
+    if (!user?.id) return;
+    const baseline = baselineHourlyWage ? Number(baselineHourlyWage) : null;
+    const weekly = baselineWeeklyHours ? Number(baselineWeeklyHours) : null;
+    if (!baseline && !weekly && !baselineEmployer && !currentlyEmployed) return;
+    try {
+      const { data: existing } = await supabase
+        .from('participant_outcomes')
+        .select('id')
+        .eq('student_id', user.id)
+        .maybeSingle();
+      const row: Record<string, any> = {
+        student_id: user.id,
+        baseline_wage: baseline,
+        weekly_hours: weekly,
+        employer: baselineEmployer || null,
+        employment_status:
+          currentlyEmployed === 'Yes — full-time'
+            ? 'employed_full_time'
+            : currentlyEmployed === 'Yes — part-time'
+            ? 'employed_part_time'
+            : currentlyEmployed === 'No'
+            ? 'unemployed'
+            : null,
+      };
+      if (existing) {
+        await supabase.from('participant_outcomes').update(row as any).eq('id', existing.id);
+      } else {
+        await supabase.from('participant_outcomes').insert(row as any);
+      }
+    } catch (e) {
+      console.warn('Could not seed participant_outcomes', e);
     }
   };
 
@@ -87,7 +141,14 @@ export default function IntakeSurvey() {
       if (currentStep < STEPS.length - 1) {
         setCurrentStep(currentStep + 1);
       } else {
+        // Seed participant_outcomes with baseline employment data captured in step 4
+        await seedParticipantOutcomes();
         await completeIntake.mutateAsync();
+        logFunnelEvent({
+          eventType: 'intake_completed',
+          userId: user?.id ?? null,
+          organizationId: profile?.organization_id ?? null,
+        });
         toast({ title: 'Thank you!', description: 'Your responses have been saved. We are here for you.' });
         navigate('/dashboard');
       }
@@ -255,8 +316,45 @@ export default function IntakeSurvey() {
             </>
           )}
 
-          {/* Step 4: Your Goals */}
+          {/* Step 4: Work & Income */}
           {currentStep === 3 && (
+            <>
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Are you currently working?</Label>
+                <RadioGroup value={currentlyEmployed} onValueChange={setCurrentlyEmployed} className="grid gap-2">
+                  {['Yes — full-time', 'Yes — part-time', 'No', 'Prefer not to say'].map(opt => (
+                    <div key={opt} className="flex items-center space-x-3 rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors">
+                      <RadioGroupItem value={opt} id={`emp-${opt}`} />
+                      <Label htmlFor={`emp-${opt}`} className="flex-1 cursor-pointer text-sm">{opt}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+
+              {(currentlyEmployed === 'Yes — full-time' || currentlyEmployed === 'Yes — part-time') && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="employer" className="text-sm font-medium">Employer (optional)</Label>
+                    <Input id="employer" placeholder="Where do you currently work?" value={baselineEmployer} onChange={(e) => setBaselineEmployer(e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="wage" className="text-sm font-medium">Hourly wage (USD)</Label>
+                      <Input id="wage" type="number" min="0" step="0.25" inputMode="decimal" placeholder="e.g. 17.50" value={baselineHourlyWage} onChange={(e) => setBaselineHourlyWage(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="hours" className="text-sm font-medium">Weekly hours</Label>
+                      <Input id="hours" type="number" min="0" step="1" inputMode="numeric" placeholder="e.g. 30" value={baselineWeeklyHours} onChange={(e) => setBaselineWeeklyHours(e.target.value)} />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">We use this only to measure how our program impacts your earnings over time. You can update it anytime in your profile.</p>
+                </>
+              )}
+            </>
+          )}
+
+          {/* Step 5: Your Goals */}
+          {currentStep === 4 && (
             <>
               <div className="space-y-3">
                 <Label className="text-sm font-medium">What's the main reason you're reaching out for support?</Label>

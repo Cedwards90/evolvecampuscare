@@ -8,11 +8,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { toast } from "sonner";
 import { ShieldCheck } from "lucide-react";
+import { logFunnelEvent } from "@/lib/funnelEvents";
 
 export default function AcceptNda() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, user, profile } = useAuth();
   const { data: nda, isLoading } = useCurrentNda();
   const accept = useAcceptNda();
 
@@ -41,6 +42,12 @@ export default function AcceptNda() {
     if (!nda) return;
     try {
       await accept.mutateAsync(nda.id);
+      logFunnelEvent({
+        eventType: 'nda_accepted',
+        userId: user?.id ?? null,
+        organizationId: profile?.organization_id ?? null,
+        metadata: { nda_version: nda.version },
+      });
       toast.success("Agreement accepted");
       await Promise.resolve();
       navigate(redirect, { replace: true });
