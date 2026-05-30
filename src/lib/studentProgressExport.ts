@@ -491,10 +491,16 @@ export function exportStudentProgressPdf(
   ai?: AISummarySections | null,
 ) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const subtitleParts = [
+    r.student?.full_name || r.student?.email || '',
+    `${fmtDate(r.range.from)} – ${fmtDate(r.range.to)}`,
+    `Generated ${fmt(r.generatedAt)}`,
+  ];
   drawHeader(
     doc,
     'Student Progress Report',
-    `${r.student?.full_name || r.student?.email || ''}  •  ${fmtDate(r.range.from)} – ${fmtDate(r.range.to)}  •  Generated ${fmt(r.generatedAt)}`,
+    subtitleParts.filter(Boolean).join('  •  '),
+    r.organization?.name || null,
   );
   appendStudentSections(doc, r, ai, 110);
   drawFooter(doc);
@@ -512,7 +518,17 @@ export function exportBulkStudentProgressPdf(
 ) {
   if (!entries.length) throw new Error('No reports to export');
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
-  drawHeader(doc, 'Caseload Student Progress Reports', rangeLabel);
+  const orgNames = Array.from(
+    new Set(entries.map((e) => e.report.organization?.name).filter(Boolean)),
+  ) as string[];
+  const coverOrg =
+    orgNames.length === 1
+      ? orgNames[0]
+      : orgNames.length > 1
+        ? `Multiple organizations (${orgNames.length})`
+        : null;
+  drawHeader(doc, 'Caseload Student Progress Reports', rangeLabel, coverOrg);
+
 
   // Cover with TOC
   doc.setFont('helvetica', 'bold');
