@@ -38,9 +38,6 @@ export function StudentPicker({ value, onChange, caseManagerId, students: studen
     });
   }, [assignments, filterCm, studentsProp]);
 
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm text-muted-foreground">Student:</span>
   const loading = !studentsProp && isLoading;
 
   return (
