@@ -161,17 +161,23 @@ export function exportReportCsv(r: InteractionReport) {
 export function exportReportPdf(r: InteractionReport) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const pageWidth = doc.internal.pageSize.getWidth();
+  const orgName = r.organization?.name?.trim();
 
-  // Header
+  // Header — organization name takes priority; Evolve attribution stays secondary
   doc.setFillColor(5, 77, 59); // Forest Green
   doc.rect(0, 0, pageWidth, 70, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
-  doc.text('Evolve Foundation', 40, 32);
-  doc.setFontSize(12);
+  doc.text(orgName || 'Evolve Foundation', 40, 32);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.text('Case Manager Interaction Report', 40, 52);
+  if (orgName) {
+    doc.setFontSize(9);
+    doc.setTextColor(220, 230, 220);
+    doc.text('Powered by Evolve Foundation', pageWidth - 40, 32, { align: 'right' });
+  }
 
   doc.setTextColor(40, 40, 40);
   doc.setFontSize(11);
@@ -182,6 +188,10 @@ export function exportReportPdf(r: InteractionReport) {
   doc.setFontSize(10);
   y += 14;
   doc.text(r.caseManager?.email || '', 40, y);
+  if (orgName) {
+    y += 14;
+    doc.text(`Organization: ${orgName}`, 40, y);
+  }
   y += 14;
   doc.text(
     `Range: ${fmtDate(r.range.from)} – ${fmtDate(r.range.to)}    Generated: ${fmt(r.generatedAt)}`,
@@ -189,6 +199,7 @@ export function exportReportPdf(r: InteractionReport) {
     y,
   );
   y += 10;
+
 
   autoTable(doc, {
     startY: y + 6,
