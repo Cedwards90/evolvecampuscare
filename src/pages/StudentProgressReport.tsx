@@ -1,29 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
-import { CalendarIcon, Download, FileText, Loader2, Users } from 'lucide-react';
+import { Download, FileText, Loader2, Users } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { PageNav } from '@/components/navigation/PageNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { useStudentAssignments } from '@/hooks/useStudentAssignments';
 import {
   useStudentProgressReport,
   getStudentReportPresetRange,
   type StudentReportPreset,
   type StudentProgressReport,
 } from '@/hooks/useStudentProgressReport';
+import { useReportStudentFilters } from '@/hooks/useReportStudentFilters';
 import { StudentPicker } from '@/components/reports/StudentPicker';
 import { StudentReportPreview } from '@/components/reports/StudentReportPreview';
+import { ReportFilters } from '@/components/reports/ReportFilters';
 import {
   AISummaryPanel,
 } from '@/components/reports/AISummaryPanel';
@@ -38,11 +32,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
-const PRESETS: { key: Exclude<StudentReportPreset, 'custom'>; label: string }[] = [
-  { key: 'daily', label: 'Daily' },
-  { key: 'weekly', label: 'Weekly' },
-  { key: 'monthly', label: 'Monthly' },
-];
+
 
 export default function StudentProgressReportPage() {
   const { studentId: routeStudentId } = useParams();
