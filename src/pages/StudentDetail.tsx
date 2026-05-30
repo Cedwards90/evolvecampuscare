@@ -975,7 +975,7 @@ function StudentCheckInsTab({ studentId, studentName, orgId }: { studentId: stri
                   variant="ghost"
                   size="sm"
                   className="rounded-full h-8"
-                  onClick={() => downloadCheckInPdf(checkIn, studentName)}
+                  onClick={() => downloadCheckInPdf(checkIn, studentName, orgName)}
                 >
                   <Download className="mr-1 h-3.5 w-3.5" /> PDF
                 </Button>
