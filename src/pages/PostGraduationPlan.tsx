@@ -29,6 +29,7 @@ export default function PostGraduationPlan() {
   const submitPlan = useSubmitPlan();
   const markComplete = useMarkSurveyComplete();
   const { profile } = useAuth();
+  const orgName = useOrgName((profile as any)?.organization_id);
   const [currentStep, setCurrentStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
