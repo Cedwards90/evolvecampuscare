@@ -31,6 +31,8 @@ const roleLabels: Record<string, string> = {
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
   const { org, members, stats } = useOrganizationDetail(id);
+  const { role } = useAuth();
+  const [bulkOpen, setBulkOpen] = useState<null | { active: boolean }>(null);
 
   if (org.isLoading) {
     return <SidebarLayout><LoadingSpinner /></SidebarLayout>;
