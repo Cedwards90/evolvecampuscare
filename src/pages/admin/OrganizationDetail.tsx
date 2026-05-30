@@ -137,8 +137,40 @@ export default function OrganizationDetail() {
                 </div>
               </div>
             </div>
+            {role === 'admin' && (
+              <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t">
+                <span className="text-sm font-medium text-muted-foreground mr-2">Bulk student access:</span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setBulkOpen({ active: false })}
+                >
+                  <UserX className="h-4 w-4 mr-1.5" />
+                  Deactivate all students
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBulkOpen({ active: true })}
+                >
+                  <UserCheck2 className="h-4 w-4 mr-1.5" />
+                  Reactivate all students
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
+
+        {role === 'admin' && id && bulkOpen && (
+          <BulkOrgStudentStatusDialog
+            open={!!bulkOpen}
+            onOpenChange={(o) => !o && setBulkOpen(null)}
+            organizationId={id}
+            organizationName={organization.name}
+            active={bulkOpen.active}
+          />
+        )}
+
 
         {/* Tabs */}
         <Tabs defaultValue="current" className="space-y-4">
