@@ -23,6 +23,11 @@ export interface Profile {
   organization_id?: string | null;
   created_at: string;
   updated_at: string;
+  deactivated_at?: string | null;
+  deactivated_by?: string | null;
+  deactivation_reason?: string | null;
+  reactivated_at?: string | null;
+  reactivated_by?: string | null;
 }
 
 export interface UserRole {
