@@ -507,7 +507,7 @@ export default function StudentProgressReportPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border/60 p-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Users className="h-4 w-4" />
-                Bulk export for {role === 'admin' ? 'all assigned students' : 'your caseload'} ({myStudents.length})
+                Bulk export for filtered students ({myStudents.length})
               </div>
               <div className="flex items-center gap-2">
                 <Button
