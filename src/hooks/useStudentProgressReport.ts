@@ -281,6 +281,19 @@ export function useStudentProgressReport({
         caseManager = (cmProfile as Profile) || null;
       }
 
+      // Look up organization (for branding in reports/exports)
+      let organization: { id: string; name: string } | null = null;
+      const orgId = (studentRes.data as Profile | null)?.organization_id;
+      if (orgId) {
+        const { data: orgRow } = await supabase
+          .from('training_organizations')
+          .select('id, name')
+          .eq('id', orgId)
+          .maybeSingle();
+        if (orgRow) organization = { id: orgRow.id, name: orgRow.name };
+      }
+
+
       const notes = (notesRes.data || []) as FileNoteLite[];
       const messagesSent = (messagesSentRes.data || []) as StaffMessageLite[];
       const messagesReceived = (messagesReceivedRes.data || []) as StaffMessageLite[];
