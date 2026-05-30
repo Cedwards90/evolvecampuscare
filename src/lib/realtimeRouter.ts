@@ -214,14 +214,17 @@ export function invalidateForChange(
     }
     case 'program_cost_settings': {
       inv(['program-cost-settings']);
+      inv(['impact-analytics']);
       break;
     }
     case 'participant_funnel_events': {
       inv(['funnel-events']);
+      inv(['impact-analytics']);
       break;
     }
     case 'participant_outcomes': {
       inv(['participant-outcomes']);
+      inv(['impact-analytics']);
       studentIds.forEach((id) => inv(['participant-outcomes', id]));
       studentIds.forEach((id) => inv(['student-detail', id]));
       studentIds.forEach((id) => inv(['student-progress-report', id]));

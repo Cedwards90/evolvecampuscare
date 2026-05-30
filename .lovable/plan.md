@@ -1,87 +1,123 @@
+# Impact Analytics Dashboard
 
-# Impact Analytics — Phase 0: Data Layer
+A single dashboard that rolls up the data layer we just shipped (funnel events, outcomes, program costs, demographics, surveys) into a logic-model view: **Inputs → Activities → Outputs → Outcomes → Impact**. Scoped automatically: Admins see the whole platform, Org Admins see only their org(s).
 
-Scope per your answers: just the data foundation now, scoped to Admins + Org Admins, with intake-collected baseline wage + staff-entered outcomes, and admin-editable cost settings for future SROI. UI dashboards come in a later phase.
+## Route & Navigation
 
-Good news: most tables already exist (`participant_outcomes`, `participant_demographics`, `impact_survey_templates/assignments/responses`, `funding_goals`, `impact_report_audit`, `donor_report_templates`). This phase fills the remaining gaps.
+- New page: `/admin/impact` → `src/pages/admin/ImpactDashboard.tsx`
+- Sidebar entry "Impact Analytics" for Admins and Org Admins (under Reports section)
+- Uses existing `PageNav` and `GlobalFilterBar` patterns
 
-## What gets built
+## Filter Bar (top of page)
 
-### 1. New tables (migration)
-- **`program_cost_settings`** — admin-editable cost inputs for SROI.
-  Columns: `id`, `organization_id` (nullable = global default), `period_start`, `period_end`, `annual_program_cost`, `cost_per_participant_override` (nullable), `avg_public_benefit_offset` (nullable, used for justice-involved / housing-insecure offsets), `currency` (default `USD`), `notes`, `created_by`, timestamps.
-  RLS: Admins manage all; Org Admins manage rows where `organization_id` is their org; all staff can SELECT.
-- **`participant_funnel_events`** — lightweight event log for the QR → signup → intake → first request → placement funnel.
-  Columns: `id`, `user_id` (nullable for pre-signup events), `qr_session_id` (nullable), `organization_id` (nullable), `event_type` (enum-ish text: `qr_scan`, `signup_started`, `signup_completed`, `nda_accepted`, `profile_completed`, `intake_completed`, `first_request_submitted`, `first_meeting_scheduled`, `placement_recorded`), `metadata` jsonb, `created_at`.
-  RLS: service role + staff SELECT scoped by org.
+Powered by a new `useImpactFilters` hook + URL params for deep-linking:
 
-### 2. Intake survey extension
-- Add a baseline employment block to `src/pages/IntakeSurvey.tsx`:
-  - `currently_employed` (yes/no)
-  - `baseline_hourly_wage` (numeric, optional)
-  - `baseline_weekly_hours` (numeric, optional)
-  - `baseline_employer` (text, optional)
-- On submit, also upsert a `participant_outcomes` row with `baseline_wage` populated (the row already exists for retention tracking; this just seeds it).
-- Store the full block in `intake_responses` as today, so historical answers are preserved.
+- **Date range** (preset: 30/90/180/365/All, or custom) — `ReportRangePicker`
+- **Organization** — multi-select (Admin: all orgs; Org Admin: locked to their orgs)
+- **Cohort / Class year** — from existing `useFilterOptions`
+- **Case Manager** — multi-select (Admin only)
+- **Demographics** — gender, age range, veteran, justice-involved, disability (uses `participant_demographics`)
+- **Reset / Save view** button
 
-### 3. Staff outcomes entry UI (minimal)
-- New tab "Outcomes" on `StudentDetail.tsx` (staff-only) wired to `participant_outcomes`:
-  - Employment status, employer, job title, placement date, hourly wage, weekly hours
-  - Retention checkpoints (30/60/90/180/365) — auto-suggest dates from placement date; staff toggle "met"
-  - Program completion fields
-- Hook: `src/hooks/useParticipantOutcomes.ts` (read + upsert + realtime).
+All downstream queries derive from a single `ImpactFiltersContext` so cards, charts, and exports stay in sync.
 
-### 4. Cost settings admin page (minimal form, no dashboard yet)
-- New section in `src/pages/Settings.tsx` → "Program Costs" card, visible to Admins (global) and Org Admins (their org).
-- CRUD list of `program_cost_settings` rows by period.
-- Hook: `src/hooks/useProgramCostSettings.ts`.
-
-### 5. Funnel event emission
-- Edit existing flows to fire `participant_funnel_events` writes (no UI yet):
-  - `useQRSession` → `qr_scan`
-  - `AuthContext.signUp` → `signup_started` / `signup_completed`
-  - `AcceptNda` success → `nda_accepted`
-  - `CompleteProfile` save → `profile_completed`
-  - `IntakeSurvey` final submit → `intake_completed`
-  - `useSubmitRequest` first-ever request for that student → `first_request_submitted`
-  - `useScheduleMeeting` first appointment → `first_meeting_scheduled`
-  - Outcomes upsert with `placement_date` set → `placement_recorded`
-- All writes scoped by org where available; RLS allows authenticated insert of own/scoped events.
-
-### 6. Realtime + types
-- Add new tables to `src/lib/realtimeRouter.ts` and the `supabase_realtime` publication.
-- No changes to `types/database.ts` (auto-regenerated from Supabase).
-
-## What is NOT in this phase
-- No dashboard pages, charts, SROI calculator UI, equity report, or PDF exports yet — those plug into this data layer in Phase 1.
-- No demographics consent UI changes (table already exists).
-- No changes to `impact_survey_*` tables (already in place).
-
-## Files touched
+## Dashboard Sections (logic model)
 
 ```text
-supabase/migrations/<new>.sql            (new tables, RLS, grants, realtime)
-src/hooks/useParticipantOutcomes.ts      (new)
-src/hooks/useProgramCostSettings.ts      (new)
-src/hooks/useFunnelEvents.ts             (new — small helper)
-src/pages/IntakeSurvey.tsx               (add baseline employment block + outcomes seed)
-src/pages/StudentDetail.tsx              (new Outcomes tab)
-src/components/outcomes/OutcomesSection.tsx (new)
-src/components/admin/ProgramCostSettings.tsx (new)
-src/pages/Settings.tsx                   (mount cost settings for admin/org_admin)
-src/contexts/AuthContext.tsx             (signup funnel events)
-src/pages/AcceptNda.tsx                  (nda_accepted event)
-src/pages/CompleteProfile.tsx            (profile_completed event)
-src/hooks/useQRSession.ts                (qr_scan event)
-src/hooks/useSubmitRequest.ts            (first_request_submitted)
-src/hooks/useScheduleMeeting.ts          (first_meeting_scheduled)
-src/lib/realtimeRouter.ts                (register new tables)
-mem://features/impact-analytics-data-v1  (new memory)
+┌─────────────────────────────────────────────────────────┐
+│ 1. INPUTS         Program cost, staff capacity, $/seat   │
+│ 2. ACTIVITIES     Requests handled, meetings, check-ins  │
+│ 3. OUTPUTS        Certifications earned, plans completed │
+│ 4. OUTCOMES       Placement, wage lift, retention curves │
+│ 5. IMPACT         SROI, equity gaps, lifetime value      │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## Acceptance
-- Admin can add a `program_cost_settings` row from Settings; Org Admin can do the same scoped to their org.
-- Student intake captures baseline wage and seeds `participant_outcomes`.
-- Staff can record placement + retention + wage on a student from the new Outcomes tab.
-- Key lifecycle actions produce `participant_funnel_events` rows visible in the DB.
-- No existing flows regress; everything new is permission-scoped.
+### 1. Inputs (from `program_cost_settings`, `user_roles`)
+- Total program cost (period)
+- Cost per active participant
+- Active case managers / org admins
+- Caseload distribution sparkline
+
+### 2. Activities (from `participant_funnel_events`, `support_requests`, `appointments`, `messages`, `student_check_ins`)
+- Funnel: QR scan → Signup → NDA → Intake → First request → Meeting (conversion % between stages)
+- Requests submitted vs resolved (area chart)
+- Meetings scheduled / completed
+- Check-ins submitted, average mood trend
+
+### 3. Outputs (from `student_certifications`, `post_graduation_plans`, `participant_record_exports`)
+- Certifications earned (count + by category)
+- Post-grad plans completed
+- Records transferred / handoffs completed
+
+### 4. Outcomes (from `participant_outcomes`)
+- Placement rate (% with `placement_date`)
+- Average wage lift = `hourly_wage − baseline_wage`
+- Retention curve: 30 / 60 / 90 / 180 / 365 day % (line chart)
+- Time-to-placement distribution
+- Program completion rate
+
+### 5. Impact (computed)
+- **SROI ratio** = (wage lift × annualized hours × placed count + public-benefit offsets) ÷ program cost
+- **Equity panel**: outcome parity gap by gender / ethnicity / veteran / justice-involved (bar comparison vs overall)
+- **Lifetime earnings lift** (projected) per cohort
+- **Goal progress**: pulls active `funding_goals`, shows actual vs target with progress bar
+
+## Data Layer
+
+New hook file `src/hooks/useImpactAnalytics.ts` with composed queries (React Query, 5-min stale):
+- `useImpactInputs(filters)`
+- `useImpactActivities(filters)`
+- `useImpactOutputs(filters)`
+- `useImpactOutcomes(filters)`
+- `useImpactSROI(filters)` — derives from outcomes + costs
+- `useImpactEquity(filters)` — joins outcomes with demographics
+
+All queries respect existing RLS — no new policies needed. Org Admins automatically see only their org because every table is already scoped through `user_in_org_admin_scope_v2` / `is_org_admin_of`.
+
+Realtime: register the analytics query keys in `src/lib/realtimeRouter.ts` so cards refresh when new outcomes/funnel events arrive.
+
+## Components
+
+```text
+src/components/impact/
+├── ImpactFilterBar.tsx
+├── InputsSection.tsx
+├── ActivitiesSection.tsx
+├── FunnelChart.tsx          (custom Recharts funnel)
+├── OutputsSection.tsx
+├── OutcomesSection.tsx
+├── RetentionCurve.tsx       (line chart)
+├── ImpactSection.tsx
+├── SROICard.tsx
+├── EquityPanel.tsx          (grouped bar)
+└── GoalProgressCard.tsx
+```
+
+Reuses existing `StatsCard`, `AreaChartCard`, `SparklineCard`, `FractionStatsCard`, `PercentageStatsCard`, `chart.tsx`.
+
+## Export
+
+"Export" button in header → PDF + CSV via extension of `src/lib/reportExport.ts`:
+- PDF: branded header (org name if filtered + "Powered by Evolve Foundation"), each section as a page, charts rasterized
+- CSV: flat metrics table + raw outcomes rows
+- Logs an entry to `impact_report_audit`
+
+## Out of scope (this pass)
+- Editing program cost settings (already in Settings)
+- Configuring funding goals UI (separate task if needed)
+- Survey response analytics (separate, larger module)
+
+## Files Created / Modified
+
+**Created**
+- `src/pages/admin/ImpactDashboard.tsx`
+- `src/contexts/ImpactFiltersContext.tsx`
+- `src/hooks/useImpactAnalytics.ts`
+- `src/components/impact/*` (10 files above)
+
+**Modified**
+- `src/App.tsx` — add route
+- `src/components/layouts/SidebarLayout.tsx` — nav link (Admin + Org Admin)
+- `src/lib/realtimeRouter.ts` — invalidate impact queries on outcome/funnel changes
+- `src/lib/reportExport.ts` — add `exportImpactReport()`
