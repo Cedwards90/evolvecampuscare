@@ -83,8 +83,10 @@ export default function StudentCheckIn() {
                         created_at: submittedAt || new Date().toISOString(),
                       },
                       profile?.full_name,
+                      orgName,
                     )
                   }
+
                 >
                   <Download className="mr-2 h-4 w-4" /> Download PDF
                 </Button>
