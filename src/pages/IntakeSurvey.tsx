@@ -316,8 +316,45 @@ export default function IntakeSurvey() {
             </>
           )}
 
-          {/* Step 4: Your Goals */}
+          {/* Step 4: Work & Income */}
           {currentStep === 3 && (
+            <>
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Are you currently working?</Label>
+                <RadioGroup value={currentlyEmployed} onValueChange={setCurrentlyEmployed} className="grid gap-2">
+                  {['Yes — full-time', 'Yes — part-time', 'No', 'Prefer not to say'].map(opt => (
+                    <div key={opt} className="flex items-center space-x-3 rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors">
+                      <RadioGroupItem value={opt} id={`emp-${opt}`} />
+                      <Label htmlFor={`emp-${opt}`} className="flex-1 cursor-pointer text-sm">{opt}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+
+              {(currentlyEmployed === 'Yes — full-time' || currentlyEmployed === 'Yes — part-time') && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="employer" className="text-sm font-medium">Employer (optional)</Label>
+                    <Input id="employer" placeholder="Where do you currently work?" value={baselineEmployer} onChange={(e) => setBaselineEmployer(e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="wage" className="text-sm font-medium">Hourly wage (USD)</Label>
+                      <Input id="wage" type="number" min="0" step="0.25" inputMode="decimal" placeholder="e.g. 17.50" value={baselineHourlyWage} onChange={(e) => setBaselineHourlyWage(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="hours" className="text-sm font-medium">Weekly hours</Label>
+                      <Input id="hours" type="number" min="0" step="1" inputMode="numeric" placeholder="e.g. 30" value={baselineWeeklyHours} onChange={(e) => setBaselineWeeklyHours(e.target.value)} />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">We use this only to measure how our program impacts your earnings over time. You can update it anytime in your profile.</p>
+                </>
+              )}
+            </>
+          )}
+
+          {/* Step 5: Your Goals */}
+          {currentStep === 4 && (
             <>
               <div className="space-y-3">
                 <Label className="text-sm font-medium">What's the main reason you're reaching out for support?</Label>
