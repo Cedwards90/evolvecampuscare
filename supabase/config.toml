@@ -37,3 +37,5 @@ project_id = "kxhykddsllizazoqxevu"
     verify_jwt = false
   [functions.acknowledge-participant-transfer]
     verify_jwt = false
+  [functions.set-user-active]
+    verify_jwt = false
