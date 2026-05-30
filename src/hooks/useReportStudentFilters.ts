@@ -96,19 +96,24 @@ export function useReportStudentFilters(
       const p = a.student;
       if (!p) return false;
 
+      const profile = p as typeof p & {
+        cohort_start_date?: string | null;
+        year_of_study?: string | null;
+      };
+
       if (filters.organizationIds.length > 0) {
-        if (!p.organization_id || !filters.organizationIds.includes(p.organization_id))
+        if (!profile.organization_id || !filters.organizationIds.includes(profile.organization_id))
           return false;
       }
 
       if (filters.cohorts.length > 0) {
-        if (!p.cohort_start_date) return false;
-        const y = String(new Date(p.cohort_start_date).getUTCFullYear());
+        if (!profile.cohort_start_date) return false;
+        const y = String(new Date(profile.cohort_start_date).getUTCFullYear());
         if (!filters.cohorts.includes(y)) return false;
       }
 
       if (filters.yearsOfStudy.length > 0) {
-        if (!p.year_of_study || !filters.yearsOfStudy.includes(p.year_of_study))
+        if (!profile.year_of_study || !filters.yearsOfStudy.includes(profile.year_of_study))
           return false;
       }
 
