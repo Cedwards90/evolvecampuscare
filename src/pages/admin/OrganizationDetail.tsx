@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Building2, Users, Mail, User, GraduationCap, UserCheck, Shield, FileText } from 'lucide-react';
+import { ArrowLeft, Building2, Users, Mail, User, GraduationCap, UserCheck, Shield, FileText, UserX, UserCheck2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -12,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useOrganizationDetail } from '@/hooks/useOrganizationDetail';
+import { useAuth } from '@/contexts/AuthContext';
+import { BulkOrgStudentStatusDialog } from '@/components/admin/BulkOrgStudentStatusDialog';
 
 const roleIcons: Record<string, typeof GraduationCap> = {
   student: GraduationCap,
