@@ -10,8 +10,12 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, role, isLoading } = useAuth();
+  const { user, role, profile, isLoading } = useAuth();
   const location = useLocation();
+
+  if (profile?.deactivated_at) {
+    return <Navigate to="/auth?reason=deactivated" replace />;
+  }
 
   const { data: nda, isLoading: ndaLoading } = useCurrentNda();
   const { data: acceptance, isLoading: accLoading, isFetching: accFetching } = useMyNdaAcceptance(nda?.id);
