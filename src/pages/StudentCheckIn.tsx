@@ -25,6 +25,7 @@ export default function StudentCheckIn() {
   const submitCheckIn = useSubmitCheckIn();
   const markComplete = useMarkSurveyComplete();
   const { profile } = useAuth();
+  const orgName = useOrgName((profile as any)?.organization_id);
   const [moodRating, setMoodRating] = useState(3);
   const [progressRating, setProgressRating] = useState(3);
   const [wins, setWins] = useState('');
