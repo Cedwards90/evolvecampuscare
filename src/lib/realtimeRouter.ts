@@ -184,6 +184,26 @@ export function invalidateForChange(
       inv(['expiring-certifications']);
       break;
     }
+    case 'participant_transfers': {
+      inv(['participant-transfers']);
+      studentIds.forEach((id) => inv(['participant-transfers', { student_id: id }]));
+      studentIds.forEach((id) => inv(['student-detail', id]));
+      break;
+    }
+    case 'participant_transfer_events': {
+      inv(['participant-transfer-events', row.transfer_id]);
+      inv(['participant-transfers']);
+      break;
+    }
+    case 'participant_record_exports': {
+      inv(['participant-exports', 'all']);
+      studentIds.forEach((id) => inv(['participant-exports', id]));
+      break;
+    }
+    case 'participant_record_access_log': {
+      inv(['participant-export-access-log', row.export_id]);
+      break;
+    }
   }
 }
 
@@ -213,4 +233,8 @@ export const REALTIME_TABLES = [
   'nda_acceptances',
   'certification_catalog',
   'student_certifications',
+  'participant_transfers',
+  'participant_transfer_events',
+  'participant_record_exports',
+  'participant_record_access_log',
 ] as const;
