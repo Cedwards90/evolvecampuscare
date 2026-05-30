@@ -95,6 +95,6 @@ Deno.serve(async (req) => {
     return json({ success: true });
   } catch (err) {
     console.error('set-user-active error', err);
-    return json({ error: sanitizeError(err) }, 500);
+    return json({ error: sanitizeError(err, 'set-user-active') }, 500);
   }
 });

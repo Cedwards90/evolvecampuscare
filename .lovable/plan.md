@@ -1,48 +1,40 @@
-## Goal
+## Problem
 
-Add a filter panel to the Student Progress Reports page (`/reports/student/...`) that scopes which students appear in the picker and bulk export. Filters: **Organization**, **Class (cohort)**, **Year of Study**, **Assigned Case Manager**, **Student Status (Active/Inactive)**, and **Date Range** (already exists for report period). All filters respect existing RLS and update counts, picker, and export in real time.
+Toggling a user's active/inactive state fails with "Failed to update status. Failed to send a request to the edge function."
 
-Scope is limited to the Reports area — no changes to other pages, hooks, RLS, or business logic outside this feature.
+### Root cause
+
+- `supabase.functions.invoke('set-user-active', ...)` returns an SDK-level FunctionsFetchError ("failed to send a request"), which means the response never reached the client.
+- Supabase edge logs for `set-user-active` show **zero requests**, even though the function has booted recently. The request is being rejected at the gateway before reaching the function runtime.
+- `supabase/config.toml` lists every other custom edge function with `verify_jwt = false`, but `set-user-active` is missing. Under the new signing‑keys system the gateway then defaults to enforcing JWT verification, and the admin's session JWT is bounced (likely because privileged users are at AAL1 until they complete MFA on this device, or because the project's JWT secret rotation isn't being honoured for this function). Either way, the gateway rejects the request and the SDK reports it as a network failure.
+- The function already validates the user in code (`auth.getUser()` + `user_roles.role = 'admin'`), so disabling gateway JWT verification is safe and matches the convention used by every other admin function in this project.
+
+### Secondary issue
+
+`sanitizeError(err)` is called with one argument inside `set-user-active/index.ts`, but the shared helper signature is `sanitizeError(error, context)`. This still works but loses the log context.
 
 ## Changes
 
-### 1. New filter hook — `src/hooks/useReportStudentFilters.ts`
-- Build the filterable student pool by joining `student_assignments` (already cached via `useStudentAssignments`) with `profiles` fields: `organization_id`, `cohort_start_date`, `year_of_study`, `deactivated_at`.
-- Pull the assigned student's organization from `profiles.organization_id` (already maintained by `sync_profile_organization` trigger).
-- Apply filters client-side over the RLS-scoped result. No new DB queries beyond fetching the needed profile columns (extend existing fetch in `useStudentAssignments` — read-only, additive).
-- Returns: `{ filteredStudents, counts: { total, matching } }`.
+1. **`supabase/config.toml`** — add a config block for the function so the gateway stops blocking it:
 
-### 2. New UI component — `src/components/reports/ReportFilters.tsx`
-- Local filter state (not the global filter context — keeps this page self-contained and avoids side effects on other pages).
-- Controls (using existing `FilterMultiSelect` + shadcn primitives):
-  - Organization (from `useFilterOptions().organizations`)
-  - Class / Cohort
-  - Year of Study
-  - Assigned Case Manager (admin/org_admin only; case managers are auto-scoped to themselves)
-  - Student Status: Active / Inactive / All (default Active)
-  - Date Range — reuses existing preset + custom popover (moved into this component for cohesion)
-- Active-filter chips with individual remove + "Reset filters" button.
-- Permission-aware: case managers see only their own caseload (CM picker hidden); org admins see only orgs they administer (filtered against `org_admin_orgs`).
+   ```toml
+   [functions.set-user-active]
+     verify_jwt = false
+   ```
 
-### 3. Update `src/pages/StudentProgressReport.tsx`
-- Replace the inline preset bar with `<ReportFilters />`.
-- Replace `myStudents` derivation with `filteredStudents` from the new hook.
-- Update the bulk-export label/count to reflect filtered count in real time.
-- Keep single-student picker (`StudentPicker`) but feed it the filtered list (extend `StudentPicker` props to accept an optional pre-filtered student list — backward compatible).
-- Bulk export iterates only over `filteredStudents`. Range and per-student fetch logic unchanged.
-- Hard guard: if a filter produces 0 students, disable bulk buttons with a helpful empty state.
+   No other entries in the file change.
 
-### 4. Real-time sync
-- No new subscriptions needed. The existing `realtimeRouter` already invalidates `['student-assignments']`, `['profiles']`, and `['global-filter-options']` on relevant table changes. Counts and filtered list will refresh automatically when assignments, profile org/cohort, or deactivation status change.
+2. **`supabase/functions/set-user-active/index.ts`** — pass a context string to `sanitizeError` so server‑side logs remain useful:
 
-### 5. URL persistence (lightweight)
-- Serialize filter selections into `searchParams` (e.g. `?org=...&cohort=...&cm=...&status=active`) so deep links and back-navigation preserve the filtered view. Reuses the existing `useSearchParams` already in the page.
+   ```ts
+   return json({ error: sanitizeError(err, 'set-user-active') }, 500);
+   ```
 
-## Out of Scope (per user's "no other changes" rule)
-- No edits to `GlobalFiltersContext`, RLS policies, edge functions, or other report types.
-- No schema changes — all needed fields already exist on `profiles`.
-- No changes to single-report fetch logic or export formats.
+3. **Verification** — after redeploy:
+   - Call the function with `supabase--curl_edge_functions` as the logged‑in admin and confirm a `200 { success: true }`.
+   - Toggle a non‑admin user from Admin → User Management and confirm the optimistic UI update sticks and the audit row appears in `user_status_audit`.
+   - Re‑check `supabase--edge_function_logs set-user-active` to confirm the invocation now shows up.
 
-## Files
-- **Create:** `src/hooks/useReportStudentFilters.ts`, `src/components/reports/ReportFilters.tsx`
-- **Modify:** `src/pages/StudentProgressReport.tsx`, `src/components/reports/StudentPicker.tsx` (additive prop only)
+## Out of scope
+
+No changes to RLS, the audit table, the `useSetUserActive` hook, or any UI. The fix is intentionally minimal — only the gateway configuration and the one logging argument.
