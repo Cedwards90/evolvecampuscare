@@ -49,6 +49,7 @@ import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDi
 import { GenerateStudentReportCard } from '@/components/reports/GenerateStudentReportCard';
 import { useFileNotes } from '@/hooks/useFileNotes';
 import { useStudentCheckIns } from '@/hooks/useStudentCheckIns';
+import { useOrgName } from '@/hooks/useOrgName';
 import { Textarea } from '@/components/ui/textarea';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
