@@ -141,7 +141,14 @@ export default function IntakeSurvey() {
       if (currentStep < STEPS.length - 1) {
         setCurrentStep(currentStep + 1);
       } else {
+        // Seed participant_outcomes with baseline employment data captured in step 4
+        await seedParticipantOutcomes();
         await completeIntake.mutateAsync();
+        logFunnelEvent({
+          eventType: 'intake_completed',
+          userId: user?.id ?? null,
+          organizationId: profile?.organization_id ?? null,
+        });
         toast({ title: 'Thank you!', description: 'Your responses have been saved. We are here for you.' });
         navigate('/dashboard');
       }
