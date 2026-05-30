@@ -883,6 +883,36 @@ export type Database = {
         }
         Relationships: []
       }
+      participant_funnel_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          organization_id: string | null
+          qr_session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          organization_id?: string | null
+          qr_session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          organization_id?: string | null
+          qr_session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       participant_outcomes: {
         Row: {
           baseline_wage: number | null
@@ -1290,6 +1320,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      program_cost_settings: {
+        Row: {
+          annual_program_cost: number
+          avg_public_benefit_offset: number | null
+          cost_per_participant_override: number | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          notes: string | null
+          organization_id: string | null
+          period_end: string
+          period_start: string
+          updated_at: string
+        }
+        Insert: {
+          annual_program_cost: number
+          avg_public_benefit_offset?: number | null
+          cost_per_participant_override?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          period_end: string
+          period_start: string
+          updated_at?: string
+        }
+        Update: {
+          annual_program_cost?: number
+          avg_public_benefit_offset?: number | null
+          cost_per_participant_override?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          period_end?: string
+          period_start?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       qr_codes: {
         Row: {
