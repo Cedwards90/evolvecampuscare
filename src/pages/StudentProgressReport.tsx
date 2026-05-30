@@ -122,13 +122,16 @@ export default function StudentProgressReportPage() {
     }
   };
 
-  // ---- Bulk export ----
-  const { data: assignments } = useStudentAssignments();
-  const myStudents = useMemo(() => {
-    if (!user) return [];
-    if (role === 'admin') return assignments || [];
-    return (assignments || []).filter((a) => a.case_manager_id === user.id);
-  }, [assignments, user, role]);
+  // ---- Filters + bulk export pool ----
+  const {
+    filters,
+    setFilter,
+    resetFilters,
+    filteredStudents,
+    totalCount,
+    matchingCount,
+  } = useReportStudentFilters();
+  const myStudents = filteredStudents;
   const [bulkLoading, setBulkLoading] = useState(false);
 
   const fetchReportFor = async (
