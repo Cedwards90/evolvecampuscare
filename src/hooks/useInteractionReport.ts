@@ -14,6 +14,7 @@ export interface InteractionReportParams {
 
 export interface InteractionReport {
   caseManager: Profile | null;
+  organization: { id: string; name: string } | null;
   range: { from: string; to: string };
   generatedAt: string;
   summary: {
