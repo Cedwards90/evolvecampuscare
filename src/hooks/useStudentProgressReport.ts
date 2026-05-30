@@ -46,6 +46,7 @@ export interface StaffMessageLite {
 export interface StudentProgressReport {
   student: Profile | null;
   caseManager: Profile | null;
+  organization: { id: string; name: string } | null;
   range: { from: string; to: string };
   generatedAt: string;
   // Section 2: deterministic activity summary
