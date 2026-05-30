@@ -160,7 +160,11 @@ export interface PlanLike {
   additional_notes: string | null;
 }
 
-export function downloadPlanPdf(plan: PlanLike, studentName?: string | null) {
+export function downloadPlanPdf(
+  plan: PlanLike,
+  studentName?: string | null,
+  orgName?: string | null,
+) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   header(
     doc,
@@ -168,7 +172,9 @@ export function downloadPlanPdf(plan: PlanLike, studentName?: string | null) {
     `${studentName ? studentName + ' · ' : ''}Submitted ${format(new Date(plan.created_at), 'PPP')}${
       plan.graduation_date ? ` · Graduation ${format(new Date(plan.graduation_date), 'PPP')}` : ''
     }`,
+    orgName,
   );
+
 
   autoTable(doc, {
     startY: 110,
