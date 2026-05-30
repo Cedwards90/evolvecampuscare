@@ -368,6 +368,7 @@ export default function StudentProgressReportPage() {
     return {
       student: studentRes.data,
       caseManager,
+      organization,
       range: { from: fromIso, to: toIso },
       generatedAt: new Date().toISOString(),
       summary: {
