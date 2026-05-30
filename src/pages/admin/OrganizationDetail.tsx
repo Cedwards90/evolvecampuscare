@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Building2, Users, Mail, User, GraduationCap, UserCheck, Shield, FileText } from 'lucide-react';
+import { ArrowLeft, Building2, Users, Mail, User, GraduationCap, UserCheck, Shield, FileText, UserX, UserCheck2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -12,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useOrganizationDetail } from '@/hooks/useOrganizationDetail';
+import { useAuth } from '@/contexts/AuthContext';
+import { BulkOrgStudentStatusDialog } from '@/components/admin/BulkOrgStudentStatusDialog';
 
 const roleIcons: Record<string, typeof GraduationCap> = {
   student: GraduationCap,
@@ -28,6 +31,8 @@ const roleLabels: Record<string, string> = {
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
   const { org, members, stats } = useOrganizationDetail(id);
+  const { role } = useAuth();
+  const [bulkOpen, setBulkOpen] = useState<null | { active: boolean }>(null);
 
   if (org.isLoading) {
     return <SidebarLayout><LoadingSpinner /></SidebarLayout>;
@@ -132,8 +137,40 @@ export default function OrganizationDetail() {
                 </div>
               </div>
             </div>
+            {role === 'admin' && (
+              <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t">
+                <span className="text-sm font-medium text-muted-foreground mr-2">Bulk student access:</span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setBulkOpen({ active: false })}
+                >
+                  <UserX className="h-4 w-4 mr-1.5" />
+                  Deactivate all students
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBulkOpen({ active: true })}
+                >
+                  <UserCheck2 className="h-4 w-4 mr-1.5" />
+                  Reactivate all students
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
+
+        {role === 'admin' && id && bulkOpen && (
+          <BulkOrgStudentStatusDialog
+            open={!!bulkOpen}
+            onOpenChange={(o) => !o && setBulkOpen(null)}
+            organizationId={id}
+            organizationName={organization.name}
+            active={bulkOpen.active}
+          />
+        )}
+
 
         {/* Tabs */}
         <Tabs defaultValue="current" className="space-y-4">

@@ -39,3 +39,5 @@ project_id = "kxhykddsllizazoqxevu"
     verify_jwt = false
   [functions.set-user-active]
     verify_jwt = false
+  [functions.bulk-set-org-students-active]
+    verify_jwt = false
