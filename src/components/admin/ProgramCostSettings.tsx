@@ -22,7 +22,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EmptyState } from '@/components/EmptyState';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActiveOrganizations } from '@/hooks/useTrainingOrganizations';
-import { useOrgAdmins } from '@/hooks/useOrgAdmins';
+import { useMyOrgAdminOrgs } from '@/hooks/useOrgAdmins';
 import {
   useProgramCostSettings,
   useUpsertProgramCostSetting,
@@ -60,8 +60,8 @@ export function ProgramCostSettingsCard() {
 
   // Determine which orgs the current user can manage
   const { data: orgs } = useActiveOrganizations();
-  const { data: orgAdminRows } = useOrgAdmins(user?.id);
-  const orgAdminOrgIds = (orgAdminRows || []).map((r: any) => r.organization_id);
+  const { data: myOrgIds = [] } = useMyOrgAdminOrgs();
+  const orgAdminOrgIds = myOrgIds;
   const manageableOrgs = isAdmin
     ? (orgs || [])
     : (orgs || []).filter((o) => orgAdminOrgIds.includes(o.id));
