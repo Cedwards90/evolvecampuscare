@@ -454,55 +454,30 @@ export default function StudentProgressReportPage() {
             <CardTitle className="text-base">Report options</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <StudentPicker value={studentId} onChange={handleStudentChange} />
+            <ReportFilters
+              filters={filters}
+              setFilter={setFilter}
+              resetFilters={resetFilters}
+              preset={preset}
+              from={from}
+              to={to}
+              onPresetChange={handlePreset}
+              onRangeChange={(f, t) => {
+                setPreset('custom');
+                setFrom(f);
+                setTo(t);
+              }}
+              totalCount={totalCount}
+              matchingCount={matchingCount}
+            />
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                {PRESETS.map((p) => (
-                  <Button
-                    key={p.key}
-                    type="button"
-                    size="sm"
-                    variant={preset === p.key ? 'default' : 'outline'}
-                    onClick={() => handlePreset(p.key)}
-                  >
-                    {p.label}
-                  </Button>
-                ))}
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={preset === 'custom' ? 'default' : 'outline'}
-                      className="gap-2"
-                    >
-                      <CalendarIcon className="h-4 w-4" />
-                      {preset === 'custom'
-                        ? `${format(from, 'PP')} – ${format(to, 'PP')}`
-                        : 'Custom range'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="range"
-                      selected={{ from, to }}
-                      onSelect={(range) => {
-                        if (range?.from && range?.to) {
-                          setPreset('custom');
-                          setFrom(range.from);
-                          setTo(range.to);
-                          setCalendarOpen(false);
-                        }
-                      }}
-                      numberOfMonths={2}
-                      className={cn('p-3 pointer-events-auto')}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+            <StudentPicker
+              value={studentId}
+              onChange={handleStudentChange}
+              students={filteredStudents}
+            />
 
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-3">
                 <Button
                   variant="outline"
                   onClick={() => refetch()}
