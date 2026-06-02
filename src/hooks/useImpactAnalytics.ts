@@ -28,6 +28,15 @@ const FUNNEL_STAGES = [
 
 export type FunnelStage = typeof FUNNEL_STAGES[number];
 
+export interface CoverageRow {
+  key: string;
+  label: string;
+  entered: number;
+  total: number;
+  pct: number;
+  hint?: string;
+}
+
 export interface ImpactData {
   scope: {
     studentIds: string[];
@@ -39,6 +48,7 @@ export interface ImpactData {
     activeStaff: number;
     activeStudents: number;
   };
+  costSettings: any[];
   activities: {
     funnel: { stage: FunnelStage; label: string; count: number; pctOfFirst: number }[];
     requestsOpened: number;
@@ -72,6 +82,7 @@ export interface ImpactData {
       groups: { label: string; placementRate: number; n: number }[];
     }[];
   };
+  coverage: CoverageRow[];
 }
 
 const HOURS_PER_YEAR = 2080;
