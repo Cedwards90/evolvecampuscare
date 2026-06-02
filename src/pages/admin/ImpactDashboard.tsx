@@ -49,6 +49,9 @@ import { useTrainingOrganizations } from '@/hooks/useTrainingOrganizations';
 import { useAuth } from '@/contexts/AuthContext';
 import { FilterMultiSelect } from '@/components/filters/FilterMultiSelect';
 import { PageNav } from '@/components/navigation/PageNav';
+import { DataCoverageCard } from '@/components/impact/DataCoverageCard';
+import { CostSettingsEditor } from '@/components/impact/CostSettingsEditor';
+import { OutcomesEditor } from '@/components/impact/OutcomesEditor';
 
 const CURRENCY = new Intl.NumberFormat('en-US', {
   style: 'currency',
