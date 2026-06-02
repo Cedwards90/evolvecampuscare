@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRequests } from '@/hooks/useRequests';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import type { RequestStatus, RequestPriority, RequestCategory } from '@/types/database';
 
 const categoryLabels: Record<RequestCategory, string> = {
