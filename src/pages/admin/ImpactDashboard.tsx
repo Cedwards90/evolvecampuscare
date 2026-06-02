@@ -53,6 +53,7 @@ import { PageNav } from '@/components/navigation/PageNav';
 import { DataCoverageCard } from '@/components/impact/DataCoverageCard';
 import { CostSettingsEditor } from '@/components/impact/CostSettingsEditor';
 import { OutcomesEditor } from '@/components/impact/OutcomesEditor';
+import { OrgBreakdownTable } from '@/components/impact/OrgBreakdownTable';
 
 const CURRENCY = new Intl.NumberFormat('en-US', {
   style: 'currency',
