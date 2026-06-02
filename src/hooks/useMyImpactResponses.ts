@@ -37,20 +37,49 @@ export function useMyImpactResponses() {
   });
 }
 
+export function useStudentImpactResponses(studentId?: string) {
+  return useQuery({
+    queryKey: ['student-impact-responses', studentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('impact_survey_responses')
+        .select('*, template:impact_survey_templates(id, slug, title, description, questions)')
+        .eq('student_id', studentId!)
+        .order('submitted_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as unknown as ImpactResponseRow[];
+    },
+    enabled: !!studentId,
+  });
+}
+
 export function useUpdateImpactResponse() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ id, responses }: { id: string; responses: Record<string, any> }) => {
       const { error } = await supabase
         .from('impact_survey_responses')
         .update({ responses, submitted_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('student_id', user!.id);
+        .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-impact-responses'] });
+      queryClient.invalidateQueries({ queryKey: ['student-impact-responses'] });
+    },
+  });
+}
+
+export function useDeleteImpactResponse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('impact_survey_responses').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-impact-responses'] });
+      queryClient.invalidateQueries({ queryKey: ['student-impact-responses'] });
     },
   });
 }

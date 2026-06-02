@@ -97,6 +97,7 @@ export function useIntakeSurvey() {
     intakeCompleted: !!studentFile?.intake_completed_at,
     saveSection,
     updateSection,
+    deleteSection,
     completeIntake,
   };
 }
