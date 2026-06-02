@@ -54,6 +54,20 @@ export function useIntakeSurvey() {
     },
   });
 
+  const updateSection = useMutation({
+    mutationFn: async ({ id, responses }: { id: string; responses: Record<string, any> }) => {
+      const { error } = await supabase
+        .from('intake_responses')
+        .update({ responses })
+        .eq('id', id)
+        .eq('student_id', user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intake-responses', user?.id] });
+    },
+  });
+
   const completeIntake = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
