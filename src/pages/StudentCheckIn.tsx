@@ -112,6 +112,10 @@ export default function StudentCheckIn() {
           description="Let us know how you're doing — this only takes a minute."
         />
 
+        <InlineAdminDeletePanel kind="checkin" />
+
+
+
         <Card className="border border-border/50">
           <CardHeader>
             <CardTitle className="text-lg">How are you feeling?</CardTitle>
