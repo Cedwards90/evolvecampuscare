@@ -49,6 +49,9 @@ import { useTrainingOrganizations } from '@/hooks/useTrainingOrganizations';
 import { useAuth } from '@/contexts/AuthContext';
 import { FilterMultiSelect } from '@/components/filters/FilterMultiSelect';
 import { PageNav } from '@/components/navigation/PageNav';
+import { DataCoverageCard } from '@/components/impact/DataCoverageCard';
+import { CostSettingsEditor } from '@/components/impact/CostSettingsEditor';
+import { OutcomesEditor } from '@/components/impact/OutcomesEditor';
 
 const CURRENCY = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -240,6 +243,24 @@ export default function ImpactDashboard() {
 
         {data && (
           <>
+            <DataCoverageCard coverage={data.coverage} />
+
+            {/* ============== 0. INPUTS ENTRY ============== */}
+            <section className="space-y-3">
+              <SectionHeading
+                step="0"
+                title="Enter Inputs"
+                blurb="Add the numbers that drive Impact: program cost, public benefit, placements, wages, and retention."
+                icon={DollarSign}
+              />
+              <CostSettingsEditor
+                costs={data.costSettings}
+                orgOptions={orgOptions}
+                isAdmin={role === 'admin'}
+              />
+              <OutcomesEditor studentIds={data.scope.studentIds} />
+            </section>
+
             {/* ============== 1. INPUTS ============== */}
             <section className="space-y-3">
               <SectionHeading

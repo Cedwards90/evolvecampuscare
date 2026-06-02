@@ -28,6 +28,15 @@ const FUNNEL_STAGES = [
 
 export type FunnelStage = typeof FUNNEL_STAGES[number];
 
+export interface CoverageRow {
+  key: string;
+  label: string;
+  entered: number;
+  total: number;
+  pct: number;
+  hint?: string;
+}
+
 export interface ImpactData {
   scope: {
     studentIds: string[];
@@ -39,6 +48,7 @@ export interface ImpactData {
     activeStaff: number;
     activeStudents: number;
   };
+  costSettings: any[];
   activities: {
     funnel: { stage: FunnelStage; label: string; count: number; pctOfFirst: number }[];
     requestsOpened: number;
@@ -72,6 +82,7 @@ export interface ImpactData {
       groups: { label: string; placementRate: number; n: number }[];
     }[];
   };
+  coverage: CoverageRow[];
 }
 
 const HOURS_PER_YEAR = 2080;
@@ -404,6 +415,35 @@ export function useImpactAnalytics(filters: ImpactFilters) {
         ),
       ].filter((e) => e.groups.length > 0);
 
+      // 10. Coverage — how much of the data needed to compute impact is on file?
+      const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0);
+      let intakeCount = 0, demoCount = 0, planAllCount = 0;
+      if (studentIds.length) {
+        const [intakeQ, demoQ, planAllQ] = await Promise.all([
+          supabase.from('intake_responses').select('student_id').in('student_id', studentIds),
+          supabase.from('participant_demographics').select('student_id').in('student_id', studentIds),
+          supabase.from('post_graduation_plans').select('student_id').in('student_id', studentIds),
+        ]);
+        intakeCount = new Set((intakeQ.data || []).map((r: any) => r.student_id)).size;
+        demoCount = new Set((demoQ.data || []).map((r: any) => r.student_id)).size;
+        planAllCount = new Set((planAllQ.data || []).map((r: any) => r.student_id)).size;
+      }
+      const outcomesCount = new Set(outcomes.map((o: any) => o.student_id)).size;
+      const withPlacementDate = placedRows.length;
+      const withBaselineWage = placedRows.filter((o: any) => Number(o.baseline_wage || 0) > 0).length;
+      const total = studentIds.length;
+      const coverage: CoverageRow[] = [
+        { key: 'intake', label: 'Intake completed', entered: intakeCount, total, pct: pct(intakeCount, total) },
+        { key: 'demographics', label: 'Demographics on file', entered: demoCount, total, pct: pct(demoCount, total) },
+        { key: 'plans', label: 'Post-graduation plan', entered: planAllCount, total, pct: pct(planAllCount, total) },
+        { key: 'outcomes', label: 'Outcomes record started', entered: outcomesCount, total, pct: pct(outcomesCount, total) },
+        { key: 'placement', label: 'Placement date recorded', entered: withPlacementDate, total: outcomesCount, pct: pct(withPlacementDate, outcomesCount), hint: 'of students with outcomes started' },
+        { key: 'baseline_wage', label: 'Baseline wage entered', entered: withBaselineWage, total: withPlacementDate, pct: pct(withBaselineWage, withPlacementDate), hint: 'of placed students — needed for SROI' },
+        { key: 'cost_periods', label: 'Cost periods covering range', entered: (costs || []).length, total: (costs || []).length, pct: (costs || []).length > 0 ? 100 : 0, hint: 'needed for SROI' },
+        { key: 'certs', label: 'Certifications earned (in range)', entered: earned.length, total: earned.length, pct: earned.length > 0 ? 100 : 0 },
+        { key: 'funnel', label: 'Funnel events (in range)', entered: (funnelRows || []).length, total: (funnelRows || []).length, pct: (funnelRows || []).length > 0 ? 100 : 0 },
+      ];
+
       return {
         scope: {
           studentIds,
@@ -416,6 +456,7 @@ export function useImpactAnalytics(filters: ImpactFilters) {
           activeStaff,
           activeStudents: studentIds.length,
         },
+        costSettings: costs || [],
         activities: {
           funnel,
           requestsOpened,
@@ -448,6 +489,7 @@ export function useImpactAnalytics(filters: ImpactFilters) {
           totalReturn: Math.round(totalReturn),
           equity,
         },
+        coverage,
       };
     },
   });
