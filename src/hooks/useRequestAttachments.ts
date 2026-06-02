@@ -59,39 +59,43 @@ export function useRequestAttachments(requestId: string | undefined) {
   });
 }
 
+export async function uploadAttachment(requestId: string, file: File): Promise<void> {
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(`"${file.name}" is larger than 10 MB.`);
+  }
+  if (file.type && !ALLOWED_MIME_TYPES.includes(file.type)) {
+    throw new Error(`"${file.name}" has an unsupported file type.`);
+  }
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr || !userData.user) throw new Error('Not signed in');
+
+  const safeName = file.name.replace(/[^\w.\-]+/g, '_');
+  const path = `${requestId}/${crypto.randomUUID()}-${safeName}`;
+  const { error: upErr } = await supabase.storage
+    .from('request-attachments')
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (upErr) throw upErr;
+
+  const { error: insErr } = await supabase.from('request_attachments').insert({
+    request_id: requestId,
+    file_name: file.name,
+    file_path: path,
+    file_size: file.size,
+    mime_type: file.type || null,
+    uploaded_by: userData.user.id,
+  });
+  if (insErr) {
+    // Try to roll back the storage object
+    await supabase.storage.from('request-attachments').remove([path]);
+    throw insErr;
+  }
+}
+
 export function useUploadAttachment(requestId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (file: File) => {
-      if (file.size > MAX_FILE_SIZE) {
-        throw new Error(`"${file.name}" is larger than 10 MB.`);
-      }
-      if (file.type && !ALLOWED_MIME_TYPES.includes(file.type)) {
-        throw new Error(`"${file.name}" has an unsupported file type.`);
-      }
-      const { data: userData, error: userErr } = await supabase.auth.getUser();
-      if (userErr || !userData.user) throw new Error('Not signed in');
-
-      const safeName = file.name.replace(/[^\w.\-]+/g, '_');
-      const path = `${requestId}/${crypto.randomUUID()}-${safeName}`;
-      const { error: upErr } = await supabase.storage
-        .from('request-attachments')
-        .upload(path, file, { contentType: file.type, upsert: false });
-      if (upErr) throw upErr;
-
-      const { error: insErr } = await supabase.from('request_attachments').insert({
-        request_id: requestId,
-        file_name: file.name,
-        file_path: path,
-        file_size: file.size,
-        mime_type: file.type || null,
-        uploaded_by: userData.user.id,
-      });
-      if (insErr) {
-        // Try to roll back the storage object
-        await supabase.storage.from('request-attachments').remove([path]);
-        throw insErr;
-      }
+      await uploadAttachment(requestId, file);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['request-attachments', requestId] });
