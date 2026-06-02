@@ -443,20 +443,76 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
                 <CardTitle className="font-display">Add Supporting Documents</CardTitle>
                 <CardDescription>Upload any files that might help us understand your situation (optional)</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 p-12">
+              <CardContent className="space-y-4">
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+                  }}
+                  className={cn(
+                    'flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 transition-colors',
+                    dragOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
+                  )}
+                >
                   <Upload className="h-12 w-12 text-muted-foreground/50" />
                   <p className="mt-4 text-sm text-muted-foreground">
                     Drag and drop files here, or click to browse
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    PDF, DOC, DOCX, PNG, JPG up to 10MB each
+                    PDF, Word, Excel, CSV, JPG, PNG, WEBP, HEIC, GIF, TXT — up to 10 MB each, max {MAX_FILES_PER_REQUEST} files
                   </p>
-                  <Button type="button" variant="outline" className="mt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={pendingFiles.length >= MAX_FILES_PER_REQUEST}
+                  >
                     Browse Files
                   </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept={ALLOWED_MIME_TYPES.join(',')}
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files) addFiles(e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
                 </div>
-                <p className="mt-4 text-sm text-muted-foreground">
+
+                {pendingFiles.length > 0 && (
+                  <ul className="divide-y divide-border rounded-md border border-border">
+                    {pendingFiles.map((f, i) => (
+                      <li key={`${f.name}-${i}`} className="flex items-center gap-3 p-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{f.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {f.size < 1024 * 1024
+                              ? `${(f.size / 1024).toFixed(1)} KB`
+                              : `${(f.size / (1024 * 1024)).toFixed(1)} MB`}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removePendingFile(i)}
+                          aria-label={`Remove ${f.name}`}
+                        >
+                          <XIcon className="h-4 w-4" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <p className="text-sm text-muted-foreground">
                   You can skip this step if you don't have any documents to attach.
                 </p>
               </CardContent>
