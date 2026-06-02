@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { uploadAttachment, MAX_FILE_SIZE, MAX_FILES_PER_REQUEST, ALLOWED_MIME_TYPES } from '@/hooks/useRequestAttachments';
+import { X as XIcon } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { QrCode } from 'lucide-react';
@@ -79,6 +81,35 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
   const { user, profile } = useAuth();
   const submitRequest = useSubmitRequest();
   const [qrContext, setQrContext] = useState<{ title: string; description: string | null } | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const addFiles = (files: FileList | File[]) => {
+    const incoming = Array.from(files);
+    const accepted: File[] = [];
+    for (const f of incoming) {
+      if (f.size > MAX_FILE_SIZE) {
+        toast({ variant: 'destructive', title: 'File too large', description: `"${f.name}" is larger than 10 MB.` });
+        continue;
+      }
+      if (f.type && !ALLOWED_MIME_TYPES.includes(f.type)) {
+        toast({ variant: 'destructive', title: 'Unsupported file', description: `"${f.name}" is not an allowed file type.` });
+        continue;
+      }
+      accepted.push(f);
+    }
+    setPendingFiles((prev) => {
+      const remaining = Math.max(0, MAX_FILES_PER_REQUEST - prev.length);
+      if (accepted.length > remaining) {
+        toast({ variant: 'destructive', title: 'Too many files', description: `Max ${MAX_FILES_PER_REQUEST} files per request.` });
+      }
+      return [...prev, ...accepted.slice(0, remaining)];
+    });
+  };
+
+  const removePendingFile = (idx: number) =>
+    setPendingFiles((prev) => prev.filter((_, i) => i !== idx));
 
   useEffect(() => {
     if (getQRSession().sessionId) {
@@ -160,12 +191,41 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
         requestedAmount: data.category === 'financial' ? data.requestedAmount : undefined,
       });
 
-      toast({
-        title: 'Request submitted successfully!',
-        description: 'A case manager will review your request shortly.',
-      });
-
       const newId = (result as any)?.id;
+
+      // Upload any attachments collected in Step 3
+      let uploaded = 0;
+      let failed = 0;
+      if (newId && pendingFiles.length > 0) {
+        for (const f of pendingFiles) {
+          try {
+            await uploadAttachment(newId, f);
+            uploaded++;
+          } catch (e) {
+            failed++;
+            console.error('Attachment upload failed:', e);
+          }
+        }
+      }
+
+      if (pendingFiles.length === 0) {
+        toast({
+          title: 'Request submitted successfully!',
+          description: 'A case manager will review your request shortly.',
+        });
+      } else if (failed === 0) {
+        toast({
+          title: 'Request submitted successfully!',
+          description: `${uploaded} file${uploaded === 1 ? '' : 's'} attached.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Request submitted, some files failed',
+          description: `${uploaded} of ${pendingFiles.length} files uploaded. You can retry the rest from the request page.`,
+        });
+      }
+
       if (standalone && qrCodeParam) {
         navigate(`/qr/${qrCodeParam}/request/success${newId ? `?id=${newId}` : ''}`, { replace: true });
       } else if (newId) navigate(`/requests/${newId}`);
@@ -383,20 +443,76 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
                 <CardTitle className="font-display">Add Supporting Documents</CardTitle>
                 <CardDescription>Upload any files that might help us understand your situation (optional)</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 p-12">
+              <CardContent className="space-y-4">
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+                  }}
+                  className={cn(
+                    'flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 transition-colors',
+                    dragOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
+                  )}
+                >
                   <Upload className="h-12 w-12 text-muted-foreground/50" />
                   <p className="mt-4 text-sm text-muted-foreground">
                     Drag and drop files here, or click to browse
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    PDF, DOC, DOCX, PNG, JPG up to 10MB each
+                    PDF, Word, Excel, CSV, JPG, PNG, WEBP, HEIC, GIF, TXT — up to 10 MB each, max {MAX_FILES_PER_REQUEST} files
                   </p>
-                  <Button type="button" variant="outline" className="mt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={pendingFiles.length >= MAX_FILES_PER_REQUEST}
+                  >
                     Browse Files
                   </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept={ALLOWED_MIME_TYPES.join(',')}
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files) addFiles(e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
                 </div>
-                <p className="mt-4 text-sm text-muted-foreground">
+
+                {pendingFiles.length > 0 && (
+                  <ul className="divide-y divide-border rounded-md border border-border">
+                    {pendingFiles.map((f, i) => (
+                      <li key={`${f.name}-${i}`} className="flex items-center gap-3 p-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{f.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {f.size < 1024 * 1024
+                              ? `${(f.size / 1024).toFixed(1)} KB`
+                              : `${(f.size / (1024 * 1024)).toFixed(1)} MB`}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removePendingFile(i)}
+                          aria-label={`Remove ${f.name}`}
+                        >
+                          <XIcon className="h-4 w-4" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <p className="text-sm text-muted-foreground">
                   You can skip this step if you don't have any documents to attach.
                 </p>
               </CardContent>

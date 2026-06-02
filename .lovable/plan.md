@@ -1,58 +1,53 @@
-# Platform-wide Organization-Aware Filtering
+# Fix: Students can't upload documents with their requests
 
-## Current state (already in place)
+## Root cause
 
-- `GlobalFiltersContext` supports `organizationId`, `cohort`, `yearOfStudy`, `status`, `role`, `assignedCaseManagerId` — persisted to `user_filter_preferences` + URL.
-- `GlobalFilterBar` + `FilterMultiSelect` UI exist.
-- Adopted on: Reports, AdminDashboard, Dashboard, ManageRequests, StudentFolders, admin/CaseManagers, admin/UserManagement, admin/TrainingOrganizations, admin/AnalyticsDashboard, admin/SurveyResponses, MyStudentsSection, PendingInvitations.
+In `src/pages/SubmitRequest.tsx` (Step 3 "Add Supporting Documents", lines ~379–404), the attachment UI is a **non-functional placeholder**:
 
-We will **extend, not rewrite**, this system. No changes to unrelated business logic.
+- No `<input type="file">` element exists.
+- The "Browse Files" button has no `onClick` handler.
+- The drag-and-drop zone has no `onDrop`/`onDragOver` handlers.
+- `onSubmit` never uploads anything — it only calls `submitRequest.mutateAsync(...)`.
 
-## Gaps to close
+So any student going through the submit wizard sees an upload area, clicks "Browse Files", nothing happens, and the request is submitted with zero attachments. The fully-working `RequestAttachments` component (used in `RequestDetail`) is never mounted here.
 
-1. **Missing filter dimensions** the user asked for:
-   - `class` → reuse `cohort` (already "Class of YYYY"). Add explicit `class` alias label + ensure shown wherever students appear.
-   - `studentStatus` → new key (active/inactive/suspended). Distinct from request `status`.
-   - `program` → new key. Source: `profiles.program` (verify column exists; if not, plan adds it as a follow-up question, not built without permission).
+The backend itself is fine: `useUploadAttachment` in `src/hooks/useRequestAttachments.ts` works, validates size/mime, writes to the `request-attachments` bucket, and inserts into `request_attachments` — it just needs a `requestId`, which doesn't exist until the request is created.
 
-2. **Default to user's org context** (currently filters start empty):
-   - On hydration, if user is `org_admin` and no saved/URL filter set → seed `organizationId` with their `org_admins` orgs.
-   - If user is `case_manager` → seed with org(s) of their assigned students (read-only default; they can clear).
-   - Admin → no default (sees all).
-   - Students → filter bar hidden (already effectively the case).
+## Fix (frontend only — no schema or business-logic changes)
 
-3. **Pages still missing the bar** where students/CMs/requests/surveys/notes/assignments are shown:
-   - `RequestsList`, `TrackRequests`, `RequestDetail` (read-only badge of active filters), `Messages` (filter conversation list), `StudentProgressReport`, `StudentDetail` (header chip showing active org context), `CaseManagerDetail`, `admin/ImpactDashboard` (already has its own — unify to consume global filters as defaults), `admin/TransitionsDashboard`, file-notes/assignments sub-views inside `StudentDetail`.
+Make Step 3 collect files locally, validate them, then upload them after the request row is created in `onSubmit`.
 
-4. **Data scoping**: ensure every query hook honors active filters:
-   - Audit hooks: `useStudents`, `useStudentFolders`, `useRequests*`, `useStudentAssignments`, `useFileNotes`, `useSurveys`, `useReportStudentFilters`, `useImpactAnalytics`, notifications counts, dashboard KPIs.
-   - Pattern: hooks accept `filters` from `useGlobalFilters()` and include them in React Query keys so cache + realtime invalidation recompute automatically.
+### 1. `src/pages/SubmitRequest.tsx`
 
-5. **Exports** (CSV/PDF): pass current filter snapshot into export builders so downloads match on-screen scope; include "Filtered by: …" line in PDF headers (extend existing branding header).
+- Add local state: `const [pendingFiles, setPendingFiles] = useState<File[]>([])` and a hidden `<input ref>`.
+- Replace the placeholder Step 3 block with a real picker:
+  - Hidden `<input type="file" multiple accept={ALLOWED_MIME_TYPES.join(',')}>` whose `onChange` appends to `pendingFiles`.
+  - Wire `onClick` on "Browse Files" to `inputRef.current?.click()`.
+  - Wire `onDragOver` / `onDrop` on the dashed zone to accept dropped files.
+  - Client-side validation using the existing constants from `useRequestAttachments`: `MAX_FILE_SIZE` (10 MB), `MAX_FILES_PER_REQUEST` (10), `ALLOWED_MIME_TYPES`. Reject with a toast on violation; don't silently drop.
+  - Render the chosen files as a small list with name, size, and a remove (×) button.
+- In `onSubmit`, after `submitRequest.mutateAsync(...)` returns the new request's `id`:
+  - For each file in `pendingFiles`, call the upload logic against that id. Two options, pick whichever fits the existing patterns:
+    - **Preferred**: extract the inner upload body of `useUploadAttachment` into a small `uploadAttachment(requestId, file)` helper exported from `useRequestAttachments.ts` so the wizard can call it imperatively per file. This avoids needing a dynamic-hook trick. The existing `useUploadAttachment` keeps working unchanged by delegating to that helper.
+    - Or call the storage + insert sequence inline (duplicates a few lines — less clean).
+  - Show per-file failures as toasts but **don't fail the whole submit** — the request is already created. Use a single summary toast: "Request submitted. 2 of 3 files uploaded — you can retry the rest from the request page."
+- Keep the existing success navigation to the request detail page so students land where they can re-upload any failed file.
 
-6. **Persistence**: already saved per user. Add per-page `visible` filters (already supported) — no schema change.
+### 2. `src/hooks/useRequestAttachments.ts`
 
-7. **Realtime**: existing realtime bridge invalidates query keys; since keys include filter values, recalculation is automatic. Verify no hook uses filters outside its queryKey.
+- Export a plain async `uploadAttachment(requestId: string, file: File): Promise<void>` that contains the current body of `useUploadAttachment`'s `mutationFn` (size/mime check, storage upload, table insert, rollback on insert failure).
+- Refactor `useUploadAttachment` to call that helper — no behavior change for `RequestDetail`.
 
-## Implementation steps
+### 3. Out of scope
 
-1. **Context**: add `studentStatus` and `program` keys to `GlobalFilters`, `URL_KEYS`, `EMPTY_FILTERS`, helpers, and `filterByProfile`.
-2. **Filter options hook**: extend `useFilterOptions` to return `programs` + `studentStatuses`.
-3. **Default seeding**: in `GlobalFiltersProvider` hydration, when no saved/URL filters exist, seed `organizationId` from role (org_admin → org_admins table; case_manager → distinct orgs of assignments).
-4. **GlobalFilterBar**: add Program + Student Status controls; keep role-based hiding.
-5. **Mount bar on missing pages** listed above with appropriate `visible` props.
-6. **Audit + update query hooks** to consume `filters` and include them in queryKey + WHERE clauses (client-side filter for already-fetched lists; server-side `.in()` where lists are large).
-7. **Exports**: thread `filters` into PDF/CSV generators; add filter summary to headers.
-8. **Tests / sanity**: verify role-based defaults, URL deep-links, realtime updates recompute counts, and clearing filters restores full scope.
+- No DB migration. The `request_attachments` table, RLS, and storage bucket already exist.
+- No change to `RequestDetail` / `RequestAttachments.tsx` behavior.
+- No change to QR standalone flow (it doesn't show an upload step today — flag separately if the user wants it added).
+- No offline-draft upload sync changes.
 
-## Out of scope (will ask before doing)
+## Verification
 
-- Adding new DB columns (e.g., if `profiles.program` doesn't exist).
-- Changing RLS or unrelated business logic.
-- Refactoring the Impact Dashboard's bespoke filter UI beyond reading defaults from global filters.
-
-## Open questions
-
-1. Does `profiles` already have a `program` column, or should `program` map to something existing (e.g., `cohort`/organization)? If not present, do you want me to add it (schema change)?
-2. For `studentStatus`, should the values be: Active / Inactive (deactivated) / Org-Suspended — or a different taxonomy?
-3. For Case Managers, should the default org context be **locked** (cannot clear) or just **pre-selected** (can clear to see cross-org assigned students)?
+1. Sign in as a student, start a new request, reach Step 3, pick a PDF + a PNG, submit.
+2. Land on the request detail page — both files appear in the Attachments card.
+3. Verify rejections: a 15 MB file is blocked with a toast; an `.exe` is blocked; adding an 11th file is blocked.
+4. Verify the existing `RequestDetail` upload still works (regression check on the refactored helper).
