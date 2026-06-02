@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useDeleteCheckIn } from '@/hooks/useStudentCheckIns';
 import { useDeletePlan } from '@/hooks/usePostGraduationPlan';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 function MoodBadge({ rating }: { rating: number }) {
