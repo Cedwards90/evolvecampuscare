@@ -71,15 +71,26 @@ export function useSubmitPlan() {
 }
 
 export function useUpdatePlan() {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<PostGraduationPlanInput> }) => {
       const { error } = await supabase
         .from('post_graduation_plans')
         .update(patch)
-        .eq('id', id)
-        .eq('student_id', user!.id);
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['post-graduation-plans'] });
+    },
+  });
+}
+
+export function useDeletePlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('post_graduation_plans').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

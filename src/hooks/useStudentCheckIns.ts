@@ -24,14 +24,27 @@ export interface CheckInUpdate {
 
 export function useUpdateCheckIn() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: CheckInUpdate }) => {
       const { error } = await supabase
         .from('student_checkins')
         .update(patch)
-        .eq('id', id)
-        .eq('student_id', user!.id);
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['latest-checkin'] });
+      queryClient.invalidateQueries({ queryKey: ['student-checkins'] });
+      queryClient.invalidateQueries({ queryKey: ['my-checkins'] });
+    },
+  });
+}
+
+export function useDeleteCheckIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('student_checkins').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

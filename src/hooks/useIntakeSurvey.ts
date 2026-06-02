@@ -59,12 +59,21 @@ export function useIntakeSurvey() {
       const { error } = await supabase
         .from('intake_responses')
         .update({ responses })
-        .eq('id', id)
-        .eq('student_id', user!.id);
+        .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['intake-responses', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['intake-responses'] });
+    },
+  });
+
+  const deleteSection = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('intake_responses').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intake-responses'] });
     },
   });
 
@@ -88,6 +97,7 @@ export function useIntakeSurvey() {
     intakeCompleted: !!studentFile?.intake_completed_at,
     saveSection,
     updateSection,
+    deleteSection,
     completeIntake,
   };
 }

@@ -17,6 +17,7 @@ import {
   Pencil,
   Download,
   Award,
+  ClipboardCheck,
 } from 'lucide-react';
 import { StickyNote, PenLine, Building2, NotebookPen, Trash2, X, Save } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -250,6 +251,14 @@ export default function StudentDetail() {
                     studentId={id!}
                     studentName={student.profile?.full_name || 'Student'}
                   />
+                  {role === 'admin' && (
+                    <Button asChild variant="outline" size="sm">
+                      <Link to={`/admin/students/${id}/submissions`}>
+                        <ClipboardCheck className="mr-2 h-4 w-4" />
+                        Manage Submissions
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               </div>
 
