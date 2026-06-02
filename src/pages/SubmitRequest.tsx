@@ -81,6 +81,35 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
   const { user, profile } = useAuth();
   const submitRequest = useSubmitRequest();
   const [qrContext, setQrContext] = useState<{ title: string; description: string | null } | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const addFiles = (files: FileList | File[]) => {
+    const incoming = Array.from(files);
+    const accepted: File[] = [];
+    for (const f of incoming) {
+      if (f.size > MAX_FILE_SIZE) {
+        toast({ variant: 'destructive', title: 'File too large', description: `"${f.name}" is larger than 10 MB.` });
+        continue;
+      }
+      if (f.type && !ALLOWED_MIME_TYPES.includes(f.type)) {
+        toast({ variant: 'destructive', title: 'Unsupported file', description: `"${f.name}" is not an allowed file type.` });
+        continue;
+      }
+      accepted.push(f);
+    }
+    setPendingFiles((prev) => {
+      const remaining = Math.max(0, MAX_FILES_PER_REQUEST - prev.length);
+      if (accepted.length > remaining) {
+        toast({ variant: 'destructive', title: 'Too many files', description: `Max ${MAX_FILES_PER_REQUEST} files per request.` });
+      }
+      return [...prev, ...accepted.slice(0, remaining)];
+    });
+  };
+
+  const removePendingFile = (idx: number) =>
+    setPendingFiles((prev) => prev.filter((_, i) => i !== idx));
 
   useEffect(() => {
     if (getQRSession().sessionId) {
