@@ -150,6 +150,11 @@ function App() {
                       <PostGraduationPlan />
                     </ProtectedRoute>
                   } />
+                  <Route path="/my-submissions" element={
+                    <ProtectedRoute allowedRoles={['student']}>
+                      <MySubmissions />
+                    </ProtectedRoute>
+                  } />
                   
                   {/* Case Manager routes */}
                   <Route path="/case-manager-managing-student-requests" element={
