@@ -119,12 +119,48 @@ function downloadCsv(rows: string[][], filename: string) {
 export default function ImpactDashboard() {
   const { role } = useAuth();
   const { data: orgs } = useTrainingOrganizations();
-  const [filters, setFilters] = useState<ImpactFilters>(defaultImpactRange(90));
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const initialOrgs = useMemo(() => {
+    const raw = searchParams.get('orgs');
+    return raw ? raw.split(',').filter(Boolean) : [];
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [filters, setFilters] = useState<ImpactFilters>(() => ({
+    ...defaultImpactRange(90),
+    organizationIds: initialOrgs,
+  }));
   const [rangePreset, setRangePreset] = useState<string>('90');
 
   const orgOptions = useMemo(
     () => (orgs || []).map((o: any) => ({ value: o.id, label: o.name })),
     [orgs],
+  );
+
+  const canFilterOrgs = role === 'admin' || role === 'org_admin';
+
+  // Sync org selection into URL for shareable views.
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (filters.organizationIds.length) {
+      next.set('orgs', filters.organizationIds.join(','));
+    } else {
+      next.delete('orgs');
+    }
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [filters.organizationIds]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setOrgIds = (vals: string[]) => setFilters((f) => ({ ...f, organizationIds: vals }));
+
+  // Breakdown shows either all visible orgs or just the ones currently selected.
+  const breakdownOrgs = useMemo(
+    () =>
+      filters.organizationIds.length
+        ? orgOptions.filter((o) => filters.organizationIds.includes(o.value))
+        : orgOptions,
+    [orgOptions, filters.organizationIds],
   );
 
   const setRange = (days: string) => {
