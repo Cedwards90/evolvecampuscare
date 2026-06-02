@@ -15,6 +15,7 @@ import { useIntakeSurvey } from '@/hooks/useIntakeSurvey';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { logFunnelEvent } from '@/lib/funnelEvents';
+import { InlineAdminDeletePanel } from '@/components/submissions/InlineAdminDeletePanel';
 
 const STEPS = [
   { key: 'about_you', title: 'About You', icon: Home, description: 'Let us get to know you a little better.' },
