@@ -1,38 +1,23 @@
-## Add admin delete buttons on survey pages
+## Add per-row delete on /admin/surveys
 
-The four survey types already have admin-only DELETE RLS in place and an admin delete UX exists at `/admin/students/:id/submissions`. This adds the same delete capability directly to the individual survey pages so admins don't have to detour through the submissions hub.
+The admin Surveys page (`/admin/surveys`) lists every check-in and post-graduation plan submission but currently has no way to remove one. This adds an admin-only Delete button to each row/card with a confirm dialog.
 
 ### Scope
-Admin-only delete on:
-- `/student/check-in` (StudentCheckIn.tsx) — delete the most recent check-in shown
-- `/student/post-graduation-plan` (PostGraduationPlan.tsx) — delete the student's plan
-- `/student/intake-survey` (IntakeSurvey.tsx) — delete the student's intake response(s)
-- Impact tab — already has delete via SubmissionsTabs when `allowDelete` is set; no change needed there
-
-Students never see the delete button. Visibility gated by `useUserRole() === 'admin'`.
-
-### UI
-- Add a small destructive outline button "Delete submission" in the page header / card footer, visible only when `role === 'admin'` AND a saved record exists.
-- Click opens an `AlertDialog` confirming the deletion (irreversible language).
-- On success: invalidate the relevant query, toast confirmation, and reset the form/state to "no submission yet".
+- `CheckInRow` (check-ins table) — add a trailing Delete icon button.
+- `PlanCard` (post-grad plan cards) — add a Delete button in the card header.
+- Confirm with `AlertDialog` ("This permanently deletes the submission. This can't be undone.") before deleting.
+- On success: toast and React Query invalidation refreshes the list.
 
 ### Wiring
-Reuse the existing delete mutations already created for `/admin/students/:id/submissions`:
-- `useDeleteCheckIn` (deletes by check-in id)
-- `useDeletePlan` (deletes by plan id)
-- `useDeleteIntake` (deletes by section id)
+Reuse existing mutations — no new DB work; admin DELETE RLS already exists on both tables:
+- `useDeleteCheckIn` from `@/hooks/useStudentCheckIns`
+- `useDeletePlan` from `@/hooks/usePostGraduationPlan`
 
-Each page already loads the current record(s), so the id is available locally.
+Both already invalidate the relevant query keys (`student-checkins`, `latest-checkin`, `my-checkins`, `post-graduation-plans`). Extend each `onSuccess` to also invalidate the `useAllCheckIns` / `useAllPostGradPlans` keys used on this page so the row disappears immediately.
+
+### Files
+- `src/pages/admin/SurveyResponses.tsx` — add Delete UI to `CheckInRow` and `PlanCard`.
+- `src/hooks/useStudentCheckIns.ts` and `src/hooks/usePostGraduationPlan.ts` — add the admin list query keys to the delete mutations' invalidation set (only if not already covered).
 
 ### Out of scope
-- No schema/RLS changes (admin DELETE policies already exist on `student_checkins`, `post_graduation_plans`, `intake_responses`, `impact_survey_responses`).
-- No student-facing delete additions.
-- No changes to admin submissions hub.
-
-### Files to modify
-- `src/pages/StudentCheckIn.tsx`
-- `src/pages/PostGraduationPlan.tsx`
-- `src/pages/IntakeSurvey.tsx`
-
-### Memory
-Update `mem://features/my-submissions-v2` to note that admin delete is also available inline on each survey page.
+No schema/RLS changes. No changes to pending tabs (nothing to delete there).

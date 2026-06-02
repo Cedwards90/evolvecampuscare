@@ -51,6 +51,7 @@ export function useDeleteCheckIn() {
       queryClient.invalidateQueries({ queryKey: ['latest-checkin'] });
       queryClient.invalidateQueries({ queryKey: ['student-checkins'] });
       queryClient.invalidateQueries({ queryKey: ['my-checkins'] });
+      queryClient.invalidateQueries({ queryKey: ['all-checkins'] });
     },
   });
 }

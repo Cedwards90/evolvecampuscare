@@ -18,12 +18,27 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Search, ChevronDown, ChevronRight, Eye, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Eye, ArrowUp, ArrowDown, ArrowUpDown, Trash2 } from 'lucide-react';
 import { SurveyPreviewDialog } from '@/components/admin/SurveyPreviewDialog';
 import { SendSurveyDialog } from '@/components/admin/SendSurveyDialog';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useDeleteCheckIn } from '@/hooks/useStudentCheckIns';
+import { useDeletePlan } from '@/hooks/usePostGraduationPlan';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 function MoodBadge({ rating }: { rating: number }) {
   const colors = rating >= 4 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
@@ -260,7 +275,19 @@ export default function SurveyResponses() {
 
 function CheckInRow({ checkIn }: { checkIn: ReturnType<typeof useAllCheckIns>['data'] extends (infer T)[] | undefined ? T : never }) {
   const [open, setOpen] = useState(false);
+  const { role } = useAuth();
+  const del = useDeleteCheckIn();
   const hasDetails = checkIn.wins || checkIn.blockers || checkIn.additional_notes;
+  const isAdmin = role === 'admin';
+
+  const handleDelete = async () => {
+    try {
+      await del.mutateAsync(checkIn.id);
+      toast.success('Check-in deleted');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to delete check-in');
+    }
+  };
 
   return (
     <>
@@ -279,7 +306,43 @@ function CheckInRow({ checkIn }: { checkIn: ReturnType<typeof useAllCheckIns>['d
         <TableCell><MoodBadge rating={checkIn.mood_rating} /></TableCell>
         <TableCell><MoodBadge rating={checkIn.progress_rating} /></TableCell>
         <TableCell>
-          {hasDetails && (open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />)}
+          <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+            {isAdmin && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    aria-label="Delete check-in"
+                    disabled={del.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this check-in?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This permanently deletes the submission from{' '}
+                      <span className="font-medium">{checkIn.student_name || checkIn.student_email}</span>{' '}
+                      on {new Date(checkIn.created_at).toLocaleDateString()}. This can't be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {hasDetails && (open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />)}
+          </div>
         </TableCell>
       </TableRow>
       {open && hasDetails && (
@@ -314,6 +377,9 @@ function CheckInRow({ checkIn }: { checkIn: ReturnType<typeof useAllCheckIns>['d
 
 function PlanCard({ plan }: { plan: ReturnType<typeof useAllPostGradPlans>['data'] extends (infer T)[] | undefined ? T : never }) {
   const [open, setOpen] = useState(false);
+  const { role } = useAuth();
+  const del = useDeletePlan();
+  const isAdmin = role === 'admin';
 
   const sections = [
     { label: 'Career Goals', value: plan.career_goals },
@@ -328,15 +394,24 @@ function PlanCard({ plan }: { plan: ReturnType<typeof useAllPostGradPlans>['data
     { label: 'Months 10-12', value: plan.month_10_12_actions },
   ].filter(s => s.value);
 
+  const handleDelete = async () => {
+    try {
+      await del.mutateAsync(plan.id);
+      toast.success('Post-graduation plan deleted');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to delete plan');
+    }
+  };
+
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <Card>
         <CollapsibleTrigger asChild>
           <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+                <div className="min-w-0">
                   <CardTitle className="text-base">
                     <Link to={`/students/${plan.student_id}`} className="text-primary hover:underline" onClick={e => e.stopPropagation()}>
                       {plan.student_name || plan.student_email}
@@ -349,7 +424,43 @@ function PlanCard({ plan }: { plan: ReturnType<typeof useAllPostGradPlans>['data
                   </p>
                 </div>
               </div>
-              <Badge variant="outline">{sections.length} sections</Badge>
+              <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
+                <Badge variant="outline">{sections.length} sections</Badge>
+                {isAdmin && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        aria-label="Delete plan"
+                        disabled={del.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this post-graduation plan?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This permanently deletes the plan from{' '}
+                          <span className="font-medium">{plan.student_name || plan.student_email}</span>{' '}
+                          submitted {new Date(plan.created_at).toLocaleDateString()}. This can't be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDelete}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
             </div>
           </CardHeader>
         </CollapsibleTrigger>

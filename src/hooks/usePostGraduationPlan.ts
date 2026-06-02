@@ -95,6 +95,7 @@ export function useDeletePlan() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['post-graduation-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['all-postgrad-plans'] });
     },
   });
 }
