@@ -191,12 +191,41 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
         requestedAmount: data.category === 'financial' ? data.requestedAmount : undefined,
       });
 
-      toast({
-        title: 'Request submitted successfully!',
-        description: 'A case manager will review your request shortly.',
-      });
-
       const newId = (result as any)?.id;
+
+      // Upload any attachments collected in Step 3
+      let uploaded = 0;
+      let failed = 0;
+      if (newId && pendingFiles.length > 0) {
+        for (const f of pendingFiles) {
+          try {
+            await uploadAttachment(newId, f);
+            uploaded++;
+          } catch (e) {
+            failed++;
+            console.error('Attachment upload failed:', e);
+          }
+        }
+      }
+
+      if (pendingFiles.length === 0) {
+        toast({
+          title: 'Request submitted successfully!',
+          description: 'A case manager will review your request shortly.',
+        });
+      } else if (failed === 0) {
+        toast({
+          title: 'Request submitted successfully!',
+          description: `${uploaded} file${uploaded === 1 ? '' : 's'} attached.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Request submitted, some files failed',
+          description: `${uploaded} of ${pendingFiles.length} files uploaded. You can retry the rest from the request page.`,
+        });
+      }
+
       if (standalone && qrCodeParam) {
         navigate(`/qr/${qrCodeParam}/request/success${newId ? `?id=${newId}` : ''}`, { replace: true });
       } else if (newId) navigate(`/requests/${newId}`);
