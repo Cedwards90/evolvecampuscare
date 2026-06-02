@@ -275,7 +275,19 @@ export default function SurveyResponses() {
 
 function CheckInRow({ checkIn }: { checkIn: ReturnType<typeof useAllCheckIns>['data'] extends (infer T)[] | undefined ? T : never }) {
   const [open, setOpen] = useState(false);
+  const { role } = useAuth();
+  const del = useDeleteCheckIn();
   const hasDetails = checkIn.wins || checkIn.blockers || checkIn.additional_notes;
+  const isAdmin = role === 'admin';
+
+  const handleDelete = async () => {
+    try {
+      await del.mutateAsync(checkIn.id);
+      toast.success('Check-in deleted');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to delete check-in');
+    }
+  };
 
   return (
     <>
@@ -294,7 +306,43 @@ function CheckInRow({ checkIn }: { checkIn: ReturnType<typeof useAllCheckIns>['d
         <TableCell><MoodBadge rating={checkIn.mood_rating} /></TableCell>
         <TableCell><MoodBadge rating={checkIn.progress_rating} /></TableCell>
         <TableCell>
-          {hasDetails && (open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />)}
+          <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+            {isAdmin && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    aria-label="Delete check-in"
+                    disabled={del.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this check-in?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This permanently deletes the submission from{' '}
+                      <span className="font-medium">{checkIn.student_name || checkIn.student_email}</span>{' '}
+                      on {new Date(checkIn.created_at).toLocaleDateString()}. This can't be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {hasDetails && (open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />)}
+          </div>
         </TableCell>
       </TableRow>
       {open && hasDetails && (
