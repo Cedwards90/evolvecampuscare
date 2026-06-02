@@ -46,6 +46,7 @@ import IntakeSurvey from "./pages/IntakeSurvey";
 import StudentFolders from "./pages/StudentFolders";
 import StudentCheckIn from "./pages/StudentCheckIn";
 import PostGraduationPlan from "./pages/PostGraduationPlan";
+import MySubmissions from "./pages/MySubmissions";
 import Reports from "./pages/Reports";
 import StudentProgressReportPage from "./pages/StudentProgressReport";
 import NotFound from "./pages/NotFound";
