@@ -134,6 +134,10 @@ export default function RequestsList() {
           />
         </div>
 
+        {role !== 'student' && (
+          <GlobalFilterBar visible={['organizationId', 'program', 'cohort', 'assignedCaseManagerId', 'studentStatus']} />
+        )}
+
         {/* Active Filters Display */}
         {(statusFilter !== 'all' || categoryFilter !== 'all' || priorityFilter !== 'all' || showEmergencyOnly) && (
           <div className="flex flex-wrap gap-2">
