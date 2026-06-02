@@ -11,6 +11,52 @@ export interface StudentCheckIn {
   wins: string | null;
   additional_notes: string | null;
   created_at: string;
+  updated_at?: string;
+}
+
+export interface CheckInUpdate {
+  mood_rating?: number;
+  progress_rating?: number;
+  blockers?: string | null;
+  wins?: string | null;
+  additional_notes?: string | null;
+}
+
+export function useUpdateCheckIn() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: CheckInUpdate }) => {
+      const { error } = await supabase
+        .from('student_checkins')
+        .update(patch)
+        .eq('id', id)
+        .eq('student_id', user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['latest-checkin'] });
+      queryClient.invalidateQueries({ queryKey: ['student-checkins'] });
+      queryClient.invalidateQueries({ queryKey: ['my-checkins'] });
+    },
+  });
+}
+
+export function useMyCheckIns() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-checkins', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('student_checkins')
+        .select('*')
+        .eq('student_id', user!.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as StudentCheckIn[];
+    },
+    enabled: !!user?.id,
+  });
 }
 
 export function useStudentCheckIns(studentId?: string) {

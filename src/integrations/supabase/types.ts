@@ -607,6 +607,7 @@ export type Database = {
           responses: Json
           section: string
           student_id: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
@@ -614,6 +615,7 @@ export type Database = {
           responses?: Json
           section: string
           student_id: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
@@ -621,6 +623,7 @@ export type Database = {
           responses?: Json
           section?: string
           student_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1852,6 +1855,7 @@ export type Database = {
           mood_rating: number
           progress_rating: number
           student_id: string
+          updated_at: string
           wins: string | null
         }
         Insert: {
@@ -1862,6 +1866,7 @@ export type Database = {
           mood_rating: number
           progress_rating: number
           student_id: string
+          updated_at?: string
           wins?: string | null
         }
         Update: {
@@ -1872,6 +1877,7 @@ export type Database = {
           mood_rating?: number
           progress_rating?: number
           student_id?: string
+          updated_at?: string
           wins?: string | null
         }
         Relationships: []
