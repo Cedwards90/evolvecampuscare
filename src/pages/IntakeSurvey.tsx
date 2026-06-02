@@ -167,7 +167,9 @@ export default function IntakeSurvey() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-2xl">
+      <div className="w-full max-w-2xl space-y-4">
+        <InlineAdminDeletePanel kind="intake" />
+        <Card className="w-full">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <step.icon className="h-6 w-6 text-primary" />
