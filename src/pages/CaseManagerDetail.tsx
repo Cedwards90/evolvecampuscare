@@ -36,6 +36,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useCaseManagerStats } from '@/hooks/useCaseManagerStats';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { GenerateReportCard } from '@/components/reports/GenerateReportCard';
 import { GenerateStudentReportCard } from '@/components/reports/GenerateStudentReportCard';
 import { 
@@ -160,6 +161,10 @@ export default function CaseManagerDetail() {
             <Badge variant="destructive" className="text-sm">High Workload</Badge>
           )}
         </div>
+
+        <GlobalFilterBar visible={['organizationId', 'program', 'cohort', 'studentStatus', 'status']} />
+
+
 
         {/* Stats Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

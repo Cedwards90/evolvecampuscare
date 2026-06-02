@@ -18,6 +18,7 @@ import { useReportStudentFilters } from '@/hooks/useReportStudentFilters';
 import { StudentPicker } from '@/components/reports/StudentPicker';
 import { StudentReportPreview } from '@/components/reports/StudentReportPreview';
 import { ReportFilters } from '@/components/reports/ReportFilters';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import {
   AISummaryPanel,
 } from '@/components/reports/AISummaryPanel';
@@ -461,6 +462,10 @@ export default function StudentProgressReportPage() {
           title="Student Progress Reports"
           description="Live, per-student summary of activity, risks, and recommended actions. Exports include only real data — no fabricated insights."
         />
+
+        <GlobalFilterBar visible={['organizationId', 'program', 'cohort', 'yearOfStudy', 'assignedCaseManagerId', 'studentStatus']} />
+
+
 
         <Card>
           <CardHeader>

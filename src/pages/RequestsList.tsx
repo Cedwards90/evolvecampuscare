@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRequests } from '@/hooks/useRequests';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import type { RequestStatus, RequestPriority, RequestCategory } from '@/types/database';
 
 const categoryLabels: Record<RequestCategory, string> = {
@@ -132,6 +133,10 @@ export default function RequestsList() {
             description={getPageDescription()}
           />
         </div>
+
+        {role !== 'student' && (
+          <GlobalFilterBar visible={['organizationId', 'program', 'cohort', 'assignedCaseManagerId', 'studentStatus']} />
+        )}
 
         {/* Active Filters Display */}
         {(statusFilter !== 'all' || categoryFilter !== 'all' || priorityFilter !== 'all' || showEmergencyOnly) && (

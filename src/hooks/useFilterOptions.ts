@@ -3,8 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Fetches options for the global filter bar selects:
- * organizations, case managers, available cohorts (years), and year-of-study values.
- * RLS already restricts what each role can see.
+ * organizations, case managers, cohorts (years), year-of-study, programs (department),
+ * and student status values. RLS already restricts what each role can see.
  */
 export function useFilterOptions() {
   return useQuery({
@@ -13,7 +13,7 @@ export function useFilterOptions() {
     queryFn: async () => {
       const [orgsRes, profilesRes, rolesRes] = await Promise.all([
         supabase.from('training_organizations').select('id, name').eq('is_active', true).order('name'),
-        supabase.from('profiles').select('user_id, full_name, email, cohort_start_date, year_of_study'),
+        supabase.from('profiles').select('user_id, full_name, email, cohort_start_date, year_of_study, department'),
         supabase.from('user_roles').select('user_id, role'),
       ]);
 
@@ -26,18 +26,25 @@ export function useFilterOptions() {
 
       const cohortSet = new Set<string>();
       const yearSet = new Set<string>();
+      const programSet = new Set<string>();
       (profilesRes.data || []).forEach((p: any) => {
         if (p.cohort_start_date) {
           const y = new Date(p.cohort_start_date).getUTCFullYear();
           if (!Number.isNaN(y)) cohortSet.add(String(y));
         }
         if (p.year_of_study) yearSet.add(p.year_of_study);
+        if (p.department) programSet.add(p.department);
       });
 
       const cohorts = [...cohortSet].sort().reverse().map((y) => ({ value: y, label: `Class of ${y}` }));
       const yearsOfStudy = [...yearSet].sort().map((y) => ({ value: y, label: y }));
+      const programs = [...programSet].sort().map((p) => ({ value: p, label: p }));
+      const studentStatuses = [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' },
+      ];
 
-      return { organizations, caseManagers, cohorts, yearsOfStudy };
+      return { organizations, caseManagers, cohorts, yearsOfStudy, programs, studentStatuses };
     },
   });
 }

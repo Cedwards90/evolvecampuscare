@@ -9,7 +9,9 @@ export type FilterKey =
   | 'organizationId'
   | 'status'
   | 'role'
-  | 'assignedCaseManagerId';
+  | 'assignedCaseManagerId'
+  | 'studentStatus'
+  | 'program';
 
 export type GlobalFilters = Record<FilterKey, string[]>;
 
@@ -20,6 +22,8 @@ const EMPTY_FILTERS: GlobalFilters = {
   status: [],
   role: [],
   assignedCaseManagerId: [],
+  studentStatus: [],
+  program: [],
 };
 
 const URL_KEYS: Record<FilterKey, string> = {
@@ -29,6 +33,8 @@ const URL_KEYS: Record<FilterKey, string> = {
   status: 'status',
   role: 'role',
   assignedCaseManagerId: 'cm',
+  studentStatus: 'sstatus',
+  program: 'program',
 };
 
 interface Ctx {
@@ -62,14 +68,22 @@ function writeToUrl(sp: URLSearchParams, filters: GlobalFilters): URLSearchParam
   return next;
 }
 
+function normalize(raw: Partial<GlobalFilters> | null | undefined): GlobalFilters {
+  const merged = { ...EMPTY_FILTERS, ...(raw || {}) } as GlobalFilters;
+  (Object.keys(EMPTY_FILTERS) as FilterKey[]).forEach((k) => {
+    if (!Array.isArray(merged[k])) merged[k] = [];
+  });
+  return merged;
+}
+
 export function GlobalFiltersProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState<GlobalFilters>(() => readFromUrl(searchParams));
   const [isHydrated, setIsHydrated] = useState(false);
   const debounceRef = useRef<number | null>(null);
 
-  // Hydrate from DB on user load (URL wins if present)
+  // Hydrate from DB on user load (URL wins if present; otherwise seed by role)
   useEffect(() => {
     if (!user) {
       setIsHydrated(true);
@@ -84,27 +98,52 @@ export function GlobalFiltersProvider({ children }: { children: React.ReactNode 
         setIsHydrated(true);
         return;
       }
+
       const { data } = await supabase
         .from('user_filter_preferences')
         .select('filters')
         .eq('user_id', user.id)
         .maybeSingle();
       if (cancelled) return;
+
+      let next: GlobalFilters;
       if (data?.filters) {
-        const merged = { ...EMPTY_FILTERS, ...(data.filters as Partial<GlobalFilters>) };
-        // Ensure all fields are arrays
-        (Object.keys(EMPTY_FILTERS) as FilterKey[]).forEach((k) => {
-          if (!Array.isArray(merged[k])) merged[k] = [];
-        });
-        setFilters(merged);
-        // Reflect in URL silently
-        setSearchParams(writeToUrl(searchParams, merged), { replace: true });
+        next = normalize(data.filters as Partial<GlobalFilters>);
+      } else {
+        // Role-based default org context seeding
+        next = { ...EMPTY_FILTERS };
+        if (role === 'org_admin') {
+          const { data: orgs } = await supabase
+            .from('org_admins')
+            .select('organization_id')
+            .eq('user_id', user.id);
+          if (cancelled) return;
+          const ids = (orgs || []).map((o: any) => o.organization_id).filter(Boolean);
+          if (ids.length) next.organizationId = ids;
+        } else if (role === 'case_manager') {
+          const { data: assigns } = await supabase
+            .from('student_assignments')
+            .select('student_id, profiles:student_id(organization_id)')
+            .eq('case_manager_id', user.id);
+          if (cancelled) return;
+          const ids = Array.from(
+            new Set(
+              (assigns || [])
+                .map((a: any) => a.profiles?.organization_id)
+                .filter(Boolean)
+            )
+          );
+          if (ids.length) next.organizationId = ids as string[];
+        }
       }
+
+      setFilters(next);
+      setSearchParams(writeToUrl(searchParams, next), { replace: true });
       setIsHydrated(true);
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, role]);
 
   // Persist on change (debounced)
   const persist = useCallback((next: GlobalFilters) => {
@@ -169,11 +208,19 @@ export function getCohortFromDate(date: string | null | undefined): string | nul
   return String(y);
 }
 
-/** Filter a list of profile-like objects by cohort/year/org. */
+export type ProfileStatus = 'active' | 'inactive';
+
+export function getProfileStatus(p: { deactivated_at?: string | null }): ProfileStatus {
+  return p.deactivated_at ? 'inactive' : 'active';
+}
+
+/** Filter a list of profile-like objects by cohort/year/org/program/studentStatus. */
 export function filterByProfile<T extends {
   cohort_start_date?: string | null;
   year_of_study?: string | null;
   organization_id?: string | null;
+  department?: string | null;
+  deactivated_at?: string | null;
 }>(rows: T[], filters: GlobalFilters): T[] {
   return rows.filter((r) => {
     if (filters.cohort.length) {
@@ -185,6 +232,13 @@ export function filterByProfile<T extends {
     }
     if (filters.organizationId.length) {
       if (!r.organization_id || !filters.organizationId.includes(r.organization_id)) return false;
+    }
+    if (filters.program.length) {
+      if (!r.department || !filters.program.includes(r.department)) return false;
+    }
+    if (filters.studentStatus.length) {
+      const s = getProfileStatus(r);
+      if (!filters.studentStatus.includes(s)) return false;
     }
     return true;
   });

@@ -1,123 +1,58 @@
-# Impact Analytics Dashboard
+# Platform-wide Organization-Aware Filtering
 
-A single dashboard that rolls up the data layer we just shipped (funnel events, outcomes, program costs, demographics, surveys) into a logic-model view: **Inputs → Activities → Outputs → Outcomes → Impact**. Scoped automatically: Admins see the whole platform, Org Admins see only their org(s).
+## Current state (already in place)
 
-## Route & Navigation
+- `GlobalFiltersContext` supports `organizationId`, `cohort`, `yearOfStudy`, `status`, `role`, `assignedCaseManagerId` — persisted to `user_filter_preferences` + URL.
+- `GlobalFilterBar` + `FilterMultiSelect` UI exist.
+- Adopted on: Reports, AdminDashboard, Dashboard, ManageRequests, StudentFolders, admin/CaseManagers, admin/UserManagement, admin/TrainingOrganizations, admin/AnalyticsDashboard, admin/SurveyResponses, MyStudentsSection, PendingInvitations.
 
-- New page: `/admin/impact` → `src/pages/admin/ImpactDashboard.tsx`
-- Sidebar entry "Impact Analytics" for Admins and Org Admins (under Reports section)
-- Uses existing `PageNav` and `GlobalFilterBar` patterns
+We will **extend, not rewrite**, this system. No changes to unrelated business logic.
 
-## Filter Bar (top of page)
+## Gaps to close
 
-Powered by a new `useImpactFilters` hook + URL params for deep-linking:
+1. **Missing filter dimensions** the user asked for:
+   - `class` → reuse `cohort` (already "Class of YYYY"). Add explicit `class` alias label + ensure shown wherever students appear.
+   - `studentStatus` → new key (active/inactive/suspended). Distinct from request `status`.
+   - `program` → new key. Source: `profiles.program` (verify column exists; if not, plan adds it as a follow-up question, not built without permission).
 
-- **Date range** (preset: 30/90/180/365/All, or custom) — `ReportRangePicker`
-- **Organization** — multi-select (Admin: all orgs; Org Admin: locked to their orgs)
-- **Cohort / Class year** — from existing `useFilterOptions`
-- **Case Manager** — multi-select (Admin only)
-- **Demographics** — gender, age range, veteran, justice-involved, disability (uses `participant_demographics`)
-- **Reset / Save view** button
+2. **Default to user's org context** (currently filters start empty):
+   - On hydration, if user is `org_admin` and no saved/URL filter set → seed `organizationId` with their `org_admins` orgs.
+   - If user is `case_manager` → seed with org(s) of their assigned students (read-only default; they can clear).
+   - Admin → no default (sees all).
+   - Students → filter bar hidden (already effectively the case).
 
-All downstream queries derive from a single `ImpactFiltersContext` so cards, charts, and exports stay in sync.
+3. **Pages still missing the bar** where students/CMs/requests/surveys/notes/assignments are shown:
+   - `RequestsList`, `TrackRequests`, `RequestDetail` (read-only badge of active filters), `Messages` (filter conversation list), `StudentProgressReport`, `StudentDetail` (header chip showing active org context), `CaseManagerDetail`, `admin/ImpactDashboard` (already has its own — unify to consume global filters as defaults), `admin/TransitionsDashboard`, file-notes/assignments sub-views inside `StudentDetail`.
 
-## Dashboard Sections (logic model)
+4. **Data scoping**: ensure every query hook honors active filters:
+   - Audit hooks: `useStudents`, `useStudentFolders`, `useRequests*`, `useStudentAssignments`, `useFileNotes`, `useSurveys`, `useReportStudentFilters`, `useImpactAnalytics`, notifications counts, dashboard KPIs.
+   - Pattern: hooks accept `filters` from `useGlobalFilters()` and include them in React Query keys so cache + realtime invalidation recompute automatically.
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│ 1. INPUTS         Program cost, staff capacity, $/seat   │
-│ 2. ACTIVITIES     Requests handled, meetings, check-ins  │
-│ 3. OUTPUTS        Certifications earned, plans completed │
-│ 4. OUTCOMES       Placement, wage lift, retention curves │
-│ 5. IMPACT         SROI, equity gaps, lifetime value      │
-└─────────────────────────────────────────────────────────┘
-```
+5. **Exports** (CSV/PDF): pass current filter snapshot into export builders so downloads match on-screen scope; include "Filtered by: …" line in PDF headers (extend existing branding header).
 
-### 1. Inputs (from `program_cost_settings`, `user_roles`)
-- Total program cost (period)
-- Cost per active participant
-- Active case managers / org admins
-- Caseload distribution sparkline
+6. **Persistence**: already saved per user. Add per-page `visible` filters (already supported) — no schema change.
 
-### 2. Activities (from `participant_funnel_events`, `support_requests`, `appointments`, `messages`, `student_check_ins`)
-- Funnel: QR scan → Signup → NDA → Intake → First request → Meeting (conversion % between stages)
-- Requests submitted vs resolved (area chart)
-- Meetings scheduled / completed
-- Check-ins submitted, average mood trend
+7. **Realtime**: existing realtime bridge invalidates query keys; since keys include filter values, recalculation is automatic. Verify no hook uses filters outside its queryKey.
 
-### 3. Outputs (from `student_certifications`, `post_graduation_plans`, `participant_record_exports`)
-- Certifications earned (count + by category)
-- Post-grad plans completed
-- Records transferred / handoffs completed
+## Implementation steps
 
-### 4. Outcomes (from `participant_outcomes`)
-- Placement rate (% with `placement_date`)
-- Average wage lift = `hourly_wage − baseline_wage`
-- Retention curve: 30 / 60 / 90 / 180 / 365 day % (line chart)
-- Time-to-placement distribution
-- Program completion rate
+1. **Context**: add `studentStatus` and `program` keys to `GlobalFilters`, `URL_KEYS`, `EMPTY_FILTERS`, helpers, and `filterByProfile`.
+2. **Filter options hook**: extend `useFilterOptions` to return `programs` + `studentStatuses`.
+3. **Default seeding**: in `GlobalFiltersProvider` hydration, when no saved/URL filters exist, seed `organizationId` from role (org_admin → org_admins table; case_manager → distinct orgs of assignments).
+4. **GlobalFilterBar**: add Program + Student Status controls; keep role-based hiding.
+5. **Mount bar on missing pages** listed above with appropriate `visible` props.
+6. **Audit + update query hooks** to consume `filters` and include them in queryKey + WHERE clauses (client-side filter for already-fetched lists; server-side `.in()` where lists are large).
+7. **Exports**: thread `filters` into PDF/CSV generators; add filter summary to headers.
+8. **Tests / sanity**: verify role-based defaults, URL deep-links, realtime updates recompute counts, and clearing filters restores full scope.
 
-### 5. Impact (computed)
-- **SROI ratio** = (wage lift × annualized hours × placed count + public-benefit offsets) ÷ program cost
-- **Equity panel**: outcome parity gap by gender / ethnicity / veteran / justice-involved (bar comparison vs overall)
-- **Lifetime earnings lift** (projected) per cohort
-- **Goal progress**: pulls active `funding_goals`, shows actual vs target with progress bar
+## Out of scope (will ask before doing)
 
-## Data Layer
+- Adding new DB columns (e.g., if `profiles.program` doesn't exist).
+- Changing RLS or unrelated business logic.
+- Refactoring the Impact Dashboard's bespoke filter UI beyond reading defaults from global filters.
 
-New hook file `src/hooks/useImpactAnalytics.ts` with composed queries (React Query, 5-min stale):
-- `useImpactInputs(filters)`
-- `useImpactActivities(filters)`
-- `useImpactOutputs(filters)`
-- `useImpactOutcomes(filters)`
-- `useImpactSROI(filters)` — derives from outcomes + costs
-- `useImpactEquity(filters)` — joins outcomes with demographics
+## Open questions
 
-All queries respect existing RLS — no new policies needed. Org Admins automatically see only their org because every table is already scoped through `user_in_org_admin_scope_v2` / `is_org_admin_of`.
-
-Realtime: register the analytics query keys in `src/lib/realtimeRouter.ts` so cards refresh when new outcomes/funnel events arrive.
-
-## Components
-
-```text
-src/components/impact/
-├── ImpactFilterBar.tsx
-├── InputsSection.tsx
-├── ActivitiesSection.tsx
-├── FunnelChart.tsx          (custom Recharts funnel)
-├── OutputsSection.tsx
-├── OutcomesSection.tsx
-├── RetentionCurve.tsx       (line chart)
-├── ImpactSection.tsx
-├── SROICard.tsx
-├── EquityPanel.tsx          (grouped bar)
-└── GoalProgressCard.tsx
-```
-
-Reuses existing `StatsCard`, `AreaChartCard`, `SparklineCard`, `FractionStatsCard`, `PercentageStatsCard`, `chart.tsx`.
-
-## Export
-
-"Export" button in header → PDF + CSV via extension of `src/lib/reportExport.ts`:
-- PDF: branded header (org name if filtered + "Powered by Evolve Foundation"), each section as a page, charts rasterized
-- CSV: flat metrics table + raw outcomes rows
-- Logs an entry to `impact_report_audit`
-
-## Out of scope (this pass)
-- Editing program cost settings (already in Settings)
-- Configuring funding goals UI (separate task if needed)
-- Survey response analytics (separate, larger module)
-
-## Files Created / Modified
-
-**Created**
-- `src/pages/admin/ImpactDashboard.tsx`
-- `src/contexts/ImpactFiltersContext.tsx`
-- `src/hooks/useImpactAnalytics.ts`
-- `src/components/impact/*` (10 files above)
-
-**Modified**
-- `src/App.tsx` — add route
-- `src/components/layouts/SidebarLayout.tsx` — nav link (Admin + Org Admin)
-- `src/lib/realtimeRouter.ts` — invalidate impact queries on outcome/funnel changes
-- `src/lib/reportExport.ts` — add `exportImpactReport()`
+1. Does `profiles` already have a `program` column, or should `program` map to something existing (e.g., `cohort`/organization)? If not present, do you want me to add it (schema change)?
+2. For `studentStatus`, should the values be: Active / Inactive (deactivated) / Org-Suspended — or a different taxonomy?
+3. For Case Managers, should the default org context be **locked** (cannot clear) or just **pre-selected** (can clear to see cross-org assigned students)?

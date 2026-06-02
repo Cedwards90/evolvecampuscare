@@ -11,6 +11,7 @@ import { Download, ArrowRightLeft, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { useParticipantTransfers, useAllParticipantExports, useGetExportUrl } from '@/hooks/useParticipantTransfers';
 import { ParticipantTransfersSection } from '@/components/transfers/ParticipantTransfersSection';
+import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useToast } from '@/hooks/use-toast';
 
 export default function TransitionsDashboard() {
@@ -44,6 +45,8 @@ export default function TransitionsDashboard() {
           title="Participant Transitions"
           description="Pending and completed transfers, missing records, export history, and access logs."
         />
+
+        <GlobalFilterBar visible={['organizationId', 'studentStatus']} />
 
         <div className="grid gap-4 md:grid-cols-4">
           <StatCard label="Pending transfers" value={counts.pending} />
