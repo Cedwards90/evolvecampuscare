@@ -415,6 +415,7 @@ export default function IntakeSurvey() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
