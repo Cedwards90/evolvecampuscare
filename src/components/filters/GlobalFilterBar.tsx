@@ -1,4 +1,4 @@
-import { GraduationCap, Calendar, Building2, Activity, UserCog, Users, X } from 'lucide-react';
+import { GraduationCap, Calendar, Building2, Activity, UserCog, Users, X, BookOpen, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useGlobalFilters, FilterKey } from '@/contexts/GlobalFiltersContext';
@@ -20,6 +20,11 @@ const ROLE_OPTIONS: FilterOption[] = [
   { value: 'admin', label: 'Admin' },
 ];
 
+const STUDENT_STATUS_OPTIONS: FilterOption[] = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+];
+
 export type FilterField = FilterKey;
 
 interface Props {
@@ -28,17 +33,26 @@ interface Props {
   className?: string;
 }
 
-const ALL: FilterField[] = ['cohort', 'yearOfStudy', 'organizationId', 'status', 'role', 'assignedCaseManagerId'];
+const ALL: FilterField[] = [
+  'organizationId',
+  'cohort',
+  'program',
+  'yearOfStudy',
+  'assignedCaseManagerId',
+  'studentStatus',
+  'status',
+  'role',
+];
 
 export function GlobalFilterBar({ visible = ALL, className }: Props) {
-  const { filters, setFilter, clearFilter, resetAll, activeCount } = useGlobalFilters();
+  const { filters, setFilter, resetAll, activeCount } = useGlobalFilters();
   const { role } = useAuth();
   const { data: opts } = useFilterOptions();
 
-  // Hide role filter for non-admins
+  // Hide admin-only filters for non-admins
   const effectiveVisible = visible.filter((f) => {
     if (f === 'role' && role !== 'admin') return false;
-    if (f === 'assignedCaseManagerId' && role !== 'admin') return false;
+    if (f === 'assignedCaseManagerId' && role !== 'admin' && role !== 'org_admin') return false;
     return true;
   });
 
@@ -50,23 +64,29 @@ export function GlobalFilterBar({ visible = ALL, className }: Props) {
     if (key === 'cohort') return `Class of ${value}`;
     if (key === 'status') return STATUS_OPTIONS.find((o) => o.value === value)?.label || value;
     if (key === 'role') return ROLE_OPTIONS.find((o) => o.value === value)?.label || value;
+    if (key === 'studentStatus') return STUDENT_STATUS_OPTIONS.find((o) => o.value === value)?.label || value;
+    if (key === 'program') return value;
     return value;
   };
 
   const renderFilter = (f: FilterField) => {
     switch (f) {
       case 'cohort':
-        return <FilterMultiSelect key={f} label="Cohort" icon={<GraduationCap className="h-3.5 w-3.5" />} options={opts?.cohorts || []} selected={filters.cohort} onChange={(v) => setFilter('cohort', v)} />;
+        return <FilterMultiSelect key={f} label="Class" icon={<GraduationCap className="h-3.5 w-3.5" />} options={opts?.cohorts || []} selected={filters.cohort} onChange={(v) => setFilter('cohort', v)} />;
       case 'yearOfStudy':
         return <FilterMultiSelect key={f} label="Year" icon={<Calendar className="h-3.5 w-3.5" />} options={opts?.yearsOfStudy || []} selected={filters.yearOfStudy} onChange={(v) => setFilter('yearOfStudy', v)} />;
       case 'organizationId':
         return <FilterMultiSelect key={f} label="Organization" icon={<Building2 className="h-3.5 w-3.5" />} options={opts?.organizations || []} selected={filters.organizationId} onChange={(v) => setFilter('organizationId', v)} />;
       case 'status':
-        return <FilterMultiSelect key={f} label="Status" icon={<Activity className="h-3.5 w-3.5" />} options={STATUS_OPTIONS} selected={filters.status} onChange={(v) => setFilter('status', v)} />;
+        return <FilterMultiSelect key={f} label="Request Status" icon={<Activity className="h-3.5 w-3.5" />} options={STATUS_OPTIONS} selected={filters.status} onChange={(v) => setFilter('status', v)} />;
       case 'role':
         return <FilterMultiSelect key={f} label="Role" icon={<Users className="h-3.5 w-3.5" />} options={ROLE_OPTIONS} selected={filters.role} onChange={(v) => setFilter('role', v)} />;
       case 'assignedCaseManagerId':
         return <FilterMultiSelect key={f} label="Case Manager" icon={<UserCog className="h-3.5 w-3.5" />} options={opts?.caseManagers || []} selected={filters.assignedCaseManagerId} onChange={(v) => setFilter('assignedCaseManagerId', v)} />;
+      case 'program':
+        return <FilterMultiSelect key={f} label="Program" icon={<BookOpen className="h-3.5 w-3.5" />} options={opts?.programs || []} selected={filters.program} onChange={(v) => setFilter('program', v)} />;
+      case 'studentStatus':
+        return <FilterMultiSelect key={f} label="Student Status" icon={<UserCheck className="h-3.5 w-3.5" />} options={STUDENT_STATUS_OPTIONS} selected={filters.studentStatus} onChange={(v) => setFilter('studentStatus', v)} />;
     }
   };
 
