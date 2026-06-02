@@ -486,7 +486,22 @@ export async function fetchImpactAnalytics(filters: ImpactFilters): Promise<Impa
         },
         coverage,
       };
-    },
+    };
+  }
+}
+
+/**
+ * Composed query for the unified impact dashboard. All data respects
+ * existing RLS — Org Admins only see their orgs, Admins see everything.
+ */
+export function useImpactAnalytics(filters: ImpactFilters) {
+  const { user, role } = useAuth();
+
+  return useQuery<ImpactData>({
+    queryKey: ['impact-analytics', filters, role, user?.id],
+    enabled: !!user && (role === 'admin' || role === 'org_admin'),
+    staleTime: 60 * 1000,
+    queryFn: () => fetchImpactAnalytics(filters),
   });
 }
 
