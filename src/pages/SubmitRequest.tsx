@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { uploadAttachment, MAX_FILE_SIZE, MAX_FILES_PER_REQUEST, ALLOWED_MIME_TYPES } from '@/hooks/useRequestAttachments';
+import { X as XIcon } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { QrCode } from 'lucide-react';
