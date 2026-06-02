@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { format, subDays } from 'date-fns';
 import {
   Activity,
@@ -52,6 +53,7 @@ import { PageNav } from '@/components/navigation/PageNav';
 import { DataCoverageCard } from '@/components/impact/DataCoverageCard';
 import { CostSettingsEditor } from '@/components/impact/CostSettingsEditor';
 import { OutcomesEditor } from '@/components/impact/OutcomesEditor';
+import { OrgBreakdownTable } from '@/components/impact/OrgBreakdownTable';
 
 const CURRENCY = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -117,12 +119,48 @@ function downloadCsv(rows: string[][], filename: string) {
 export default function ImpactDashboard() {
   const { role } = useAuth();
   const { data: orgs } = useTrainingOrganizations();
-  const [filters, setFilters] = useState<ImpactFilters>(defaultImpactRange(90));
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const initialOrgs = useMemo(() => {
+    const raw = searchParams.get('orgs');
+    return raw ? raw.split(',').filter(Boolean) : [];
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [filters, setFilters] = useState<ImpactFilters>(() => ({
+    ...defaultImpactRange(90),
+    organizationIds: initialOrgs,
+  }));
   const [rangePreset, setRangePreset] = useState<string>('90');
 
   const orgOptions = useMemo(
     () => (orgs || []).map((o: any) => ({ value: o.id, label: o.name })),
     [orgs],
+  );
+
+  const canFilterOrgs = role === 'admin' || role === 'org_admin';
+
+  // Sync org selection into URL for shareable views.
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (filters.organizationIds.length) {
+      next.set('orgs', filters.organizationIds.join(','));
+    } else {
+      next.delete('orgs');
+    }
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [filters.organizationIds]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setOrgIds = (vals: string[]) => setFilters((f) => ({ ...f, organizationIds: vals }));
+
+  // Breakdown shows either all visible orgs or just the ones currently selected.
+  const breakdownOrgs = useMemo(
+    () =>
+      filters.organizationIds.length
+        ? orgOptions.filter((o) => filters.organizationIds.includes(o.value))
+        : orgOptions,
+    [orgOptions, filters.organizationIds],
   );
 
   const setRange = (days: string) => {
@@ -217,20 +255,39 @@ export default function ImpactDashboard() {
                 <SelectItem value="all">All time</SelectItem>
               </SelectContent>
             </Select>
-            {role === 'admin' && orgOptions.length > 0 && (
-              <FilterMultiSelect
-                label="Organization"
-                options={orgOptions}
-                selected={filters.organizationIds}
-                onChange={(vals) => setFilters((f) => ({ ...f, organizationIds: vals }))}
-              />
-            )}
             <Button onClick={handleExport} variant="outline" disabled={!data}>
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
           </div>
         </div>
+
+        {canFilterOrgs && orgOptions.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
+            <span className="text-xs font-medium text-muted-foreground px-1">Organizations</span>
+            <FilterMultiSelect
+              label="Filter"
+              options={orgOptions}
+              selected={filters.organizationIds}
+              onChange={setOrgIds}
+            />
+            <span className="text-xs text-muted-foreground">
+              {filters.organizationIds.length === 0
+                ? `Showing all ${orgOptions.length}`
+                : `${filters.organizationIds.length} of ${orgOptions.length} selected`}
+            </span>
+            {filters.organizationIds.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="rounded-full h-7 px-3 text-xs"
+                onClick={() => setOrgIds([])}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        )}
 
         {isLoading && <LoadingSpinner />}
         {error && (
@@ -244,6 +301,10 @@ export default function ImpactDashboard() {
         {data && (
           <>
             <DataCoverageCard coverage={data.coverage} />
+
+            {canFilterOrgs && breakdownOrgs.length > 1 && (
+              <OrgBreakdownTable filters={filters} orgOptions={breakdownOrgs} />
+            )}
 
             {/* ============== 0. INPUTS ENTRY ============== */}
             <section className="space-y-3">
