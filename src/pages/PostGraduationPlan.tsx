@@ -143,6 +143,10 @@ export default function PostGraduationPlan() {
           <p className="text-muted-foreground">Plan your first year after graduation across career, housing, finances, and more.</p>
         </div>
 
+        <InlineAdminDeletePanel kind="plan" />
+
+
+
         <Progress value={progress} className="h-2" />
         <p className="text-xs text-muted-foreground text-right">Step {currentStep + 1} of {STEPS.length}</p>
 
