@@ -87,6 +87,7 @@ export function useIntakeSurvey() {
     isLoading: fileLoading || responsesLoading,
     intakeCompleted: !!studentFile?.intake_completed_at,
     saveSection,
+    updateSection,
     completeIntake,
   };
 }
