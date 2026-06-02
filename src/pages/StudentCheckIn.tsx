@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { downloadCheckInPdf } from '@/lib/wellbeingExport';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrgName } from '@/hooks/useOrgName';
+import { InlineAdminDeletePanel } from '@/components/submissions/InlineAdminDeletePanel';
 
 const moodLabels = ['😔 Struggling', '😕 Not Great', '😐 Okay', '🙂 Good', '😊 Great'];
 const progressLabels = ['Struggling', 'Behind', 'On Track', 'Progressing Well', 'Thriving'];
