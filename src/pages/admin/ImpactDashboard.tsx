@@ -243,6 +243,24 @@ export default function ImpactDashboard() {
 
         {data && (
           <>
+            <DataCoverageCard coverage={data.coverage} />
+
+            {/* ============== 0. INPUTS ENTRY ============== */}
+            <section className="space-y-3">
+              <SectionHeading
+                step="0"
+                title="Enter Inputs"
+                blurb="Add the numbers that drive Impact: program cost, public benefit, placements, wages, and retention."
+                icon={DollarSign}
+              />
+              <CostSettingsEditor
+                costs={data.costSettings}
+                orgOptions={orgOptions}
+                isAdmin={role === 'admin'}
+              />
+              <OutcomesEditor studentIds={data.scope.studentIds} />
+            </section>
+
             {/* ============== 1. INPUTS ============== */}
             <section className="space-y-3">
               <SectionHeading
