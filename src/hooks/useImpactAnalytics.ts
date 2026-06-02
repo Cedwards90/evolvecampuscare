@@ -88,17 +88,12 @@ export interface ImpactData {
 const HOURS_PER_YEAR = 2080;
 
 /**
- * Composed query for the unified impact dashboard. All data respects
- * existing RLS — Org Admins only see their orgs, Admins see everything.
+ * Standalone fetcher so non-hook callers (e.g. useQueries) can reuse the
+ * exact same computation. RLS scopes everything based on the current session.
  */
-export function useImpactAnalytics(filters: ImpactFilters) {
-  const { user, role } = useAuth();
-
-  return useQuery<ImpactData>({
-    queryKey: ['impact-analytics', filters, role, user?.id],
-    enabled: !!user && (role === 'admin' || role === 'org_admin'),
-    staleTime: 60 * 1000,
-    queryFn: async () => {
+export async function fetchImpactAnalytics(filters: ImpactFilters): Promise<ImpactData> {
+  {
+    {
       const fromIso = new Date(filters.from).toISOString();
       const toIso = new Date(filters.to).toISOString();
       const orgScope = filters.organizationIds.length > 0 ? filters.organizationIds : null;
