@@ -302,6 +302,10 @@ export default function ImpactDashboard() {
           <>
             <DataCoverageCard coverage={data.coverage} />
 
+            {canFilterOrgs && breakdownOrgs.length > 1 && (
+              <OrgBreakdownTable filters={filters} orgOptions={breakdownOrgs} />
+            )}
+
             {/* ============== 0. INPUTS ENTRY ============== */}
             <section className="space-y-3">
               <SectionHeading
