@@ -1,23 +1,36 @@
-## Add per-row delete on /admin/surveys
+## Organization sorting on /admin/impact
 
-The admin Surveys page (`/admin/surveys`) lists every check-in and post-graduation plan submission but currently has no way to remove one. This adds an admin-only Delete button to each row/card with a confirm dialog.
+Two additions to `src/pages/admin/ImpactDashboard.tsx`:
 
-### Scope
-- `CheckInRow` (check-ins table) — add a trailing Delete icon button.
-- `PlanCard` (post-grad plan cards) — add a Delete button in the card header.
-- Confirm with `AlertDialog` ("This permanently deletes the submission. This can't be undone.") before deleting.
-- On success: toast and React Query invalidation refreshes the list.
+### 1. Promote the Organization filter
+Move the existing top-right `FilterMultiSelect` into its own filter bar row directly under the page header (alongside the date range), styled like other admin filter bars (`rounded-full`, sage outline). Add:
+- A count badge ("3 of 12 selected") and a "Clear" pill when any orgs are selected.
+- Make it visible to **Org Admins** too — for them, options auto-restrict to their `org_admins` orgs (already RLS-scoped via `useTrainingOrganizations`).
+- Persist selection in the URL (`?orgs=id1,id2`) so the view is shareable/deep-linkable.
 
-### Wiring
-Reuse existing mutations — no new DB work; admin DELETE RLS already exists on both tables:
-- `useDeleteCheckIn` from `@/hooks/useStudentCheckIns`
-- `useDeletePlan` from `@/hooks/usePostGraduationPlan`
+### 2. Per-organization breakdown table
+New `<OrgBreakdownTable />` rendered in a collapsible Card titled "Compare organizations" beneath the existing KPI grid.
 
-Both already invalidate the relevant query keys (`student-checkins`, `latest-checkin`, `my-checkins`, `post-graduation-plans`). Extend each `onSuccess` to also invalidate the `useAllCheckIns` / `useAllPostGradPlans` keys used on this page so the row disappears immediately.
+Columns (sortable by clicking the header, default desc by Students):
+- Organization
+- Active students
+- Requests opened / resolved
+- Approved $ (sum)
+- Certifications earned
+- Placement rate (%)
+- Avg wage lift ($)
+- SROI
+
+Data: call `useImpactAnalytics` once per org via `useQueries` with `{ ...filters, organizationIds: [org.id] }` for each org the admin/org-admin can see (respects the active multi-select — if none selected, all visible orgs; if some, just those). Show a small spinner per row while loading; render `—` for null metrics.
+
+Also: a "Totals" row at the bottom summing numeric columns (rates shown as weighted averages, not summed).
+
+### Export
+Extend the existing CSV export with an "Organization breakdown" section (one row per org with the same columns).
 
 ### Files
-- `src/pages/admin/SurveyResponses.tsx` — add Delete UI to `CheckInRow` and `PlanCard`.
-- `src/hooks/useStudentCheckIns.ts` and `src/hooks/usePostGraduationPlan.ts` — add the admin list query keys to the delete mutations' invalidation set (only if not already covered).
+- `src/pages/admin/ImpactDashboard.tsx` — relocate filter, add URL sync, render new component, extend CSV.
+- `src/components/impact/OrgBreakdownTable.tsx` — new component (uses `useQueries` + existing hook).
 
 ### Out of scope
-No schema/RLS changes. No changes to pending tabs (nothing to delete there).
+No DB/RLS changes, no new endpoints, no changes to charts.
