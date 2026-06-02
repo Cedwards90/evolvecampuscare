@@ -15,6 +15,7 @@ import { PageNav } from '@/components/navigation/PageNav';
 import { downloadPlanPdf } from '@/lib/wellbeingExport';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrgName } from '@/hooks/useOrgName';
+import { InlineAdminDeletePanel } from '@/components/submissions/InlineAdminDeletePanel';
 
 const STEPS = [
   { key: 'goals', title: 'Career & Education', icon: GraduationCap, description: 'Your career and education goals for the first year after graduation.' },
@@ -141,6 +142,10 @@ export default function PostGraduationPlan() {
           <h1 className="font-display text-h2 font-bold">12-Month Post-Graduation Plan</h1>
           <p className="text-muted-foreground">Plan your first year after graduation across career, housing, finances, and more.</p>
         </div>
+
+        <InlineAdminDeletePanel kind="plan" />
+
+
 
         <Progress value={progress} className="h-2" />
         <p className="text-xs text-muted-foreground text-right">Step {currentStep + 1} of {STEPS.length}</p>
