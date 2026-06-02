@@ -255,20 +255,39 @@ export default function ImpactDashboard() {
                 <SelectItem value="all">All time</SelectItem>
               </SelectContent>
             </Select>
-            {role === 'admin' && orgOptions.length > 0 && (
-              <FilterMultiSelect
-                label="Organization"
-                options={orgOptions}
-                selected={filters.organizationIds}
-                onChange={(vals) => setFilters((f) => ({ ...f, organizationIds: vals }))}
-              />
-            )}
             <Button onClick={handleExport} variant="outline" disabled={!data}>
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
           </div>
         </div>
+
+        {canFilterOrgs && orgOptions.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
+            <span className="text-xs font-medium text-muted-foreground px-1">Organizations</span>
+            <FilterMultiSelect
+              label="Filter"
+              options={orgOptions}
+              selected={filters.organizationIds}
+              onChange={setOrgIds}
+            />
+            <span className="text-xs text-muted-foreground">
+              {filters.organizationIds.length === 0
+                ? `Showing all ${orgOptions.length}`
+                : `${filters.organizationIds.length} of ${orgOptions.length} selected`}
+            </span>
+            {filters.organizationIds.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="rounded-full h-7 px-3 text-xs"
+                onClick={() => setOrgIds([])}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        )}
 
         {isLoading && <LoadingSpinner />}
         {error && (
