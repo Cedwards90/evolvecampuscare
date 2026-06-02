@@ -15,6 +15,7 @@ import { PageNav } from '@/components/navigation/PageNav';
 import { downloadPlanPdf } from '@/lib/wellbeingExport';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrgName } from '@/hooks/useOrgName';
+import { InlineAdminDeletePanel } from '@/components/submissions/InlineAdminDeletePanel';
 
 const STEPS = [
   { key: 'goals', title: 'Career & Education', icon: GraduationCap, description: 'Your career and education goals for the first year after graduation.' },
