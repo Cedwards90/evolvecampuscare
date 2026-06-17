@@ -309,7 +309,17 @@ export default function Settings() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    {!isEnrolled && (
+                    {profile?.mfa_exempt && (
+                      <Alert>
+                        <Shield className="h-4 w-4" />
+                        <AlertDescription>
+                          An administrator has waived the MFA requirement for your account
+                          {profile.mfa_exempt_reason ? <>: <em>{profile.mfa_exempt_reason}</em></> : '.'}
+                          {' '}You can still enable MFA below for extra security.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    {!isEnrolled && !profile?.mfa_exempt && (
                       <Alert>
                         <Shield className="h-4 w-4" />
                         <AlertDescription>
