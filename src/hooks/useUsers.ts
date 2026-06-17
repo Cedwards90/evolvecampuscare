@@ -212,3 +212,20 @@ export function useUserStatusHistory(userId: string | null | undefined) {
     },
   });
 }
+
+export function useSetUserMfaExempt() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, exempt, reason }: { userId: string; exempt: boolean; reason?: string }) => {
+      const { data, error } = await supabase.functions.invoke('set-user-mfa-exempt', {
+        body: { userId, exempt, reason },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+    },
+  });
+}
