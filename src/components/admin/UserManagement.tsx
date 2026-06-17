@@ -234,6 +234,7 @@ export function UserManagement() {
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>MFA</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -245,11 +246,12 @@ export function UserManagement() {
                   <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                   <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-9 w-32 ml-auto" /></TableCell>
                 </TableRow>
               ))
             ) : filteredUsers.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No users found matching your criteria.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No users found matching your criteria.</TableCell></TableRow>
             ) : (
               filteredUsers.map((u) => {
                 const RoleIcon = roleConfig[u.role].icon;
@@ -294,6 +296,29 @@ export function UserManagement() {
                         </Tooltip>
                       )}
                     </TableCell>
+                    <TableCell>
+                      {u.role === 'student' ? (
+                        <span className="text-xs text-muted-foreground">N/A</span>
+                      ) : u.mfa_exempt ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 cursor-help">
+                              <ShieldOff className="h-3 w-3 mr-1" />Waived
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="text-xs space-y-1">
+                              <p>MFA waived {u.mfa_exempt_at ? format(new Date(u.mfa_exempt_at), 'PPp') : ''}</p>
+                              {u.mfa_exempt_reason && <p className="max-w-[240px]">Reason: {u.mfa_exempt_reason}</p>}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                          <Shield className="h-3 w-3 mr-1" />Required
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Select
@@ -322,6 +347,22 @@ export function UserManagement() {
                           </TooltipTrigger>
                           <TooltipContent>{isCurrentUser ? 'You cannot change your own status' : (u.is_active ? 'Deactivate account' : 'Activate account')}</TooltipContent>
                         </Tooltip>
+                        {u.role !== 'student' && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openMfaDialog(u)}
+                                disabled={setMfaExempt.isPending}
+                                aria-label={u.mfa_exempt ? 'Re-require MFA' : 'Waive MFA'}
+                              >
+                                {u.mfa_exempt ? <Shield className="h-4 w-4" /> : <ShieldOff className="h-4 w-4" />}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{u.mfa_exempt ? 'Re-require MFA' : 'Waive MFA'}</TooltipContent>
+                          </Tooltip>
+                        )}
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" onClick={() => setHistoryUserId(u.user_id)} aria-label="View status history">
