@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Search, UserCog, Shield, GraduationCap, Briefcase, Loader2, History, Power } from 'lucide-react';
-import { useUsers, useUpdateUserRole, useSetUserActive, useUserStatusHistory, type UserWithRole } from '@/hooks/useUsers';
+import { Search, UserCog, Shield, ShieldOff, GraduationCap, Briefcase, Loader2, History, Power } from 'lucide-react';
+import { useUsers, useUpdateUserRole, useSetUserActive, useUserStatusHistory, useSetUserMfaExempt, type UserWithRole } from '@/hooks/useUsers';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +55,7 @@ export function UserManagement() {
   const { data: users, isLoading, error } = useUsers();
   const updateRole = useUpdateUserRole();
   const setActive = useSetUserActive();
+  const setMfaExempt = useSetUserMfaExempt();
   const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,6 +71,11 @@ export function UserManagement() {
     open: false, user: null, nextActive: true,
   });
   const [reason, setReason] = useState('');
+
+  const [mfaDialog, setMfaDialog] = useState<{ open: boolean; user: UserWithRole | null; nextExempt: boolean }>({
+    open: false, user: null, nextExempt: false,
+  });
+  const [mfaReason, setMfaReason] = useState('');
 
   const [historyUserId, setHistoryUserId] = useState<string | null>(null);
 
@@ -130,6 +136,31 @@ export function UserManagement() {
     } finally {
       setStatusDialog({ open: false, user: null, nextActive: true });
       setReason('');
+    }
+  };
+
+  const openMfaDialog = (u: UserWithRole) => {
+    setMfaReason('');
+    setMfaDialog({ open: true, user: u, nextExempt: !u.mfa_exempt });
+  };
+
+  const confirmMfaChange = async () => {
+    if (!mfaDialog.user) return;
+    try {
+      await setMfaExempt.mutateAsync({
+        userId: mfaDialog.user.user_id,
+        exempt: mfaDialog.nextExempt,
+        reason: mfaReason.trim() || undefined,
+      });
+      toast({
+        title: mfaDialog.nextExempt ? 'MFA waived' : 'MFA re-required',
+        description: `${mfaDialog.user.full_name || mfaDialog.user.email} ${mfaDialog.nextExempt ? 'no longer needs to use MFA.' : 'will be required to use MFA at next sign-in.'}`,
+      });
+    } catch (err: any) {
+      toast({ title: 'Failed to update MFA setting', description: err?.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setMfaDialog({ open: false, user: null, nextExempt: false });
+      setMfaReason('');
     }
   };
 
@@ -203,6 +234,7 @@ export function UserManagement() {
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>MFA</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -214,11 +246,12 @@ export function UserManagement() {
                   <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                   <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-9 w-32 ml-auto" /></TableCell>
                 </TableRow>
               ))
             ) : filteredUsers.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No users found matching your criteria.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No users found matching your criteria.</TableCell></TableRow>
             ) : (
               filteredUsers.map((u) => {
                 const RoleIcon = roleConfig[u.role].icon;
@@ -263,6 +296,29 @@ export function UserManagement() {
                         </Tooltip>
                       )}
                     </TableCell>
+                    <TableCell>
+                      {u.role === 'student' ? (
+                        <span className="text-xs text-muted-foreground">N/A</span>
+                      ) : u.mfa_exempt ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 cursor-help">
+                              <ShieldOff className="h-3 w-3 mr-1" />Waived
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="text-xs space-y-1">
+                              <p>MFA waived {u.mfa_exempt_at ? format(new Date(u.mfa_exempt_at), 'PPp') : ''}</p>
+                              {u.mfa_exempt_reason && <p className="max-w-[240px]">Reason: {u.mfa_exempt_reason}</p>}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                          <Shield className="h-3 w-3 mr-1" />Required
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Select
@@ -291,6 +347,22 @@ export function UserManagement() {
                           </TooltipTrigger>
                           <TooltipContent>{isCurrentUser ? 'You cannot change your own status' : (u.is_active ? 'Deactivate account' : 'Activate account')}</TooltipContent>
                         </Tooltip>
+                        {u.role !== 'student' && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openMfaDialog(u)}
+                                disabled={setMfaExempt.isPending}
+                                aria-label={u.mfa_exempt ? 'Re-require MFA' : 'Waive MFA'}
+                              >
+                                {u.mfa_exempt ? <Shield className="h-4 w-4" /> : <ShieldOff className="h-4 w-4" />}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{u.mfa_exempt ? 'Re-require MFA' : 'Waive MFA'}</TooltipContent>
+                          </Tooltip>
+                        )}
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" onClick={() => setHistoryUserId(u.user_id)} aria-label="View status history">
@@ -362,6 +434,41 @@ export function UserManagement() {
             <AlertDialogAction onClick={confirmStatusChange} disabled={setActive.isPending} className={statusDialog.nextActive ? '' : 'bg-destructive hover:bg-destructive/90'}>
               {setActive.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {statusDialog.nextActive ? 'Activate' : 'Deactivate'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* MFA exemption confirm */}
+      <AlertDialog open={mfaDialog.open} onOpenChange={(open) => !open && setMfaDialog({ open: false, user: null, nextExempt: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display flex items-center gap-2">
+              {mfaDialog.nextExempt ? <ShieldOff className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+              {mfaDialog.nextExempt ? 'Waive MFA requirement' : 'Re-require MFA'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {mfaDialog.nextExempt ? (
+                <><strong>{mfaDialog.user?.full_name || mfaDialog.user?.email}</strong> will no longer be required to enroll or verify with MFA. Use sparingly — MFA is the primary defense against account takeover for staff accounts.</>
+              ) : (
+                <><strong>{mfaDialog.user?.full_name || mfaDialog.user?.email}</strong> will be required to enroll in MFA at next sign-in.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Reason {mfaDialog.nextExempt ? '(recommended)' : '(optional)'}</label>
+            <Textarea
+              value={mfaReason}
+              onChange={(e) => setMfaReason(e.target.value.slice(0, 500))}
+              placeholder={mfaDialog.nextExempt ? 'Why is MFA being waived for this user?' : 'Why is MFA being re-required?'}
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmMfaChange} disabled={setMfaExempt.isPending} className={mfaDialog.nextExempt ? 'bg-amber-600 hover:bg-amber-600/90' : ''}>
+              {setMfaExempt.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {mfaDialog.nextExempt ? 'Waive MFA' : 'Re-require MFA'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

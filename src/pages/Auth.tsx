@@ -53,7 +53,7 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMFAVerification, setShowMFAVerification] = useState(false);
   const [showMFAEnrollment, setShowMFAEnrollment] = useState(false);
-  const { user, role, signIn, signUp } = useAuth();
+  const { user, role, profile, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isEnrolled, isLoading: mfaLoading, checkMFAStatus } = useMFA();
@@ -71,7 +71,8 @@ export default function Auth() {
     if (user && role) {
       // Check if privileged user needs MFA enrollment (first time setup)
       const isPrivilegedRole = role === 'admin' || role === 'case_manager' || role === 'org_admin';
-      if (isPrivilegedRole && !isEnrolled && !isLoading) {
+      const isExempt = profile?.mfa_exempt === true;
+      if (isPrivilegedRole && !isExempt && !isEnrolled && !isLoading) {
         setShowMFAEnrollment(true);
         return;
       }
@@ -80,7 +81,7 @@ export default function Auth() {
       const redirect = searchParams.get('redirect');
       navigate(redirect || '/dashboard', { replace: true });
     }
-  }, [user, role, isEnrolled, isLoading, showMFAVerification, showMFAEnrollment, navigate]);
+  }, [user, role, profile, isEnrolled, isLoading, showMFAVerification, showMFAEnrollment, navigate]);
 
   // Handle invitation token - switch to signup and pre-fill email
   useEffect(() => {
