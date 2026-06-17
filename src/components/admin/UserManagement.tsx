@@ -439,6 +439,41 @@ export function UserManagement() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* MFA exemption confirm */}
+      <AlertDialog open={mfaDialog.open} onOpenChange={(open) => !open && setMfaDialog({ open: false, user: null, nextExempt: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display flex items-center gap-2">
+              {mfaDialog.nextExempt ? <ShieldOff className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+              {mfaDialog.nextExempt ? 'Waive MFA requirement' : 'Re-require MFA'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {mfaDialog.nextExempt ? (
+                <><strong>{mfaDialog.user?.full_name || mfaDialog.user?.email}</strong> will no longer be required to enroll or verify with MFA. Use sparingly — MFA is the primary defense against account takeover for staff accounts.</>
+              ) : (
+                <><strong>{mfaDialog.user?.full_name || mfaDialog.user?.email}</strong> will be required to enroll in MFA at next sign-in.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Reason {mfaDialog.nextExempt ? '(recommended)' : '(optional)'}</label>
+            <Textarea
+              value={mfaReason}
+              onChange={(e) => setMfaReason(e.target.value.slice(0, 500))}
+              placeholder={mfaDialog.nextExempt ? 'Why is MFA being waived for this user?' : 'Why is MFA being re-required?'}
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmMfaChange} disabled={setMfaExempt.isPending} className={mfaDialog.nextExempt ? 'bg-amber-600 hover:bg-amber-600/90' : ''}>
+              {setMfaExempt.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {mfaDialog.nextExempt ? 'Waive MFA' : 'Re-require MFA'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Status history dialog */}
       <StatusHistoryDialog userId={historyUserId} onClose={() => setHistoryUserId(null)} />
     </section>
