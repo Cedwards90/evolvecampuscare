@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Search, UserCog, Shield, GraduationCap, Briefcase, Loader2, History, Power } from 'lucide-react';
-import { useUsers, useUpdateUserRole, useSetUserActive, useUserStatusHistory, type UserWithRole } from '@/hooks/useUsers';
+import { Search, UserCog, Shield, ShieldOff, GraduationCap, Briefcase, Loader2, History, Power } from 'lucide-react';
+import { useUsers, useUpdateUserRole, useSetUserActive, useUserStatusHistory, useSetUserMfaExempt, type UserWithRole } from '@/hooks/useUsers';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +55,7 @@ export function UserManagement() {
   const { data: users, isLoading, error } = useUsers();
   const updateRole = useUpdateUserRole();
   const setActive = useSetUserActive();
+  const setMfaExempt = useSetUserMfaExempt();
   const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,6 +71,11 @@ export function UserManagement() {
     open: false, user: null, nextActive: true,
   });
   const [reason, setReason] = useState('');
+
+  const [mfaDialog, setMfaDialog] = useState<{ open: boolean; user: UserWithRole | null; nextExempt: boolean }>({
+    open: false, user: null, nextExempt: false,
+  });
+  const [mfaReason, setMfaReason] = useState('');
 
   const [historyUserId, setHistoryUserId] = useState<string | null>(null);
 
@@ -130,6 +136,31 @@ export function UserManagement() {
     } finally {
       setStatusDialog({ open: false, user: null, nextActive: true });
       setReason('');
+    }
+  };
+
+  const openMfaDialog = (u: UserWithRole) => {
+    setMfaReason('');
+    setMfaDialog({ open: true, user: u, nextExempt: !u.mfa_exempt });
+  };
+
+  const confirmMfaChange = async () => {
+    if (!mfaDialog.user) return;
+    try {
+      await setMfaExempt.mutateAsync({
+        userId: mfaDialog.user.user_id,
+        exempt: mfaDialog.nextExempt,
+        reason: mfaReason.trim() || undefined,
+      });
+      toast({
+        title: mfaDialog.nextExempt ? 'MFA waived' : 'MFA re-required',
+        description: `${mfaDialog.user.full_name || mfaDialog.user.email} ${mfaDialog.nextExempt ? 'no longer needs to use MFA.' : 'will be required to use MFA at next sign-in.'}`,
+      });
+    } catch (err: any) {
+      toast({ title: 'Failed to update MFA setting', description: err?.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setMfaDialog({ open: false, user: null, nextExempt: false });
+      setMfaReason('');
     }
   };
 
