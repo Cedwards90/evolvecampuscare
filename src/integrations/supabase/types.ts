@@ -627,6 +627,33 @@ export type Database = {
         }
         Relationships: []
       }
+      mfa_exemption_audit: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       nda_acceptances: {
         Row: {
           accepted_at: string
@@ -1254,6 +1281,10 @@ export type Database = {
           full_name: string | null
           graduation_date: string | null
           id: string
+          mfa_exempt: boolean
+          mfa_exempt_at: string | null
+          mfa_exempt_by: string | null
+          mfa_exempt_reason: string | null
           organization_id: string | null
           phone: string | null
           placement_date: string | null
@@ -1278,6 +1309,10 @@ export type Database = {
           full_name?: string | null
           graduation_date?: string | null
           id?: string
+          mfa_exempt?: boolean
+          mfa_exempt_at?: string | null
+          mfa_exempt_by?: string | null
+          mfa_exempt_reason?: string | null
           organization_id?: string | null
           phone?: string | null
           placement_date?: string | null
@@ -1302,6 +1337,10 @@ export type Database = {
           full_name?: string | null
           graduation_date?: string | null
           id?: string
+          mfa_exempt?: boolean
+          mfa_exempt_at?: string | null
+          mfa_exempt_by?: string | null
+          mfa_exempt_reason?: string | null
           organization_id?: string | null
           phone?: string | null
           placement_date?: string | null
