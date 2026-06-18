@@ -150,13 +150,14 @@ export function useStudentFolders() {
 
       const pendingStatuses = ['submitted', 'in_progress', 'escalated'];
 
-      return (profiles || []).map(p => {
+      return (profiles || []).map((p: any) => {
         const reqs = requestsByStudent.get(p.user_id) || [];
         const file = filesMap.get(p.user_id);
         const lastReq = reqs.length > 0
           ? reqs.reduce((a, b) => (a.updated_at > b.updated_at ? a : b))
           : null;
-        const orgId = (p as any).organization_id;
+        const orgId = p.organization_id;
+        const cmId = cmIdByStudent.get(p.user_id) || null;
 
         return {
           user_id: p.user_id,
@@ -168,7 +169,11 @@ export function useStudentFolders() {
           last_activity: lastReq?.updated_at || null,
           organization_id: orgId || null,
           organization_name: orgId ? orgMap.get(orgId) || null : null,
-          graduation_date: (p as any).graduation_date || null,
+          graduation_date: p.graduation_date || null,
+          cohort_id: p.cohort_id || null,
+          cohort_name: p.cohort_id ? cohortMap.get(p.cohort_id) || null : null,
+          case_manager_id: cmId,
+          case_manager_name: cmId ? cmNameMap.get(cmId) || null : null,
         };
       }).sort((a, b) => (b.last_activity || '').localeCompare(a.last_activity || ''));
     },
