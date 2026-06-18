@@ -195,6 +195,10 @@ export default function TimeTrackingAdmin() {
               <CheckCheck className="h-4 w-4 mr-2" />
               Approve selected ({selected.size})
             </Button>
+            <Button variant="outline" onClick={() => setCreating(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add entry
+            </Button>
             <Button onClick={handleExport} disabled={entries.length === 0}>
               <Download className="h-4 w-4 mr-2" />
               Export CSV
