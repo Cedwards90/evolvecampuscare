@@ -37,6 +37,8 @@ import {
 } from '@/components/ui/table';
 import { useCaseManagerStats } from '@/hooks/useCaseManagerStats';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { applyToRequests } from '@/lib/applyGlobalFilters';
 import { GenerateReportCard } from '@/components/reports/GenerateReportCard';
 import { GenerateStudentReportCard } from '@/components/reports/GenerateStudentReportCard';
 import { 
