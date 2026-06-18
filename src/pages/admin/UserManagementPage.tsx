@@ -360,6 +360,7 @@ export default function UserManagementPage() {
                   value={orgFilter} 
                   onValueChange={(value) => {
                     setOrgFilter(value);
+                    setCohortFilter('all');
                     setCurrentPage(1);
                   }}
                 >
@@ -371,6 +372,40 @@ export default function UserManagementPage() {
                     <SelectItem value="all">All Organizations</SelectItem>
                     {organizations.map(org => (
                       <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {visibleCohorts.length > 0 && (
+                <Select
+                  value={cohortFilter}
+                  onValueChange={(value) => { setCohortFilter(value); setCurrentPage(1); }}
+                >
+                  <SelectTrigger className="w-full sm:w-48">
+                    <GraduationCap className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Filter by cohort" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Cohorts</SelectItem>
+                    {visibleCohorts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {cmOptions.length > 0 && (
+                <Select
+                  value={cmFilter}
+                  onValueChange={(value) => { setCmFilter(value); setCurrentPage(1); }}
+                >
+                  <SelectTrigger className="w-full sm:w-56">
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Filter by case manager" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Case Managers</SelectItem>
+                    {cmOptions.map((cm) => (
+                      <SelectItem key={cm.value} value={cm.value}>{cm.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
