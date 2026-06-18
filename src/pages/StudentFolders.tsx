@@ -63,9 +63,10 @@ export default function StudentFolders() {
     const matchesSearch = (s.full_name || '').toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
     const matchesOrg = orgFilter === 'all' || s.organization_id === orgFilter;
     const matchesGlobalOrg = gf.organizationId.length === 0 || (s.organization_id && gf.organizationId.includes(s.organization_id));
-    const matchesCohort = cohortFilter === 'all' || s.cohort_id === cohortFilter;
+    const matchesLocalCohort = cohortFilter === 'all' || s.cohort_id === cohortFilter;
+    const matchesGlobalCohort = gf.cohort.length === 0 || (s.cohort_id && gf.cohort.includes(s.cohort_id));
     const matchesCM = cmFilter === 'all' || s.case_manager_id === cmFilter;
-    return matchesSearch && matchesOrg && matchesGlobalOrg && matchesCohort && matchesCM;
+    return matchesSearch && matchesOrg && matchesGlobalOrg && matchesLocalCohort && matchesGlobalCohort && matchesCM;
   });
 
   return (
