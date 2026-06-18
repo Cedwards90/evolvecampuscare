@@ -1,47 +1,55 @@
 ## Problem
 
-In the Submit Request form, every keystroke causes the input to lose focus, so you have to click back into the field to type the next letter.
+On step 4 of the Submit Request wizard, clicking **Submit My Request** does nothing — no toast, no navigation, no network call.
 
 ## Root Cause
 
-In `src/pages/SubmitRequest.tsx` (line 243), a `Wrapper` component is defined **inside** the `SubmitRequest` function body:
+The submit button is `type="submit"` inside `form.handleSubmit(onSubmit)`. `handleSubmit` runs zod validation first and silently no-ops `onSubmit` if validation fails. Two issues cause silent failure:
 
-```tsx
-const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
-  standalone ? <>{children}</> : <SidebarLayout>{children}</SidebarLayout>;
-```
+1. **`requestedAmount` becomes `NaN`.** The field is registered with `valueAsNumber: true`:
+   ```tsx
+   {...form.register('requestedAmount', { valueAsNumber: true })}
+   ```
+   An empty `<input type="number">` returns `""`, which `valueAsNumber` converts to `NaN`. The zod schema is `z.number().min(0).optional()` — `optional()` only allows `undefined`, not `NaN`, so validation fails. This happens whenever the user picked the **Financial** category and left the amount field blank (or typed and then cleared it).
 
-Because `Wrapper` is re-created on every render, React sees a brand-new component type each time, unmounts the entire subtree (including `SidebarLayout` and every `Input`/`Textarea`), and re-mounts it. The newly mounted input cannot keep focus, so typing one character drops focus immediately.
+2. **No invalid-handler is wired up.** `form.handleSubmit(onSubmit)` is called without a second argument, so any validation error on a field that isn't rendered on the current step (steps 1–3 fields aren't on step 4) produces no visible feedback.
 
-This is a well-known React anti-pattern: never declare a component inside another component's render.
+## Fix (frontend only, `src/pages/SubmitRequest.tsx`)
 
-## Fix
+1. Replace `valueAsNumber: true` on `requestedAmount` with a `setValueAs` that coerces empty / non-numeric input to `undefined`:
+   ```tsx
+   {...form.register('requestedAmount', {
+     setValueAs: (v) =>
+       v === '' || v === null || v === undefined || Number.isNaN(Number(v))
+         ? undefined
+         : Number(v),
+   })}
+   ```
 
-Replace the inline `Wrapper` with a conditional render that uses the existing `SidebarLayout` component directly — no new component definition per render, stable tree, focus preserved.
-
-```tsx
-// remove the inline Wrapper declaration
-
-return standalone ? (
-  <div className="space-y-12 max-w-3xl mx-auto">{/* ...existing content... */}</div>
-) : (
-  <SidebarLayout>
-    <div className="space-y-12 max-w-3xl mx-auto">{/* ...existing content... */}</div>
-  </SidebarLayout>
-);
-```
-
-To avoid duplicating the entire body, extract the inner JSX into a `const content = (...)` variable above the return, then render `{standalone ? content : <SidebarLayout>{content}</SidebarLayout>}`.
-
-## Files Touched
-
-- `src/pages/SubmitRequest.tsx` — remove the in-render `Wrapper`, render `SidebarLayout` conditionally around a stable `content` element.
+2. Add an `onInvalid` callback to `form.handleSubmit` so any future silent validation failure surfaces a toast pointing the user to the field that's wrong:
+   ```tsx
+   <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
+     const first = Object.values(errors)[0] as any;
+     toast({
+       variant: 'destructive',
+       title: 'Please fix the form',
+       description: first?.message || 'Some fields are missing or invalid.',
+     });
+   })}>
+   ```
 
 ## Out of Scope
 
-- No other components, hooks, routes, or database changes.
-- No styling or feature changes to the form itself.
+- No schema, hook, database, or RLS changes.
+- No other field behavior changes.
+- No styling changes.
 
 ## Verification
 
-- Open `/submit-request`, type a sentence in the Title and Description fields without clicking — characters should appear continuously without focus loss.
+- Submit a non-financial request → reaches the database and navigates to the request page.
+- Submit a financial request with the amount field left blank → no longer fails silently; either submits with `requested_amount = null` or shows a clear toast if the amount is invalid.
+- Reach step 4 with a contrived invalid earlier-step field → toast appears instead of nothing happening.
+
+## Files Touched
+
+- `src/pages/SubmitRequest.tsx`

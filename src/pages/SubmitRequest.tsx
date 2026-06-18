@@ -400,7 +400,12 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
                         min="0"
                         placeholder="0.00"
                         className="pl-9"
-                        {...form.register('requestedAmount', { valueAsNumber: true })}
+                        {...form.register('requestedAmount', {
+                          setValueAs: (v) =>
+                            v === '' || v === null || v === undefined || Number.isNaN(Number(v))
+                              ? undefined
+                              : Number(v),
+                        })}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
