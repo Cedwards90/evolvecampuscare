@@ -18,6 +18,9 @@ export interface UserWithRole {
   reactivated_at: string | null;
   reactivated_by: string | null;
   is_active: boolean;
+  mfa_exempt?: boolean;
+  mfa_exempt_at?: string | null;
+  mfa_exempt_reason?: string | null;
 }
 
 export function useUsers() {
