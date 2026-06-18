@@ -642,6 +642,17 @@ export default function UserManagementPage() {
         userId={orgAdminTarget?.id ?? null}
         userName={orgAdminTarget?.name ?? ''}
       />
+
+      {mfaTarget && (
+        <MFAUserDialog
+          open={!!mfaTarget}
+          onOpenChange={(o) => !o && setMfaTarget(null)}
+          userId={mfaTarget.id}
+          userName={mfaTarget.name}
+          userEmail={mfaTarget.email}
+          currentlyExempt={mfaTarget.exempt}
+        />
+      )}
     </SidebarLayout>
   );
 }
