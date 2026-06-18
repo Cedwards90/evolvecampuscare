@@ -77,10 +77,10 @@ export function useStudentFolders() {
 
       if (studentIds.length === 0) return [];
 
-      // Step 2: Fetch profiles
+      // Step 2: Fetch profiles (include cohort_id)
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('user_id, full_name, email, organization_id, graduation_date')
+        .select('user_id, full_name, email, organization_id, graduation_date, cohort_id')
         .in('user_id', studentIds);
       if (profileError) throw profileError;
 
@@ -93,6 +93,40 @@ export function useStudentFolders() {
           .select('id, name')
           .in('id', orgIds);
         orgMap = new Map((orgs || []).map((o: any) => [o.id, o.name]));
+      }
+
+      // Step 2c: Fetch cohort names
+      const cohortIds = [...new Set((profiles || []).map((p: any) => p.cohort_id).filter(Boolean))];
+      let cohortMap = new Map<string, string>();
+      if (cohortIds.length > 0) {
+        const { data: cohorts } = await supabase
+          .from('cohorts')
+          .select('id, name')
+          .in('id', cohortIds);
+        cohortMap = new Map((cohorts || []).map((c: any) => [c.id, c.name]));
+      }
+
+      // Step 2d: Fetch current case manager assignments for these students
+      const { data: assignments } = await supabase
+        .from('student_assignments')
+        .select('student_id, case_manager_id')
+        .in('student_id', studentIds);
+      const cmIdByStudent = new Map<string, string>();
+      const cmIds = new Set<string>();
+      for (const a of assignments || []) {
+        // first wins (most recent isn't guaranteed but assignments are usually 1:1)
+        if (!cmIdByStudent.has(a.student_id)) {
+          cmIdByStudent.set(a.student_id, a.case_manager_id);
+          cmIds.add(a.case_manager_id);
+        }
+      }
+      let cmNameMap = new Map<string, string>();
+      if (cmIds.size > 0) {
+        const { data: cmProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', [...cmIds]);
+        cmNameMap = new Map((cmProfiles || []).map((p: any) => [p.user_id, p.full_name || p.email]));
       }
 
       // Step 3: Fetch student_files for intake status
