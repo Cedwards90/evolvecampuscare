@@ -69,6 +69,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUsers, useUpdateUserRole, useDeleteUser } from '@/hooks/useUsers';
+import { useAllCohorts, useAssignStudentCohort } from '@/hooks/useCohorts';
+import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 import { applyToProfiles } from '@/lib/applyGlobalFilters';
@@ -95,6 +97,8 @@ export default function UserManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<AppRole | 'all'>('all');
   const [orgFilter, setOrgFilter] = useState<string>('all');
+  const [cohortFilter, setCohortFilter] = useState<string>('all');
+  const [cmFilter, setCmFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; currentRole: AppRole } | null>(null);
   const [newRole, setNewRole] = useState<AppRole | null>(null);
@@ -102,14 +106,19 @@ export default function UserManagementPage() {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [orgAdminTarget, setOrgAdminTarget] = useState<{ id: string; name: string } | null>(null);
   const [mfaTarget, setMfaTarget] = useState<{ id: string; name: string; email: string; exempt: boolean } | null>(null);
-  
+  const [cohortAssignTarget, setCohortAssignTarget] = useState<{ id: string; name: string; orgId: string | null; currentCohortId: string | null } | null>(null);
+  const [pendingCohort, setPendingCohort] = useState<string>('');
+
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
   const { data: users, isLoading } = useUsers();
   const { data: organizations } = useTrainingOrganizations();
   const { data: pendingInvitations } = usePendingInvitations();
+  const { data: cohorts } = useAllCohorts();
+  const { data: filterOptions } = useFilterOptions();
   const updateRole = useUpdateUserRole();
   const deleteUser = useDeleteUser();
+  const assignCohort = useAssignStudentCohort();
 
   const { filters: globalFilters } = useGlobalFilters();
 
@@ -124,10 +133,20 @@ export default function UserManagementPage() {
 
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
       const matchesOrg = orgFilter === 'all' || user.organization_id === orgFilter;
+      const matchesCohort = cohortFilter === 'all' || (user as any).cohort_id === cohortFilter;
+      const matchesCM = cmFilter === 'all' || (user as any).case_manager_id === cmFilter;
 
-      return matchesSearch && matchesRole && matchesOrg;
+      return matchesSearch && matchesRole && matchesOrg && matchesCohort && matchesCM;
     });
-  }, [users, searchQuery, roleFilter, orgFilter, globalFilters]);
+  }, [users, searchQuery, roleFilter, orgFilter, cohortFilter, cmFilter, globalFilters]);
+
+  const visibleCohorts = useMemo(() => {
+    const list = cohorts || [];
+    if (orgFilter === 'all') return list;
+    return list.filter((c) => c.organization_id === orgFilter);
+  }, [cohorts, orgFilter]);
+
+  const cmOptions = filterOptions?.caseManagers ?? [];
 
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = filteredUsers.slice(
@@ -341,6 +360,7 @@ export default function UserManagementPage() {
                   value={orgFilter} 
                   onValueChange={(value) => {
                     setOrgFilter(value);
+                    setCohortFilter('all');
                     setCurrentPage(1);
                   }}
                 >
@@ -352,6 +372,40 @@ export default function UserManagementPage() {
                     <SelectItem value="all">All Organizations</SelectItem>
                     {organizations.map(org => (
                       <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {visibleCohorts.length > 0 && (
+                <Select
+                  value={cohortFilter}
+                  onValueChange={(value) => { setCohortFilter(value); setCurrentPage(1); }}
+                >
+                  <SelectTrigger className="w-full sm:w-48">
+                    <GraduationCap className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Filter by cohort" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Cohorts</SelectItem>
+                    {visibleCohorts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {cmOptions.length > 0 && (
+                <Select
+                  value={cmFilter}
+                  onValueChange={(value) => { setCmFilter(value); setCurrentPage(1); }}
+                >
+                  <SelectTrigger className="w-full sm:w-56">
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Filter by case manager" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Case Managers</SelectItem>
+                    {cmOptions.map((cm) => (
+                      <SelectItem key={cm.value} value={cm.value}>{cm.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -481,6 +535,25 @@ export default function UserManagementPage() {
                                     <Building2 className="mr-2 h-4 w-4" />
                                     Manage organizations
                                   </DropdownMenuItem>
+                                )}
+                                {user.role === 'student' && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setPendingCohort((user as any).cohort_id ?? 'none');
+                                        setCohortAssignTarget({
+                                          id: user.user_id,
+                                          name: user.full_name || 'User',
+                                          orgId: user.organization_id,
+                                          currentCohortId: (user as any).cohort_id ?? null,
+                                        });
+                                      }}
+                                    >
+                                      <GraduationCap className="mr-2 h-4 w-4" />
+                                      Assign cohort
+                                    </DropdownMenuItem>
+                                  </>
                                 )}
                                 {user.role !== 'student' && (
                                   <>
@@ -653,6 +726,75 @@ export default function UserManagementPage() {
           currentlyExempt={mfaTarget.exempt}
         />
       )}
+
+      <AlertDialog
+        open={!!cohortAssignTarget}
+        onOpenChange={(o) => {
+          if (!o) {
+            setCohortAssignTarget(null);
+            setPendingCohort('');
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Assign cohort</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Assign <strong>{cohortAssignTarget?.name}</strong> to a cohort. The student record itself is not changed.
+                </p>
+                {!cohortAssignTarget?.orgId ? (
+                  <p className="text-sm text-destructive">
+                    This student has no organization yet. Assign them to an organization first.
+                  </p>
+                ) : (
+                  <Select value={pendingCohort} onValueChange={setPendingCohort}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select cohort" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No cohort</SelectItem>
+                      {(cohorts || [])
+                        .filter((c) => c.organization_id === cohortAssignTarget?.orgId)
+                        .map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={assignCohort.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={
+                !cohortAssignTarget?.orgId ||
+                assignCohort.isPending ||
+                pendingCohort === (cohortAssignTarget?.currentCohortId ?? 'none')
+              }
+              onClick={async () => {
+                if (!cohortAssignTarget) return;
+                try {
+                  await assignCohort.mutateAsync({
+                    studentId: cohortAssignTarget.id,
+                    cohortId: pendingCohort === 'none' ? null : pendingCohort,
+                  });
+                  toast({ title: 'Cohort updated' });
+                  setCohortAssignTarget(null);
+                  setPendingCohort('');
+                } catch (e: any) {
+                  toast({ title: 'Failed to update cohort', description: e?.message, variant: 'destructive' });
+                }
+              }}
+            >
+              {assignCohort.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidebarLayout>
   );
 }

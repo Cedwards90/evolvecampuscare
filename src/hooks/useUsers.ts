@@ -12,6 +12,9 @@ export interface UserWithRole {
   created_at: string;
   organization_id: string | null;
   organization_name: string | null;
+  cohort_id: string | null;
+  cohort_name: string | null;
+  case_manager_id: string | null;
   deactivated_at: string | null;
   deactivated_by: string | null;
   deactivation_reason: string | null;
@@ -29,7 +32,7 @@ export function useUsers() {
     queryFn: async (): Promise<UserWithRole[]> => {
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, user_id, email, full_name, avatar_url, created_at, organization_id, deactivated_at, deactivated_by, deactivation_reason, reactivated_at, reactivated_by, mfa_exempt, mfa_exempt_at, mfa_exempt_reason')
+        .select('id, user_id, email, full_name, avatar_url, created_at, organization_id, cohort_id, deactivated_at, deactivated_by, deactivation_reason, reactivated_at, reactivated_by, mfa_exempt, mfa_exempt_at, mfa_exempt_reason')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
@@ -70,6 +73,26 @@ export function useUsers() {
         orgNameMap = new Map((orgs || []).map(o => [o.id, o.name]));
       }
 
+      // Cohort names
+      const cohortIds = [...new Set((profiles || []).map((p: any) => p.cohort_id).filter(Boolean))];
+      let cohortNameMap = new Map<string, string>();
+      if (cohortIds.length > 0) {
+        const { data: cohorts } = await supabase
+          .from('cohorts')
+          .select('id, name')
+          .in('id', cohortIds);
+        cohortNameMap = new Map((cohorts || []).map((c: any) => [c.id, c.name]));
+      }
+
+      // Current case-manager assignment per student
+      const { data: assignments } = await supabase
+        .from('student_assignments')
+        .select('student_id, case_manager_id');
+      const cmByStudent = new Map<string, string>();
+      for (const a of assignments || []) {
+        if (!cmByStudent.has(a.student_id)) cmByStudent.set(a.student_id, a.case_manager_id);
+      }
+
       return (profiles || []).map((profile: any) => {
         const membership = membershipMap.get(profile.user_id);
         const orgId = profile.organization_id || membership?.organization_id || null;
@@ -79,6 +102,9 @@ export function useUsers() {
           ...profile,
           organization_id: orgId,
           organization_name: orgName,
+          cohort_id: profile.cohort_id || null,
+          cohort_name: profile.cohort_id ? cohortNameMap.get(profile.cohort_id) || null : null,
+          case_manager_id: cmByStudent.get(profile.user_id) || null,
           role: (roleMap.get(profile.user_id) || 'student') as AppRole,
           is_active: !profile.deactivated_at,
         };

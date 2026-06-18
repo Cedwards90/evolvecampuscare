@@ -260,6 +260,50 @@ export type Database = {
         }
         Relationships: []
       }
+      cohorts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          organization_id: string
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cohorts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "training_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       donor_report_templates: {
         Row: {
           branding: Json
@@ -1298,6 +1342,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          cohort_id: string | null
           cohort_start_date: string | null
           created_at: string
           deactivated_at: string | null
@@ -1326,6 +1371,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          cohort_id?: string | null
           cohort_start_date?: string | null
           created_at?: string
           deactivated_at?: string | null
@@ -1354,6 +1400,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          cohort_id?: string | null
           cohort_start_date?: string | null
           created_at?: string
           deactivated_at?: string | null
@@ -1381,6 +1428,13 @@ export type Database = {
           year_of_study?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_organization_id_fkey"
             columns: ["organization_id"]
