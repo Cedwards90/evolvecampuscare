@@ -518,67 +518,102 @@ export default function TimeTrackingAdmin() {
 
 function EditDialog({
   entry,
+  caseManagers,
+  students,
   onClose,
   onSave,
   saving,
 }: {
   entry: TimeEntry;
+  caseManagers: import('@/hooks/useUsers').UserWithRole[];
+  students: import('@/hooks/useUsers').UserWithRole[];
   onClose: () => void;
   onSave: (patch: Partial<TimeEntry>) => void;
   saving: boolean;
 }) {
+  const [caseManagerId, setCaseManagerId] = useState(entry.case_manager_id);
+  const [studentId, setStudentId] = useState<string>(entry.student_id ?? 'none');
   const [start, setStart] = useState(entry.start_time.slice(0, 16));
   const [end, setEnd] = useState(entry.end_time.slice(0, 16));
   const [serviceType, setServiceType] = useState(entry.service_type);
   const [notes, setNotes] = useState(entry.notes ?? '');
   const [billable, setBillable] = useState(entry.billable);
+  const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>(entry.status);
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Edit time entry</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
+              <Label className="text-xs">Case manager</Label>
+              <Select value={caseManagerId} onValueChange={setCaseManagerId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {caseManagers.map((u) => (
+                    <SelectItem key={u.user_id} value={u.user_id}>
+                      {u.full_name || u.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Student (optional)</Label>
+              <Select value={studentId} onValueChange={setStudentId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— None —</SelectItem>
+                  {students.map((u) => (
+                    <SelectItem key={u.user_id} value={u.user_id}>
+                      {u.full_name || u.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
               <Label className="text-xs">Start</Label>
-              <Input
-                type="datetime-local"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-              />
+              <Input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} />
             </div>
             <div>
               <Label className="text-xs">End</Label>
-              <Input
-                type="datetime-local"
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-              />
+              <Input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
             </div>
           </div>
-          <div>
-            <Label className="text-xs">Service type</Label>
-            <Select value={serviceType} onValueChange={setServiceType}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SERVICE_TYPES.map((s) => (
-                  <SelectItem key={s} value={s} className="capitalize">
-                    {s.replace('_', ' ')}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Service type</Label>
+              <Select value={serviceType} onValueChange={setServiceType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SERVICE_TYPES.map((s) => (
+                    <SelectItem key={s} value={s} className="capitalize">
+                      {s.replace('_', ' ')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <Checkbox
-              id="billable"
-              checked={billable}
-              onCheckedChange={(c) => setBillable(!!c)}
-            />
+            <Checkbox id="billable" checked={billable} onCheckedChange={(c) => setBillable(!!c)} />
             <Label htmlFor="billable">Billable</Label>
           </div>
           <div>
@@ -587,26 +622,176 @@ function EditDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
             disabled={saving}
             onClick={() => {
               const startISO = new Date(start).toISOString();
               const endISO = new Date(end).toISOString();
               onSave({
+                case_manager_id: caseManagerId,
+                student_id: studentId === 'none' ? null : studentId,
                 start_time: startISO,
                 end_time: endISO,
                 entry_date: endISO.slice(0, 10),
                 service_type: serviceType,
                 notes,
                 billable,
+                status,
               } as any);
             }}
           >
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CreateDialog({
+  caseManagers,
+  students,
+  onClose,
+  onSave,
+  saving,
+}: {
+  caseManagers: import('@/hooks/useUsers').UserWithRole[];
+  students: import('@/hooks/useUsers').UserWithRole[];
+  onClose: () => void;
+  onSave: (input: {
+    case_manager_id: string;
+    student_id?: string | null;
+    service_type: string;
+    start_time: string;
+    end_time: string;
+    entry_date: string;
+    notes?: string | null;
+    billable?: boolean;
+    status?: 'pending' | 'approved' | 'rejected';
+  }) => void;
+  saving: boolean;
+}) {
+  const today = format(new Date(), "yyyy-MM-dd'T'HH:mm");
+  const [caseManagerId, setCaseManagerId] = useState<string>('');
+  const [studentId, setStudentId] = useState<string>('none');
+  const [start, setStart] = useState(today);
+  const [end, setEnd] = useState(today);
+  const [serviceType, setServiceType] = useState('case_management');
+  const [notes, setNotes] = useState('');
+  const [billable, setBillable] = useState(true);
+  const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>('approved');
+
+  const valid =
+    !!caseManagerId && !!start && !!end && new Date(end) > new Date(start);
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Add time entry</DialogTitle>
+          <DialogDescription>
+            Log time on behalf of a case manager. Set status to Approved to skip review.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Case manager *</Label>
+              <Select value={caseManagerId} onValueChange={setCaseManagerId}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  {caseManagers.map((u) => (
+                    <SelectItem key={u.user_id} value={u.user_id}>
+                      {u.full_name || u.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Student (optional)</Label>
+              <Select value={studentId} onValueChange={setStudentId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— None —</SelectItem>
+                  {students.map((u) => (
+                    <SelectItem key={u.user_id} value={u.user_id}>
+                      {u.full_name || u.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Start *</Label>
+              <Input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">End *</Label>
+              <Input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Service type</Label>
+              <Select value={serviceType} onValueChange={setServiceType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SERVICE_TYPES.map((s) => (
+                    <SelectItem key={s} value={s} className="capitalize">
+                      {s.replace('_', ' ')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox id="create-billable" checked={billable} onCheckedChange={(c) => setBillable(!!c)} />
+            <Label htmlFor="create-billable">Billable</Label>
+          </div>
+          <div>
+            <Label className="text-xs">Notes</Label>
+            <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            disabled={saving || !valid}
+            onClick={() => {
+              const startISO = new Date(start).toISOString();
+              const endISO = new Date(end).toISOString();
+              onSave({
+                case_manager_id: caseManagerId,
+                student_id: studentId === 'none' ? null : studentId,
+                service_type: serviceType,
+                start_time: startISO,
+                end_time: endISO,
+                entry_date: endISO.slice(0, 10),
+                notes: notes || null,
+                billable,
+                status,
+              });
+            }}
+          >
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Create
           </Button>
         </DialogFooter>
       </DialogContent>
