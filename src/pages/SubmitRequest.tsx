@@ -240,11 +240,7 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
     }
   };
 
-  const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
-    standalone ? <>{children}</> : <SidebarLayout>{children}</SidebarLayout>;
-
-  return (
-    <Wrapper>
+  const content = (
       <div className="space-y-12 max-w-3xl mx-auto">
         <PageHeader
           title="Submit a Support Request"
