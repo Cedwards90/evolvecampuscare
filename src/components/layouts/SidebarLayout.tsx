@@ -24,7 +24,8 @@ import {
   QrCode,
   ArrowRightLeft,
   Sparkles,
-  ClipboardCheck
+  ClipboardCheck,
+  Timer,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
