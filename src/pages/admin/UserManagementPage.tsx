@@ -376,6 +376,7 @@ export default function UserManagementPage() {
                       <TableHead className="hidden sm:table-cell">Email</TableHead>
                       <TableHead className="hidden md:table-cell">Organization</TableHead>
                       <TableHead>Role</TableHead>
+                      <TableHead className="hidden lg:table-cell">MFA</TableHead>
                       <TableHead className="hidden lg:table-cell">Joined</TableHead>
                       <TableHead className="w-[70px]"></TableHead>
                     </TableRow>
