@@ -182,6 +182,9 @@ export default function OrganizationDetail() {
             <TabsTrigger value="past" className="gap-2">
               <Users className="h-4 w-4" />Past Members ({pastMembers.length})
             </TabsTrigger>
+            <TabsTrigger value="cohorts" className="gap-2">
+              <GraduationCap className="h-4 w-4" />Cohorts
+            </TabsTrigger>
             <TabsTrigger value="stats" className="gap-2">
               <FileText className="h-4 w-4" />Request Stats
             </TabsTrigger>
