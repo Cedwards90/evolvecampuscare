@@ -100,8 +100,10 @@ export default function RequestsList() {
     setSearchParams(params, { replace: true });
   }, [statusFilter, categoryFilter, priorityFilter, showEmergencyOnly, setSearchParams]);
 
-  // Sort requests
-  const sortedRequests = [...(requests || [])].sort((a, b) => {
+  // Apply global filters then sort
+  const { filters: globalFilters } = useGlobalFilters();
+  const globallyFiltered = applyToRequests((requests || []) as any, globalFilters);
+  const sortedRequests = [...globallyFiltered].sort((a, b) => {
     const diff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     return sortOrder === 'desc' ? diff : -diff;
   });
