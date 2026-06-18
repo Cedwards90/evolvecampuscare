@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderOpen, Search, CheckCircle, Clock, FileText, Building2, GraduationCap } from 'lucide-react';
+import { AlertCircle, FolderOpen, Search, CheckCircle, Clock, FileText, Building2, GraduationCap } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Table,
@@ -29,19 +30,21 @@ function getInitials(name: string | null): string {
 }
 
 export default function StudentFolders() {
-  const { data: students, isLoading } = useStudentFolders();
+  const { data: students, isLoading, isError, error, refetch } = useStudentFolders();
   const [search, setSearch] = useState('');
   const [orgFilter, setOrgFilter] = useState<string>('all');
 
   // Get unique orgs for filter
   const orgOptions = [...new Map((students || []).filter(s => s.organization_name).map(s => [s.organization_id, s.organization_name])).entries()];
 
-  const { filters: gf } = useGlobalFilters();
+  const { filters: gf, resetAll, isHydrated } = useGlobalFilters();
+  const availableOrgIds = new Set((students || []).map(s => s.organization_id).filter(Boolean));
+  const activeGlobalOrgIds = gf.organizationId.filter(id => availableOrgIds.has(id));
   const filtered = (students || []).filter(s => {
     const q = search.toLowerCase();
     const matchesSearch = (s.full_name || '').toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
     const matchesOrg = orgFilter === 'all' || s.organization_id === orgFilter;
-    const matchesGlobalOrg = gf.organizationId.length === 0 || (s.organization_id && gf.organizationId.includes(s.organization_id));
+    const matchesGlobalOrg = activeGlobalOrgIds.length === 0 || (s.organization_id && activeGlobalOrgIds.includes(s.organization_id));
     return matchesSearch && matchesOrg && matchesGlobalOrg;
   });
 
@@ -84,13 +87,21 @@ export default function StudentFolders() {
           </Badge>
         </div>
 
-        {isLoading ? (
+        {isLoading || !isHydrated ? (
           <LoadingSpinner />
+        ) : isError ? (
+          <EmptyState
+            icon={AlertCircle}
+            title="Student folders could not load"
+            description={(error as Error)?.message || 'Please try again, or contact an administrator if this continues.'}
+            action={<Button onClick={() => refetch()}>Try again</Button>}
+          />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={FolderOpen}
             title="No student folders found"
-            description={search ? 'Try adjusting your search.' : 'No students are assigned yet.'}
+            description={students?.length ? 'Try clearing search and filters.' : 'No students are assigned yet.'}
+            action={students?.length ? <Button variant="outline" onClick={() => { setSearch(''); setOrgFilter('all'); resetAll(); }}>Clear filters</Button> : undefined}
           />
         ) : (
           <Card className="border border-border/50">
