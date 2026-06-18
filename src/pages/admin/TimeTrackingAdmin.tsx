@@ -109,18 +109,24 @@ export default function TimeTrackingAdmin() {
     () => (users ?? []).filter((u) => u.role === 'case_manager' || u.role === 'admin'),
     [users],
   );
+  const students = useMemo(
+    () => (users ?? []).filter((u) => u.role === 'student'),
+    [users],
+  );
 
   const [filters, setFilters] = useState<TimeEntryFilters>({ status: 'all', billable: 'all' });
   const { data: entries = [], isLoading } = useTimeEntries(filters);
 
   const [editing, setEditing] = useState<TimeEntry | null>(null);
   const [viewing, setViewing] = useState<TimeEntry | null>(null);
+  const [creating, setCreating] = useState(false);
   const [reviewing, setReviewing] = useState<{ entry: TimeEntry; status: 'approved' | 'rejected' } | null>(null);
   const [reviewNote, setReviewNote] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const updateEntry = useUpdateTimeEntry();
   const reviewEntry = useReviewTimeEntry();
+  const createEntry = useCreateTimeEntry();
 
   const totalHours = entries.reduce((acc, e) => acc + e.duration_minutes, 0) / 60;
   const pendingCount = entries.filter((e) => e.status === 'pending').length;
