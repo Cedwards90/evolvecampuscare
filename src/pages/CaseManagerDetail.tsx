@@ -106,7 +106,8 @@ export default function CaseManagerDetail() {
     );
   }
 
-  const { caseManager, assignedRequests, recentActivity } = stats;
+  const { caseManager, assignedRequests: allAssignedRequests, recentActivity } = stats;
+  const assignedRequests = applyToRequests(allAssignedRequests as any, globalFilters);
   const maxLoad = 20;
   const loadPercentage = (stats.activeRequests / maxLoad) * 100;
   const isOverloaded = loadPercentage > 80;
