@@ -19,7 +19,6 @@ import {
   AlertTriangle,
   Building2,
   KeyRound,
-  GraduationCap,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
