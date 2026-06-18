@@ -12,6 +12,9 @@ export interface UserWithRole {
   created_at: string;
   organization_id: string | null;
   organization_name: string | null;
+  cohort_id: string | null;
+  cohort_name: string | null;
+  case_manager_id: string | null;
   deactivated_at: string | null;
   deactivated_by: string | null;
   deactivation_reason: string | null;
