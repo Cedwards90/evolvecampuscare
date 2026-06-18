@@ -14,6 +14,8 @@ export interface CheckInWithStudent {
   student_email: string;
   organization_id: string | null;
   organization_name: string | null;
+  cohort_id: string | null;
+  year_of_study: string | null;
 }
 
 export interface PostGradPlanWithStudent {
