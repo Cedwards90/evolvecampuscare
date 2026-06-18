@@ -2356,6 +2356,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_user_org: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -2389,6 +2390,10 @@ export type Database = {
         Returns: boolean
       }
       org_admin_orgs: { Args: { _user_id: string }; Returns: string[] }
+      org_admin_sees_user: {
+        Args: { _admin: string; _user: string }
+        Returns: boolean
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
