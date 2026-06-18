@@ -18,6 +18,7 @@ import {
   Trash2,
   AlertTriangle,
   Building2,
+  KeyRound,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
