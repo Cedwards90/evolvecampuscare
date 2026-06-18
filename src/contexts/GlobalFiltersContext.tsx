@@ -201,6 +201,7 @@ export function useGlobalFilters() {
 
 // Helpers ---------------------------------------------------------------
 
+/** @deprecated Cohort filter now uses profiles.cohort_id directly. Retained for any legacy callers. */
 export function getCohortFromDate(date: string | null | undefined): string | null {
   if (!date) return null;
   const y = new Date(date).getUTCFullYear();
@@ -216,7 +217,7 @@ export function getProfileStatus(p: { deactivated_at?: string | null }): Profile
 
 /** Filter a list of profile-like objects by cohort/year/org/program/studentStatus. */
 export function filterByProfile<T extends {
-  cohort_start_date?: string | null;
+  cohort_id?: string | null;
   year_of_study?: string | null;
   organization_id?: string | null;
   department?: string | null;
@@ -224,8 +225,7 @@ export function filterByProfile<T extends {
 }>(rows: T[], filters: GlobalFilters): T[] {
   return rows.filter((r) => {
     if (filters.cohort.length) {
-      const c = getCohortFromDate(r.cohort_start_date);
-      if (!c || !filters.cohort.includes(c)) return false;
+      if (!r.cohort_id || !filters.cohort.includes(r.cohort_id)) return false;
     }
     if (filters.yearOfStudy.length) {
       if (!r.year_of_study || !filters.yearOfStudy.includes(r.year_of_study)) return false;
