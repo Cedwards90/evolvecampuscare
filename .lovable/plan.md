@@ -1,55 +1,26 @@
-## Problem
+## Plan to restore Student Folders sitewide
 
-On step 4 of the Submit Request wizard, clicking **Submit My Request** does nothing — no toast, no navigation, no network call.
+1. **Fix the folder visibility regression in the backend**
+   - Replace direct policy subqueries that read `student_assignments` from other table policies with the existing secure helper `cm_has_assignment(...)`.
+   - Apply this to folder-related data tables used across the student folder views, including profiles, student files, file notes, intake responses, check-ins, post-graduation plans, support requests, appointments, certifications, and related folder/analytics records where case-manager access depends on assigned students.
+   - Keep the existing rule: case managers only see students assigned to them; org admins remain org-scoped; admins keep full access.
 
-## Root Cause
+2. **Restore reliable folder list behavior**
+   - Update the Student Folders query so it does not silently look like “no folders” when a backend query fails.
+   - Make the page show a real error message if access breaks again, instead of the same empty state used for no assigned students.
+   - Ensure global organization filters do not hide all folders due to stale saved filters.
 
-The submit button is `type="submit"` inside `form.handleSubmit(onSubmit)`. `handleSubmit` runs zod validation first and silently no-ops `onSubmit` if validation fails. Two issues cause silent failure:
+3. **Address the scan findings from the same pass**
+   - Fix the `organization_memberships` policy that currently lets case managers read all memberships; scope it to their assigned students only.
+   - Remove sensitive share-link token exposure risk from Realtime by excluding `request_share_links` from the realtime publication, while preserving normal app access through existing RLS.
 
-1. **`requestedAmount` becomes `NaN`.** The field is registered with `valueAsNumber: true`:
-   ```tsx
-   {...form.register('requestedAmount', { valueAsNumber: true })}
-   ```
-   An empty `<input type="number">` returns `""`, which `valueAsNumber` converts to `NaN`. The zod schema is `z.number().min(0).optional()` — `optional()` only allows `undefined`, not `NaN`, so validation fails. This happens whenever the user picked the **Financial** category and left the amount field blank (or typed and then cleared it).
+4. **Validate after implementation**
+   - Re-run targeted policy/grant checks for the folder tables.
+   - Re-run the security scan and mark fixed findings once the scanner confirms them.
+   - Verify the folder hook can load assigned student IDs, profiles, and folder metadata without returning a misleading empty state.
 
-2. **No invalid-handler is wired up.** `form.handleSubmit(onSubmit)` is called without a second argument, so any validation error on a field that isn't rendered on the current step (steps 1–3 fields aren't on step 4) produces no visible feedback.
+## Technical notes
 
-## Fix (frontend only, `src/pages/SubmitRequest.tsx`)
-
-1. Replace `valueAsNumber: true` on `requestedAmount` with a `setValueAs` that coerces empty / non-numeric input to `undefined`:
-   ```tsx
-   {...form.register('requestedAmount', {
-     setValueAs: (v) =>
-       v === '' || v === null || v === undefined || Number.isNaN(Number(v))
-         ? undefined
-         : Number(v),
-   })}
-   ```
-
-2. Add an `onInvalid` callback to `form.handleSubmit` so any future silent validation failure surfaces a toast pointing the user to the field that's wrong:
-   ```tsx
-   <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
-     const first = Object.values(errors)[0] as any;
-     toast({
-       variant: 'destructive',
-       title: 'Please fix the form',
-       description: first?.message || 'Some fields are missing or invalid.',
-     });
-   })}>
-   ```
-
-## Out of Scope
-
-- No schema, hook, database, or RLS changes.
-- No other field behavior changes.
-- No styling changes.
-
-## Verification
-
-- Submit a non-financial request → reaches the database and navigates to the request page.
-- Submit a financial request with the amount field left blank → no longer fails silently; either submits with `requested_amount = null` or shows a clear toast if the amount is invalid.
-- Reach step 4 with a contrived invalid earlier-step field → toast appears instead of nothing happening.
-
-## Files Touched
-
-- `src/pages/SubmitRequest.tsx`
+- This will be done with a database migration plus a small frontend error-state change.
+- No broad access will be added; the fix keeps assignment-based isolation intact.
+- I will not make `profiles` or student folder data publicly readable.
