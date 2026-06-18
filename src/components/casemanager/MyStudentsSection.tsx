@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/EmptyState';
 import { InviteStudentDialog } from '@/components/casemanager/InviteStudentDialog';
 import type { MyStudent } from '@/hooks/useMyStudents';
-import { useGlobalFilters, getCohortFromDate } from '@/contexts/GlobalFiltersContext';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 
 interface MyStudentsSectionProps {
   students: MyStudent[];
@@ -26,8 +26,7 @@ export function MyStudentsSection({ students: rawStudents, isLoading }: MyStuden
     const p: any = s.student;
     if (f.organizationId.length && (!p?.organization_id || !f.organizationId.includes(p.organization_id))) return false;
     if (f.cohort.length) {
-      const c = getCohortFromDate(p?.cohort_start_date);
-      if (!c || !f.cohort.includes(c)) return false;
+      if (!p?.cohort_id || !f.cohort.includes(p.cohort_id)) return false;
     }
     if (f.yearOfStudy.length && (!p?.year_of_study || !f.yearOfStudy.includes(p.year_of_study))) return false;
     return true;

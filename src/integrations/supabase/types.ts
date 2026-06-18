@@ -260,6 +260,38 @@ export type Database = {
         }
         Relationships: []
       }
+      cohort_case_managers: {
+        Row: {
+          assigned_by: string | null
+          case_manager_id: string
+          cohort_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          case_manager_id: string
+          cohort_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          case_manager_id?: string
+          cohort_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cohort_case_managers_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cohorts: {
         Row: {
           created_at: string

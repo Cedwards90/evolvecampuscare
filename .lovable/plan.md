@@ -1,36 +1,49 @@
 ## Goal
-Let admins (and org admins, within scope) assign students to cohorts from the **Student Detail** page and **in bulk** from the Cohort Manager.
+1. Replace the global "Class" filter so it lists **named cohorts** (from the `cohorts` table) and filters by `profiles.cohort_id`.
+2. Let admins/org admins assign **case managers to cohorts** (many-to-many), and auto-create student assignments for that cohort's students — both retroactively and for future joiners.
 
-## Scope
-- No schema changes — `profiles.cohort_id` and `useAssignStudentCohort` already exist.
-- No changes to existing assign flow on Admin → Users.
-- Respect Data Preservation: clearing a cohort sets `cohort_id = NULL`; no student records are deleted/hidden.
+## 1. Database (migration)
 
-## 1. Student Detail page (`src/pages/StudentDetail.tsx`)
-- Add a **Cohort** card/row (admin + org_admin-in-scope only).
-- Shows current cohort name (or "Not assigned").
-- Edit button opens a Select listing cohorts filtered to the student's organization (uses `useOrgCohorts(student.organization_id)`), with a "No cohort" option.
-- Save calls `useAssignStudentCohort` and invalidates queries.
-- If student has no organization, show a disabled state with hint to assign an organization first.
+**New table `cohort_case_managers`** (junction):
+- `cohort_id` → cohorts (cascade)
+- `case_manager_id` → auth.users (cascade)
+- `assigned_by`, `created_at`
+- Unique on (`cohort_id`, `case_manager_id`)
+- GRANT to authenticated + service_role
+- RLS:
+  - SELECT: admins, org admins of the cohort's org, the CM themselves, and students in that cohort
+  - INSERT/DELETE: admins, org admins of the cohort's org
 
-## 2. Bulk assignment from Cohort Manager
-- Add a **"Manage students"** button on each cohort row in `src/components/admin/CohortManager.tsx` (admin / scoped org_admin only).
-- Opens a new `CohortStudentsDialog` (new file `src/components/admin/CohortStudentsDialog.tsx`) showing:
-  - Left list: students in the organization not currently in this cohort (with search).
-  - Right list: students currently in this cohort.
-  - Checkbox multi-select + **Add selected** / **Remove selected** buttons.
-  - Each action runs a batched `Promise.all` of `useAssignStudentCohort` mutations (cohortId for add, `null` for remove).
-- Data source: query `profiles` joined with `user_roles` for `student` role within the org (reuse pattern from `useOrgCohorts`); or add a small `useOrgStudents(orgId)` hook in `src/hooks/useCohorts.ts`.
+**Auto-assign function + trigger** `sync_cohort_case_manager_assignments()`:
+- When a row is inserted into `cohort_case_managers`, for every student whose `profiles.cohort_id = NEW.cohort_id`, upsert into `student_assignments (student_id, case_manager_id, assigned_by, notes='Auto-assigned via cohort')`. No-op if assignment already exists.
+- Per Data Preservation: deleting a row from `cohort_case_managers` does **not** remove existing student_assignments — staff must remove those manually.
 
-## 3. Hook additions (`src/hooks/useCohorts.ts`)
-- Add `useOrgStudents(orgId)` returning `{ user_id, full_name, email, cohort_id }` for students in the org (active memberships + profile-org fallback, mirroring `admin_student_data_health` logic on the client side: simple `profiles` query where `organization_id = orgId` and role = student).
-- Existing `useAssignStudentCohort` already invalidates relevant queries — no change.
+**Profile cohort change trigger** `sync_profile_cohort_assignments()` on `profiles` AFTER UPDATE of `cohort_id`:
+- When a student's `cohort_id` changes to a non-null value, upsert student_assignments for each CM linked to the new cohort.
+- Same no-op behavior when leaving a cohort (assignments preserved).
 
-## Out of scope
-- Bulk assign across organizations.
-- Moving cohorts between orgs.
-- Any change to filtering, RLS, or existing UserManagementPage cohort dropdown.
+## 2. Global "Class" filter → named cohorts
+
+- `src/hooks/useFilterOptions.ts`: stop deriving from `cohort_start_date`. Query the `cohorts` table; return `{ value: cohort.id, label: cohort.name }` (with org name suffix when ambiguous).
+- `src/contexts/GlobalFiltersContext.tsx` + `src/lib/applyGlobalFilters.ts`: change client-side cohort matching from year derivation to direct `cohort_id` equality. Keep the filter key name `cohort` to avoid touching every consumer.
+- `src/components/filters/GlobalFilterBar.tsx`: relabel chip from "Class of {year}" to the cohort name (looked up from filter options).
+- Any direct query that filtered by `cohort_start_date` for the global filter: switch to `cohort_id`. Audit `useStudentFolders`, `useUsers`, dashboards.
+
+## 3. UI for CM ↔ cohort
+
+- Extend `src/components/admin/CohortStudentsDialog.tsx` (or add a sibling tabbed dialog) with a second tab **"Case Managers"**:
+  - Lists currently assigned CMs (chips with remove button).
+  - Combobox to add a CM (queries `user_roles` for `case_manager`, filtered to those in the cohort's org via memberships).
+  - On add → insert into `cohort_case_managers`; trigger handles student_assignments.
+  - On remove → delete junction row only; shows a hint that existing student assignments stay until removed manually.
+- New hook `src/hooks/useCohortCaseManagers.ts`: `useCohortCaseManagers(cohortId)`, `useAddCohortCM()`, `useRemoveCohortCM()`.
+- `CohortManager` table: show a small CM count badge next to the student count.
+
+## 4. Out of scope
+- No removal of `cohort_start_date` column or any historical year data.
+- No changes to existing student_assignments RLS or reassignment flows.
+- No bulk CM removal of inherited student assignments.
 
 ## Files
-- **Edit**: `src/pages/StudentDetail.tsx`, `src/components/admin/CohortManager.tsx`, `src/hooks/useCohorts.ts`
-- **New**: `src/components/admin/CohortStudentsDialog.tsx`
+- **New**: migration; `src/hooks/useCohortCaseManagers.ts`.
+- **Edit**: `src/hooks/useFilterOptions.ts`, `src/contexts/GlobalFiltersContext.tsx`, `src/lib/applyGlobalFilters.ts`, `src/components/filters/GlobalFilterBar.tsx`, `src/components/admin/CohortStudentsDialog.tsx`, `src/components/admin/CohortManager.tsx`.

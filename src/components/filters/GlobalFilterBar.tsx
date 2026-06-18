@@ -61,7 +61,7 @@ export function GlobalFilterBar({ visible = ALL, className }: Props) {
   const lookup = (key: FilterKey, value: string): string => {
     if (key === 'organizationId') return opts?.organizations.find((o) => o.value === value)?.label || value;
     if (key === 'assignedCaseManagerId') return opts?.caseManagers.find((o) => o.value === value)?.label || value;
-    if (key === 'cohort') return `Class of ${value}`;
+    if (key === 'cohort') return opts?.cohorts.find((o) => o.value === value)?.label || value;
     if (key === 'status') return STATUS_OPTIONS.find((o) => o.value === value)?.label || value;
     if (key === 'role') return ROLE_OPTIONS.find((o) => o.value === value)?.label || value;
     if (key === 'studentStatus') return STUDENT_STATUS_OPTIONS.find((o) => o.value === value)?.label || value;
@@ -72,7 +72,7 @@ export function GlobalFilterBar({ visible = ALL, className }: Props) {
   const renderFilter = (f: FilterField) => {
     switch (f) {
       case 'cohort':
-        return <FilterMultiSelect key={f} label="Class" icon={<GraduationCap className="h-3.5 w-3.5" />} options={opts?.cohorts || []} selected={filters.cohort} onChange={(v) => setFilter('cohort', v)} />;
+        return <FilterMultiSelect key={f} label="Cohort" icon={<GraduationCap className="h-3.5 w-3.5" />} options={opts?.cohorts || []} selected={filters.cohort} onChange={(v) => setFilter('cohort', v)} />;
       case 'yearOfStudy':
         return <FilterMultiSelect key={f} label="Year" icon={<Calendar className="h-3.5 w-3.5" />} options={opts?.yearsOfStudy || []} selected={filters.yearOfStudy} onChange={(v) => setFilter('yearOfStudy', v)} />;
       case 'organizationId':
