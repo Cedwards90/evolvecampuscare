@@ -146,3 +146,67 @@ export function useAssignStudentCohort() {
     },
   });
 }
+
+export interface OrgStudent {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  cohort_id: string | null;
+}
+
+/** Students whose profile.organization_id matches the given org. */
+export function useOrgStudents(organizationId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['cohorts', 'org-students', organizationId],
+    enabled: !!organizationId,
+    queryFn: async (): Promise<OrgStudent[]> => {
+      // Get student user_ids in this org via profiles
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email, cohort_id')
+        .eq('organization_id', organizationId!)
+        .order('full_name', { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      const ids = (profiles || []).map((p: any) => p.user_id);
+      if (ids.length === 0) return [];
+
+      // Filter to those with student role
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('user_id', ids)
+        .eq('role', 'student');
+      const studentSet = new Set((roles || []).map((r: any) => r.user_id));
+
+      return (profiles || [])
+        .filter((p: any) => studentSet.has(p.user_id))
+        .map((p: any) => ({
+          user_id: p.user_id,
+          full_name: p.full_name,
+          email: p.email,
+          cohort_id: p.cohort_id,
+        }));
+    },
+  });
+}
+
+/** Bulk assign/unassign students to a cohort. */
+export function useBulkAssignCohort() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ studentIds, cohortId }: { studentIds: string[]; cohortId: string | null }) => {
+      if (studentIds.length === 0) return;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ cohort_id: cohortId })
+        .in('user_id', studentIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cohorts'] });
+      qc.invalidateQueries({ queryKey: ['student-folders'] });
+      qc.invalidateQueries({ queryKey: ['users-with-roles'] });
+      qc.invalidateQueries({ queryKey: ['student-detail'] });
+    },
+  });
+}

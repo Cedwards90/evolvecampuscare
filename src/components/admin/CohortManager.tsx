@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Plus, Pencil, Trash2, Users, GraduationCap, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, GraduationCap, Loader2, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { EmptyState } from '@/components/EmptyState';
 import { CohortDialog } from './CohortDialog';
+import { CohortStudentsDialog } from './CohortStudentsDialog';
 import { useOrgCohorts, useDeleteCohort, type Cohort } from '@/hooks/useCohorts';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,6 +37,7 @@ export function CohortManager({ organizationId }: Props) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Cohort | null>(null);
   const [deleting, setDeleting] = useState<Cohort | null>(null);
+  const [managing, setManaging] = useState<Cohort | null>(null);
 
   const canManage =
     role === 'admin' || (role === 'org_admin' && (orgAdminOrgs ?? []).includes(organizationId));
@@ -95,7 +97,7 @@ export function CohortManager({ organizationId }: Props) {
                   <TableHead>Name</TableHead>
                   <TableHead className="hidden sm:table-cell">Dates</TableHead>
                   <TableHead>Students</TableHead>
-                  {canManage && <TableHead className="w-[120px] text-right">Actions</TableHead>}
+                  {canManage && <TableHead className="w-[180px] text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -120,6 +122,15 @@ export function CohortManager({ organizationId }: Props) {
                     </TableCell>
                     {canManage && (
                       <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setManaging(c)}
+                          className="rounded-full"
+                        >
+                          <UserPlus className="h-4 w-4 mr-1" />
+                          Students
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => setEditing(c)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -153,6 +164,11 @@ export function CohortManager({ organizationId }: Props) {
             onOpenChange={(o) => !o && setEditing(null)}
             organizationId={organizationId}
             cohort={editing}
+          />
+          <CohortStudentsDialog
+            open={!!managing}
+            onOpenChange={(o) => !o && setManaging(null)}
+            cohort={managing}
           />
           <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
             <AlertDialogContent>
