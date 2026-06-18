@@ -203,7 +203,7 @@ export function useAllPostGradPlans() {
       const [{ data: profiles }, orgMap] = await Promise.all([
         supabase
           .from('profiles')
-          .select('user_id, full_name, email, organization_id')
+          .select('user_id, full_name, email, organization_id, cohort_id, year_of_study')
           .in('user_id', studentIds),
         loadOrgMap(),
       ]);
@@ -218,6 +218,8 @@ export function useAllPostGradPlans() {
           student_email: prof?.email || '',
           organization_id: prof?.organization_id || null,
           organization_name: prof?.organization_id ? orgMap.get(prof.organization_id) || null : null,
+          cohort_id: (prof as any)?.cohort_id || null,
+          year_of_study: (prof as any)?.year_of_study || null,
         };
       }) as PostGradPlanWithStudent[];
     },
