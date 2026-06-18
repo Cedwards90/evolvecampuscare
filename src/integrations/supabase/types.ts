@@ -2326,6 +2326,10 @@ export type Database = {
         Args: { _actor: string; _student: string }
         Returns: boolean
       }
+      cm_has_assignment: {
+        Args: { _actor: string; _student: string }
+        Returns: boolean
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
