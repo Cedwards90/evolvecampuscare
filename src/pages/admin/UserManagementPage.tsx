@@ -133,10 +133,20 @@ export default function UserManagementPage() {
 
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
       const matchesOrg = orgFilter === 'all' || user.organization_id === orgFilter;
+      const matchesCohort = cohortFilter === 'all' || (user as any).cohort_id === cohortFilter;
+      const matchesCM = cmFilter === 'all' || (user as any).case_manager_id === cmFilter;
 
-      return matchesSearch && matchesRole && matchesOrg;
+      return matchesSearch && matchesRole && matchesOrg && matchesCohort && matchesCM;
     });
-  }, [users, searchQuery, roleFilter, orgFilter, globalFilters]);
+  }, [users, searchQuery, roleFilter, orgFilter, cohortFilter, cmFilter, globalFilters]);
+
+  const visibleCohorts = useMemo(() => {
+    const list = cohorts || [];
+    if (orgFilter === 'all') return list;
+    return list.filter((c) => c.organization_id === orgFilter);
+  }, [cohorts, orgFilter]);
+
+  const cmOptions = filterOptions?.caseManagers ?? [];
 
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = filteredUsers.slice(
