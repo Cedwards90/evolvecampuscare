@@ -101,6 +101,7 @@ export default function UserManagementPage() {
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string; email: string; role: AppRole } | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [orgAdminTarget, setOrgAdminTarget] = useState<{ id: string; name: string } | null>(null);
+  const [mfaTarget, setMfaTarget] = useState<{ id: string; name: string; email: string; exempt: boolean } | null>(null);
   
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
