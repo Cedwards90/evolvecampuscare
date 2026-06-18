@@ -1,42 +1,75 @@
-# Show all organizations everywhere + add a data-preservation rule
+## Goal
 
-## 1) Why orgs are "missing"
+Add three frontend features on top of the existing backend (time_entries, time_entry_audit, profiles.mfa_exempt, mfa_exemption_audit are already in the DB). All changes are additive — no existing data, columns, policies, or UI behavior is altered.
 
-The database has 4 organizations: **548 Foundation**, **Elevate**, **Englewood Shared Renewables**, and **Jireh**. Three of them have `is_active = false`, so they get hidden by two queries:
+## 1. Admin MFA controls (per-user)
 
-- `src/hooks/useFilterOptions.ts` — global filter bar org dropdown — filters `.eq('is_active', true)`.
-- `src/hooks/useTrainingOrganizations.ts` (`useActiveOrganizations`) — filters `.eq('is_active', true)`. Used by the Impact dashboard's org filter and breakdown table.
+On `/admin/users` (`UserManagementPage.tsx`), add an **MFA** column + action menu for each staff row (Admin / Case Manager / Org Admin only — Students remain excluded per the MFA Access Policy memory).
 
-No data was lost — they're just flagged inactive, which the UI treats as hidden.
+For each staff user, admin can:
+- See current state: `Enrolled` / `Not enrolled` / `Exempt` (badge), plus enrollment count from an edge-function lookup.
+- **Toggle "MFA Exempt"** — flips `profiles.mfa_exempt` and writes `mfa_exempt_at` / `mfa_exempt_by` / `mfa_exempt_reason` (reason prompted via dialog). Insert a row into `mfa_exemption_audit`.
+- **Force unenroll factors** — destructive on the user's auth factors only (not data); requires typing the user's email to confirm. Done via a new edge function `admin-mfa-manage` using the service role (`auth.admin.mfa.deleteFactor` per factor). Writes to `mfa_exemption_audit` with `action='force_unenroll'`.
+- **View audit log** — slide-over panel listing rows from `mfa_exemption_audit` for that user.
 
-## 2) Fix (frontend only, no DB changes)
+Permissions: only `admin` role can see/use these controls (`has_role` check + RLS on `mfa_exemption_audit`). Org Admins do NOT get MFA toggle (out of scope).
 
-- `useFilterOptions.ts`: drop the `is_active = true` filter. Show all orgs the user is allowed to see (RLS already restricts org_admins to their own orgs; admins see all).
-- `useTrainingOrganizations.ts → useActiveOrganizations()`: drop the `is_active = true` filter and rename the comment/intent to "visible organizations" (do not rename the export to avoid touching every call site). All consumers (Impact dashboard org filter, OrgBreakdownTable, ReportFilters, etc.) will then list all four orgs.
-- Add a small "Inactive" badge next to inactive org names in the global filter dropdown and Impact org dropdown so admins can tell the difference at a glance. (No behavior change — they're still selectable.)
+No changes to login enforcement logic, no changes to student rows, no changes to existing user-management features.
 
-After this, you'll see 548 Foundation, Elevate, Jireh, and Englewood Shared Renewables in every org dropdown and in the Impact breakdown table.
+## 2. Case Manager clock-in / clock-out (`/time-tracking`)
 
-## 3) Data-preservation rule (going forward)
+New page `src/pages/TimeTracking.tsx` (route added to `App.tsx` guarded by `case_manager` or `admin`). Existing Case Manager pages are untouched.
 
-Save a **Core** memory so it's applied to every future change in this project:
+UI:
+- **Active shift card**: big Clock-In button when no active shift; when active, shows live elapsed timer, start time, optional student/service-type/notes fields, and Clock-Out button.
+- **Today / This week** summary (sum of `duration_minutes` from `time_entries` for current user).
+- **Recent entries** list with status badges (draft / submitted / approved / rejected) and an Edit button for `draft` rows only.
 
-> **Student and organizational data must never be changed, removed, or hidden as a side effect of site updates.** When implementing UI/feature changes:
-> - Never add filters that hide existing rows (e.g. `is_active`, `deactivated_at`, `suspended_at`) without explicit user request.
-> - Never write migrations that DROP, TRUNCATE, or mass-DELETE/UPDATE rows in `profiles`, `training_organizations`, `organization_memberships`, `student_*`, `support_requests`, `intake_responses`, `post_graduation_plans`, `participant_outcomes`, `request_*`, or any other student/org data table.
-> - Schema changes that touch these tables are allowed only when the user explicitly asks; favor additive changes (new columns/tables) over destructive ones.
-> - If a feature requires hiding data, surface it as a user-controlled toggle, not a hard filter.
+Data model (additive only — does NOT change `time_entries`):
+- New table `public.active_time_sessions` (one row per case manager max) with `case_manager_id` (PK), `start_time`, `student_id`, `service_type`, `notes`, `created_at`. RLS: case manager sees/manages own; service_role full.
+- On Clock-Out: insert a row into `time_entries` (status `submitted`, end_time=now, validation trigger computes `duration_minutes` + `organization_id`) and delete the active session. Wrapped in an edge function `time-clock` to keep it atomic.
 
-This rule will be persisted to `mem://core` so I follow it on every subsequent prompt without you having to repeat it.
+Offline/edge cases: simple `navigator.onLine` guard with toast; no offline queue (out of scope).
 
-## Files touched
+## 3. Admin time reporting (`/admin/time-tracking`)
 
-- `src/hooks/useFilterOptions.ts` (1 line removed)
-- `src/hooks/useTrainingOrganizations.ts` (1 line removed in `useActiveOrganizations`)
-- `src/components/filters/FilterMultiSelect.tsx` or the org-option mapping spots — small "Inactive" label, only if the option carries a flag.
-- `mem://index.md` (Core rule updated)
+New page `src/pages/admin/TimeTrackingAdmin.tsx`. Available to `admin` (all entries) and `org_admin` (entries scoped via existing `org_admin_can_access_time_entry`).
 
-## Out of scope
-- No DB migrations.
-- No changes to the recent Impact org-breakdown work or the RLS fix.
-- No changes to deactivation/reactivation flows on the Training Organizations admin page — admins can still mark orgs inactive there; it just no longer hides them in filters.
+Features:
+- Filters: case manager, organization, student, date range, status, billable. Uses existing global filter context where applicable.
+- Table: date, case manager, student, service type, duration, status, billable, notes preview.
+- Row actions: **View details** (drawer with full notes + `time_entry_audit` history), **Edit** (admin/org_admin only — date, times, service type, notes, billable), **Approve** / **Reject** (sets `status` + `review_note`; trigger fills `reviewed_by/at`).
+- Bulk approve selected.
+- **Export CSV** of current filtered result (client-side; columns: date, case manager email, student email, organization, service_type, start, end, duration_hrs, billable, status, reviewed_by, review_note, notes).
+
+No schema changes for this page — uses existing `time_entries`, `time_entry_audit`, `validate_time_entry`, `audit_time_entry`.
+
+## Files
+
+New:
+- `src/pages/TimeTracking.tsx`
+- `src/pages/admin/TimeTrackingAdmin.tsx`
+- `src/components/time/ActiveShiftCard.tsx`, `TimeEntryRow.tsx`, `TimeEntryEditDialog.tsx`, `TimeEntryDetailDrawer.tsx`
+- `src/components/admin/MFAUserControls.tsx`, `MFAAuditDrawer.tsx`
+- `src/hooks/useActiveShift.ts`, `useTimeEntries.ts`, `useAdminMFA.ts`
+- `supabase/functions/time-clock/index.ts` (clock-in / clock-out)
+- `supabase/functions/admin-mfa-manage/index.ts` (set exempt, force unenroll, list factor count)
+
+Edited (minimal, scoped):
+- `src/App.tsx` — add 2 routes
+- `src/pages/admin/UserManagementPage.tsx` — add MFA column + open dialog (no changes to existing row rendering logic beyond the new column)
+- Sidebar/nav — add "Time Tracking" link for case_manager, "Time Reports" for admin/org_admin
+
+Migrations (additive only):
+- `CREATE TABLE public.active_time_sessions` + GRANTs + RLS + policies (case manager owns own; service_role all)
+
+## Out of scope (won't touch)
+
+- Existing time_entries / time_entry_audit / mfa_exemption_audit schema, triggers, policies, RLS
+- Login MFA enforcement flow
+- Student data, organization data, request/messaging/intake features
+- No `is_active`/soft-hide filters added anywhere (per Data Preservation rule)
+
+## Verification
+
+- Build passes; routes load; clock-in then clock-out creates a `time_entries` row with correct duration; admin approve flips status; CSV downloads; MFA toggle writes audit row; force-unenroll removes auth factors only.
