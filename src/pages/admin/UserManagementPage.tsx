@@ -528,13 +528,24 @@ export default function UserManagementPage() {
                                     Make Org Admin
                                   </DropdownMenuItem>
                                 )}
-                                {user.role === 'org_admin' && (
-                                  <DropdownMenuItem
-                                    onClick={() => setOrgAdminTarget({ id: user.user_id, name: user.full_name || 'User' })}
-                                  >
-                                    <Building2 className="mr-2 h-4 w-4" />
-                                    Manage organizations
-                                  </DropdownMenuItem>
+                                {user.role === 'student' && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setPendingCohort((user as any).cohort_id ?? 'none');
+                                        setCohortAssignTarget({
+                                          id: user.user_id,
+                                          name: user.full_name || 'User',
+                                          orgId: user.organization_id,
+                                          currentCohortId: (user as any).cohort_id ?? null,
+                                        });
+                                      }}
+                                    >
+                                      <GraduationCap className="mr-2 h-4 w-4" />
+                                      Assign cohort
+                                    </DropdownMenuItem>
+                                  </>
                                 )}
                                 {user.role !== 'student' && (
                                   <>
