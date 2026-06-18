@@ -55,6 +55,8 @@ import AdminNda from "./pages/admin/AdminNda";
 import TransitionsDashboard from "./pages/admin/TransitionsDashboard";
 import ImpactDashboard from "./pages/admin/ImpactDashboard";
 import AdminStudentSubmissions from "./pages/admin/AdminStudentSubmissions";
+import TimeTracking from "./pages/TimeTracking";
+import TimeTrackingAdmin from "./pages/admin/TimeTrackingAdmin";
 
 // Create query client outside component to ensure stable reference.
 // Defaults tuned to avoid stale UI after mutations or returning to a tab,
