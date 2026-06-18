@@ -439,6 +439,8 @@ export default function TimeTrackingAdmin() {
       {editing && (
         <EditDialog
           entry={editing}
+          caseManagers={caseManagers}
+          students={students}
           onClose={() => setEditing(null)}
           onSave={async (patch) => {
             try {
@@ -450,6 +452,25 @@ export default function TimeTrackingAdmin() {
             }
           }}
           saving={updateEntry.isPending}
+        />
+      )}
+
+      {/* Create dialog */}
+      {creating && (
+        <CreateDialog
+          caseManagers={caseManagers}
+          students={students}
+          onClose={() => setCreating(false)}
+          onSave={async (input) => {
+            try {
+              await createEntry.mutateAsync(input);
+              toast({ title: 'Entry created' });
+              setCreating(false);
+            } catch (e: any) {
+              toast({ title: 'Error', description: e.message, variant: 'destructive' });
+            }
+          }}
+          saving={createEntry.isPending}
         />
       )}
 
