@@ -37,6 +37,7 @@ export function CohortManager({ organizationId }: Props) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Cohort | null>(null);
   const [deleting, setDeleting] = useState<Cohort | null>(null);
+  const [managing, setManaging] = useState<Cohort | null>(null);
 
   const canManage =
     role === 'admin' || (role === 'org_admin' && (orgAdminOrgs ?? []).includes(organizationId));
