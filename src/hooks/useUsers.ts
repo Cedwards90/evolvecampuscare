@@ -18,9 +18,6 @@ export interface UserWithRole {
   reactivated_at: string | null;
   reactivated_by: string | null;
   is_active: boolean;
-  mfa_exempt: boolean;
-  mfa_exempt_reason: string | null;
-  mfa_exempt_at: string | null;
 }
 
 export function useUsers() {
@@ -29,7 +26,7 @@ export function useUsers() {
     queryFn: async (): Promise<UserWithRole[]> => {
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, user_id, email, full_name, avatar_url, created_at, organization_id, deactivated_at, deactivated_by, deactivation_reason, reactivated_at, reactivated_by, mfa_exempt, mfa_exempt_reason, mfa_exempt_at')
+        .select('id, user_id, email, full_name, avatar_url, created_at, organization_id, deactivated_at, deactivated_by, deactivation_reason, reactivated_at, reactivated_by')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
@@ -81,7 +78,6 @@ export function useUsers() {
           organization_name: orgName,
           role: (roleMap.get(profile.user_id) || 'student') as AppRole,
           is_active: !profile.deactivated_at,
-          mfa_exempt: !!profile.mfa_exempt,
         };
       });
     },
@@ -209,23 +205,6 @@ export function useUserStatusHistory(userId: string | null | undefined) {
         }));
       }
       return rows;
-    },
-  });
-}
-
-export function useSetUserMfaExempt() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ userId, exempt, reason }: { userId: string; exempt: boolean; reason?: string }) => {
-      const { data, error } = await supabase.functions.invoke('set-user-mfa-exempt', {
-        body: { userId, exempt, reason },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
     },
   });
 }

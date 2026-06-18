@@ -1,51 +1,36 @@
-# Allow Disabling MFA on Individual Accounts
+## Organization sorting on /admin/impact
 
-Today MFA is mandatory for every staff member (admin / case_manager / org_admin). We'll add a per-user **MFA exemption** that an admin can toggle from User Management. Exempt users won't be forced to enroll or verify; everyone else stays mandatory.
+Two additions to `src/pages/admin/ImpactDashboard.tsx`:
 
-## 1. Database
+### 1. Promote the Organization filter
+Move the existing top-right `FilterMultiSelect` into its own filter bar row directly under the page header (alongside the date range), styled like other admin filter bars (`rounded-full`, sage outline). Add:
+- A count badge ("3 of 12 selected") and a "Clear" pill when any orgs are selected.
+- Make it visible to **Org Admins** too — for them, options auto-restrict to their `org_admins` orgs (already RLS-scoped via `useTrainingOrganizations`).
+- Persist selection in the URL (`?orgs=id1,id2`) so the view is shareable/deep-linkable.
 
-New nullable columns on `profiles`:
-- `mfa_exempt boolean NOT NULL DEFAULT false`
-- `mfa_exempt_reason text`
-- `mfa_exempt_at timestamptz`
-- `mfa_exempt_by uuid` (references the admin who set it)
+### 2. Per-organization breakdown table
+New `<OrgBreakdownTable />` rendered in a collapsible Card titled "Compare organizations" beneath the existing KPI grid.
 
-Plus an audit table `mfa_exemption_audit` (user_id, actor_id, action `granted|revoked`, reason, created_at) with admin-only read and service-role writes.
+Columns (sortable by clicking the header, default desc by Students):
+- Organization
+- Active students
+- Requests opened / resolved
+- Approved $ (sum)
+- Certifications earned
+- Placement rate (%)
+- Avg wage lift ($)
+- SROI
 
-RLS:
-- Only admins can `UPDATE` the new columns on profiles (via a dedicated policy / edge function).
-- Users can read their own `mfa_exempt` flag (already covered by existing self-select profile policy).
+Data: call `useImpactAnalytics` once per org via `useQueries` with `{ ...filters, organizationIds: [org.id] }` for each org the admin/org-admin can see (respects the active multi-select — if none selected, all visible orgs; if some, just those). Show a small spinner per row while loading; render `—` for null metrics.
 
-## 2. Edge function
+Also: a "Totals" row at the bottom summing numeric columns (rates shown as weighted averages, not summed).
 
-New `set-user-mfa-exempt` function:
-- Requires admin caller (AAL2 via existing `verifyMFAForPrivilegedRole`).
-- Input: `{ userId, exempt: boolean, reason?: string }`.
-- Updates the profile columns, writes audit row.
-- Strict CORS + `sanitizeError`, same pattern as `set-user-active`.
+### Export
+Extend the existing CSV export with an "Organization breakdown" section (one row per org with the same columns).
 
-## 3. Client enforcement
+### Files
+- `src/pages/admin/ImpactDashboard.tsx` — relocate filter, add URL sync, render new component, extend CSV.
+- `src/components/impact/OrgBreakdownTable.tsx` — new component (uses `useQueries` + existing hook).
 
-- Extend `useMFA` (or `AuthContext`) to fetch the caller's `mfa_exempt` flag.
-- In `Auth.tsx` MFA gate: if `mfa_exempt === true`, skip both `showMFAEnrollment` and `showMFAVerification`, even for privileged roles.
-- In `Settings.tsx` MFA section: when exempt, show a read-only "MFA waived by administrator" note (reason + date) instead of the enroll prompt. Users can still optionally enroll if they want.
-- Server-side `verifyMFAForPrivilegedRole` (in `supabase/functions/_shared/security.ts`): short-circuit to `{ verified: true }` when the user's profile has `mfa_exempt = true`. This keeps edge functions consistent with the UI.
-
-## 4. Admin UI
-
-In `src/components/admin/UserManagement.tsx` user row menu, add:
-- **"MFA: Required / Waived"** badge column (compact).
-- Menu item **"Waive MFA…"** / **"Re-require MFA"** opening a dialog that collects an optional reason and calls the edge function. Confirmation required; toast on success.
-- Admin-only; hidden for student rows (students never use MFA anyway).
-- Invalidate `users-with-roles` query after change.
-
-A new hook `useSetUserMfaExempt` wraps the function call (mirrors `useSetUserActive`).
-
-## 5. Memory
-
-Update `mem://technical/mfa-access-policy` to note: "Staff MFA is mandatory **unless** an admin has set `profiles.mfa_exempt = true` for that user; exemption is audited and surfaced in User Management."
-
-## Out of scope
-- No bulk waive UI (per-user only).
-- No auto-expiring exemptions (admins manage manually).
-- No change to student behavior (already MFA-disabled).
+### Out of scope
+No DB/RLS changes, no new endpoints, no changes to charts.

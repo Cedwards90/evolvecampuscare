@@ -28,10 +28,6 @@ export interface Profile {
   deactivation_reason?: string | null;
   reactivated_at?: string | null;
   reactivated_by?: string | null;
-  mfa_exempt?: boolean;
-  mfa_exempt_reason?: string | null;
-  mfa_exempt_at?: string | null;
-  mfa_exempt_by?: string | null;
 }
 
 export interface UserRole {
