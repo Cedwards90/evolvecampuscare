@@ -285,7 +285,14 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
           ))}
         </div>
 
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
+          const first = Object.values(errors)[0] as any;
+          toast({
+            variant: 'destructive',
+            title: 'Please fix the form',
+            description: first?.message || 'Some fields are missing or invalid.',
+          });
+        })}>
           {/* Step 1: Category Selection */}
           {step === 1 && (
             <Card className="border border-border/50">
