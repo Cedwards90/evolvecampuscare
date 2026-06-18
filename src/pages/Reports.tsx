@@ -72,14 +72,21 @@ export default function Reports() {
   const { filters } = useGlobalFilters();
   const filteredData = useMemo(() => {
     if (!data) return data;
-    const orgs = filters.organizationId;
-    if (orgs.length === 0) return data;
-    const inOrg = (s: any) => s?.organization_id && orgs.includes(s.organization_id);
+    const { organizationId: orgs, cohort, yearOfStudy, assignedCaseManagerId } = filters;
+    if (!orgs.length && !cohort.length && !yearOfStudy.length && !assignedCaseManagerId.length) return data;
+    const matches = (r: any) => {
+      const s = r.student;
+      if (orgs.length && (!s?.organization_id || !orgs.includes(s.organization_id))) return false;
+      if (cohort.length && (!s?.cohort_id || !cohort.includes(s.cohort_id))) return false;
+      if (yearOfStudy.length && (!s?.year_of_study || !yearOfStudy.includes(s.year_of_study))) return false;
+      if (assignedCaseManagerId.length && (!r.assigned_case_manager_id || !assignedCaseManagerId.includes(r.assigned_case_manager_id))) return false;
+      return true;
+    };
     return {
       ...data,
-      unresolved: data.unresolved.filter((r: any) => inOrg(r.student)),
+      unresolved: data.unresolved.filter(matches),
     };
-  }, [data, filters.organizationId]);
+  }, [data, filters]);
 
   const handleExportPdf = () => {
     if (!data) return;

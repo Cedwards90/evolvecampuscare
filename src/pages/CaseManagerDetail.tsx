@@ -37,6 +37,8 @@ import {
 } from '@/components/ui/table';
 import { useCaseManagerStats } from '@/hooks/useCaseManagerStats';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { applyToRequests } from '@/lib/applyGlobalFilters';
 import { GenerateReportCard } from '@/components/reports/GenerateReportCard';
 import { GenerateStudentReportCard } from '@/components/reports/GenerateStudentReportCard';
 import { 
@@ -71,6 +73,7 @@ export default function CaseManagerDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: stats, isLoading, error } = useCaseManagerStats(id);
+  const { filters: globalFilters } = useGlobalFilters();
 
   const getInitials = (name: string | null) => {
     if (!name) return '?';
@@ -103,7 +106,8 @@ export default function CaseManagerDetail() {
     );
   }
 
-  const { caseManager, assignedRequests, recentActivity } = stats;
+  const { caseManager, assignedRequests: allAssignedRequests, recentActivity } = stats;
+  const assignedRequests = applyToRequests(allAssignedRequests as any, globalFilters);
   const maxLoad = 20;
   const loadPercentage = (stats.activeRequests / maxLoad) * 100;
   const isOverloaded = loadPercentage > 80;

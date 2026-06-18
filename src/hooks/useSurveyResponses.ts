@@ -14,6 +14,8 @@ export interface CheckInWithStudent {
   student_email: string;
   organization_id: string | null;
   organization_name: string | null;
+  cohort_id: string | null;
+  year_of_study: string | null;
 }
 
 export interface PostGradPlanWithStudent {
@@ -37,6 +39,8 @@ export interface PostGradPlanWithStudent {
   student_email: string;
   organization_id: string | null;
   organization_name: string | null;
+  cohort_id: string | null;
+  year_of_study: string | null;
 }
 
 async function loadOrgMap() {
@@ -58,7 +62,7 @@ export function useAllCheckIns() {
       const [{ data: profiles }, orgMap] = await Promise.all([
         supabase
           .from('profiles')
-          .select('user_id, full_name, email, organization_id')
+          .select('user_id, full_name, email, organization_id, cohort_id, year_of_study')
           .in('user_id', studentIds),
         loadOrgMap(),
       ]);
@@ -73,6 +77,8 @@ export function useAllCheckIns() {
           student_email: p?.email || '',
           organization_id: p?.organization_id || null,
           organization_name: p?.organization_id ? orgMap.get(p.organization_id) || null : null,
+          cohort_id: (p as any)?.cohort_id || null,
+          year_of_study: (p as any)?.year_of_study || null,
         };
       }) as CheckInWithStudent[];
     },
@@ -85,6 +91,8 @@ export interface PendingStudent {
   student_email: string;
   organization_id: string | null;
   organization_name: string | null;
+  cohort_id: string | null;
+  year_of_study: string | null;
   last_submitted_at: string | null;
   days_since: number | null;
 }
@@ -99,7 +107,7 @@ async function loadStudentsWithProfiles() {
   const [{ data: profiles }, orgMap] = await Promise.all([
     supabase
       .from('profiles')
-      .select('user_id, full_name, email, organization_id')
+      .select('user_id, full_name, email, organization_id, cohort_id, year_of_study')
       .in('user_id', ids),
     loadOrgMap(),
   ]);
@@ -139,6 +147,8 @@ export function usePendingCheckIns() {
           student_email: s.email || '',
           organization_id: s.organization_id || null,
           organization_name: s.organization_id ? orgMap.get(s.organization_id) || null : null,
+          cohort_id: s.cohort_id || null,
+          year_of_study: s.year_of_study || null,
           last_submitted_at: last,
           days_since: lastTs ? Math.floor((Date.now() - lastTs) / 86400000) : null,
         });
@@ -170,6 +180,8 @@ export function usePendingPostGradPlans() {
           student_email: s.email || '',
           organization_id: s.organization_id || null,
           organization_name: s.organization_id ? orgMap.get(s.organization_id) || null : null,
+          cohort_id: s.cohort_id || null,
+          year_of_study: s.year_of_study || null,
           last_submitted_at: null,
           days_since: null,
         })) as PendingStudent[];
@@ -191,7 +203,7 @@ export function useAllPostGradPlans() {
       const [{ data: profiles }, orgMap] = await Promise.all([
         supabase
           .from('profiles')
-          .select('user_id, full_name, email, organization_id')
+          .select('user_id, full_name, email, organization_id, cohort_id, year_of_study')
           .in('user_id', studentIds),
         loadOrgMap(),
       ]);
@@ -206,6 +218,8 @@ export function useAllPostGradPlans() {
           student_email: prof?.email || '',
           organization_id: prof?.organization_id || null,
           organization_name: prof?.organization_id ? orgMap.get(prof.organization_id) || null : null,
+          cohort_id: (prof as any)?.cohort_id || null,
+          year_of_study: (prof as any)?.year_of_study || null,
         };
       }) as PostGradPlanWithStudent[];
     },

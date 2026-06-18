@@ -39,6 +39,8 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useRequests } from '@/hooks/useRequests';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { applyToRequests } from '@/lib/applyGlobalFilters';
 import type { RequestStatus, RequestPriority, RequestCategory } from '@/types/database';
 
 const categoryLabels: Record<RequestCategory, string> = {
@@ -98,8 +100,10 @@ export default function RequestsList() {
     setSearchParams(params, { replace: true });
   }, [statusFilter, categoryFilter, priorityFilter, showEmergencyOnly, setSearchParams]);
 
-  // Sort requests
-  const sortedRequests = [...(requests || [])].sort((a, b) => {
+  // Apply global filters then sort
+  const { filters: globalFilters } = useGlobalFilters();
+  const globallyFiltered = applyToRequests((requests || []) as any, globalFilters);
+  const sortedRequests = [...globallyFiltered].sort((a, b) => {
     const diff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     return sortOrder === 'desc' ? diff : -diff;
   });
