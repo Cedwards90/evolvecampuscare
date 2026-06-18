@@ -97,6 +97,8 @@ export default function UserManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<AppRole | 'all'>('all');
   const [orgFilter, setOrgFilter] = useState<string>('all');
+  const [cohortFilter, setCohortFilter] = useState<string>('all');
+  const [cmFilter, setCmFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; currentRole: AppRole } | null>(null);
   const [newRole, setNewRole] = useState<AppRole | null>(null);
@@ -104,14 +106,19 @@ export default function UserManagementPage() {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [orgAdminTarget, setOrgAdminTarget] = useState<{ id: string; name: string } | null>(null);
   const [mfaTarget, setMfaTarget] = useState<{ id: string; name: string; email: string; exempt: boolean } | null>(null);
-  
+  const [cohortAssignTarget, setCohortAssignTarget] = useState<{ id: string; name: string; orgId: string | null; currentCohortId: string | null } | null>(null);
+  const [pendingCohort, setPendingCohort] = useState<string>('');
+
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
   const { data: users, isLoading } = useUsers();
   const { data: organizations } = useTrainingOrganizations();
   const { data: pendingInvitations } = usePendingInvitations();
+  const { data: cohorts } = useAllCohorts();
+  const { data: filterOptions } = useFilterOptions();
   const updateRole = useUpdateUserRole();
   const deleteUser = useDeleteUser();
+  const assignCohort = useAssignStudentCohort();
 
   const { filters: globalFilters } = useGlobalFilters();
 
