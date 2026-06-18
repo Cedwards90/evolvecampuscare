@@ -726,6 +726,75 @@ export default function UserManagementPage() {
           currentlyExempt={mfaTarget.exempt}
         />
       )}
+
+      <AlertDialog
+        open={!!cohortAssignTarget}
+        onOpenChange={(o) => {
+          if (!o) {
+            setCohortAssignTarget(null);
+            setPendingCohort('');
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Assign cohort</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Assign <strong>{cohortAssignTarget?.name}</strong> to a cohort. The student record itself is not changed.
+                </p>
+                {!cohortAssignTarget?.orgId ? (
+                  <p className="text-sm text-destructive">
+                    This student has no organization yet. Assign them to an organization first.
+                  </p>
+                ) : (
+                  <Select value={pendingCohort} onValueChange={setPendingCohort}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select cohort" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No cohort</SelectItem>
+                      {(cohorts || [])
+                        .filter((c) => c.organization_id === cohortAssignTarget?.orgId)
+                        .map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={assignCohort.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={
+                !cohortAssignTarget?.orgId ||
+                assignCohort.isPending ||
+                pendingCohort === (cohortAssignTarget?.currentCohortId ?? 'none')
+              }
+              onClick={async () => {
+                if (!cohortAssignTarget) return;
+                try {
+                  await assignCohort.mutateAsync({
+                    studentId: cohortAssignTarget.id,
+                    cohortId: pendingCohort === 'none' ? null : pendingCohort,
+                  });
+                  toast({ title: 'Cohort updated' });
+                  setCohortAssignTarget(null);
+                  setPendingCohort('');
+                } catch (e: any) {
+                  toast({ title: 'Failed to update cohort', description: e?.message, variant: 'destructive' });
+                }
+              }}
+            >
+              {assignCohort.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidebarLayout>
   );
 }
