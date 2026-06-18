@@ -180,6 +180,8 @@ export function usePendingPostGradPlans() {
           student_email: s.email || '',
           organization_id: s.organization_id || null,
           organization_name: s.organization_id ? orgMap.get(s.organization_id) || null : null,
+          cohort_id: s.cohort_id || null,
+          year_of_study: s.year_of_study || null,
           last_submitted_at: null,
           days_since: null,
         })) as PendingStudent[];
