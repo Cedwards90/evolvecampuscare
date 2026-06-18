@@ -1,28 +1,36 @@
 ## Goal
-Let admins (and org admins, within scope) create new time entries and edit any existing entry from the Time Reports page.
+Let admins (and org admins, within scope) assign students to cohorts from the **Student Detail** page and **in bulk** from the Cohort Manager.
 
-## Changes
+## Scope
+- No schema changes — `profiles.cohort_id` and `useAssignStudentCohort` already exist.
+- No changes to existing assign flow on Admin → Users.
+- Respect Data Preservation: clearing a cohort sets `cohort_id = NULL`; no student records are deleted/hidden.
 
-### 1. RLS migration (`time_entries`)
-Current INSERT policy requires `case_manager_id = auth.uid()`, blocking admins from logging time for other case managers. Replace with:
-- `CM inserts own entries` (unchanged: CM inserts where case_manager_id = auth.uid())
-- New: `Admins insert any entry` — allow when `has_role(auth.uid(), 'admin')`
-- New: `Org admins insert in scope` — allow when `is_org_admin(auth.uid())` AND the target case_manager_id falls within their org scope (`user_in_org_admin_scope_v2`)
+## 1. Student Detail page (`src/pages/StudentDetail.tsx`)
+- Add a **Cohort** card/row (admin + org_admin-in-scope only).
+- Shows current cohort name (or "Not assigned").
+- Edit button opens a Select listing cohorts filtered to the student's organization (uses `useOrgCohorts(student.organization_id)`), with a "No cohort" option.
+- Save calls `useAssignStudentCohort` and invalidates queries.
+- If student has no organization, show a disabled state with hint to assign an organization first.
 
-UPDATE policy already permits admin/org_admin, no change needed.
+## 2. Bulk assignment from Cohort Manager
+- Add a **"Manage students"** button on each cohort row in `src/components/admin/CohortManager.tsx` (admin / scoped org_admin only).
+- Opens a new `CohortStudentsDialog` (new file `src/components/admin/CohortStudentsDialog.tsx`) showing:
+  - Left list: students in the organization not currently in this cohort (with search).
+  - Right list: students currently in this cohort.
+  - Checkbox multi-select + **Add selected** / **Remove selected** buttons.
+  - Each action runs a batched `Promise.all` of `useAssignStudentCohort` mutations (cohortId for add, `null` for remove).
+- Data source: query `profiles` joined with `user_roles` for `student` role within the org (reuse pattern from `useOrgCohorts`); or add a small `useOrgStudents(orgId)` hook in `src/hooks/useCohorts.ts`.
 
-### 2. Hook: `useTimeEntries.ts`
-Add `useCreateTimeEntry()` that inserts directly into `time_entries` (relies on `validate_time_entry` trigger for duration/org auto-fill) and invalidates the query.
+## 3. Hook additions (`src/hooks/useCohorts.ts`)
+- Add `useOrgStudents(orgId)` returning `{ user_id, full_name, email, cohort_id }` for students in the org (active memberships + profile-org fallback, mirroring `admin_student_data_health` logic on the client side: simple `profiles` query where `organization_id = orgId` and role = student).
+- Existing `useAssignStudentCohort` already invalidates relevant queries — no change.
 
-### 3. `TimeTrackingAdmin.tsx`
-- Add an "Add entry" button next to "Export CSV" that opens a new `CreateEntryDialog`.
-- `CreateEntryDialog`: fields for case manager (required, from `caseManagers`), student (optional, from `users` filtered to role `student`), date, start time, end time, service type, billable, notes. Submits via the new hook.
-- Extend `EditDialog` so admins can also edit: case manager, student (optional), date, and status. (Existing fields stay.) For non-admins this would be locked, but this page is admin-only so all fields editable.
-
-### 4. Out of scope
-No change to clock-in/out, audit, case-manager-facing TimeTracking page, or unrelated areas. Per Data Preservation rule, no soft-delete or hiding logic.
+## Out of scope
+- Bulk assign across organizations.
+- Moving cohorts between orgs.
+- Any change to filtering, RLS, or existing UserManagementPage cohort dropdown.
 
 ## Files
-- new migration `time_entries` insert policies
-- edit `src/hooks/useTimeEntries.ts`
-- edit `src/pages/admin/TimeTrackingAdmin.tsx`
+- **Edit**: `src/pages/StudentDetail.tsx`, `src/components/admin/CohortManager.tsx`, `src/hooks/useCohorts.ts`
+- **New**: `src/components/admin/CohortStudentsDialog.tsx`
