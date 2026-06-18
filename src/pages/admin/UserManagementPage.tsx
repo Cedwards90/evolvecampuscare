@@ -482,6 +482,22 @@ export default function UserManagementPage() {
                                     Manage organizations
                                   </DropdownMenuItem>
                                 )}
+                                {user.role !== 'student' && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => setMfaTarget({
+                                        id: user.user_id,
+                                        name: user.full_name || 'User',
+                                        email: user.email,
+                                        exempt: !!(user as any).mfa_exempt,
+                                      })}
+                                    >
+                                      <KeyRound className="mr-2 h-4 w-4" />
+                                      MFA controls
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onClick={() => openDeleteDialog(user.user_id, user.full_name || 'User', user.email, user.role)}
