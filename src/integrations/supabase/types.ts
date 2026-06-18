@@ -2318,6 +2318,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_student_data_health: {
+        Args: never
+        Returns: {
+          certifications: number
+          checkins: number
+          intake_responses: number
+          organization_id: string
+          organization_name: string
+          post_grad_plans: number
+          student_folders: number
+          students: number
+          support_requests: number
+        }[]
+      }
       can_staff_access_request: {
         Args: { _request_id: string; _user: string }
         Returns: boolean
