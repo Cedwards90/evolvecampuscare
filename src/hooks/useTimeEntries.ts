@@ -110,6 +110,33 @@ export function useTimeEntries(filters: TimeEntryFilters = {}) {
   });
 }
 
+export function useCreateTimeEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      case_manager_id: string;
+      student_id?: string | null;
+      organization_id?: string | null;
+      service_type: string;
+      start_time: string;
+      end_time: string;
+      entry_date: string;
+      notes?: string | null;
+      billable?: boolean;
+      status?: 'pending' | 'approved' | 'rejected';
+    }) => {
+      const { data, error } = await supabase
+        .from('time_entries')
+        .insert(input as any)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['time-entries'] }),
+  });
+}
+
 export function useUpdateTimeEntry() {
   const qc = useQueryClient();
   return useMutation({
