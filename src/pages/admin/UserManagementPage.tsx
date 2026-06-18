@@ -69,6 +69,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUsers, useUpdateUserRole, useDeleteUser } from '@/hooks/useUsers';
+import { useAllCohorts, useAssignStudentCohort } from '@/hooks/useCohorts';
+import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 import { applyToProfiles } from '@/lib/applyGlobalFilters';
