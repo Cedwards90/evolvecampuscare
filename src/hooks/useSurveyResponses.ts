@@ -107,7 +107,7 @@ async function loadStudentsWithProfiles() {
   const [{ data: profiles }, orgMap] = await Promise.all([
     supabase
       .from('profiles')
-      .select('user_id, full_name, email, organization_id')
+      .select('user_id, full_name, email, organization_id, cohort_id, year_of_study')
       .in('user_id', ids),
     loadOrgMap(),
   ]);
