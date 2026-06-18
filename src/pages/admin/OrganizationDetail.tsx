@@ -237,6 +237,10 @@ export default function OrganizationDetail() {
             )}
           </TabsContent>
 
+          <TabsContent value="cohorts">
+            {id && <CohortManager organizationId={id} />}
+          </TabsContent>
+
           <TabsContent value="stats">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Card>
