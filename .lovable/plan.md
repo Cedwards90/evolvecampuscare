@@ -1,36 +1,40 @@
-## Organization sorting on /admin/impact
+# Fix: "infinite recursion detected in policy" on profiles & training_organizations
 
-Two additions to `src/pages/admin/ImpactDashboard.tsx`:
+## What's broken
+All Data API reads of `profiles` and `training_organizations` are returning HTTP 500 with `42P17 infinite recursion detected in policy`. That's why the admin sees "No users found" and empty org/case-manager lists everywhere — `UserManagement`, global filter options, impact dashboard, etc.
 
-### 1. Promote the Organization filter
-Move the existing top-right `FilterMultiSelect` into its own filter bar row directly under the page header (alongside the date range), styled like other admin filter bars (`rounded-full`, sage outline). Add:
-- A count badge ("3 of 12 selected") and a "Clear" pill when any orgs are selected.
-- Make it visible to **Org Admins** too — for them, options auto-restrict to their `org_admins` orgs (already RLS-scoped via `useTrainingOrganizations`).
-- Persist selection in the URL (`?orgs=id1,id2`) so the view is shareable/deep-linkable.
+## Root cause
+Two policies reference each other via **inline subqueries** (not via `SECURITY DEFINER` helpers), creating a mutual loop the planner detects as recursion:
 
-### 2. Per-organization breakdown table
-New `<OrgBreakdownTable />` rendered in a collapsible Card titled "Compare organizations" beneath the existing KPI grid.
+- `training_organizations` policy **"Users can view their own org"** runs an inline `SELECT organization_id FROM profiles WHERE user_id = auth.uid()`.
+- `profiles` policy **"Org admins view profiles via membership"** runs an inline `EXISTS … JOIN training_organizations …`.
 
-Columns (sortable by clicking the header, default desc by Students):
-- Organization
-- Active students
-- Requests opened / resolved
-- Approved $ (sum)
-- Certifications earned
-- Placement rate (%)
-- Avg wage lift ($)
-- SROI
+Because each inline subquery is evaluated as the caller (invoker), the other table's RLS kicks in, which re-enters the first table's RLS → recursion. The existing `SECURITY DEFINER` helpers (`is_org_admin`, `is_org_admin_of`, `is_user_org_suspended`, etc.) sidestep this; the two policies above were written without using them.
 
-Data: call `useImpactAnalytics` once per org via `useQueries` with `{ ...filters, organizationIds: [org.id] }` for each org the admin/org-admin can see (respects the active multi-select — if none selected, all visible orgs; if some, just those). Show a small spinner per row while loading; render `—` for null metrics.
+Nothing else in the schema was actually changed in the recent Impact work — the recursion has been latent and is being surfaced by reads that exercise both tables in the same query plan.
 
-Also: a "Totals" row at the bottom summing numeric columns (rates shown as weighted averages, not summed).
+## Fix (one migration)
 
-### Export
-Extend the existing CSV export with an "Organization breakdown" section (one row per org with the same columns).
+1. Add two small `SECURITY DEFINER STABLE` helpers in `public`:
+   - `get_user_org(_user_id uuid) returns uuid` — returns `profiles.organization_id` for the given user. Used by the `training_organizations` self-view policy.
+   - `org_admin_sees_user(_admin uuid, _user uuid) returns boolean` — returns true when `_admin` is an org_admin of any active (non-suspended) org that `_user` is a current member of. Used by the profiles membership policy.
+   Both run with `search_path = public`, owned by `postgres`, and bypass RLS the same way the existing helpers do.
 
-### Files
-- `src/pages/admin/ImpactDashboard.tsx` — relocate filter, add URL sync, render new component, extend CSV.
-- `src/components/impact/OrgBreakdownTable.tsx` — new component (uses `useQueries` + existing hook).
+2. Replace the two recursive policies:
+   - `DROP POLICY "Users can view their own org" ON public.training_organizations;` then recreate it as:
+     `USING (id = public.get_user_org(auth.uid()) OR EXISTS (SELECT 1 FROM organization_memberships m WHERE m.user_id = auth.uid() AND m.organization_id = training_organizations.id AND m.left_at IS NULL))`
+     (the memberships EXISTS does not touch profiles or training_organizations recursively, so it's safe to keep inline).
+   - `DROP POLICY "Org admins view profiles via membership" ON public.profiles;` then recreate it as:
+     `USING (public.org_admin_sees_user(auth.uid(), user_id))`.
 
-### Out of scope
-No DB/RLS changes, no new endpoints, no changes to charts.
+3. No GRANT changes, no column changes, no app code changes.
+
+## Verification
+After the migration:
+- `select count(*) from public.profiles;` and `select * from public.training_organizations limit 1;` succeed (run via `supabase--read_query` as a smoke test).
+- Reload `/admin/users`, `/admin/impact`, and the global filter bar; user list, org filter, and case-manager dropdown populate again.
+- Console no longer shows `42P17` errors.
+
+## Out of scope
+- No changes to other policies, to roles, to MFA, or to any frontend code.
+- No changes to the recent Impact org-breakdown work.
