@@ -12,7 +12,9 @@ import {
   Menu,
   X,
   ChevronDown,
-  Globe
+  Globe,
+  Timer,
+  ClipboardCheck
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -49,6 +51,8 @@ const navItems: NavItem[] = [
   { label: 'Track Requests', href: '/student-tracking-request-status-scheduling-meeting', icon: Clock, roles: ['student'] },
   { label: 'Offline Drafts', href: '/student-creating-offline-draft-request', icon: WifiOff, roles: ['student'] },
   { label: 'Manage Requests', href: '/case-manager-managing-student-requests', icon: Users, roles: ['case_manager'] },
+  { label: 'Time Tracking', href: '/time-tracking', icon: Timer, roles: ['case_manager', 'admin'] },
+  { label: 'Hours Review', href: '/admin/time-tracking', icon: ClipboardCheck, roles: ['admin', 'org_admin'] },
   { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin'] },
 ];

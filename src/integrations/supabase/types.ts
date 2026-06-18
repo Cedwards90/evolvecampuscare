@@ -2065,6 +2065,93 @@ export type Database = {
         }
         Relationships: []
       }
+      time_entries: {
+        Row: {
+          billable: boolean
+          case_manager_id: string
+          created_at: string
+          duration_minutes: number
+          end_time: string
+          entry_date: string
+          id: string
+          notes: string | null
+          organization_id: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          service_type: Database["public"]["Enums"]["service_type"]
+          start_time: string
+          status: Database["public"]["Enums"]["time_entry_status"]
+          student_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          billable?: boolean
+          case_manager_id: string
+          created_at?: string
+          duration_minutes?: number
+          end_time: string
+          entry_date: string
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          service_type?: Database["public"]["Enums"]["service_type"]
+          start_time: string
+          status?: Database["public"]["Enums"]["time_entry_status"]
+          student_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          billable?: boolean
+          case_manager_id?: string
+          created_at?: string
+          duration_minutes?: number
+          end_time?: string
+          entry_date?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          service_type?: Database["public"]["Enums"]["service_type"]
+          start_time?: string
+          status?: Database["public"]["Enums"]["time_entry_status"]
+          student_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      time_entry_audit: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          diff: Json | null
+          id: string
+          time_entry_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          diff?: Json | null
+          id?: string
+          time_entry_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          diff?: Json | null
+          id?: string
+          time_entry_id?: string
+        }
+        Relationships: []
+      }
       training_organizations: {
         Row: {
           contact_email: string | null
@@ -2275,6 +2362,10 @@ export type Database = {
         }
         Returns: number
       }
+      org_admin_can_access_time_entry: {
+        Args: { _actor: string; _entry_id: string }
+        Returns: boolean
+      }
       org_admin_orgs: { Args: { _user_id: string }; Returns: string[] }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
@@ -2317,12 +2408,21 @@ export type Database = {
         | "escalated"
         | "resolved"
         | "cancelled"
+      service_type:
+        | "direct_service"
+        | "case_management"
+        | "documentation"
+        | "meeting"
+        | "outreach"
+        | "travel"
+        | "other"
       share_action:
         | "download"
         | "email"
         | "link_created"
         | "link_revoked"
         | "link_accessed"
+      time_entry_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2476,6 +2576,15 @@ export const Constants = {
         "resolved",
         "cancelled",
       ],
+      service_type: [
+        "direct_service",
+        "case_management",
+        "documentation",
+        "meeting",
+        "outreach",
+        "travel",
+        "other",
+      ],
       share_action: [
         "download",
         "email",
@@ -2483,6 +2592,7 @@ export const Constants = {
         "link_revoked",
         "link_accessed",
       ],
+      time_entry_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
