@@ -1,51 +1,77 @@
-# Allow Disabling MFA on Individual Accounts
+# Case Manager Hour Tracking
 
-Today MFA is mandatory for every staff member (admin / case_manager / org_admin). We'll add a per-user **MFA exemption** that an admin can toggle from User Management. Exempt users won't be forced to enroll or verify; everyone else stays mandatory.
+Add time tracking so case managers log billable/non-billable hours against students, and admins (plus org_admins, scoped to their orgs) can review, edit, approve, reject, and export.
 
-## 1. Database
+## 1. Database (new migration)
 
-New nullable columns on `profiles`:
-- `mfa_exempt boolean NOT NULL DEFAULT false`
-- `mfa_exempt_reason text`
-- `mfa_exempt_at timestamptz`
-- `mfa_exempt_by uuid` (references the admin who set it)
+New enum and tables:
 
-Plus an audit table `mfa_exemption_audit` (user_id, actor_id, action `granted|revoked`, reason, created_at) with admin-only read and service-role writes.
+- `time_entry_status` enum: `pending` | `approved` | `rejected`
+- `service_type` enum: `direct_service` | `case_management` | `documentation` | `meeting` | `outreach` | `travel` | `other`
+- `time_entries` table:
+  - `case_manager_id` (uuid → profiles.user_id)
+  - `student_id` (nullable uuid → profiles.user_id, so non-client time can also be logged)
+  - `organization_id` (nullable uuid, auto-filled from student/case manager for org_admin scoping)
+  - `entry_date` (date)
+  - `start_time`, `end_time` (timetz) + computed `duration_minutes` (int, stored via trigger)
+  - `service_type` (enum), `notes` (text), `billable` (boolean, default true)
+  - `status` (enum, default `pending`)
+  - `reviewed_by`, `reviewed_at`, `review_note`
+  - timestamps + `updated_at` trigger
+- `time_entry_audit` table: every create/edit/status change with actor + diff (jsonb) for compliance.
 
-RLS:
-- Only admins can `UPDATE` the new columns on profiles (via a dedicated policy / edge function).
-- Users can read their own `mfa_exempt` flag (already covered by existing self-select profile policy).
+Validation trigger (not CHECK, per project rule):
+- `end_time > start_time`
+- `entry_date <= current_date`
+- Only admin/org_admin may set `status` to `approved`/`rejected`; case managers may only edit their own `pending` entries.
 
-## 2. Edge function
+GRANTs: `authenticated` SELECT/INSERT/UPDATE/DELETE on `time_entries`; SELECT on audit. `service_role` ALL. No `anon` access.
 
-New `set-user-mfa-exempt` function:
-- Requires admin caller (AAL2 via existing `verifyMFAForPrivilegedRole`).
-- Input: `{ userId, exempt: boolean, reason?: string }`.
-- Updates the profile columns, writes audit row.
-- Strict CORS + `sanitizeError`, same pattern as `set-user-active`.
+RLS policies (use existing `has_role`, `is_org_admin`, `user_in_org_admin_scope_v2`):
+- Case managers: SELECT/INSERT/UPDATE/DELETE only `WHERE case_manager_id = auth.uid()` AND `status = 'pending'` for UPDATE/DELETE.
+- Admins: full access.
+- Org admins: SELECT + UPDATE (approval) limited to entries whose case_manager_id or student_id falls in their org scope.
+- Students: no access.
 
-## 3. Client enforcement
+## 2. Hooks (new)
 
-- Extend `useMFA` (or `AuthContext`) to fetch the caller's `mfa_exempt` flag.
-- In `Auth.tsx` MFA gate: if `mfa_exempt === true`, skip both `showMFAEnrollment` and `showMFAVerification`, even for privileged roles.
-- In `Settings.tsx` MFA section: when exempt, show a read-only "MFA waived by administrator" note (reason + date) instead of the enroll prompt. Users can still optionally enroll if they want.
-- Server-side `verifyMFAForPrivilegedRole` (in `supabase/functions/_shared/security.ts`): short-circuit to `{ verified: true }` when the user's profile has `mfa_exempt = true`. This keeps edge functions consistent with the UI.
+- `src/hooks/useTimeEntries.ts` — list with filters (caseManagerId, studentId, dateFrom, dateTo, status, billable), grouped weekly totals.
+- `src/hooks/useTimeEntryMutations.ts` — create / update / delete / approve / reject (single + bulk).
 
-## 4. Admin UI
+## 3. Case manager screen — `src/pages/TimeTracking.tsx`
 
-In `src/components/admin/UserManagement.tsx` user row menu, add:
-- **"MFA: Required / Waived"** badge column (compact).
-- Menu item **"Waive MFA…"** / **"Re-require MFA"** opening a dialog that collects an optional reason and calls the edge function. Confirmation required; toast on success.
-- Admin-only; hidden for student rows (students never use MFA anyway).
-- Invalidate `users-with-roles` query after change.
+- Route `/time-tracking`, sidebar entry for `case_manager` and `admin`.
+- "Log Time" dialog: student picker (their assigned students via existing `useMyStudents`, plus "No client / internal"), date picker, start/end time, service type select, billable switch, notes textarea. Zod validation.
+- Table of own entries with weekly totals header, status badges, edit/delete on pending only.
+- Filters: date range, status, billable.
+- Empty state + offline-friendly toast (no offline draft sync in v1, out of scope).
 
-A new hook `useSetUserMfaExempt` wraps the function call (mirrors `useSetUserActive`).
+## 4. Admin screen — `src/pages/admin/TimeTrackingAdmin.tsx`
 
-## 5. Memory
+- Route `/admin/time-tracking`, sidebar entry for `admin` and `org_admin`.
+- Filters bar: case manager (multi), student (multi), date range, status, billable, organization (reuse `GlobalFilterBar` patterns).
+- Weekly totals summary cards (total hrs, billable hrs, pending count, approved hrs this week).
+- Table with bulk-select → Approve / Reject (with reason). Inline edit dialog (admins only).
+- Export: CSV download client-side using existing pattern from `reportExport.ts` — columns: date, case manager, student, org, service type, hours, billable, status, approved by, notes.
 
-Update `mem://technical/mfa-access-policy` to note: "Staff MFA is mandatory **unless** an admin has set `profiles.mfa_exempt = true` for that user; exemption is audited and surfaced in User Management."
+## 5. Navigation
+
+- Add nav items in `src/components/layouts/AppLayout.tsx`:
+  - `Time Tracking` → `/time-tracking` for `case_manager`, `admin`.
+  - `Hours Review` → `/admin/time-tracking` for `admin`, `org_admin`.
+- Wire routes in `src/App.tsx` inside `<ProtectedRoute>`.
+
+## 6. Types
+
+- Extend `src/types/database.ts` with `TimeEntry`, `TimeEntryStatus`, `ServiceType`. Supabase `types.ts` regenerates after migration approval.
+
+## 7. Memory
+
+- New `mem://features/time-tracking-v1` describing schema, roles, approval workflow, export format. Update `mem://index.md`.
 
 ## Out of scope
-- No bulk waive UI (per-user only).
-- No auto-expiring exemptions (admins manage manually).
-- No change to student behavior (already MFA-disabled).
+- No payroll integration, no invoice generation, no offline drafts, no calendar auto-import, no PDF export (CSV only in v1), no edits to existing files beyond `App.tsx` routes, `AppLayout.tsx` nav, `types/database.ts`, and the memory index — flagged here for explicit permission.
+
+## Files to touch
+- New: migration, `src/pages/TimeTracking.tsx`, `src/pages/admin/TimeTrackingAdmin.tsx`, `src/hooks/useTimeEntries.ts`, `src/hooks/useTimeEntryMutations.ts`, `src/components/timetracking/TimeEntryDialog.tsx`, `src/components/timetracking/TimeEntryTable.tsx`, `src/components/timetracking/WeeklyTotalsCards.tsx`, memory files.
+- Edited (with permission requested by this plan): `src/App.tsx`, `src/components/layouts/AppLayout.tsx`, `src/types/database.ts`, `mem://index.md`.
