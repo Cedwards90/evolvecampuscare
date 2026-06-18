@@ -256,6 +256,37 @@ export default function StudentDetail() {
                   )}
                 </div>
 
+                {/* Cohort */}
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <UsersIcon className="h-4 w-4" />
+                    <span>Cohort:</span>
+                  </div>
+                  {canManageCohort && studentOrgId ? (
+                    <Select
+                      value={studentCohortId ?? 'none'}
+                      onValueChange={handleCohortChange}
+                      disabled={assignCohort.isPending}
+                    >
+                      <SelectTrigger className="h-8 w-[240px] rounded-full">
+                        <SelectValue placeholder="Assign cohort" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No cohort</SelectItem>
+                        {(orgCohorts || []).map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge variant="secondary">{currentCohort?.name || 'Not assigned'}</Badge>
+                  )}
+                  {canManageCohort && !studentOrgId && (
+                    <span className="text-xs text-muted-foreground">Assign an organization first.</span>
+                  )}
+                </div>
+
+
                 <div className="flex gap-2">
                   <Button asChild size="sm">
                     <Link to={`/messages/${id}`}>
