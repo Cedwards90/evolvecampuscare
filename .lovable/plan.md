@@ -1,75 +1,79 @@
-## Goal
+# Cohorts & Case Manager Filtering
 
-Add three frontend features on top of the existing backend (time_entries, time_entry_audit, profiles.mfa_exempt, mfa_exemption_audit are already in the DB). All changes are additive — no existing data, columns, policies, or UI behavior is altered.
+Add structured "Classes/Cohorts" inside each organization, an admin UI to manage them, and a "filter by assigned case manager" control on Student Folders and the Admin Users student tab. No changes to unrelated areas.
 
-## 1. Admin MFA controls (per-user)
+## 1. Database (migration)
 
-On `/admin/users` (`UserManagementPage.tsx`), add an **MFA** column + action menu for each staff row (Admin / Case Manager / Org Admin only — Students remain excluded per the MFA Access Policy memory).
+New table `public.cohorts`:
+- `id uuid pk`, `organization_id uuid not null references training_organizations(id) on delete cascade`
+- `name text not null`
+- `start_date date`, `end_date date`
+- `description text`
+- `created_by uuid`, `created_at`, `updated_at`
+- Unique `(organization_id, lower(name))`
+- Indexes on `organization_id`
 
-For each staff user, admin can:
-- See current state: `Enrolled` / `Not enrolled` / `Exempt` (badge), plus enrollment count from an edge-function lookup.
-- **Toggle "MFA Exempt"** — flips `profiles.mfa_exempt` and writes `mfa_exempt_at` / `mfa_exempt_by` / `mfa_exempt_reason` (reason prompted via dialog). Insert a row into `mfa_exemption_audit`.
-- **Force unenroll factors** — destructive on the user's auth factors only (not data); requires typing the user's email to confirm. Done via a new edge function `admin-mfa-manage` using the service role (`auth.admin.mfa.deleteFactor` per factor). Writes to `mfa_exemption_audit` with `action='force_unenroll'`.
-- **View audit log** — slide-over panel listing rows from `mfa_exemption_audit` for that user.
+Add `profiles.cohort_id uuid references cohorts(id) on delete set null` (nullable — preserves existing student data; `cohort_start_date` is left intact for backward compatibility).
 
-Permissions: only `admin` role can see/use these controls (`has_role` check + RLS on `mfa_exemption_audit`). Org Admins do NOT get MFA toggle (out of scope).
+GRANTs:
+- `cohorts`: SELECT/INSERT/UPDATE/DELETE to authenticated; ALL to service_role.
 
-No changes to login enforcement logic, no changes to student rows, no changes to existing user-management features.
+RLS on `cohorts`:
+- SELECT: any authenticated user whose profile/membership is in that org, plus admins, org_admins of that org, and case_managers (so they can see cohort labels on their students).
+- INSERT/UPDATE/DELETE: admins, or org_admins where `is_org_admin_of(auth.uid(), organization_id)`.
 
-## 2. Case Manager clock-in / clock-out (`/time-tracking`)
+`profiles.cohort_id` update rules: rely on existing profile policies (admins + org_admin scope can update student profiles). No data is hidden or destroyed.
 
-New page `src/pages/TimeTracking.tsx` (route added to `App.tsx` guarded by `case_manager` or `admin`). Existing Case Manager pages are untouched.
+## 2. Cohort management UI
 
-UI:
-- **Active shift card**: big Clock-In button when no active shift; when active, shows live elapsed timer, start time, optional student/service-type/notes fields, and Clock-Out button.
-- **Today / This week** summary (sum of `duration_minutes` from `time_entries` for current user).
-- **Recent entries** list with status badges (draft / submitted / approved / rejected) and an Edit button for `draft` rows only.
+New component `src/components/admin/CohortManager.tsx` mounted inside the existing `OrganizationDetail` page as a "Classes / Cohorts" section:
+- List cohorts for that org with name, dates, student count.
+- Create / Edit / Delete dialogs (delete only when count = 0, else show "reassign students first").
+- Bulk-assign students into a cohort from a multi-select of unassigned/assigned students in that org.
 
-Data model (additive only — does NOT change `time_entries`):
-- New table `public.active_time_sessions` (one row per case manager max) with `case_manager_id` (PK), `start_time`, `student_id`, `service_type`, `notes`, `created_at`. RLS: case manager sees/manages own; service_role full.
-- On Clock-Out: insert a row into `time_entries` (status `submitted`, end_time=now, validation trigger computes `duration_minutes` + `organization_id`) and delete the active session. Wrapped in an edge function `time-clock` to keep it atomic.
+New hook `src/hooks/useCohorts.ts` (list/create/update/delete + assign).
 
-Offline/edge cases: simple `navigator.onLine` guard with toast; no offline queue (out of scope).
+## 3. Assign students to cohorts
 
-## 3. Admin time reporting (`/admin/time-tracking`)
+- Add a "Cohort" select to the existing student-edit dialog in `UserManagementPage` (admin + org_admin only, scoped to the student's org).
+- Add a small "Move to cohort" action in `CohortManager` for one or many students.
 
-New page `src/pages/admin/TimeTrackingAdmin.tsx`. Available to `admin` (all entries) and `org_admin` (entries scoped via existing `org_admin_can_access_time_entry`).
+## 4. Filters
 
-Features:
-- Filters: case manager, organization, student, date range, status, billable. Uses existing global filter context where applicable.
-- Table: date, case manager, student, service type, duration, status, billable, notes preview.
-- Row actions: **View details** (drawer with full notes + `time_entry_audit` history), **Edit** (admin/org_admin only — date, times, service type, notes, billable), **Approve** / **Reject** (sets `status` + `review_note`; trigger fills `reviewed_by/at`).
-- Bulk approve selected.
-- **Export CSV** of current filtered result (client-side; columns: date, case manager email, student email, organization, service_type, start, end, duration_hrs, billable, status, reviewed_by, review_note, notes).
+**Student Folders (`/student-folders`)**:
+- Add a "Case Manager" select (visible to admin + org_admin). Selecting one shows only students currently assigned to that CM.
+- Add a "Cohort" select (scoped to currently selected org if any, otherwise all visible cohorts).
 
-No schema changes for this page — uses existing `time_entries`, `time_entry_audit`, `validate_time_entry`, `audit_time_entry`.
+**Admin Users page (`/admin/users`) student tab**:
+- Add the same "Case Manager" and "Cohort" filters next to the existing org filter.
+
+Both filters are pure client-side narrowing on data already fetched under RLS — no destructive queries, no `is_active` side-effects.
+
+## 5. Global filter options
+
+Extend `useFilterOptions` to also return cohorts (id, name, org_id). The existing `GlobalFilterBar` cohort control keeps working off `cohort_start_date` years; the new cohort dropdowns are local to the two pages above to avoid touching unrelated filtering logic.
 
 ## Files
 
-New:
-- `src/pages/TimeTracking.tsx`
-- `src/pages/admin/TimeTrackingAdmin.tsx`
-- `src/components/time/ActiveShiftCard.tsx`, `TimeEntryRow.tsx`, `TimeEntryEditDialog.tsx`, `TimeEntryDetailDrawer.tsx`
-- `src/components/admin/MFAUserControls.tsx`, `MFAAuditDrawer.tsx`
-- `src/hooks/useActiveShift.ts`, `useTimeEntries.ts`, `useAdminMFA.ts`
-- `supabase/functions/time-clock/index.ts` (clock-in / clock-out)
-- `supabase/functions/admin-mfa-manage/index.ts` (set exempt, force unenroll, list factor count)
+**New**
+- `supabase/migrations/<ts>_cohorts.sql`
+- `src/hooks/useCohorts.ts`
+- `src/components/admin/CohortManager.tsx`
+- `src/components/admin/CohortDialog.tsx`
 
-Edited (minimal, scoped):
-- `src/App.tsx` — add 2 routes
-- `src/pages/admin/UserManagementPage.tsx` — add MFA column + open dialog (no changes to existing row rendering logic beyond the new column)
-- Sidebar/nav — add "Time Tracking" link for case_manager, "Time Reports" for admin/org_admin
-
-Migrations (additive only):
-- `CREATE TABLE public.active_time_sessions` + GRANTs + RLS + policies (case manager owns own; service_role all)
+**Edited (scoped to this feature only)**
+- `src/pages/StudentFolders.tsx` — add CM + cohort filters
+- `src/pages/admin/UserManagementPage.tsx` — add CM + cohort filters on student tab; add cohort field to edit student dialog
+- `src/pages/admin/OrganizationDetail.tsx` — mount `CohortManager`
+- `src/hooks/useStudentFolders.ts` — include `cohort_id` + `cohort_name` in returned rows
+- `src/hooks/useFilterOptions.ts` — return cohorts list
 
 ## Out of scope (won't touch)
+- `cohort_start_date`, existing GlobalFilterBar cohort-year logic, reports, analytics, messaging, requests, MFA, time tracking.
+- No deactivation/soft-hide filters added (Data Preservation rule).
+- No edits to `src/integrations/supabase/*` auto-gen except the post-migration regeneration.
 
-- Existing time_entries / time_entry_audit / mfa_exemption_audit schema, triggers, policies, RLS
-- Login MFA enforcement flow
-- Student data, organization data, request/messaging/intake features
-- No `is_active`/soft-hide filters added anywhere (per Data Preservation rule)
-
-## Verification
-
-- Build passes; routes load; clock-in then clock-out creates a `time_entries` row with correct duration; admin approve flips status; CSV downloads; MFA toggle writes audit row; force-unenroll removes auth factors only.
+## Technical notes
+- Cohort deletion uses `on delete set null` for `profiles.cohort_id` so deleting a cohort never removes student records.
+- `useCohorts` invalidates `['cohorts', orgId]` and `['student-folders']` queries on mutation.
+- All new dialogs use existing shadcn primitives and Forest Green / pill UI per brand memory.
