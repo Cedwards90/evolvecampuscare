@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/EmptyState';
 import { InviteStudentDialog } from '@/components/casemanager/InviteStudentDialog';
 import type { MyStudent } from '@/hooks/useMyStudents';
-import { useGlobalFilters, getCohortFromDate } from '@/contexts/GlobalFiltersContext';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 
 interface MyStudentsSectionProps {
   students: MyStudent[];
