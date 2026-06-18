@@ -584,6 +584,7 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
           </div>
         </form>
       </div>
-    </Wrapper>
   );
+
+  return standalone ? content : <SidebarLayout>{content}</SidebarLayout>;
 }
