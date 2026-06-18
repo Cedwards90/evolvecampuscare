@@ -418,6 +418,15 @@ export default function UserManagementPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
+                            {user.role === 'student' ? (
+                              <span className="text-xs text-muted-foreground">N/A</span>
+                            ) : (user as any).mfa_exempt ? (
+                              <Badge variant="outline" className="text-xs">Exempt</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">Required</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Calendar className="h-4 w-4" />
                               {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
