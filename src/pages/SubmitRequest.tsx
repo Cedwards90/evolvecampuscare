@@ -285,7 +285,14 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
           ))}
         </div>
 
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
+          const first = Object.values(errors)[0] as any;
+          toast({
+            variant: 'destructive',
+            title: 'Please fix the form',
+            description: first?.message || 'Some fields are missing or invalid.',
+          });
+        })}>
           {/* Step 1: Category Selection */}
           {step === 1 && (
             <Card className="border border-border/50">
@@ -400,7 +407,12 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
                         min="0"
                         placeholder="0.00"
                         className="pl-9"
-                        {...form.register('requestedAmount', { valueAsNumber: true })}
+                        {...form.register('requestedAmount', {
+                          setValueAs: (v) =>
+                            v === '' || v === null || v === undefined || Number.isNaN(Number(v))
+                              ? undefined
+                              : Number(v),
+                        })}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
