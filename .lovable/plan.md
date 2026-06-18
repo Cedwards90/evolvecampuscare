@@ -1,77 +1,47 @@
-# Case Manager Hour Tracking
+## Problem
 
-Add time tracking so case managers log billable/non-billable hours against students, and admins (plus org_admins, scoped to their orgs) can review, edit, approve, reject, and export.
+In the Submit Request form, every keystroke causes the input to lose focus, so you have to click back into the field to type the next letter.
 
-## 1. Database (new migration)
+## Root Cause
 
-New enum and tables:
+In `src/pages/SubmitRequest.tsx` (line 243), a `Wrapper` component is defined **inside** the `SubmitRequest` function body:
 
-- `time_entry_status` enum: `pending` | `approved` | `rejected`
-- `service_type` enum: `direct_service` | `case_management` | `documentation` | `meeting` | `outreach` | `travel` | `other`
-- `time_entries` table:
-  - `case_manager_id` (uuid → profiles.user_id)
-  - `student_id` (nullable uuid → profiles.user_id, so non-client time can also be logged)
-  - `organization_id` (nullable uuid, auto-filled from student/case manager for org_admin scoping)
-  - `entry_date` (date)
-  - `start_time`, `end_time` (timetz) + computed `duration_minutes` (int, stored via trigger)
-  - `service_type` (enum), `notes` (text), `billable` (boolean, default true)
-  - `status` (enum, default `pending`)
-  - `reviewed_by`, `reviewed_at`, `review_note`
-  - timestamps + `updated_at` trigger
-- `time_entry_audit` table: every create/edit/status change with actor + diff (jsonb) for compliance.
+```tsx
+const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
+  standalone ? <>{children}</> : <SidebarLayout>{children}</SidebarLayout>;
+```
 
-Validation trigger (not CHECK, per project rule):
-- `end_time > start_time`
-- `entry_date <= current_date`
-- Only admin/org_admin may set `status` to `approved`/`rejected`; case managers may only edit their own `pending` entries.
+Because `Wrapper` is re-created on every render, React sees a brand-new component type each time, unmounts the entire subtree (including `SidebarLayout` and every `Input`/`Textarea`), and re-mounts it. The newly mounted input cannot keep focus, so typing one character drops focus immediately.
 
-GRANTs: `authenticated` SELECT/INSERT/UPDATE/DELETE on `time_entries`; SELECT on audit. `service_role` ALL. No `anon` access.
+This is a well-known React anti-pattern: never declare a component inside another component's render.
 
-RLS policies (use existing `has_role`, `is_org_admin`, `user_in_org_admin_scope_v2`):
-- Case managers: SELECT/INSERT/UPDATE/DELETE only `WHERE case_manager_id = auth.uid()` AND `status = 'pending'` for UPDATE/DELETE.
-- Admins: full access.
-- Org admins: SELECT + UPDATE (approval) limited to entries whose case_manager_id or student_id falls in their org scope.
-- Students: no access.
+## Fix
 
-## 2. Hooks (new)
+Replace the inline `Wrapper` with a conditional render that uses the existing `SidebarLayout` component directly — no new component definition per render, stable tree, focus preserved.
 
-- `src/hooks/useTimeEntries.ts` — list with filters (caseManagerId, studentId, dateFrom, dateTo, status, billable), grouped weekly totals.
-- `src/hooks/useTimeEntryMutations.ts` — create / update / delete / approve / reject (single + bulk).
+```tsx
+// remove the inline Wrapper declaration
 
-## 3. Case manager screen — `src/pages/TimeTracking.tsx`
+return standalone ? (
+  <div className="space-y-12 max-w-3xl mx-auto">{/* ...existing content... */}</div>
+) : (
+  <SidebarLayout>
+    <div className="space-y-12 max-w-3xl mx-auto">{/* ...existing content... */}</div>
+  </SidebarLayout>
+);
+```
 
-- Route `/time-tracking`, sidebar entry for `case_manager` and `admin`.
-- "Log Time" dialog: student picker (their assigned students via existing `useMyStudents`, plus "No client / internal"), date picker, start/end time, service type select, billable switch, notes textarea. Zod validation.
-- Table of own entries with weekly totals header, status badges, edit/delete on pending only.
-- Filters: date range, status, billable.
-- Empty state + offline-friendly toast (no offline draft sync in v1, out of scope).
+To avoid duplicating the entire body, extract the inner JSX into a `const content = (...)` variable above the return, then render `{standalone ? content : <SidebarLayout>{content}</SidebarLayout>}`.
 
-## 4. Admin screen — `src/pages/admin/TimeTrackingAdmin.tsx`
+## Files Touched
 
-- Route `/admin/time-tracking`, sidebar entry for `admin` and `org_admin`.
-- Filters bar: case manager (multi), student (multi), date range, status, billable, organization (reuse `GlobalFilterBar` patterns).
-- Weekly totals summary cards (total hrs, billable hrs, pending count, approved hrs this week).
-- Table with bulk-select → Approve / Reject (with reason). Inline edit dialog (admins only).
-- Export: CSV download client-side using existing pattern from `reportExport.ts` — columns: date, case manager, student, org, service type, hours, billable, status, approved by, notes.
+- `src/pages/SubmitRequest.tsx` — remove the in-render `Wrapper`, render `SidebarLayout` conditionally around a stable `content` element.
 
-## 5. Navigation
+## Out of Scope
 
-- Add nav items in `src/components/layouts/AppLayout.tsx`:
-  - `Time Tracking` → `/time-tracking` for `case_manager`, `admin`.
-  - `Hours Review` → `/admin/time-tracking` for `admin`, `org_admin`.
-- Wire routes in `src/App.tsx` inside `<ProtectedRoute>`.
+- No other components, hooks, routes, or database changes.
+- No styling or feature changes to the form itself.
 
-## 6. Types
+## Verification
 
-- Extend `src/types/database.ts` with `TimeEntry`, `TimeEntryStatus`, `ServiceType`. Supabase `types.ts` regenerates after migration approval.
-
-## 7. Memory
-
-- New `mem://features/time-tracking-v1` describing schema, roles, approval workflow, export format. Update `mem://index.md`.
-
-## Out of scope
-- No payroll integration, no invoice generation, no offline drafts, no calendar auto-import, no PDF export (CSV only in v1), no edits to existing files beyond `App.tsx` routes, `AppLayout.tsx` nav, `types/database.ts`, and the memory index — flagged here for explicit permission.
-
-## Files to touch
-- New: migration, `src/pages/TimeTracking.tsx`, `src/pages/admin/TimeTrackingAdmin.tsx`, `src/hooks/useTimeEntries.ts`, `src/hooks/useTimeEntryMutations.ts`, `src/components/timetracking/TimeEntryDialog.tsx`, `src/components/timetracking/TimeEntryTable.tsx`, `src/components/timetracking/WeeklyTotalsCards.tsx`, memory files.
-- Edited (with permission requested by this plan): `src/App.tsx`, `src/components/layouts/AppLayout.tsx`, `src/types/database.ts`, `mem://index.md`.
+- Open `/submit-request`, type a sentence in the Title and Description fields without clicking — characters should appear continuously without focus loss.
