@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useOrganizationDetail } from '@/hooks/useOrganizationDetail';
 import { useAuth } from '@/contexts/AuthContext';
 import { BulkOrgStudentStatusDialog } from '@/components/admin/BulkOrgStudentStatusDialog';
+import { CohortManager } from '@/components/admin/CohortManager';
 
 const roleIcons: Record<string, typeof GraduationCap> = {
   student: GraduationCap,
