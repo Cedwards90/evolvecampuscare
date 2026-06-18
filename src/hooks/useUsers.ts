@@ -29,7 +29,7 @@ export function useUsers() {
     queryFn: async (): Promise<UserWithRole[]> => {
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, user_id, email, full_name, avatar_url, created_at, organization_id, deactivated_at, deactivated_by, deactivation_reason, reactivated_at, reactivated_by')
+        .select('id, user_id, email, full_name, avatar_url, created_at, organization_id, deactivated_at, deactivated_by, deactivation_reason, reactivated_at, reactivated_by, mfa_exempt, mfa_exempt_at, mfa_exempt_reason')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
