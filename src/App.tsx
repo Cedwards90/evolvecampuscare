@@ -237,6 +237,16 @@ function App() {
                 <ImpactDashboard />
               </ProtectedRoute>
             } />
+            <Route path="/time-tracking" element={
+              <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
+                <TimeTracking />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/time-tracking" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                <TimeTrackingAdmin />
+              </ProtectedRoute>
+            } />
                   <Route path="/messages" element={
                     <ProtectedRoute>
                       <Messages />
