@@ -12,7 +12,7 @@ export function useFilterOptions() {
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const [orgsRes, profilesRes, rolesRes] = await Promise.all([
-        supabase.from('training_organizations').select('id, name').eq('is_active', true).order('name'),
+        supabase.from('training_organizations').select('id, name').order('name'),
         supabase.from('profiles').select('user_id, full_name, email, cohort_start_date, year_of_study, department'),
         supabase.from('user_roles').select('user_id, role'),
       ]);

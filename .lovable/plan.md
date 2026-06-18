@@ -1,40 +1,42 @@
-# Fix: "infinite recursion detected in policy" on profiles & training_organizations
+# Show all organizations everywhere + add a data-preservation rule
 
-## What's broken
-All Data API reads of `profiles` and `training_organizations` are returning HTTP 500 with `42P17 infinite recursion detected in policy`. That's why the admin sees "No users found" and empty org/case-manager lists everywhere — `UserManagement`, global filter options, impact dashboard, etc.
+## 1) Why orgs are "missing"
 
-## Root cause
-Two policies reference each other via **inline subqueries** (not via `SECURITY DEFINER` helpers), creating a mutual loop the planner detects as recursion:
+The database has 4 organizations: **548 Foundation**, **Elevate**, **Englewood Shared Renewables**, and **Jireh**. Three of them have `is_active = false`, so they get hidden by two queries:
 
-- `training_organizations` policy **"Users can view their own org"** runs an inline `SELECT organization_id FROM profiles WHERE user_id = auth.uid()`.
-- `profiles` policy **"Org admins view profiles via membership"** runs an inline `EXISTS … JOIN training_organizations …`.
+- `src/hooks/useFilterOptions.ts` — global filter bar org dropdown — filters `.eq('is_active', true)`.
+- `src/hooks/useTrainingOrganizations.ts` (`useActiveOrganizations`) — filters `.eq('is_active', true)`. Used by the Impact dashboard's org filter and breakdown table.
 
-Because each inline subquery is evaluated as the caller (invoker), the other table's RLS kicks in, which re-enters the first table's RLS → recursion. The existing `SECURITY DEFINER` helpers (`is_org_admin`, `is_org_admin_of`, `is_user_org_suspended`, etc.) sidestep this; the two policies above were written without using them.
+No data was lost — they're just flagged inactive, which the UI treats as hidden.
 
-Nothing else in the schema was actually changed in the recent Impact work — the recursion has been latent and is being surfaced by reads that exercise both tables in the same query plan.
+## 2) Fix (frontend only, no DB changes)
 
-## Fix (one migration)
+- `useFilterOptions.ts`: drop the `is_active = true` filter. Show all orgs the user is allowed to see (RLS already restricts org_admins to their own orgs; admins see all).
+- `useTrainingOrganizations.ts → useActiveOrganizations()`: drop the `is_active = true` filter and rename the comment/intent to "visible organizations" (do not rename the export to avoid touching every call site). All consumers (Impact dashboard org filter, OrgBreakdownTable, ReportFilters, etc.) will then list all four orgs.
+- Add a small "Inactive" badge next to inactive org names in the global filter dropdown and Impact org dropdown so admins can tell the difference at a glance. (No behavior change — they're still selectable.)
 
-1. Add two small `SECURITY DEFINER STABLE` helpers in `public`:
-   - `get_user_org(_user_id uuid) returns uuid` — returns `profiles.organization_id` for the given user. Used by the `training_organizations` self-view policy.
-   - `org_admin_sees_user(_admin uuid, _user uuid) returns boolean` — returns true when `_admin` is an org_admin of any active (non-suspended) org that `_user` is a current member of. Used by the profiles membership policy.
-   Both run with `search_path = public`, owned by `postgres`, and bypass RLS the same way the existing helpers do.
+After this, you'll see 548 Foundation, Elevate, Jireh, and Englewood Shared Renewables in every org dropdown and in the Impact breakdown table.
 
-2. Replace the two recursive policies:
-   - `DROP POLICY "Users can view their own org" ON public.training_organizations;` then recreate it as:
-     `USING (id = public.get_user_org(auth.uid()) OR EXISTS (SELECT 1 FROM organization_memberships m WHERE m.user_id = auth.uid() AND m.organization_id = training_organizations.id AND m.left_at IS NULL))`
-     (the memberships EXISTS does not touch profiles or training_organizations recursively, so it's safe to keep inline).
-   - `DROP POLICY "Org admins view profiles via membership" ON public.profiles;` then recreate it as:
-     `USING (public.org_admin_sees_user(auth.uid(), user_id))`.
+## 3) Data-preservation rule (going forward)
 
-3. No GRANT changes, no column changes, no app code changes.
+Save a **Core** memory so it's applied to every future change in this project:
 
-## Verification
-After the migration:
-- `select count(*) from public.profiles;` and `select * from public.training_organizations limit 1;` succeed (run via `supabase--read_query` as a smoke test).
-- Reload `/admin/users`, `/admin/impact`, and the global filter bar; user list, org filter, and case-manager dropdown populate again.
-- Console no longer shows `42P17` errors.
+> **Student and organizational data must never be changed, removed, or hidden as a side effect of site updates.** When implementing UI/feature changes:
+> - Never add filters that hide existing rows (e.g. `is_active`, `deactivated_at`, `suspended_at`) without explicit user request.
+> - Never write migrations that DROP, TRUNCATE, or mass-DELETE/UPDATE rows in `profiles`, `training_organizations`, `organization_memberships`, `student_*`, `support_requests`, `intake_responses`, `post_graduation_plans`, `participant_outcomes`, `request_*`, or any other student/org data table.
+> - Schema changes that touch these tables are allowed only when the user explicitly asks; favor additive changes (new columns/tables) over destructive ones.
+> - If a feature requires hiding data, surface it as a user-controlled toggle, not a hard filter.
+
+This rule will be persisted to `mem://core` so I follow it on every subsequent prompt without you having to repeat it.
+
+## Files touched
+
+- `src/hooks/useFilterOptions.ts` (1 line removed)
+- `src/hooks/useTrainingOrganizations.ts` (1 line removed in `useActiveOrganizations`)
+- `src/components/filters/FilterMultiSelect.tsx` or the org-option mapping spots — small "Inactive" label, only if the option carries a flag.
+- `mem://index.md` (Core rule updated)
 
 ## Out of scope
-- No changes to other policies, to roles, to MFA, or to any frontend code.
-- No changes to the recent Impact org-breakdown work.
+- No DB migrations.
+- No changes to the recent Impact org-breakdown work or the RLS fix.
+- No changes to deactivation/reactivation flows on the Training Organizations admin page — admins can still mark orgs inactive there; it just no longer hides them in filters.
