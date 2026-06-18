@@ -97,7 +97,7 @@ export function CohortManager({ organizationId }: Props) {
                   <TableHead>Name</TableHead>
                   <TableHead className="hidden sm:table-cell">Dates</TableHead>
                   <TableHead>Students</TableHead>
-                  {canManage && <TableHead className="w-[120px] text-right">Actions</TableHead>}
+                  {canManage && <TableHead className="w-[180px] text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
