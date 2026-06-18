@@ -91,6 +91,8 @@ export interface PendingStudent {
   student_email: string;
   organization_id: string | null;
   organization_name: string | null;
+  cohort_id: string | null;
+  year_of_study: string | null;
   last_submitted_at: string | null;
   days_since: number | null;
 }
