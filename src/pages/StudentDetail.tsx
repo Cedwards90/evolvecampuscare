@@ -70,7 +70,9 @@ import { CertificationsSection } from '@/components/certifications/Certification
 import { GenerateParticipantRecordCard } from '@/components/transfers/GenerateParticipantRecordCard';
 import { InitiateTransferDialog } from '@/components/transfers/InitiateTransferDialog';
 import { ParticipantTransfersSection } from '@/components/transfers/ParticipantTransfersSection';
-import { ArrowRightLeft } from 'lucide-react';
+import { ArrowRightLeft, Users as UsersIcon } from 'lucide-react';
+import { useOrgCohorts, useAssignStudentCohort } from '@/hooks/useCohorts';
+import { useMyOrgAdminOrgs } from '@/hooks/useOrgAdmins';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
