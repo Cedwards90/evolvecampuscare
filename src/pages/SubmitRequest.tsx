@@ -240,7 +240,11 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
     }
   };
 
-  const content = (
+  const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
+    standalone ? <>{children}</> : <SidebarLayout>{children}</SidebarLayout>;
+
+  return (
+    <Wrapper>
       <div className="space-y-12 max-w-3xl mx-auto">
         <PageHeader
           title="Submit a Support Request"
@@ -285,14 +289,7 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
           ))}
         </div>
 
-        <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
-          const first = Object.values(errors)[0] as any;
-          toast({
-            variant: 'destructive',
-            title: 'Please fix the form',
-            description: first?.message || 'Some fields are missing or invalid.',
-          });
-        })}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
           {/* Step 1: Category Selection */}
           {step === 1 && (
             <Card className="border border-border/50">
@@ -407,12 +404,7 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
                         min="0"
                         placeholder="0.00"
                         className="pl-9"
-                        {...form.register('requestedAmount', {
-                          setValueAs: (v) =>
-                            v === '' || v === null || v === undefined || Number.isNaN(Number(v))
-                              ? undefined
-                              : Number(v),
-                        })}
+                        {...form.register('requestedAmount', { valueAsNumber: true })}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -596,7 +588,6 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
           </div>
         </form>
       </div>
+    </Wrapper>
   );
-
-  return standalone ? content : <SidebarLayout>{content}</SidebarLayout>;
 }

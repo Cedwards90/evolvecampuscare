@@ -84,27 +84,24 @@ export function useStudentFolders() {
       const orgIds = [...new Set((profiles || []).map(p => (p as any).organization_id).filter(Boolean))];
       let orgMap = new Map<string, string>();
       if (orgIds.length > 0) {
-        const { data: orgs, error: orgError } = await supabase
+        const { data: orgs } = await supabase
           .from('training_organizations')
           .select('id, name')
           .in('id', orgIds);
-        if (orgError) throw orgError;
         orgMap = new Map((orgs || []).map((o: any) => [o.id, o.name]));
       }
 
       // Step 3: Fetch student_files for intake status
-      const { data: files, error: filesError } = await supabase
+      const { data: files } = await supabase
         .from('student_files')
         .select('student_id, intake_completed_at')
         .in('student_id', studentIds);
-      if (filesError) throw filesError;
 
       // Step 4: Fetch request counts
-      const { data: requests, error: requestsError } = await supabase
+      const { data: requests } = await supabase
         .from('support_requests')
         .select('student_id, status, updated_at')
         .in('student_id', studentIds);
-      if (requestsError) throw requestsError;
 
       const filesMap = new Map((files || []).map(f => [f.student_id, f]));
       const requestsByStudent = new Map<string, typeof requests>();

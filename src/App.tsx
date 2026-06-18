@@ -55,8 +55,6 @@ import AdminNda from "./pages/admin/AdminNda";
 import TransitionsDashboard from "./pages/admin/TransitionsDashboard";
 import ImpactDashboard from "./pages/admin/ImpactDashboard";
 import AdminStudentSubmissions from "./pages/admin/AdminStudentSubmissions";
-import TimeTracking from "./pages/TimeTracking";
-import TimeTrackingAdmin from "./pages/admin/TimeTrackingAdmin";
 
 // Create query client outside component to ensure stable reference.
 // Defaults tuned to avoid stale UI after mutations or returning to a tab,
@@ -235,16 +233,6 @@ function App() {
             <Route path="/admin/impact" element={
               <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <ImpactDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/time-tracking" element={
-              <ProtectedRoute allowedRoles={['case_manager', 'admin']}>
-                <TimeTracking />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/time-tracking" element={
-              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
-                <TimeTrackingAdmin />
               </ProtectedRoute>
             } />
                   <Route path="/messages" element={

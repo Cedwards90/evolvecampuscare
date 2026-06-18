@@ -1,26 +1,51 @@
-## Plan to restore Student Folders sitewide
+# Allow Disabling MFA on Individual Accounts
 
-1. **Fix the folder visibility regression in the backend**
-   - Replace direct policy subqueries that read `student_assignments` from other table policies with the existing secure helper `cm_has_assignment(...)`.
-   - Apply this to folder-related data tables used across the student folder views, including profiles, student files, file notes, intake responses, check-ins, post-graduation plans, support requests, appointments, certifications, and related folder/analytics records where case-manager access depends on assigned students.
-   - Keep the existing rule: case managers only see students assigned to them; org admins remain org-scoped; admins keep full access.
+Today MFA is mandatory for every staff member (admin / case_manager / org_admin). We'll add a per-user **MFA exemption** that an admin can toggle from User Management. Exempt users won't be forced to enroll or verify; everyone else stays mandatory.
 
-2. **Restore reliable folder list behavior**
-   - Update the Student Folders query so it does not silently look like “no folders” when a backend query fails.
-   - Make the page show a real error message if access breaks again, instead of the same empty state used for no assigned students.
-   - Ensure global organization filters do not hide all folders due to stale saved filters.
+## 1. Database
 
-3. **Address the scan findings from the same pass**
-   - Fix the `organization_memberships` policy that currently lets case managers read all memberships; scope it to their assigned students only.
-   - Remove sensitive share-link token exposure risk from Realtime by excluding `request_share_links` from the realtime publication, while preserving normal app access through existing RLS.
+New nullable columns on `profiles`:
+- `mfa_exempt boolean NOT NULL DEFAULT false`
+- `mfa_exempt_reason text`
+- `mfa_exempt_at timestamptz`
+- `mfa_exempt_by uuid` (references the admin who set it)
 
-4. **Validate after implementation**
-   - Re-run targeted policy/grant checks for the folder tables.
-   - Re-run the security scan and mark fixed findings once the scanner confirms them.
-   - Verify the folder hook can load assigned student IDs, profiles, and folder metadata without returning a misleading empty state.
+Plus an audit table `mfa_exemption_audit` (user_id, actor_id, action `granted|revoked`, reason, created_at) with admin-only read and service-role writes.
 
-## Technical notes
+RLS:
+- Only admins can `UPDATE` the new columns on profiles (via a dedicated policy / edge function).
+- Users can read their own `mfa_exempt` flag (already covered by existing self-select profile policy).
 
-- This will be done with a database migration plus a small frontend error-state change.
-- No broad access will be added; the fix keeps assignment-based isolation intact.
-- I will not make `profiles` or student folder data publicly readable.
+## 2. Edge function
+
+New `set-user-mfa-exempt` function:
+- Requires admin caller (AAL2 via existing `verifyMFAForPrivilegedRole`).
+- Input: `{ userId, exempt: boolean, reason?: string }`.
+- Updates the profile columns, writes audit row.
+- Strict CORS + `sanitizeError`, same pattern as `set-user-active`.
+
+## 3. Client enforcement
+
+- Extend `useMFA` (or `AuthContext`) to fetch the caller's `mfa_exempt` flag.
+- In `Auth.tsx` MFA gate: if `mfa_exempt === true`, skip both `showMFAEnrollment` and `showMFAVerification`, even for privileged roles.
+- In `Settings.tsx` MFA section: when exempt, show a read-only "MFA waived by administrator" note (reason + date) instead of the enroll prompt. Users can still optionally enroll if they want.
+- Server-side `verifyMFAForPrivilegedRole` (in `supabase/functions/_shared/security.ts`): short-circuit to `{ verified: true }` when the user's profile has `mfa_exempt = true`. This keeps edge functions consistent with the UI.
+
+## 4. Admin UI
+
+In `src/components/admin/UserManagement.tsx` user row menu, add:
+- **"MFA: Required / Waived"** badge column (compact).
+- Menu item **"Waive MFA…"** / **"Re-require MFA"** opening a dialog that collects an optional reason and calls the edge function. Confirmation required; toast on success.
+- Admin-only; hidden for student rows (students never use MFA anyway).
+- Invalidate `users-with-roles` query after change.
+
+A new hook `useSetUserMfaExempt` wraps the function call (mirrors `useSetUserActive`).
+
+## 5. Memory
+
+Update `mem://technical/mfa-access-policy` to note: "Staff MFA is mandatory **unless** an admin has set `profiles.mfa_exempt = true` for that user; exemption is audited and surfaced in User Management."
+
+## Out of scope
+- No bulk waive UI (per-user only).
+- No auto-expiring exemptions (admins manage manually).
+- No change to student behavior (already MFA-disabled).
