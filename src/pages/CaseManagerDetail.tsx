@@ -73,6 +73,7 @@ export default function CaseManagerDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: stats, isLoading, error } = useCaseManagerStats(id);
+  const { filters: globalFilters } = useGlobalFilters();
 
   const getInitials = (name: string | null) => {
     if (!name) return '?';
