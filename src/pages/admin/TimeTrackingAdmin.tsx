@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Download, Check, X, Pencil, Eye, Loader2, CheckCheck } from 'lucide-react';
+import { Download, Check, X, Pencil, Eye, Loader2, CheckCheck, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
 import {
@@ -26,6 +26,7 @@ import {
   useUpdateTimeEntry,
   useReviewTimeEntry,
   useTimeEntryAudit,
+  useCreateTimeEntry,
   type TimeEntry,
   type TimeEntryFilters,
 } from '@/hooks/useTimeEntries';
