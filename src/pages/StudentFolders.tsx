@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderOpen, Search, CheckCircle, Clock, FileText, Building2, GraduationCap } from 'lucide-react';
+import { FolderOpen, Search, CheckCircle, Clock, Building2, GraduationCap, UserCheck } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Table,
@@ -20,8 +20,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useStudentFolders } from '@/hooks/useStudentFolders';
+import { useAllCohorts } from '@/hooks/useCohorts';
+import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
-import { useGlobalFilters, getCohortFromDate } from '@/contexts/GlobalFiltersContext';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -29,12 +32,30 @@ function getInitials(name: string | null): string {
 }
 
 export default function StudentFolders() {
+  const { role } = useAuth();
   const { data: students, isLoading } = useStudentFolders();
+  const { data: cohorts } = useAllCohorts();
+  const { data: filterOptions } = useFilterOptions();
   const [search, setSearch] = useState('');
   const [orgFilter, setOrgFilter] = useState<string>('all');
+  const [cohortFilter, setCohortFilter] = useState<string>('all');
+  const [cmFilter, setCmFilter] = useState<string>('all');
 
-  // Get unique orgs for filter
-  const orgOptions = [...new Map((students || []).filter(s => s.organization_name).map(s => [s.organization_id, s.organization_name])).entries()];
+  const canFilterByCM = role === 'admin' || role === 'org_admin';
+
+  const orgOptions = useMemo(
+    () => [...new Map((students || []).filter(s => s.organization_name).map(s => [s.organization_id, s.organization_name])).entries()],
+    [students],
+  );
+
+  // Cohorts scoped to currently selected org (or all visible)
+  const cohortOptions = useMemo(() => {
+    const list = cohorts || [];
+    if (orgFilter === 'all') return list;
+    return list.filter((c) => c.organization_id === orgFilter);
+  }, [cohorts, orgFilter]);
+
+  const cmOptions = filterOptions?.caseManagers ?? [];
 
   const { filters: gf } = useGlobalFilters();
   const filtered = (students || []).filter(s => {
@@ -42,7 +63,9 @@ export default function StudentFolders() {
     const matchesSearch = (s.full_name || '').toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
     const matchesOrg = orgFilter === 'all' || s.organization_id === orgFilter;
     const matchesGlobalOrg = gf.organizationId.length === 0 || (s.organization_id && gf.organizationId.includes(s.organization_id));
-    return matchesSearch && matchesOrg && matchesGlobalOrg;
+    const matchesCohort = cohortFilter === 'all' || s.cohort_id === cohortFilter;
+    const matchesCM = cmFilter === 'all' || s.case_manager_id === cmFilter;
+    return matchesSearch && matchesOrg && matchesGlobalOrg && matchesCohort && matchesCM;
   });
 
   return (
@@ -55,8 +78,8 @@ export default function StudentFolders() {
 
         <GlobalFilterBar visible={['cohort', 'yearOfStudy', 'organizationId']} />
 
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by name or email..."
@@ -66,7 +89,7 @@ export default function StudentFolders() {
             />
           </div>
           {orgOptions.length > 0 && (
-            <Select value={orgFilter} onValueChange={setOrgFilter}>
+            <Select value={orgFilter} onValueChange={(v) => { setOrgFilter(v); setCohortFilter('all'); }}>
               <SelectTrigger className="w-48">
                 <Building2 className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filter by org" />
@@ -75,6 +98,34 @@ export default function StudentFolders() {
                 <SelectItem value="all">All Organizations</SelectItem>
                 {orgOptions.map(([id, name]) => (
                   <SelectItem key={id} value={id!}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {cohortOptions.length > 0 && (
+            <Select value={cohortFilter} onValueChange={setCohortFilter}>
+              <SelectTrigger className="w-48">
+                <GraduationCap className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter by cohort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Cohorts</SelectItem>
+                {cohortOptions.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {canFilterByCM && cmOptions.length > 0 && (
+            <Select value={cmFilter} onValueChange={setCmFilter}>
+              <SelectTrigger className="w-56">
+                <UserCheck className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter by case manager" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Case Managers</SelectItem>
+                {cmOptions.map((cm) => (
+                  <SelectItem key={cm.value} value={cm.value}>{cm.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -90,7 +141,7 @@ export default function StudentFolders() {
           <EmptyState
             icon={FolderOpen}
             title="No student folders found"
-            description={search ? 'Try adjusting your search.' : 'No students are assigned yet.'}
+            description={search ? 'Try adjusting your search.' : 'No students match the current filters.'}
           />
         ) : (
           <Card className="border border-border/50">
@@ -99,6 +150,8 @@ export default function StudentFolders() {
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead>Organization</TableHead>
+                  <TableHead>Cohort</TableHead>
+                  <TableHead>Case Manager</TableHead>
                   <TableHead>Intake</TableHead>
                   <TableHead>Graduation</TableHead>
                   <TableHead className="text-center">Requests</TableHead>
@@ -131,6 +184,19 @@ export default function StudentFolders() {
                       ) : (
                         <span className="text-muted-foreground text-xs">—</span>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      {student.cohort_name ? (
+                        <Badge variant="outline" className="gap-1 text-xs">
+                          <GraduationCap className="h-3 w-3" />
+                          {student.cohort_name}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {student.case_manager_name || <span className="text-muted-foreground text-xs">Unassigned</span>}
                     </TableCell>
                     <TableCell>
                       {student.intake_completed ? (
