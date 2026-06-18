@@ -18,6 +18,7 @@ import {
   Trash2,
   AlertTriangle,
   Building2,
+  KeyRound,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
@@ -25,6 +26,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
 import { PendingInvitationsSection } from '@/components/admin/PendingInvitationsSection';
 import { OrgAdminAssignmentDialog } from '@/components/admin/OrgAdminAssignmentDialog';
+import { MFAUserDialog } from '@/components/admin/MFAUserDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -99,6 +101,7 @@ export default function UserManagementPage() {
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string; email: string; role: AppRole } | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [orgAdminTarget, setOrgAdminTarget] = useState<{ id: string; name: string } | null>(null);
+  const [mfaTarget, setMfaTarget] = useState<{ id: string; name: string; email: string; exempt: boolean } | null>(null);
   
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
@@ -373,6 +376,7 @@ export default function UserManagementPage() {
                       <TableHead className="hidden sm:table-cell">Email</TableHead>
                       <TableHead className="hidden md:table-cell">Organization</TableHead>
                       <TableHead>Role</TableHead>
+                      <TableHead className="hidden lg:table-cell">MFA</TableHead>
                       <TableHead className="hidden lg:table-cell">Joined</TableHead>
                       <TableHead className="w-[70px]"></TableHead>
                     </TableRow>
@@ -412,6 +416,15 @@ export default function UserManagementPage() {
                               <RoleIcon className="h-3 w-3" />
                               <span className="capitalize">{user.role.replace('_', ' ')}</span>
                             </Badge>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            {user.role === 'student' ? (
+                              <span className="text-xs text-muted-foreground">N/A</span>
+                            ) : (user as any).mfa_exempt ? (
+                              <Badge variant="outline" className="text-xs">Exempt</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">Required</Badge>
+                            )}
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -468,6 +481,22 @@ export default function UserManagementPage() {
                                     <Building2 className="mr-2 h-4 w-4" />
                                     Manage organizations
                                   </DropdownMenuItem>
+                                )}
+                                {user.role !== 'student' && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => setMfaTarget({
+                                        id: user.user_id,
+                                        name: user.full_name || 'User',
+                                        email: user.email,
+                                        exempt: !!(user as any).mfa_exempt,
+                                      })}
+                                    >
+                                      <KeyRound className="mr-2 h-4 w-4" />
+                                      MFA controls
+                                    </DropdownMenuItem>
+                                  </>
                                 )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
@@ -613,6 +642,17 @@ export default function UserManagementPage() {
         userId={orgAdminTarget?.id ?? null}
         userName={orgAdminTarget?.name ?? ''}
       />
+
+      {mfaTarget && (
+        <MFAUserDialog
+          open={!!mfaTarget}
+          onOpenChange={(o) => !o && setMfaTarget(null)}
+          userId={mfaTarget.id}
+          userName={mfaTarget.name}
+          userEmail={mfaTarget.email}
+          currentlyExempt={mfaTarget.exempt}
+        />
+      )}
     </SidebarLayout>
   );
 }

@@ -24,7 +24,8 @@ import {
   QrCode,
   ArrowRightLeft,
   Sparkles,
-  ClipboardCheck
+  ClipboardCheck,
+  Timer,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -80,6 +81,8 @@ const navItems: NavItem[] = [
   { label: 'Transitions', href: '/admin/transitions', icon: ArrowRightLeft, roles: ['admin', 'org_admin'] },
   { label: 'Reports', href: '/reports', icon: FileBarChart, roles: ['case_manager', 'admin', 'org_admin'] },
   { label: 'Impact Analytics', href: '/admin/impact', icon: Sparkles, roles: ['admin', 'org_admin'] },
+  { label: 'Time Tracking', href: '/time-tracking', icon: Timer, roles: ['case_manager'] },
+  { label: 'Time Reports', href: '/admin/time-tracking', icon: Timer, roles: ['admin', 'org_admin'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
 ];
 

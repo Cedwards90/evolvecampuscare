@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      active_time_sessions: {
+        Row: {
+          case_manager_id: string
+          created_at: string
+          notes: string | null
+          service_type: Database["public"]["Enums"]["service_type"]
+          start_time: string
+          student_id: string | null
+        }
+        Insert: {
+          case_manager_id: string
+          created_at?: string
+          notes?: string | null
+          service_type?: Database["public"]["Enums"]["service_type"]
+          start_time?: string
+          student_id?: string | null
+        }
+        Update: {
+          case_manager_id?: string
+          created_at?: string
+          notes?: string | null
+          service_type?: Database["public"]["Enums"]["service_type"]
+          start_time?: string
+          student_id?: string | null
+        }
+        Relationships: []
+      }
       ai_insights: {
         Row: {
           case_manager_id: string | null
