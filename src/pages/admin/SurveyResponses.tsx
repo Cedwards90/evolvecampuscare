@@ -69,22 +69,29 @@ export default function SurveyResponses() {
   const [planSort, setPlanSort] = useState<{ key: PlanSortKey; dir: 'asc' | 'desc' }>({ key: 'date', dir: 'desc' });
 
   const orgFilter = filters.organizationId;
+  const cohortFilter = filters.cohort;
+  const yearFilter = filters.yearOfStudy;
+
+  const matchesGlobal = (row: { organization_id: string | null; cohort_id?: string | null; year_of_study?: string | null }) => {
+    if (orgFilter.length && (!row.organization_id || !orgFilter.includes(row.organization_id))) return false;
+    if (cohortFilter.length && (!row.cohort_id || !cohortFilter.includes(row.cohort_id))) return false;
+    if (yearFilter.length && (!row.year_of_study || !yearFilter.includes(row.year_of_study))) return false;
+    return true;
+  };
 
   const filterPending = (list: PendingStudent[] | undefined) =>
     (list || []).filter((s) => {
       if (!(s.student_name || s.student_email).toLowerCase().includes(search.toLowerCase())) return false;
-      if (orgFilter.length && (!s.organization_id || !orgFilter.includes(s.organization_id))) return false;
-      return true;
+      return matchesGlobal(s);
     });
-  const filteredPendingCheck = useMemo(() => filterPending(pendingCheckIns), [pendingCheckIns, search, orgFilter]);
-  const filteredPendingPlans = useMemo(() => filterPending(pendingPlans), [pendingPlans, search, orgFilter]);
+  const filteredPendingCheck = useMemo(() => filterPending(pendingCheckIns), [pendingCheckIns, search, orgFilter, cohortFilter, yearFilter]);
+  const filteredPendingPlans = useMemo(() => filterPending(pendingPlans), [pendingPlans, search, orgFilter, cohortFilter, yearFilter]);
 
 
   const filteredCheckIns = useMemo(() => {
     const list = (checkIns || []).filter(c => {
       if (!(c.student_name || c.student_email).toLowerCase().includes(search.toLowerCase())) return false;
-      if (orgFilter.length && (!c.organization_id || !orgFilter.includes(c.organization_id))) return false;
-      return true;
+      return matchesGlobal(c);
     });
     const sorted = [...list].sort((a, b) => {
       let r = 0;
@@ -94,13 +101,12 @@ export default function SurveyResponses() {
       return checkSort.dir === 'asc' ? r : -r;
     });
     return sorted;
-  }, [checkIns, search, orgFilter, checkSort]);
+  }, [checkIns, search, orgFilter, cohortFilter, yearFilter, checkSort]);
 
   const filteredPlans = useMemo(() => {
     const list = (plans || []).filter(p => {
       if (!(p.student_name || p.student_email).toLowerCase().includes(search.toLowerCase())) return false;
-      if (orgFilter.length && (!p.organization_id || !orgFilter.includes(p.organization_id))) return false;
-      return true;
+      return matchesGlobal(p);
     });
     const sorted = [...list].sort((a, b) => {
       let r = 0;
@@ -110,7 +116,7 @@ export default function SurveyResponses() {
       return planSort.dir === 'asc' ? r : -r;
     });
     return sorted;
-  }, [plans, search, orgFilter, planSort]);
+  }, [plans, search, orgFilter, cohortFilter, yearFilter, planSort]);
 
   const toggleCheckSort = (key: CheckSortKey) => {
     setCheckSort((s) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'date' ? 'desc' : 'asc' });
