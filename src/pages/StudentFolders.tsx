@@ -38,11 +38,13 @@ export default function StudentFolders() {
   const orgOptions = [...new Map((students || []).filter(s => s.organization_name).map(s => [s.organization_id, s.organization_name])).entries()];
 
   const { filters: gf, resetAll, isHydrated } = useGlobalFilters();
+  const availableOrgIds = new Set((students || []).map(s => s.organization_id).filter(Boolean));
+  const activeGlobalOrgIds = gf.organizationId.filter(id => availableOrgIds.has(id));
   const filtered = (students || []).filter(s => {
     const q = search.toLowerCase();
     const matchesSearch = (s.full_name || '').toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
     const matchesOrg = orgFilter === 'all' || s.organization_id === orgFilter;
-    const matchesGlobalOrg = gf.organizationId.length === 0 || (s.organization_id && gf.organizationId.includes(s.organization_id));
+    const matchesGlobalOrg = activeGlobalOrgIds.length === 0 || (s.organization_id && activeGlobalOrgIds.includes(s.organization_id));
     return matchesSearch && matchesOrg && matchesGlobalOrg;
   });
 
