@@ -92,6 +92,30 @@ export default function StudentDetail() {
 
   const isStaff = role === 'admin' || role === 'case_manager';
 
+  const studentOrgId = (student?.profile as any)?.organization_id as string | null | undefined;
+  const studentCohortId = (student?.profile as any)?.cohort_id as string | null | undefined;
+  const { data: myOrgAdminOrgs } = useMyOrgAdminOrgs();
+  const canManageCohort =
+    role === 'admin' ||
+    (role === 'org_admin' && !!studentOrgId && (myOrgAdminOrgs ?? []).includes(studentOrgId));
+  const { data: orgCohorts } = useOrgCohorts(canManageCohort ? studentOrgId : null);
+  const assignCohort = useAssignStudentCohort();
+  const currentCohort = (orgCohorts || []).find((c) => c.id === studentCohortId);
+
+  const handleCohortChange = async (value: string) => {
+    if (!id) return;
+    try {
+      await assignCohort.mutateAsync({
+        studentId: id,
+        cohortId: value === 'none' ? null : value,
+      });
+      toast({ title: 'Cohort updated' });
+    } catch (e: any) {
+      toast({ title: 'Failed to update cohort', description: e?.message, variant: 'destructive' });
+    }
+  };
+
+
   const openEditDates = () => {
     const p = student?.profile as any;
     setCohortStart(p?.cohort_start_date ? new Date(p.cohort_start_date) : undefined);
