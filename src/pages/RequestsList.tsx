@@ -39,6 +39,8 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useRequests } from '@/hooks/useRequests';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { applyToRequests } from '@/lib/applyGlobalFilters';
 import type { RequestStatus, RequestPriority, RequestCategory } from '@/types/database';
 
 const categoryLabels: Record<RequestCategory, string> = {
