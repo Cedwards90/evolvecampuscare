@@ -122,6 +122,15 @@ export function CohortManager({ organizationId }: Props) {
                     </TableCell>
                     {canManage && (
                       <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setManaging(c)}
+                          className="rounded-full"
+                        >
+                          <UserPlus className="h-4 w-4 mr-1" />
+                          Students
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => setEditing(c)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
