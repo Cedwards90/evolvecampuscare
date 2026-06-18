@@ -13,6 +13,10 @@ export interface StudentFolder {
   organization_id: string | null;
   organization_name: string | null;
   graduation_date: string | null;
+  cohort_id: string | null;
+  cohort_name: string | null;
+  case_manager_id: string | null;
+  case_manager_name: string | null;
 }
 
 export function useStudentFolders() {
