@@ -165,6 +165,11 @@ export function CohortManager({ organizationId }: Props) {
             organizationId={organizationId}
             cohort={editing}
           />
+          <CohortStudentsDialog
+            open={!!managing}
+            onOpenChange={(o) => !o && setManaging(null)}
+            cohort={managing}
+          />
           <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
             <AlertDialogContent>
               <AlertDialogHeader>
