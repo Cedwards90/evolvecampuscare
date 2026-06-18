@@ -626,14 +626,14 @@ function EditDialog({
           <Button
             disabled={saving}
             onClick={() => {
-              const startISO = new Date(start).toISOString();
-              const endISO = new Date(end).toISOString();
+              const [startDate, startClock] = start.split('T');
+              const [, endClock] = end.split('T');
               onSave({
                 case_manager_id: caseManagerId,
                 student_id: studentId === 'none' ? null : studentId,
-                start_time: startISO,
-                end_time: endISO,
-                entry_date: endISO.slice(0, 10),
+                start_time: `${startClock}:00`,
+                end_time: `${endClock}:00`,
+                entry_date: startDate,
                 service_type: serviceType,
                 notes,
                 billable,
