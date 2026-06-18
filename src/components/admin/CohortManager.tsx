@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { EmptyState } from '@/components/EmptyState';
 import { CohortDialog } from './CohortDialog';
+import { CohortStudentsDialog } from './CohortStudentsDialog';
 import { useOrgCohorts, useDeleteCohort, type Cohort } from '@/hooks/useCohorts';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
