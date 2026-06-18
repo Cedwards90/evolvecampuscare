@@ -62,7 +62,7 @@ export function useAllCheckIns() {
       const [{ data: profiles }, orgMap] = await Promise.all([
         supabase
           .from('profiles')
-          .select('user_id, full_name, email, organization_id')
+          .select('user_id, full_name, email, organization_id, cohort_id, year_of_study')
           .in('user_id', studentIds),
         loadOrgMap(),
       ]);
@@ -77,6 +77,8 @@ export function useAllCheckIns() {
           student_email: p?.email || '',
           organization_id: p?.organization_id || null,
           organization_name: p?.organization_id ? orgMap.get(p.organization_id) || null : null,
+          cohort_id: (p as any)?.cohort_id || null,
+          year_of_study: (p as any)?.year_of_study || null,
         };
       }) as CheckInWithStudent[];
     },
