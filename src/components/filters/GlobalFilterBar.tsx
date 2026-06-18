@@ -61,7 +61,7 @@ export function GlobalFilterBar({ visible = ALL, className }: Props) {
   const lookup = (key: FilterKey, value: string): string => {
     if (key === 'organizationId') return opts?.organizations.find((o) => o.value === value)?.label || value;
     if (key === 'assignedCaseManagerId') return opts?.caseManagers.find((o) => o.value === value)?.label || value;
-    if (key === 'cohort') return `Class of ${value}`;
+    if (key === 'cohort') return opts?.cohorts.find((o) => o.value === value)?.label || value;
     if (key === 'status') return STATUS_OPTIONS.find((o) => o.value === value)?.label || value;
     if (key === 'role') return ROLE_OPTIONS.find((o) => o.value === value)?.label || value;
     if (key === 'studentStatus') return STUDENT_STATUS_OPTIONS.find((o) => o.value === value)?.label || value;
