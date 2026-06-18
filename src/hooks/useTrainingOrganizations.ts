@@ -33,7 +33,9 @@ export function useActiveOrganizations() {
       const { data, error } = await supabase
         .from('training_organizations')
         .select('*')
-        .eq('is_active', true)
+        // Show all visible organizations (RLS handles per-role scoping).
+        // Do NOT filter on is_active — inactive orgs must remain visible in
+        // filters/breakdowns so admins never "lose" them after a status change.
         .order('name');
       if (error) throw error;
       return data as TrainingOrganization[];
