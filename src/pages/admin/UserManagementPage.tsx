@@ -528,6 +528,14 @@ export default function UserManagementPage() {
                                     Make Org Admin
                                   </DropdownMenuItem>
                                 )}
+                                {user.role === 'org_admin' && (
+                                  <DropdownMenuItem
+                                    onClick={() => setOrgAdminTarget({ id: user.user_id, name: user.full_name || 'User' })}
+                                  >
+                                    <Building2 className="mr-2 h-4 w-4" />
+                                    Manage organizations
+                                  </DropdownMenuItem>
+                                )}
                                 {user.role === 'student' && (
                                   <>
                                     <DropdownMenuSeparator />
