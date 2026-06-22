@@ -313,9 +313,24 @@ function App() {
                   <IntakeSurvey />
                 </ProtectedRoute>
               } />
-                  
-                  {/* Catch-all route */}
-                  <Route path="*" element={<NotFound />} />
+              <Route path="/onboarding/career-intake" element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <CareerIntakeOnboarding />
+                </ProtectedRoute>
+              } />
+              <Route path="/onboarding/cmf-basics" element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <CmfBasicsOnboarding />
+                </ProtectedRoute>
+              } />
+              <Route path="/onboarding/personality-quiz" element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <PersonalityQuizOnboarding />
+                </ProtectedRoute>
+              } />
+
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
                 </Routes>
                 </TooltipProvider>
                 </GlobalFiltersProvider>
