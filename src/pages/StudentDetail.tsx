@@ -361,7 +361,7 @@ export default function StudentDetail() {
               { value: 'grad-plan', label: 'Post-Grad Plan' },
               { value: 'certifications', label: 'Certifications' },
               { value: 'profile', label: 'Profile & Intake' },
-              ...(role !== 'student' ? [{ value: 'transfers', label: 'Transfer & Records' }] : []),
+              { value: 'profile', label: 'Profile & Intake' },
             ];
             return (
               <Select value={activeTab} onValueChange={setActiveTab}>
