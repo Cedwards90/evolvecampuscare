@@ -2144,6 +2144,7 @@ export type Database = {
       }
       student_files: {
         Row: {
+          cmf_identified_needs: number[]
           created_at: string
           id: string
           intake_completed_at: string | null
@@ -2154,6 +2155,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cmf_identified_needs?: number[]
           created_at?: string
           id?: string
           intake_completed_at?: string | null
@@ -2164,6 +2166,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cmf_identified_needs?: number[]
           created_at?: string
           id?: string
           intake_completed_at?: string | null
