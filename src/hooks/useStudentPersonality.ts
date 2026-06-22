@@ -61,8 +61,8 @@ export function useStudentPersonality(studentId: string | undefined) {
 
   const remove = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('student_personality_profiles' as any)
+      const { error } = await (supabase as any)
+        .from('student_personality_profiles')
         .delete()
         .eq('student_id', studentId!);
       if (error) throw error;
