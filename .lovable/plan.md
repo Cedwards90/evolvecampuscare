@@ -1,41 +1,59 @@
-## Remove Participant Transitions/Transfers Entirely
+## Group Sidebar Nav into Collapsible Sections
 
-Full teardown of the Transitions tab and the underlying transfers/exports feature.
+Today the sidebar is one long flat list of ~18 items mixed across roles. The fix is to group items into a few labeled, collapsible sections and let the section containing the active route auto-expand. No items get removed; nothing changes for students (their list is already short).
 
-### Frontend removals
-- **`src/App.tsx`** — drop the `TransitionsDashboard` import and the `/admin/transitions` route.
-- **`src/components/layouts/SidebarLayout.tsx`** — remove the `Transitions` nav item (and `ArrowRightLeft` import if unused).
-- **`src/pages/admin/TransitionsDashboard.tsx`** — delete.
-- **`src/pages/StudentDetail.tsx`** — remove the `transfers` / "Transfer & Records" option, its content block, and the three transfer-component imports (`GenerateParticipantRecordCard`, `InitiateTransferDialog`, `ParticipantTransfersSection`).
-- **`src/components/transfers/`** — delete the entire folder (`GenerateParticipantRecordCard.tsx`, `InitiateTransferDialog.tsx`, `ParticipantTransfersSection.tsx`).
-- **`src/hooks/useParticipantTransfers.ts`** — delete.
-- **`src/lib/realtimeRouter.ts`** — remove the `participant_transfers`, `participant_transfer_events`, `participant_record_exports`, `participant_record_access_log` cases and their entries in the subscribed-tables list.
+### Section structure (role-filtered as today)
 
-### Edge functions (delete code + deployed function)
-- `supabase/functions/acknowledge-participant-transfer/`
-- `supabase/functions/generate-participant-record/`
-- `supabase/functions/get-participant-export-url/`
+**Workspace** (always visible to that role)
+- Dashboard — all roles
+- Messages — all roles
+- My Submissions — student
+- Submit Request, Track Requests, Offline Drafts — student
+- Manage Requests — case_manager, org_admin
+- Student Folders — case_manager, admin, org_admin
 
-Call `supabase--delete_edge_functions` for these three names so the deployed instances are removed.
+**People** — admin / org_admin / case_manager
+- User Management (admin)
+- Case Managers (admin, org_admin)
+- Organizations (admin)
 
-### Database migration (destructive — drops data)
-Single migration in dependency order:
-```sql
-DROP TABLE IF EXISTS public.participant_record_access_log CASCADE;
-DROP TABLE IF EXISTS public.participant_record_exports CASCADE;
-DROP TABLE IF EXISTS public.participant_transfer_events CASCADE;
-DROP TABLE IF EXISTS public.participant_transfers CASCADE;
-```
-Also drop the `participant-exports` storage bucket and its objects.
+**Engagement** — staff
+- Surveys
+- QR Codes
 
-### Verification
-- Build passes (no dangling imports).
-- `/admin/transitions` 404s, sidebar no longer lists Transitions, StudentDetail dropdown no longer shows Transfer & Records.
-- `supabase--linter` clean re: dropped tables.
+**Insights** — staff
+- Admin Dashboard (admin, org_admin)
+- Reports
+- Impact Analytics
+
+**Time** — case_manager / admin / org_admin
+- Time Tracking (case_manager)
+- Time Reports (admin, org_admin)
+
+**Compliance** — admin
+- NDA
+
+**Bottom (unchanged)**
+- Help Center
+- Settings (moved here from the main list — it belongs with utility links)
+
+### Behavior
+- Each group uses shadcn `Collapsible` with a small uppercase `SidebarGroupLabel` + chevron.
+- The group containing the current route is open by default; others collapsed. Open/closed state persists in `localStorage` per user.
+- When the whole sidebar is in `collapsible="icon"` mode, group labels hide and items render as icon-only (tooltips on hover) — no nested chevrons in that mode.
+- A group with only one visible item (after role filtering) renders flat — no wrapper — to avoid pointless collapsibles for, e.g., students.
+- Students effectively see one short flat list (Workspace only), so they get the same simplified experience they have now.
 
 ### Out of scope
-- Generic request PDF sharing (`share-request-pdf`, `public-request-pdf`) — unrelated to participant transfers, kept.
-- Student File / Folder Summary / Certifications — untouched.
+- No route/permission changes.
+- No icon, label, or color overhaul.
+- No mobile sheet redesign beyond mirroring the same grouping.
+- No new pages, no removed pages.
 
-### Warning to user
-This permanently destroys every existing participant transfer record, transfer event, exported participant record metadata, access log, and any files stored in the `participant-exports` bucket. There is no undo.
+### Files touched
+- `src/components/layouts/SidebarLayout.tsx` — convert the flat `navItems` array into a grouped structure and render groups with `Collapsible`.
+
+### Verification
+- Each role only sees their permitted items, same as before.
+- Active route's group is expanded on load; click a different group's item → that group expands, prior remembered state restored on next visit.
+- Collapsing the whole sidebar still shows all icons; expanding restores the grouped view.
