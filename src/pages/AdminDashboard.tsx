@@ -330,8 +330,13 @@ export default function AdminDashboard() {
         </section>
 
         {/* Case Manager Workloads */}
-        <section className="space-y-4">
-          <h2 className="font-display text-h3">Case Manager Workloads</h2>
+        <Collapsible defaultOpen asChild>
+          <section className="space-y-4">
+            <CollapsibleTrigger className="group flex w-full items-center justify-between gap-2 text-left">
+              <h2 className="font-display text-h3">Case Manager Workloads</h2>
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
           {caseManagers.length === 0 ? (
             <EmptyState
               icon={Users}
@@ -403,7 +408,10 @@ export default function AdminDashboard() {
               })}
             </div>
           )}
-        </section>
+            </CollapsibleContent>
+          </section>
+        </Collapsible>
+
 
         {/* Bulk Assignment Panel for Unassigned Requests */}
         {unassignedRequests.length > 0 && (
