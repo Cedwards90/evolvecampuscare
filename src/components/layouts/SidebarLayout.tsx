@@ -163,6 +163,22 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
         return item;
       })
     : fallbackNavItems;
+
+  const filteredNavGroups: NavGroup[] = role
+    ? navGroups
+        .map(group => ({
+          ...group,
+          items: group.items
+            .filter(item => item.roles.includes(role))
+            .map(item =>
+              item.href === '/messages' && unreadCount && unreadCount > 0
+                ? { ...item, badge: unreadCount }
+                : item
+            ),
+        }))
+        .filter(group => group.items.length > 0)
+    : [];
+
   const filteredBottomNavItems = bottomNavItems.filter(item => role && item.roles.includes(role));
 
   const getInitials = (name: string | null) => {
