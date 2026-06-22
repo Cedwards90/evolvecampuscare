@@ -100,6 +100,9 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2">
+            {/* Active shift widget (case managers) */}
+            <ShiftHeaderWidget />
+
             {/* Offline indicator */}
             {!isOnline && <OfflineIndicator />}
 
