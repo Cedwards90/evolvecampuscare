@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -10,7 +11,7 @@ import {
   Settings, 
   LogOut,
   Menu,
-  ChevronRight,
+  
   Globe,
   Search,
   HelpCircle,
@@ -61,33 +62,77 @@ interface NavItem {
   badge?: number;
 }
 
-const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
-  { label: 'Submit Request', href: '/student-submitting-a-support-request', icon: FileText, roles: ['student'] },
-  { label: 'Track Requests', href: '/student-tracking-request-status-scheduling-meeting', icon: Clock, roles: ['student'] },
-  { label: 'Offline Drafts', href: '/student-creating-offline-draft-request', icon: WifiOff, roles: ['student'] },
-  { label: 'My Submissions', href: '/my-submissions', icon: ClipboardCheck, roles: ['student'] },
-  { label: 'Manage Requests', href: '/case-manager-managing-student-requests', icon: Users, roles: ['case_manager', 'org_admin'] },
-  { label: 'Student Folders', href: '/student-folders', icon: FolderOpen, roles: ['case_manager', 'admin', 'org_admin'] },
-  { label: 'Messages', href: '/messages', icon: MessageSquare, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
-  { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin', 'org_admin'] },
-  { label: 'User Management', href: '/admin/users', icon: Shield, roles: ['admin'] },
-  { label: 'Case Managers', href: '/admin/case-managers', icon: UserCog, roles: ['admin', 'org_admin'] },
-  { label: 'Organizations', href: '/admin/organizations', icon: Building2, roles: ['admin'] },
-  { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: ['case_manager', 'admin', 'org_admin'] },
-  { label: 'QR Codes', href: '/admin/qr-codes', icon: QrCode, roles: ['admin', 'org_admin'] },
-  { label: 'NDA', href: '/admin/nda', icon: FileText, roles: ['admin'] },
-  
-  { label: 'Reports', href: '/reports', icon: FileBarChart, roles: ['case_manager', 'admin', 'org_admin'] },
-  { label: 'Impact Analytics', href: '/admin/impact', icon: Sparkles, roles: ['admin', 'org_admin'] },
-  { label: 'Time Tracking', href: '/time-tracking', icon: Timer, roles: ['case_manager'] },
-  { label: 'Time Reports', href: '/admin/time-tracking', icon: Timer, roles: ['admin', 'org_admin'] },
-  { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
+interface NavGroup {
+  id: string;
+  label: string;
+  items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    id: 'workspace',
+    label: 'Workspace',
+    items: [
+      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
+      { label: 'Messages', href: '/messages', icon: MessageSquare, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
+      { label: 'Submit Request', href: '/student-submitting-a-support-request', icon: FileText, roles: ['student'] },
+      { label: 'Track Requests', href: '/student-tracking-request-status-scheduling-meeting', icon: Clock, roles: ['student'] },
+      { label: 'Offline Drafts', href: '/student-creating-offline-draft-request', icon: WifiOff, roles: ['student'] },
+      { label: 'My Submissions', href: '/my-submissions', icon: ClipboardCheck, roles: ['student'] },
+      { label: 'Manage Requests', href: '/case-manager-managing-student-requests', icon: Users, roles: ['case_manager', 'org_admin'] },
+      { label: 'Student Folders', href: '/student-folders', icon: FolderOpen, roles: ['case_manager', 'admin', 'org_admin'] },
+    ],
+  },
+  {
+    id: 'people',
+    label: 'People',
+    items: [
+      { label: 'User Management', href: '/admin/users', icon: Shield, roles: ['admin'] },
+      { label: 'Case Managers', href: '/admin/case-managers', icon: UserCog, roles: ['admin', 'org_admin'] },
+      { label: 'Organizations', href: '/admin/organizations', icon: Building2, roles: ['admin'] },
+    ],
+  },
+  {
+    id: 'engagement',
+    label: 'Engagement',
+    items: [
+      { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: ['case_manager', 'admin', 'org_admin'] },
+      { label: 'QR Codes', href: '/admin/qr-codes', icon: QrCode, roles: ['admin', 'org_admin'] },
+    ],
+  },
+  {
+    id: 'insights',
+    label: 'Insights',
+    items: [
+      { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin', 'org_admin'] },
+      { label: 'Reports', href: '/reports', icon: FileBarChart, roles: ['case_manager', 'admin', 'org_admin'] },
+      { label: 'Impact Analytics', href: '/admin/impact', icon: Sparkles, roles: ['admin', 'org_admin'] },
+    ],
+  },
+  {
+    id: 'time',
+    label: 'Time',
+    items: [
+      { label: 'Time Tracking', href: '/time-tracking', icon: Timer, roles: ['case_manager'] },
+      { label: 'Time Reports', href: '/admin/time-tracking', icon: Timer, roles: ['admin', 'org_admin'] },
+    ],
+  },
+  {
+    id: 'compliance',
+    label: 'Compliance',
+    items: [
+      { label: 'NDA', href: '/admin/nda', icon: FileText, roles: ['admin'] },
+    ],
+  },
 ];
 
 const bottomNavItems: NavItem[] = [
   { label: 'Help Center', href: '/support', icon: HelpCircle, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
+  { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
 ];
+
+// Flat list used for breadcrumb lookups
+const navItems: NavItem[] = navGroups.flatMap(g => g.items);
 
 export function SidebarLayout({ children }: SidebarLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -118,6 +163,22 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
         return item;
       })
     : fallbackNavItems;
+
+  const filteredNavGroups: NavGroup[] = role
+    ? navGroups
+        .map(group => ({
+          ...group,
+          items: group.items
+            .filter(item => item.roles.includes(role))
+            .map(item =>
+              item.href === '/messages' && unreadCount && unreadCount > 0
+                ? { ...item, badge: unreadCount }
+                : item
+            ),
+        }))
+        .filter(group => group.items.length > 0)
+    : [];
+
   const filteredBottomNavItems = bottomNavItems.filter(item => role && item.roles.includes(role));
 
   const getInitials = (name: string | null) => {
@@ -126,6 +187,63 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   };
 
   const isActive = (href: string) => location.pathname === href;
+
+  // Track which nav groups are open. Persists per browser.
+  const STORAGE_KEY = 'sidebar:openGroups';
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Auto-open the group that contains the active route.
+  useEffect(() => {
+    const active = filteredNavGroups.find(g => g.items.some(i => isActive(i.href)));
+    if (active && !openGroups[active.id]) {
+      setOpenGroups(prev => ({ ...prev, [active.id]: true }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, role]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(openGroups));
+    } catch {
+      /* ignore */
+    }
+  }, [openGroups]);
+
+  const toggleGroup = (id: string) =>
+    setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
+
+  const renderNavLink = (item: NavItem, onClick?: () => void, compact = false) => (
+    <Link
+      to={item.href}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+        isActive(item.href)
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1"
+      )}
+    >
+      <item.icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200" />
+      {!compact && (
+        <>
+          <span className="flex-1">{item.label}</span>
+          {item.badge && item.badge > 0 && (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+              {item.badge > 9 ? '9+' : item.badge}
+            </span>
+          )}
+        </>
+      )}
+    </Link>
+  );
 
   return (
     <div className="flex min-h-screen bg-muted/30 max-w-full overflow-x-hidden">
@@ -178,34 +296,51 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                   )}
                 </div>
               )}
-              <ul className="space-y-1">
-                {filteredNavItems.map((item) => (
-                  <li key={item.href}>
-                    <Link
-                      to={item.href}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                        isActive(item.href)
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1"
-                      )}
-                    >
-                      <item.icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200" />
-                      {!sidebarCollapsed && (
-                        <>
-                          <span className="flex-1">{item.label}</span>
-                          {item.badge && item.badge > 0 && (
-                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
-                              {item.badge > 9 ? '9+' : item.badge}
-                            </span>
-                          )}
-                          {!item.badge && <ChevronRight className="h-4 w-4 opacity-50" />}
-                        </>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              {sidebarCollapsed || !role ? (
+                <ul className="space-y-1">
+                  {filteredNavItems.map((item) => (
+                    <li key={item.href}>{renderNavLink(item, undefined, sidebarCollapsed)}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="space-y-3">
+                  {filteredNavGroups.map((group) => {
+                    // Collapse the wrapper for single-item groups
+                    if (group.items.length === 1) {
+                      return (
+                        <ul key={group.id} className="space-y-1">
+                          <li>{renderNavLink(group.items[0])}</li>
+                        </ul>
+                      );
+                    }
+                    const isOpen = openGroups[group.id] ?? false;
+                    return (
+                      <div key={group.id}>
+                        <button
+                          type="button"
+                          onClick={() => toggleGroup(group.id)}
+                          className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-foreground transition-colors"
+                        >
+                          <span>{group.label}</span>
+                          <ChevronDown
+                            className={cn(
+                              "h-3.5 w-3.5 transition-transform duration-200",
+                              isOpen ? "rotate-0" : "-rotate-90"
+                            )}
+                          />
+                        </button>
+                        {isOpen && (
+                          <ul className="mt-1 space-y-1">
+                            {group.items.map((item) => (
+                              <li key={item.href}>{renderNavLink(item)}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </>
           )}
         </nav>
@@ -294,25 +429,34 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                   )}
                 </div>
               )}
-              <ul className="space-y-1">
-                {filteredNavItems.map((item) => (
-                  <li key={item.href}>
-                    <Link
-                      to={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                        isActive(item.href)
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              {!role ? (
+                <ul className="space-y-1">
+                  {filteredNavItems.map((item) => (
+                    <li key={item.href}>
+                      {renderNavLink(item, () => setMobileMenuOpen(false))}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="space-y-4">
+                  {filteredNavGroups.map((group) => (
+                    <div key={group.id}>
+                      {group.items.length > 1 && (
+                        <div className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                          {group.label}
+                        </div>
                       )}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.label}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+                      <ul className="space-y-1">
+                        {group.items.map((item) => (
+                          <li key={item.href}>
+                            {renderNavLink(item, () => setMobileMenuOpen(false))}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </nav>
