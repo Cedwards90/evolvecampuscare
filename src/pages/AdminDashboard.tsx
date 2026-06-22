@@ -588,9 +588,14 @@ export default function AdminDashboard() {
 
 
         {/* All Requests Table */}
-        <section className="space-y-4">
-          <h2 className="font-display text-h3">All Requests</h2>
-          
+        <Collapsible defaultOpen asChild>
+          <section className="space-y-4">
+            <CollapsibleTrigger className="group flex w-full items-center justify-between gap-2 text-left">
+              <h2 className="font-display text-h3">All Requests</h2>
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+
           {/* Filters */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative flex-1">
@@ -688,20 +693,30 @@ export default function AdminDashboard() {
               </Table>
             </Card>
           )}
-        </section>
+            </CollapsibleContent>
+          </section>
+        </Collapsible>
 
         {/* Student Assignments Section */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <UserCheck className="h-5 w-5 text-primary" />
-            <h2 className="font-display text-h3">Student Assignments</h2>
-          </div>
-          <Card className="border border-border/50">
-            <CardContent className="pt-6">
-              <StudentAssignmentsTable />
-            </CardContent>
-          </Card>
-        </section>
+        <Collapsible defaultOpen asChild>
+          <section className="space-y-4">
+            <CollapsibleTrigger className="group flex w-full items-center justify-between gap-2 text-left">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-primary" />
+                <h2 className="font-display text-h3">Student Assignments</h2>
+              </div>
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+              <Card className="border border-border/50">
+                <CardContent className="pt-6">
+                  <StudentAssignmentsTable />
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </section>
+        </Collapsible>
+
 
         <ExpiringCertificationsCard />
 
