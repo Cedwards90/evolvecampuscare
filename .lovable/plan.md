@@ -1,20 +1,21 @@
-**Issue found**
-Students can complete the visible questions, but the hard gate does not release them because the new student-facing onboarding tables only allow students to read their own career/personality records. The Career Intake and Personality Quiz pages try to upsert rows, but current policies do not allow student insert/update, so the gate never sees those steps as complete.
+## Make Admin Dashboard tables collapsible
 
-**Plan**
-1. **Add student write policies for onboarding records**
-   - Add RLS policies allowing students to insert and update their own rows in `career_intake_responses`.
-   - Add RLS policies allowing students to insert and update their own rows in `student_personality_profiles`.
-   - Keep staff access unchanged.
+Wrap each of the table-bearing sections on `/admin-monitoring-reassigning-requests` (`src/pages/AdminDashboard.tsx`) in a `Collapsible` from `@/components/ui/collapsible`, so admins can hide/show them.
 
-2. **Make final completion refresh reliable**
-   - After the personality quiz saves, refresh the authenticated profile directly so `onboarding_completed_at` is immediately visible to `ProtectedRoute`.
-   - Invalidate the exact onboarding query key so the gate re-checks with fresh data.
+### Sections to make collapsible
+1. **Case Manager Workloads** (cards grid)
+2. **Escalated Requests** (table)
+3. **All Requests** (table + status filter)
+4. **Student Assignments** (the `StudentAssignmentsTable` with its own inner Assigned/Unassigned tabs)
 
-3. **Fix step-to-step navigation after Sensitive Intake**
-   - Change the onboarding completion navigation in `IntakeSurvey` from `/dashboard` to `/onboarding/career-intake` for student onboarding, so students proceed sequentially instead of relying on a redirect bounce.
-   - Remove or disable skip paths that send students to dashboard during hard-gated onboarding.
+### UX
+- Each section's existing `CardHeader` becomes a `CollapsibleTrigger` (full-width button row) with a `ChevronDown` icon that rotates 180° when open.
+- `CardContent` moves inside `CollapsibleContent`.
+- Default state: **all open** (matches current behavior so nothing is hidden by surprise).
+- Open/closed state stored in local `useState` per section (not persisted) — keeps scope small.
+- Keep the section count badges (e.g. "2 requiring attention") visible in the trigger row so admins can see counts without expanding.
 
-4. **Validate the flow**
-   - Verify the route sequence is Profile → Sensitive Intake → Career Intake → CMF Basics → Personality Quiz → Dashboard.
-   - Confirm existing non-student/staff behavior is unchanged and existing onboarded students remain bypassed.
+### Out of scope
+- No changes to the top stats cards, charts, or filter bar.
+- No changes to the inner tables themselves (columns, data, sorting).
+- No persistence of collapsed state across reloads.
