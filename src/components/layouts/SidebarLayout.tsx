@@ -62,33 +62,77 @@ interface NavItem {
   badge?: number;
 }
 
-const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
-  { label: 'Submit Request', href: '/student-submitting-a-support-request', icon: FileText, roles: ['student'] },
-  { label: 'Track Requests', href: '/student-tracking-request-status-scheduling-meeting', icon: Clock, roles: ['student'] },
-  { label: 'Offline Drafts', href: '/student-creating-offline-draft-request', icon: WifiOff, roles: ['student'] },
-  { label: 'My Submissions', href: '/my-submissions', icon: ClipboardCheck, roles: ['student'] },
-  { label: 'Manage Requests', href: '/case-manager-managing-student-requests', icon: Users, roles: ['case_manager', 'org_admin'] },
-  { label: 'Student Folders', href: '/student-folders', icon: FolderOpen, roles: ['case_manager', 'admin', 'org_admin'] },
-  { label: 'Messages', href: '/messages', icon: MessageSquare, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
-  { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin', 'org_admin'] },
-  { label: 'User Management', href: '/admin/users', icon: Shield, roles: ['admin'] },
-  { label: 'Case Managers', href: '/admin/case-managers', icon: UserCog, roles: ['admin', 'org_admin'] },
-  { label: 'Organizations', href: '/admin/organizations', icon: Building2, roles: ['admin'] },
-  { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: ['case_manager', 'admin', 'org_admin'] },
-  { label: 'QR Codes', href: '/admin/qr-codes', icon: QrCode, roles: ['admin', 'org_admin'] },
-  { label: 'NDA', href: '/admin/nda', icon: FileText, roles: ['admin'] },
-  
-  { label: 'Reports', href: '/reports', icon: FileBarChart, roles: ['case_manager', 'admin', 'org_admin'] },
-  { label: 'Impact Analytics', href: '/admin/impact', icon: Sparkles, roles: ['admin', 'org_admin'] },
-  { label: 'Time Tracking', href: '/time-tracking', icon: Timer, roles: ['case_manager'] },
-  { label: 'Time Reports', href: '/admin/time-tracking', icon: Timer, roles: ['admin', 'org_admin'] },
-  { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
+interface NavGroup {
+  id: string;
+  label: string;
+  items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    id: 'workspace',
+    label: 'Workspace',
+    items: [
+      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
+      { label: 'Messages', href: '/messages', icon: MessageSquare, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
+      { label: 'Submit Request', href: '/student-submitting-a-support-request', icon: FileText, roles: ['student'] },
+      { label: 'Track Requests', href: '/student-tracking-request-status-scheduling-meeting', icon: Clock, roles: ['student'] },
+      { label: 'Offline Drafts', href: '/student-creating-offline-draft-request', icon: WifiOff, roles: ['student'] },
+      { label: 'My Submissions', href: '/my-submissions', icon: ClipboardCheck, roles: ['student'] },
+      { label: 'Manage Requests', href: '/case-manager-managing-student-requests', icon: Users, roles: ['case_manager', 'org_admin'] },
+      { label: 'Student Folders', href: '/student-folders', icon: FolderOpen, roles: ['case_manager', 'admin', 'org_admin'] },
+    ],
+  },
+  {
+    id: 'people',
+    label: 'People',
+    items: [
+      { label: 'User Management', href: '/admin/users', icon: Shield, roles: ['admin'] },
+      { label: 'Case Managers', href: '/admin/case-managers', icon: UserCog, roles: ['admin', 'org_admin'] },
+      { label: 'Organizations', href: '/admin/organizations', icon: Building2, roles: ['admin'] },
+    ],
+  },
+  {
+    id: 'engagement',
+    label: 'Engagement',
+    items: [
+      { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: ['case_manager', 'admin', 'org_admin'] },
+      { label: 'QR Codes', href: '/admin/qr-codes', icon: QrCode, roles: ['admin', 'org_admin'] },
+    ],
+  },
+  {
+    id: 'insights',
+    label: 'Insights',
+    items: [
+      { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin', 'org_admin'] },
+      { label: 'Reports', href: '/reports', icon: FileBarChart, roles: ['case_manager', 'admin', 'org_admin'] },
+      { label: 'Impact Analytics', href: '/admin/impact', icon: Sparkles, roles: ['admin', 'org_admin'] },
+    ],
+  },
+  {
+    id: 'time',
+    label: 'Time',
+    items: [
+      { label: 'Time Tracking', href: '/time-tracking', icon: Timer, roles: ['case_manager'] },
+      { label: 'Time Reports', href: '/admin/time-tracking', icon: Timer, roles: ['admin', 'org_admin'] },
+    ],
+  },
+  {
+    id: 'compliance',
+    label: 'Compliance',
+    items: [
+      { label: 'NDA', href: '/admin/nda', icon: FileText, roles: ['admin'] },
+    ],
+  },
 ];
 
 const bottomNavItems: NavItem[] = [
   { label: 'Help Center', href: '/support', icon: HelpCircle, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
+  { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
 ];
+
+// Flat list used for breadcrumb lookups
+const navItems: NavItem[] = navGroups.flatMap(g => g.items);
 
 export function SidebarLayout({ children }: SidebarLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
