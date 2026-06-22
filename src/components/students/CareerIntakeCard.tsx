@@ -124,7 +124,11 @@ function Field({ label, value, multiline }: { label: string; value: string | nul
   );
 }
 
-function MultiCheck({ options, value, onChange }: { options: string[]; value: string[]; onChange: (v: string[]) => void }) {
+function MultiCheck({ options, value, onChange }: { options: string[]; value: string[] | null | undefined; onChange: (v: string[]) => void }) {
+  const safe = value ?? [];
+  return _MultiCheckImpl({ options, value: safe, onChange });
+}
+function _MultiCheckImpl({ options, value, onChange }: { options: string[]; value: string[]; onChange: (v: string[]) => void }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
       {options.map((opt) => {
@@ -234,7 +238,7 @@ function CareerIntakeDialog({
           <div>
             <Label className="text-xs mb-1 block">Assistance areas</Label>
             <MultiCheck options={ASSISTANCE_AREAS} value={form.assistance_areas} onChange={(v) => setForm({ ...form, assistance_areas: v })} />
-            {form.assistance_areas.includes('Changing my major/career path') && (
+            {(form.assistance_areas ?? []).includes('Changing my major/career path') && (
               <div className="mt-2">
                 <Label className="text-xs">Current major</Label>
                 <Input value={form.current_major} onChange={(e) => setForm({ ...form, current_major: e.target.value })} />
