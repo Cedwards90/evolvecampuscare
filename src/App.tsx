@@ -57,6 +57,9 @@ import ImpactDashboard from "./pages/admin/ImpactDashboard";
 import AdminStudentSubmissions from "./pages/admin/AdminStudentSubmissions";
 import TimeTracking from "./pages/TimeTracking";
 import TimeTrackingAdmin from "./pages/admin/TimeTrackingAdmin";
+import CareerIntakeOnboarding from "./pages/onboarding/CareerIntakeOnboarding";
+import CmfBasicsOnboarding from "./pages/onboarding/CmfBasicsOnboarding";
+import PersonalityQuizOnboarding from "./pages/onboarding/PersonalityQuizOnboarding";
 
 // Create query client outside component to ensure stable reference.
 // Defaults tuned to avoid stale UI after mutations or returning to a tab,
@@ -310,9 +313,24 @@ function App() {
                   <IntakeSurvey />
                 </ProtectedRoute>
               } />
-                  
-                  {/* Catch-all route */}
-                  <Route path="*" element={<NotFound />} />
+              <Route path="/onboarding/career-intake" element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <CareerIntakeOnboarding />
+                </ProtectedRoute>
+              } />
+              <Route path="/onboarding/cmf-basics" element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <CmfBasicsOnboarding />
+                </ProtectedRoute>
+              } />
+              <Route path="/onboarding/personality-quiz" element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <PersonalityQuizOnboarding />
+                </ProtectedRoute>
+              } />
+
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
                 </Routes>
                 </TooltipProvider>
                 </GlobalFiltersProvider>
