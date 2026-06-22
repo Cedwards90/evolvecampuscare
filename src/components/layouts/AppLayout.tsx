@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
+import { ClockInPrompt } from '@/components/time/ClockInPrompt';
 import { cn } from '@/lib/utils';
 import type { AppRole } from '@/types/database';
 
