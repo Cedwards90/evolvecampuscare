@@ -54,7 +54,10 @@ export default function CmfBasicsOnboarding() {
     try {
       const { error: fileErr } = await supabase
         .from('student_files')
-        .update({ primary_reason_for_contact: reason.trim() })
+        .update({
+          primary_reason_for_contact: reason.trim(),
+          cmf_identified_needs: needs,
+        } as any)
         .eq('student_id', user!.id);
       if (fileErr) throw fileErr;
 
@@ -63,20 +66,6 @@ export default function CmfBasicsOnboarding() {
         .update({ cmf_preferred_contact_type: contactType } as any)
         .eq('user_id', user!.id);
       if (profErr) throw profErr;
-
-      // Seed an initial CMF case-note entry so identified needs show up in the student folder
-      if (needs.length > 0) {
-        await (supabase as any).from('file_notes').insert({
-          student_id: user!.id,
-          author_id: user!.id,
-          note_type: 'intake',
-          title: 'Initial CMF needs (self-reported)',
-          content: reason.trim(),
-          contact_date: new Date().toISOString().slice(0, 10),
-          contact_type: contactType,
-          identified_needs: needs,
-        });
-      }
 
       await qc.invalidateQueries({ queryKey: ['onboarding-status'] });
       await qc.invalidateQueries({ queryKey: ['student-file', user?.id] });
