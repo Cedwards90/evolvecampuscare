@@ -564,25 +564,6 @@ export default function StudentDetail() {
             <CareerIntakeCard studentId={id!} canEdit={isStaff} />
           </TabsContent>
 
-          {/* Transfer & Records Tab */}
-          {role !== 'student' && (
-            <TabsContent value="transfers" className="space-y-4">
-              {(role === 'admin' || role === 'org_admin') && (
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <h2 className="text-lg font-semibold">Participant transfers</h2>
-                    <p className="text-sm text-muted-foreground">Chain of custody for handoffs between organizations.</p>
-                  </div>
-                  <InitiateTransferDialog
-                    studentId={id!}
-                    fromOrgId={student.profile?.organization_id ?? null}
-                  />
-                </div>
-              )}
-              <ParticipantTransfersSection studentId={id!} />
-              <GenerateParticipantRecordCard studentId={id!} />
-            </TabsContent>
-          )}
         </Tabs>
 
         {/* Edit Dates Dialog */}
