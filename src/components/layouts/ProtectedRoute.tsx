@@ -50,6 +50,16 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to={`/accept-nda${redirect}`} replace />;
   }
 
+  // Student onboarding gate — students must complete all onboarding steps before
+  // accessing any non-onboarding protected page. Staff/admin/org_admin bypass.
+  const onboarding = useOnboardingStatus();
+  if (role === 'student' && !onboarding.loading && onboarding.nextStep) {
+    const targetPath = ONBOARDING_STEP_PATH[onboarding.nextStep];
+    if (!ONBOARDING_PATHS.has(location.pathname) && location.pathname !== targetPath) {
+      return <Navigate to={targetPath} replace />;
+    }
+  }
+
   if (allowedRoles && role && !allowedRoles.includes(role)) {
     return <Navigate to="/dashboard" replace />;
   }
