@@ -237,8 +237,8 @@ export async function fetchImpactAnalytics(filters: ImpactFilters): Promise<Impa
         };
       });
 
-      // 6. Outputs: certifications, plans, transfers.
-      const [certRes, planRes, exportRes] = await Promise.all([
+      // 6. Outputs: certifications, plans.
+      const [certRes, planRes] = await Promise.all([
         inStudents(
           supabase
             .from('student_certifications')
@@ -252,13 +252,6 @@ export async function fetchImpactAnalytics(filters: ImpactFilters): Promise<Impa
             .select('id, student_id, updated_at')
             .gte('updated_at', fromIso)
             .lte('updated_at', toIso),
-        ),
-        inStudents(
-          supabase
-            .from('participant_record_exports')
-            .select('id, student_id, purpose, created_at')
-            .gte('created_at', fromIso)
-            .lte('created_at', toIso),
         ),
       ]);
       const certifications = (certRes.data || []) as any[];
@@ -466,7 +459,7 @@ export async function fetchImpactAnalytics(filters: ImpactFilters): Promise<Impa
             .map(([name, count]) => ({ name, count }))
             .sort((a, b) => b.count - a.count),
           postGradPlans: (planRes.data || []).length,
-          recordsTransferred: (exportRes.data || []).length,
+          recordsTransferred: 0,
         },
         outcomes: {
           placed,

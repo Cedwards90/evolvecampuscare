@@ -52,7 +52,7 @@ import StudentProgressReportPage from "./pages/StudentProgressReport";
 import NotFound from "./pages/NotFound";
 import AcceptNda from "./pages/AcceptNda";
 import AdminNda from "./pages/admin/AdminNda";
-import TransitionsDashboard from "./pages/admin/TransitionsDashboard";
+
 import ImpactDashboard from "./pages/admin/ImpactDashboard";
 import AdminStudentSubmissions from "./pages/admin/AdminStudentSubmissions";
 import TimeTracking from "./pages/TimeTracking";
@@ -228,11 +228,6 @@ function App() {
             <Route path="/admin/nda" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminNda />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/transitions" element={
-              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
-                <TransitionsDashboard />
               </ProtectedRoute>
             } />
             <Route path="/admin/impact" element={
