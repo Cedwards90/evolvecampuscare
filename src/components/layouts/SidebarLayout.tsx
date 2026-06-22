@@ -188,6 +188,63 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
   const isActive = (href: string) => location.pathname === href;
 
+  // Track which nav groups are open. Persists per browser.
+  const STORAGE_KEY = 'sidebar:openGroups';
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Auto-open the group that contains the active route.
+  useEffect(() => {
+    const active = filteredNavGroups.find(g => g.items.some(i => isActive(i.href)));
+    if (active && !openGroups[active.id]) {
+      setOpenGroups(prev => ({ ...prev, [active.id]: true }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, role]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(openGroups));
+    } catch {
+      /* ignore */
+    }
+  }, [openGroups]);
+
+  const toggleGroup = (id: string) =>
+    setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
+
+  const renderNavLink = (item: NavItem, onClick?: () => void, compact = false) => (
+    <Link
+      to={item.href}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+        isActive(item.href)
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1"
+      )}
+    >
+      <item.icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200" />
+      {!compact && (
+        <>
+          <span className="flex-1">{item.label}</span>
+          {item.badge && item.badge > 0 && (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+              {item.badge > 9 ? '9+' : item.badge}
+            </span>
+          )}
+        </>
+      )}
+    </Link>
+  );
+
   return (
     <div className="flex min-h-screen bg-muted/30 max-w-full overflow-x-hidden">
       {/* Sidebar */}
