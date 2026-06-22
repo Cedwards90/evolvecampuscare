@@ -57,6 +57,9 @@ import ImpactDashboard from "./pages/admin/ImpactDashboard";
 import AdminStudentSubmissions from "./pages/admin/AdminStudentSubmissions";
 import TimeTracking from "./pages/TimeTracking";
 import TimeTrackingAdmin from "./pages/admin/TimeTrackingAdmin";
+import CareerIntakeOnboarding from "./pages/onboarding/CareerIntakeOnboarding";
+import CmfBasicsOnboarding from "./pages/onboarding/CmfBasicsOnboarding";
+import PersonalityQuizOnboarding from "./pages/onboarding/PersonalityQuizOnboarding";
 
 // Create query client outside component to ensure stable reference.
 // Defaults tuned to avoid stale UI after mutations or returning to a tab,
