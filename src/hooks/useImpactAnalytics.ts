@@ -459,7 +459,7 @@ export async function fetchImpactAnalytics(filters: ImpactFilters): Promise<Impa
             .map(([name, count]) => ({ name, count }))
             .sort((a, b) => b.count - a.count),
           postGradPlans: (planRes.data || []).length,
-          recordsTransferred: (exportRes.data || []).length,
+          recordsTransferred: 0,
         },
         outcomes: {
           placed,
