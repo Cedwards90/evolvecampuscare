@@ -351,51 +351,34 @@ export default function StudentDetail() {
         <GenerateStudentReportCard studentId={id} />
 
         {/* Tabs */}
-        <Tabs defaultValue="requests" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="requests" className="gap-2">
-              <FileText className="h-4 w-4" />
-              Requests ({student.requests.length})
-            </TabsTrigger>
-            <TabsTrigger value="appointments" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              Appointments ({student.appointments.length})
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="gap-2">
-              <Clock className="h-4 w-4" />
-              Activity
-            </TabsTrigger>
-            <TabsTrigger value="file" className="gap-2">
-              <StickyNote className="h-4 w-4" />
-              Student File
-            </TabsTrigger>
-            <TabsTrigger value="case-notes" className="gap-2">
-              <NotebookPen className="h-4 w-4" />
-              Case Notes
-            </TabsTrigger>
-            <TabsTrigger value="checkins" className="gap-2">
-              <Smile className="h-4 w-4" />
-              Check-Ins
-            </TabsTrigger>
-            <TabsTrigger value="grad-plan" className="gap-2">
-              <GraduationCap className="h-4 w-4" />
-              Post-Grad Plan
-            </TabsTrigger>
-            <TabsTrigger value="certifications" className="gap-2">
-              <Award className="h-4 w-4" />
-              Certifications
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="gap-2">
-              <Brain className="h-4 w-4" />
-              Profile &amp; Intake
-            </TabsTrigger>
-            {role !== 'student' && (
-              <TabsTrigger value="transfers" className="gap-2">
-                <ArrowRightLeft className="h-4 w-4" />
-                Transfer &amp; Records
-              </TabsTrigger>
-            )}
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          {(() => {
+            const tabOptions = [
+              { value: 'requests', label: `Requests (${student.requests.length})` },
+              { value: 'appointments', label: `Appointments (${student.appointments.length})` },
+              { value: 'activity', label: 'Activity' },
+              { value: 'file', label: 'Student File' },
+              { value: 'case-notes', label: 'Case Notes' },
+              { value: 'checkins', label: 'Check-Ins' },
+              { value: 'grad-plan', label: 'Post-Grad Plan' },
+              { value: 'certifications', label: 'Certifications' },
+              { value: 'profile', label: 'Profile & Intake' },
+              ...(role !== 'student' ? [{ value: 'transfers', label: 'Transfer & Records' }] : []),
+            ];
+            return (
+              <Select value={activeTab} onValueChange={setActiveTab}>
+                <SelectTrigger className="w-full sm:w-72">
+                  <SelectValue placeholder="Select section" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tabOptions.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            );
+          })()}
+
 
           {/* Requests Tab */}
           <TabsContent value="requests" className="space-y-4">
