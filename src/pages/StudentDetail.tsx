@@ -381,6 +381,10 @@ export default function StudentDetail() {
               <Award className="h-4 w-4" />
               Certifications
             </TabsTrigger>
+            <TabsTrigger value="profile" className="gap-2">
+              <Brain className="h-4 w-4" />
+              Profile &amp; Intake
+            </TabsTrigger>
             {role !== 'student' && (
               <TabsTrigger value="transfers" className="gap-2">
                 <ArrowRightLeft className="h-4 w-4" />
