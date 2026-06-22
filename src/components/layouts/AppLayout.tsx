@@ -207,6 +207,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           © {new Date().getFullYear()} Evolve Foundation. All rights reserved.
         </div>
       </footer>
+      <ClockInPrompt />
     </div>
   );
 }
