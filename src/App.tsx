@@ -230,11 +230,6 @@ function App() {
                 <AdminNda />
               </ProtectedRoute>
             } />
-            <Route path="/admin/transitions" element={
-              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
-                <TransitionsDashboard />
-              </ProtectedRoute>
-            } />
             <Route path="/admin/impact" element={
               <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <ImpactDashboard />
