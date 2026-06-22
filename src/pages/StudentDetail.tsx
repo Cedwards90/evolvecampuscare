@@ -93,6 +93,7 @@ export default function StudentDetail() {
   const [gradDate, setGradDate] = useState<Date | undefined>();
   const [placementDate, setPlacementDate] = useState<Date | undefined>();
   const [savingDates, setSavingDates] = useState(false);
+  const [activeTab, setActiveTab] = useState('requests');
 
   const isStaff = role === 'admin' || role === 'case_manager';
 
