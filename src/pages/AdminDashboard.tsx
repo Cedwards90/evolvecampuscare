@@ -10,8 +10,10 @@ import {
   UserCog,
   MessageSquare,
   CheckSquare,
-  UserCheck
+  UserCheck,
+  ChevronDown
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { AssignCaseManagerDialog } from '@/components/admin/AssignCaseManagerDialog';
@@ -328,8 +330,13 @@ export default function AdminDashboard() {
         </section>
 
         {/* Case Manager Workloads */}
-        <section className="space-y-4">
-          <h2 className="font-display text-h3">Case Manager Workloads</h2>
+        <Collapsible defaultOpen asChild>
+          <section className="space-y-4">
+            <CollapsibleTrigger className="group flex w-full items-center justify-between gap-2 text-left">
+              <h2 className="font-display text-h3">Case Manager Workloads</h2>
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
           {caseManagers.length === 0 ? (
             <EmptyState
               icon={Users}
@@ -401,7 +408,10 @@ export default function AdminDashboard() {
               })}
             </div>
           )}
-        </section>
+            </CollapsibleContent>
+          </section>
+        </Collapsible>
+
 
         {/* Bulk Assignment Panel for Unassigned Requests */}
         {unassignedRequests.length > 0 && (
@@ -499,14 +509,18 @@ export default function AdminDashboard() {
 
         {/* Escalated Requests */}
         {criticalRequests.filter(r => r.status === 'escalated').length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-h3">Escalated Requests</h2>
-              <Badge variant="outline" className="text-destructive border-destructive">
-                {criticalRequests.filter(r => r.status === 'escalated').length} requiring attention
-              </Badge>
-            </div>
-            
+          <Collapsible defaultOpen asChild>
+            <section className="space-y-4">
+              <CollapsibleTrigger className="group flex w-full items-center justify-between gap-2 text-left">
+                <div className="flex items-center gap-3">
+                  <h2 className="font-display text-h3">Escalated Requests</h2>
+                  <Badge variant="outline" className="text-destructive border-destructive">
+                    {criticalRequests.filter(r => r.status === 'escalated').length} requiring attention
+                  </Badge>
+                </div>
+                <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
             <Card className="border border-border/50">
               <Table>
                 <TableHeader>
@@ -567,13 +581,21 @@ export default function AdminDashboard() {
                 </TableBody>
               </Table>
             </Card>
-          </section>
+              </CollapsibleContent>
+            </section>
+          </Collapsible>
         )}
 
+
         {/* All Requests Table */}
-        <section className="space-y-4">
-          <h2 className="font-display text-h3">All Requests</h2>
-          
+        <Collapsible defaultOpen asChild>
+          <section className="space-y-4">
+            <CollapsibleTrigger className="group flex w-full items-center justify-between gap-2 text-left">
+              <h2 className="font-display text-h3">All Requests</h2>
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+
           {/* Filters */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative flex-1">
@@ -671,20 +693,30 @@ export default function AdminDashboard() {
               </Table>
             </Card>
           )}
-        </section>
+            </CollapsibleContent>
+          </section>
+        </Collapsible>
 
         {/* Student Assignments Section */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <UserCheck className="h-5 w-5 text-primary" />
-            <h2 className="font-display text-h3">Student Assignments</h2>
-          </div>
-          <Card className="border border-border/50">
-            <CardContent className="pt-6">
-              <StudentAssignmentsTable />
-            </CardContent>
-          </Card>
-        </section>
+        <Collapsible defaultOpen asChild>
+          <section className="space-y-4">
+            <CollapsibleTrigger className="group flex w-full items-center justify-between gap-2 text-left">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-primary" />
+                <h2 className="font-display text-h3">Student Assignments</h2>
+              </div>
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+              <Card className="border border-border/50">
+                <CardContent className="pt-6">
+                  <StudentAssignmentsTable />
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </section>
+        </Collapsible>
+
 
         <ExpiringCertificationsCard />
 
