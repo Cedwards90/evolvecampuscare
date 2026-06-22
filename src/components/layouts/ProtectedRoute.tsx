@@ -2,6 +2,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useCurrentNda, useMyNdaAcceptance } from '@/hooks/useNda';
+import { useOnboardingStatus, ONBOARDING_PATHS, ONBOARDING_STEP_PATH } from '@/hooks/useOnboardingStatus';
 import type { AppRole } from '@/types/database';
 
 interface ProtectedRouteProps {
