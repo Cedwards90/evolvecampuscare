@@ -37,8 +37,8 @@ export function useStudentPersonality(studentId: string | undefined) {
   const query = useQuery({
     queryKey: ['personality-profile', studentId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('student_personality_profiles' as any)
+      const { data, error } = await (supabase as any)
+        .from('student_personality_profiles')
         .select('*')
         .eq('student_id', studentId!)
         .maybeSingle();
