@@ -1476,6 +1476,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          cmf_preferred_contact_type: string | null
           cohort_id: string | null
           cohort_start_date: string | null
           created_at: string
@@ -1491,6 +1492,7 @@ export type Database = {
           mfa_exempt_at: string | null
           mfa_exempt_by: string | null
           mfa_exempt_reason: string | null
+          onboarding_completed_at: string | null
           organization_id: string | null
           phone: string | null
           placement_date: string | null
@@ -1505,6 +1507,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          cmf_preferred_contact_type?: string | null
           cohort_id?: string | null
           cohort_start_date?: string | null
           created_at?: string
@@ -1520,6 +1523,7 @@ export type Database = {
           mfa_exempt_at?: string | null
           mfa_exempt_by?: string | null
           mfa_exempt_reason?: string | null
+          onboarding_completed_at?: string | null
           organization_id?: string | null
           phone?: string | null
           placement_date?: string | null
@@ -1534,6 +1538,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          cmf_preferred_contact_type?: string | null
           cohort_id?: string | null
           cohort_start_date?: string | null
           created_at?: string
@@ -1549,6 +1554,7 @@ export type Database = {
           mfa_exempt_at?: string | null
           mfa_exempt_by?: string | null
           mfa_exempt_reason?: string | null
+          onboarding_completed_at?: string | null
           organization_id?: string | null
           phone?: string | null
           placement_date?: string | null
