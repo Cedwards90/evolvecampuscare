@@ -22,7 +22,6 @@ import {
   UserCog,
   FileBarChart,
   QrCode,
-  ArrowRightLeft,
   Sparkles,
   ClipboardCheck,
   Timer,
