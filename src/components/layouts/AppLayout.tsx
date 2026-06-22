@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { ClockInPrompt } from '@/components/time/ClockInPrompt';
+import { ShiftHeaderWidget } from '@/components/time/ShiftHeaderWidget';
 import { cn } from '@/lib/utils';
 import type { AppRole } from '@/types/database';
 
@@ -99,6 +100,9 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2">
+            {/* Active shift widget (case managers) */}
+            <ShiftHeaderWidget />
+
             {/* Offline indicator */}
             {!isOnline && <OfflineIndicator />}
 
