@@ -19,7 +19,7 @@ import {
   Award,
   ClipboardCheck,
 } from 'lucide-react';
-import { StickyNote, PenLine, Building2, NotebookPen, Trash2, X, Save } from 'lucide-react';
+import { StickyNote, PenLine, Building2, NotebookPen, Trash2, X, Save, Brain } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
