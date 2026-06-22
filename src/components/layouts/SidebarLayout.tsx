@@ -296,34 +296,51 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                   )}
                 </div>
               )}
-              <ul className="space-y-1">
-                {filteredNavItems.map((item) => (
-                  <li key={item.href}>
-                    <Link
-                      to={item.href}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                        isActive(item.href)
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1"
-                      )}
-                    >
-                      <item.icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200" />
-                      {!sidebarCollapsed && (
-                        <>
-                          <span className="flex-1">{item.label}</span>
-                          {item.badge && item.badge > 0 && (
-                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
-                              {item.badge > 9 ? '9+' : item.badge}
-                            </span>
-                          )}
-                          {!item.badge && <ChevronRight className="h-4 w-4 opacity-50" />}
-                        </>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              {sidebarCollapsed || !role ? (
+                <ul className="space-y-1">
+                  {filteredNavItems.map((item) => (
+                    <li key={item.href}>{renderNavLink(item, undefined, sidebarCollapsed)}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="space-y-3">
+                  {filteredNavGroups.map((group) => {
+                    // Collapse the wrapper for single-item groups
+                    if (group.items.length === 1) {
+                      return (
+                        <ul key={group.id} className="space-y-1">
+                          <li>{renderNavLink(group.items[0])}</li>
+                        </ul>
+                      );
+                    }
+                    const isOpen = openGroups[group.id] ?? false;
+                    return (
+                      <div key={group.id}>
+                        <button
+                          type="button"
+                          onClick={() => toggleGroup(group.id)}
+                          className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-foreground transition-colors"
+                        >
+                          <span>{group.label}</span>
+                          <ChevronDown
+                            className={cn(
+                              "h-3.5 w-3.5 transition-transform duration-200",
+                              isOpen ? "rotate-0" : "-rotate-90"
+                            )}
+                          />
+                        </button>
+                        {isOpen && (
+                          <ul className="mt-1 space-y-1">
+                            {group.items.map((item) => (
+                              <li key={item.href}>{renderNavLink(item)}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </>
           )}
         </nav>
