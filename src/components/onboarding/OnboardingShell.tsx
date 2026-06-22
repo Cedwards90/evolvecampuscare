@@ -22,7 +22,7 @@ export function OnboardingShell({ step, totalSteps = 5, title, description, chil
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>Welcome to Evolve</span>
             <span>
-              Step {step} of {totalSteps} \u00b7 {STEP_LABELS[step - 1]}
+              Step {step} of {totalSteps} · {STEP_LABELS[step - 1]}
             </span>
           </div>
           <Progress value={pct} className="h-2" />
