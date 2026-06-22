@@ -10,8 +10,10 @@ import {
   UserCog,
   MessageSquare,
   CheckSquare,
-  UserCheck
+  UserCheck,
+  ChevronDown
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { AssignCaseManagerDialog } from '@/components/admin/AssignCaseManagerDialog';
