@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+
 import { useStudentPersonality } from '@/hooks/useStudentPersonality';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -18,7 +19,7 @@ import {
 } from '@/lib/personalityQuiz';
 
 export default function PersonalityQuizOnboarding() {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -65,8 +66,8 @@ export default function PersonalityQuizOnboarding() {
           .from('profiles')
           .update({ onboarding_completed_at: new Date().toISOString() } as any)
           .eq('user_id', user!.id);
+        await refreshProfile();
         await qc.invalidateQueries({ queryKey: ['onboarding-status'] });
-        await qc.invalidateQueries({ queryKey: ['auth-profile'] });
         setResult(score);
       } catch (e: any) {
         toast({ title: 'Could not save quiz', description: e.message, variant: 'destructive' });

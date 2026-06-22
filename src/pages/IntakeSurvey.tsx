@@ -151,7 +151,7 @@ export default function IntakeSurvey() {
           organizationId: profile?.organization_id ?? null,
         });
         toast({ title: 'Thank you!', description: 'Your responses have been saved. We are here for you.' });
-        navigate('/dashboard');
+        navigate('/onboarding/career-intake');
       }
     } catch {
       toast({ title: 'Error', description: 'Failed to save. Please try again.', variant: 'destructive' });
