@@ -429,25 +429,34 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                   )}
                 </div>
               )}
-              <ul className="space-y-1">
-                {filteredNavItems.map((item) => (
-                  <li key={item.href}>
-                    <Link
-                      to={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                        isActive(item.href)
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              {!role ? (
+                <ul className="space-y-1">
+                  {filteredNavItems.map((item) => (
+                    <li key={item.href}>
+                      {renderNavLink(item, () => setMobileMenuOpen(false))}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="space-y-4">
+                  {filteredNavGroups.map((group) => (
+                    <div key={group.id}>
+                      {group.items.length > 1 && (
+                        <div className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                          {group.label}
+                        </div>
                       )}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.label}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+                      <ul className="space-y-1">
+                        {group.items.map((item) => (
+                          <li key={item.href}>
+                            {renderNavLink(item, () => setMobileMenuOpen(false))}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </nav>
