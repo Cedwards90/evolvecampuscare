@@ -20,6 +20,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   const { data: nda, isLoading: ndaLoading } = useCurrentNda();
   const { data: acceptance, isLoading: accLoading, isFetching: accFetching } = useMyNdaAcceptance(nda?.id);
+  const onboarding = useOnboardingStatus();
 
   if (isLoading) {
     return (
