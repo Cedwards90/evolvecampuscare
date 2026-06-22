@@ -221,6 +221,87 @@ export type Database = {
         }
         Relationships: []
       }
+      career_intake_responses: {
+        Row: {
+          accomplishment_goal: string | null
+          assistance_areas: string[]
+          availability: Json
+          career_influences: string | null
+          completed_at: string | null
+          considered_majors: string | null
+          created_at: string
+          created_by: string | null
+          current_major: string | null
+          dream_career: string | null
+          educational_goal: string | null
+          favorite_subjects: string | null
+          has_computer_access: boolean | null
+          id: string
+          internet_skill_level: string | null
+          least_favorite_subjects: string | null
+          obstacles: string[]
+          prior_assessments: string | null
+          referral_sources: string[]
+          strengths_skills: string | null
+          student_id: string
+          student_status: string | null
+          updated_at: string
+          work_experience: string | null
+        }
+        Insert: {
+          accomplishment_goal?: string | null
+          assistance_areas?: string[]
+          availability?: Json
+          career_influences?: string | null
+          completed_at?: string | null
+          considered_majors?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_major?: string | null
+          dream_career?: string | null
+          educational_goal?: string | null
+          favorite_subjects?: string | null
+          has_computer_access?: boolean | null
+          id?: string
+          internet_skill_level?: string | null
+          least_favorite_subjects?: string | null
+          obstacles?: string[]
+          prior_assessments?: string | null
+          referral_sources?: string[]
+          strengths_skills?: string | null
+          student_id: string
+          student_status?: string | null
+          updated_at?: string
+          work_experience?: string | null
+        }
+        Update: {
+          accomplishment_goal?: string | null
+          assistance_areas?: string[]
+          availability?: Json
+          career_influences?: string | null
+          completed_at?: string | null
+          considered_majors?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_major?: string | null
+          dream_career?: string | null
+          educational_goal?: string | null
+          favorite_subjects?: string | null
+          has_computer_access?: boolean | null
+          id?: string
+          internet_skill_level?: string | null
+          least_favorite_subjects?: string | null
+          obstacles?: string[]
+          prior_assessments?: string | null
+          referral_sources?: string[]
+          strengths_skills?: string | null
+          student_id?: string
+          student_status?: string | null
+          updated_at?: string
+          work_experience?: string | null
+        }
+        Relationships: []
+      }
       certification_catalog: {
         Row: {
           category: string | null
@@ -462,30 +543,51 @@ export type Database = {
       file_notes: {
         Row: {
           author_id: string
+          contact_date: string | null
+          contact_type: string | null
           content: string
           created_at: string
+          duration_minutes: number | null
           id: string
+          identified_needs: number[]
+          next_steps: string | null
           note_type: string
+          referral_agency: string | null
+          referral_contact: string | null
           student_id: string
           title: string | null
           updated_at: string
         }
         Insert: {
           author_id: string
+          contact_date?: string | null
+          contact_type?: string | null
           content: string
           created_at?: string
+          duration_minutes?: number | null
           id?: string
+          identified_needs?: number[]
+          next_steps?: string | null
           note_type?: string
+          referral_agency?: string | null
+          referral_contact?: string | null
           student_id: string
           title?: string | null
           updated_at?: string
         }
         Update: {
           author_id?: string
+          contact_date?: string | null
+          contact_type?: string | null
           content?: string
           created_at?: string
+          duration_minutes?: number | null
           id?: string
+          identified_needs?: number[]
+          next_steps?: string | null
           note_type?: string
+          referral_agency?: string | null
+          referral_contact?: string | null
           student_id?: string
           title?: string | null
           updated_at?: string
@@ -2039,6 +2141,9 @@ export type Database = {
           created_at: string
           id: string
           intake_completed_at: string | null
+          mentor_name: string | null
+          primary_reason_for_contact: string | null
+          received_on_caseload_date: string | null
           student_id: string
           updated_at: string
         }
@@ -2046,6 +2151,9 @@ export type Database = {
           created_at?: string
           id?: string
           intake_completed_at?: string | null
+          mentor_name?: string | null
+          primary_reason_for_contact?: string | null
+          received_on_caseload_date?: string | null
           student_id: string
           updated_at?: string
         }
@@ -2053,8 +2161,92 @@ export type Database = {
           created_at?: string
           id?: string
           intake_completed_at?: string | null
+          mentor_name?: string | null
+          primary_reason_for_contact?: string | null
+          received_on_caseload_date?: string | null
           student_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      student_personality_profiles: {
+        Row: {
+          assessed_on: string | null
+          assessment_source: string | null
+          assessment_url: string | null
+          attachment_path: string | null
+          created_at: string
+          created_by: string | null
+          energy_label: string | null
+          energy_pct: number | null
+          id: string
+          identity_label: string | null
+          identity_pct: number | null
+          mind_label: string | null
+          mind_pct: number | null
+          nature_label: string | null
+          nature_pct: number | null
+          strengths: string[]
+          student_id: string
+          summary: string | null
+          tactics_label: string | null
+          tactics_pct: number | null
+          type_code: string | null
+          type_name: string | null
+          updated_at: string
+          weaknesses: string[]
+        }
+        Insert: {
+          assessed_on?: string | null
+          assessment_source?: string | null
+          assessment_url?: string | null
+          attachment_path?: string | null
+          created_at?: string
+          created_by?: string | null
+          energy_label?: string | null
+          energy_pct?: number | null
+          id?: string
+          identity_label?: string | null
+          identity_pct?: number | null
+          mind_label?: string | null
+          mind_pct?: number | null
+          nature_label?: string | null
+          nature_pct?: number | null
+          strengths?: string[]
+          student_id: string
+          summary?: string | null
+          tactics_label?: string | null
+          tactics_pct?: number | null
+          type_code?: string | null
+          type_name?: string | null
+          updated_at?: string
+          weaknesses?: string[]
+        }
+        Update: {
+          assessed_on?: string | null
+          assessment_source?: string | null
+          assessment_url?: string | null
+          attachment_path?: string | null
+          created_at?: string
+          created_by?: string | null
+          energy_label?: string | null
+          energy_pct?: number | null
+          id?: string
+          identity_label?: string | null
+          identity_pct?: number | null
+          mind_label?: string | null
+          mind_pct?: number | null
+          nature_label?: string | null
+          nature_pct?: number | null
+          strengths?: string[]
+          student_id?: string
+          summary?: string | null
+          tactics_label?: string | null
+          tactics_pct?: number | null
+          type_code?: string | null
+          type_name?: string | null
+          updated_at?: string
+          weaknesses?: string[]
         }
         Relationships: []
       }
