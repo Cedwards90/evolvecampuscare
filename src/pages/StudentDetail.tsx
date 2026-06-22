@@ -73,6 +73,10 @@ import { ParticipantTransfersSection } from '@/components/transfers/ParticipantT
 import { ArrowRightLeft, Users as UsersIcon } from 'lucide-react';
 import { useOrgCohorts, useAssignStudentCohort } from '@/hooks/useCohorts';
 import { useMyOrgAdminOrgs } from '@/hooks/useOrgAdmins';
+import { PersonalityCard } from '@/components/students/PersonalityCard';
+import { CareerIntakeCard } from '@/components/students/CareerIntakeCard';
+import { CMF_NEEDS, CMF_CONTACT_TYPES, needLabel } from '@/lib/cmfNeeds';
+import { Checkbox } from '@/components/ui/checkbox';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
