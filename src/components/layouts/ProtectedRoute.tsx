@@ -53,7 +53,6 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   // Student onboarding gate — students must complete all onboarding steps before
   // accessing any non-onboarding protected page. Staff/admin/org_admin bypass.
-  const onboarding = useOnboardingStatus();
   if (role === 'student' && !onboarding.loading && onboarding.nextStep) {
     const targetPath = ONBOARDING_STEP_PATH[onboarding.nextStep];
     if (!ONBOARDING_PATHS.has(location.pathname) && location.pathname !== targetPath) {
