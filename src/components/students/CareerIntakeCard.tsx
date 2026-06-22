@@ -238,7 +238,7 @@ function CareerIntakeDialog({
           <div>
             <Label className="text-xs mb-1 block">Assistance areas</Label>
             <MultiCheck options={ASSISTANCE_AREAS} value={form.assistance_areas} onChange={(v) => setForm({ ...form, assistance_areas: v })} />
-            {form.assistance_areas.includes('Changing my major/career path') && (
+            {(form.assistance_areas ?? []).includes('Changing my major/career path') && (
               <div className="mt-2">
                 <Label className="text-xs">Current major</Label>
                 <Input value={form.current_major} onChange={(e) => setForm({ ...form, current_major: e.target.value })} />
