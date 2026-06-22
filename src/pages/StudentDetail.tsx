@@ -578,6 +578,12 @@ export default function StudentDetail() {
             <CertificationsSection studentId={id!} canManage={role !== 'student'} />
           </TabsContent>
 
+          {/* Profile & Intake Tab */}
+          <TabsContent value="profile" className="space-y-4">
+            <PersonalityCard studentId={id!} canEdit={isStaff} />
+            <CareerIntakeCard studentId={id!} canEdit={isStaff} />
+          </TabsContent>
+
           {/* Transfer & Records Tab */}
           {role !== 'student' && (
             <TabsContent value="transfers" className="space-y-4">
