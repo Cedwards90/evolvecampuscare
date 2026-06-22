@@ -780,12 +780,7 @@ function StudentFileTab({ studentId, requests }: { studentId: string; requests: 
 }
 
 // ---- Case Notes Tab Component ----
-const NOTE_TYPES: { value: string; label: string }[] = [
-  { value: 'case_note', label: 'Case Note' },
-  { value: 'general', label: 'General' },
-  { value: 'meeting', label: 'Meeting' },
-  { value: 'follow_up', label: 'Follow-up' },
-];
+
 
 function StudentCaseNotesTab({ studentId }: { studentId: string }) {
   const { user, role } = useAuth();
