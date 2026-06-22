@@ -124,7 +124,11 @@ function Field({ label, value, multiline }: { label: string; value: string | nul
   );
 }
 
-function MultiCheck({ options, value, onChange }: { options: string[]; value: string[]; onChange: (v: string[]) => void }) {
+function MultiCheck({ options, value, onChange }: { options: string[]; value: string[] | null | undefined; onChange: (v: string[]) => void }) {
+  const safe = value ?? [];
+  return _MultiCheckImpl({ options, value: safe, onChange });
+}
+function _MultiCheckImpl({ options, value, onChange }: { options: string[]; value: string[]; onChange: (v: string[]) => void }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
       {options.map((opt) => {
