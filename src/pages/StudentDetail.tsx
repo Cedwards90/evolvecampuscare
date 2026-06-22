@@ -791,26 +791,60 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
   const { user, role } = useAuth();
   const { toast } = useToast();
   const { notes, isLoading, addNote, updateNote, deleteNote } = useFileNotes(studentId);
-  const [content, setContent] = useState('');
-  const [title, setTitle] = useState('');
-  const [noteType, setNoteType] = useState('case_note');
+
+  const blank = {
+    content: '',
+    title: '',
+    noteType: 'case_note',
+    contactDate: format(new Date(), 'yyyy-MM-dd'),
+    contactType: '' as string,
+    durationMinutes: '' as string,
+    identifiedNeeds: [] as number[],
+    referralAgency: '',
+    referralContact: '',
+    nextSteps: '',
+  };
+  const [form, setForm] = useState(blank);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState('');
-  const [editTitle, setEditTitle] = useState('');
-  const [editType, setEditType] = useState('case_note');
 
-  const handleAdd = async () => {
-    if (!content.trim()) return;
+  const toggleNeed = (code: number) => {
+    setForm((f) => ({
+      ...f,
+      identifiedNeeds: f.identifiedNeeds.includes(code)
+        ? f.identifiedNeeds.filter((n) => n !== code)
+        : [...f.identifiedNeeds, code].sort((a, b) => a - b),
+    }));
+  };
+
+  const payloadFromForm = () => ({
+    content: form.content.trim(),
+    noteType: form.noteType,
+    title: form.title,
+    contactDate: form.contactDate || null,
+    contactType: form.contactType || null,
+    durationMinutes: form.durationMinutes ? parseInt(form.durationMinutes, 10) : null,
+    identifiedNeeds: form.identifiedNeeds,
+    referralAgency: form.referralAgency,
+    referralContact: form.referralContact,
+    nextSteps: form.nextSteps,
+  });
+
+  const handleSubmit = async () => {
+    if (!form.content.trim()) return;
     setSubmitting(true);
     try {
-      await addNote.mutateAsync({ content: content.trim(), noteType, title });
-      setContent('');
-      setTitle('');
-      setNoteType('case_note');
-      toast({ title: 'Note added' });
+      if (editingId) {
+        await updateNote.mutateAsync({ id: editingId, ...payloadFromForm() });
+        toast({ title: 'Note updated' });
+      } else {
+        await addNote.mutateAsync(payloadFromForm());
+        toast({ title: 'Note added' });
+      }
+      setForm(blank);
+      setEditingId(null);
     } catch (err: any) {
-      toast({ title: 'Could not add note', description: err.message, variant: 'destructive' });
+      toast({ title: 'Could not save note', description: err.message, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -818,26 +852,24 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
 
   const startEdit = (note: any) => {
     setEditingId(note.id);
-    setEditContent(note.content);
-    setEditTitle(note.title || '');
-    setEditType(note.note_type || 'case_note');
+    setForm({
+      content: note.content,
+      title: note.title || '',
+      noteType: note.note_type || 'case_note',
+      contactDate: note.contact_date || format(new Date(note.created_at), 'yyyy-MM-dd'),
+      contactType: note.contact_type || '',
+      durationMinutes: note.duration_minutes != null ? String(note.duration_minutes) : '',
+      identifiedNeeds: note.identified_needs || [],
+      referralAgency: note.referral_agency || '',
+      referralContact: note.referral_contact || '',
+      nextSteps: note.next_steps || '',
+    });
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditContent('');
-    setEditTitle('');
-  };
-
-  const handleUpdate = async (id: string) => {
-    if (!editContent.trim()) return;
-    try {
-      await updateNote.mutateAsync({ id, content: editContent.trim(), noteType: editType, title: editTitle });
-      cancelEdit();
-      toast({ title: 'Note updated' });
-    } catch (err: any) {
-      toast({ title: 'Could not update note', description: err.message, variant: 'destructive' });
-    }
+    setForm(blank);
   };
 
   const handleDelete = async (id: string) => {
@@ -849,8 +881,7 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
     }
   };
 
-  const canModify = (note: any) =>
-    role === 'admin' || (note.author_id === user?.id);
+  const canModify = (note: any) => role === 'admin' || note.author_id === user?.id;
 
   return (
     <div className="space-y-4">
@@ -858,44 +889,89 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <NotebookPen className="h-4 w-4" />
-            Add Case Note
+            {editingId ? 'Edit Case Note' : 'Add Case Note'}
           </CardTitle>
           <CardDescription>
-            Notes are visible to admins and the assigned case manager only.
+            CMF-aligned: capture contact details, identified needs, and any referrals. Visible to admins and the assigned case manager only.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid sm:grid-cols-[180px_1fr] gap-3">
+          <div className="grid sm:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">Type</Label>
-              <Select value={noteType} onValueChange={setNoteType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Label className="text-xs">Date of Contact</Label>
+              <Input type="date" value={form.contactDate} onChange={(e) => setForm({ ...form, contactDate: e.target.value })} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Type of Contact</Label>
+              <Select value={form.contactType} onValueChange={(v) => setForm({ ...form, contactType: v })}>
+                <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
-                  {NOTE_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  {CMF_CONTACT_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Title <span className="text-muted-foreground">(optional)</span></Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short summary..." maxLength={120} />
+              <Label className="text-xs">Duration (min)</Label>
+              <Input type="number" min={0} value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })} placeholder="e.g. 30" />
             </div>
           </div>
+
           <div className="space-y-1">
-            <Label className="text-xs">Note</Label>
+            <Label className="text-xs">Title <span className="text-muted-foreground">(optional)</span></Label>
+            <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Short summary..." maxLength={120} />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs">Contact Notes / Next Steps</Label>
             <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Document the conversation, decisions, action items, or context..."
-              className="min-h-[140px]"
+              value={form.content}
+              onChange={(e) => setForm({ ...form, content: e.target.value })}
+              placeholder="Describe the focus of contact, decisions, action items, and any assignments..."
+              className="min-h-[120px]"
               maxLength={5000}
             />
-            <p className="text-xs text-muted-foreground text-right">{content.length}/5000</p>
+            <p className="text-xs text-muted-foreground text-right">{form.content.length}/5000</p>
           </div>
-          <div className="flex justify-end">
-            <Button onClick={handleAdd} disabled={submitting || !content.trim()} className="rounded-full">
-              {submitting ? 'Saving...' : 'Save Note'}
+
+          <div className="space-y-1">
+            <Label className="text-xs">Identified Needs</Label>
+            <div className="border border-border/60 rounded-lg p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto">
+              {CMF_NEEDS.map((n) => (
+                <label key={n.code} className="flex items-center gap-2 text-xs cursor-pointer">
+                  <Checkbox
+                    checked={form.identifiedNeeds.includes(n.code)}
+                    onCheckedChange={() => toggleNeed(n.code)}
+                  />
+                  <span><span className="font-medium">{n.code}.</span> {n.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Referral Agency / Service</Label>
+              <Input value={form.referralAgency} onChange={(e) => setForm({ ...form, referralAgency: e.target.value })} placeholder="Agency name & contact info" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Referral Contact Person</Label>
+              <Input value={form.referralContact} onChange={(e) => setForm({ ...form, referralContact: e.target.value })} placeholder="Name / email / phone" />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs">Next Steps <span className="text-muted-foreground">(optional)</span></Label>
+            <Textarea value={form.nextSteps} onChange={(e) => setForm({ ...form, nextSteps: e.target.value })} className="min-h-[60px]" maxLength={2000} placeholder="What's the plan after this contact?" />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            {editingId && (
+              <Button variant="outline" onClick={cancelEdit} className="rounded-full">Cancel</Button>
+            )}
+            <Button onClick={handleSubmit} disabled={submitting || !form.content.trim()} className="rounded-full">
+              {submitting ? 'Saving...' : editingId ? 'Update Note' : 'Save Note'}
             </Button>
           </div>
         </CardContent>
@@ -917,85 +993,74 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
             />
           ) : (
             <div className="space-y-3">
-              {notes.map((note: any) => {
-                const isEditing = editingId === note.id;
-                const typeLabel = NOTE_TYPES.find((t) => t.value === note.note_type)?.label || note.note_type;
-                return (
-                  <div key={note.id} className="border border-border/60 rounded-lg p-4 space-y-2 bg-card">
-                    {isEditing ? (
-                      <div className="space-y-2">
-                        <div className="grid sm:grid-cols-[180px_1fr] gap-2">
-                          <Select value={editType} onValueChange={setEditType}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {NOTE_TYPES.map((t) => (
-                                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Title (optional)" maxLength={120} />
-                        </div>
-                        <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="min-h-[120px]" maxLength={5000} />
-                        <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="outline" onClick={cancelEdit} className="rounded-full">
-                            <X className="h-3 w-3 mr-1" /> Cancel
-                          </Button>
-                          <Button size="sm" onClick={() => handleUpdate(note.id)} disabled={!editContent.trim()} className="rounded-full">
-                            <Save className="h-3 w-3 mr-1" /> Save
-                          </Button>
-                        </div>
+              {notes.map((note: any) => (
+                <div key={note.id} className="border border-border/60 rounded-lg p-4 space-y-2 bg-card">
+                  <div className="flex items-start justify-between gap-2 flex-wrap">
+                    <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap text-xs">
+                      {note.contact_date && (
+                        <Badge variant="secondary">{format(new Date(note.contact_date), 'MMM d, yyyy')}</Badge>
+                      )}
+                      {note.contact_type && <Badge variant="outline">{note.contact_type}</Badge>}
+                      {note.duration_minutes != null && <Badge variant="outline">{note.duration_minutes} min</Badge>}
+                      {note.title && <span className="font-medium text-sm">— {note.title}</span>}
+                    </div>
+                    {canModify(note) && (
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => startEdit(note)} className="h-7 w-7 p-0">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete this case note?</AlertDialogTitle>
+                              <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(note.id)}>Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
-                    ) : (
+                    )}
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                  {note.next_steps && (
+                    <div className="text-xs">
+                      <span className="font-medium">Next steps: </span>
+                      <span className="whitespace-pre-wrap">{note.next_steps}</span>
+                    </div>
+                  )}
+                  {(note.identified_needs?.length > 0 || note.referral_agency) && (
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {note.identified_needs?.map((c: number) => (
+                        <Badge key={c} variant="secondary" className="text-[10px]">#{c} {needLabel(c)}</Badge>
+                      ))}
+                      {note.referral_agency && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Referral: {note.referral_agency}{note.referral_contact ? ` (${note.referral_contact})` : ''}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+                    <span className="font-medium">{note.author_name}</span>
+                    <span>•</span>
+                    <span>logged {format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}</span>
+                    {note.updated_at && note.updated_at !== note.created_at && (
                       <>
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="secondary" className="text-xs">{typeLabel}</Badge>
-                              {note.title && <p className="font-medium text-sm">{note.title}</p>}
-                            </div>
-                          </div>
-                          {canModify(note) && (
-                            <div className="flex items-center gap-1">
-                              <Button size="sm" variant="ghost" onClick={() => startEdit(note)} className="h-7 w-7 p-0">
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive">
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete this case note?</AlertDialogTitle>
-                                    <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(note.id)}>Delete</AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-sm whitespace-pre-wrap">{note.content}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
-                          <span className="font-medium">{note.author_name}</span>
-                          <span>•</span>
-                          <span>{format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}</span>
-                          {note.updated_at && note.updated_at !== note.created_at && (
-                            <>
-                              <span>•</span>
-                              <span className="italic">edited {formatDistanceToNow(new Date(note.updated_at), { addSuffix: true })}</span>
-                            </>
-                          )}
-                        </div>
+                        <span>•</span>
+                        <span className="italic">edited {formatDistanceToNow(new Date(note.updated_at), { addSuffix: true })}</span>
                       </>
                     )}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
