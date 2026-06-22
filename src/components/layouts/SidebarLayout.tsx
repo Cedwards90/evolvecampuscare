@@ -77,7 +77,7 @@ const navItems: NavItem[] = [
   { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: ['case_manager', 'admin', 'org_admin'] },
   { label: 'QR Codes', href: '/admin/qr-codes', icon: QrCode, roles: ['admin', 'org_admin'] },
   { label: 'NDA', href: '/admin/nda', icon: FileText, roles: ['admin'] },
-  { label: 'Transitions', href: '/admin/transitions', icon: ArrowRightLeft, roles: ['admin', 'org_admin'] },
+  
   { label: 'Reports', href: '/reports', icon: FileBarChart, roles: ['case_manager', 'admin', 'org_admin'] },
   { label: 'Impact Analytics', href: '/admin/impact', icon: Sparkles, roles: ['admin', 'org_admin'] },
   { label: 'Time Tracking', href: '/time-tracking', icon: Timer, roles: ['case_manager'] },
