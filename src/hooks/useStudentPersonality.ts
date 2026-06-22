@@ -51,8 +51,8 @@ export function useStudentPersonality(studentId: string | undefined) {
   const upsert = useMutation({
     mutationFn: async (input: PersonalityInput) => {
       const payload = { student_id: studentId!, created_by: user?.id ?? null, ...input };
-      const { error } = await supabase
-        .from('student_personality_profiles' as any)
+      const { error } = await (supabase as any)
+        .from('student_personality_profiles')
         .upsert(payload, { onConflict: 'student_id' });
       if (error) throw error;
     },
