@@ -11,7 +11,7 @@ import {
   Settings, 
   LogOut,
   Menu,
-  ChevronRight,
+  ChevronRight: _ChevronRight,
   Globe,
   Search,
   HelpCircle,
