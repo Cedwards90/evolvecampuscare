@@ -1,66 +1,97 @@
 ## Goal
 
-Move the student check-in from the current 3-week ad-hoc cadence to a fully automated **weekly** cycle: an email goes out every week, and when a student logs in without a completed check-in for the current week, they see a reminder banner that gets more prominent the longer it stays incomplete.
+Add Life Skills module surveys (pre + post per module, plus a final wrap-up) that students complete in the portal, and let staff send them in bulk to a cohort/class before and after each lesson.
 
 ## What changes for users
 
-- **Students** receive one check-in email every Monday morning (their local time-of-day approximated to a single global send window). If they don't complete it, they get a reminder email 3 days later. On login, a banner prompts them to complete this week's check-in; after 7 days overdue it becomes a blocking-style alert at the top of the dashboard.
-- **Case managers / admins** see no new UI — existing check-in history views keep working. Admins get a new "Check-in reminders" toggle in Notification Admin Controls so they can pause the automation site-wide if needed.
+### Students
+- New **"Life Skills Surveys"** section on the dashboard (and `/surveys` page) listing any assigned module survey: pending pre-module, pending post-module, and the final wrap-up.
+- Each survey opens in a clean form (1–5 scales rendered as radio pills, open-ended as textareas). Submitting it stores responses and marks the assignment complete.
+- The post-module survey can't be opened until the matching pre-module is submitted (so impact deltas are valid).
+
+### Staff (Case Manager / Org Admin / Admin)
+- New **"Life Skills"** page under Admin → **`/admin/lifeskills`**.
+- Lists the 7 modules + final wrap-up. For each module, "Send Pre-Survey" and "Send Post-Survey" buttons.
+- Bulk-send dialog: pick a **cohort**, **organization**, or **manually select students**, then confirm. The system creates one assignment per student and queues an email.
+- A small results panel shows submission counts (e.g. "Module 04 Pre: 18/22 submitted") and links to per-module response breakdown.
+
+### Impact reporting
+- `/admin/impact` gets a new **"Life Skills Module Impact"** card: average pre vs post confidence per module across all responses (within active global filters), plus the wrap-up NPS.
 
 ## How it works
 
-### 1. Cadence change (3 weeks → 1 week)
-- Update the dashboard banner threshold in `src/pages/Dashboard.tsx` from 21 days to 7 days.
-- Add a second "overdue" state (≥ 14 days) that renders a stronger destructive-style alert.
-- Update banner copy from "3-week check-in" to "weekly check-in".
+### Survey templates (seeded once)
+Use the existing `impact_survey_templates` table with `is_builtin = true`. Add 15 templates:
+- 7 × pre-module (`slug: lifeskills-m01-pre` … `m07-pre`)
+- 7 × post-module (`slug: lifeskills-m01-post` … `m07-post`)
+- 1 × final wrap-up (`slug: lifeskills-final`)
 
-### 2. Rewrite `send-checkin-reminders` edge function
-- Change the eligibility window from 21 days to 7 days for the first nudge, plus a second pass for students whose last check-in is ≥ 10 days old (3-day follow-up).
-- Skip students whose account is < 7 days old, who are deactivated, or whose org is suspended.
-- Respect the existing `site_settings` notification toggles (add a new `checkin_reminders_enabled` key, default `true`).
-- Log every send to `email_send_log` with `template_name = 'weekly-checkin-reminder'` and an idempotency key of `checkin-<student_id>-<ISO week>` so the same student never gets two "first nudge" emails in one week even if the cron runs twice.
-- Switch the email body to a branded React-Email template (Forest Green / Sage, matches existing transactional emails) routed through the Lovable email queue instead of the current inline Resend call.
+Each template's `questions` JSON encodes the questions from the spec (confidence 1–5, habit 1–5, open-ended goal for pre; knowledge 1–5, action commitment open, resource likelihood 1–5 for post; the full wrap-up question set for final).
 
-### 3. Schedule it weekly with pg_cron
-- Enable `pg_cron` + `pg_net` (already enabled for the email queue).
-- Schedule two jobs via `cron.schedule`:
-  - `weekly-checkin-monday-9am` — every Monday 14:00 UTC (~9am ET) → first nudge.
-  - `weekly-checkin-thursday-9am` — every Thursday 14:00 UTC → 3-day follow-up for anyone still missing.
-- Both call the `send-checkin-reminders` function via `net.http_post` with the service-role-protected anon key header.
+Module metadata (name, topic phrase) is embedded in each template so the dashboard renders "Module 04: Financial Literacy — Pre" etc.
 
-### 4. Login banner refinement
-- `src/pages/Dashboard.tsx` already renders a check-in banner; split it into:
-  - **Due** (no check-in for ≥ 7 days) → accent-colored card, dismissible for 24h via localStorage.
-  - **Overdue** (≥ 14 days) → destructive variant, not dismissible, anchored at the top.
-- Also surface a small badge in the sidebar nav next to "Check-in" when due.
+### Assignments + responses
+Reuse `impact_survey_assignments` (student_id, template_id, next_due_at) and `impact_survey_responses` (responses jsonb, score_summary jsonb). No new tables required — only one new optional column on `impact_survey_assignments`:
+- `assigned_by uuid` — who triggered the bulk send (nullable, for staff audit).
+- `cohort_id uuid` — to group bulk sends and power per-cohort reporting (nullable).
 
-### 5. Admin pause switch
-- Add `checkin_reminders_enabled: boolean` to `site_settings` (default `true`).
-- Add a toggle in the existing Notification Admin Controls page; the edge function reads it on every run and exits early when off.
+Score summary stored on submit:
+- pre/post: `{ confidence: n, habit_or_resource: n }`
+- wrap-up: `{ self_efficacy: {m01..m07}, future_outlook: n, nps: n }`
+
+### Bulk send flow
+1. Staff opens `/admin/lifeskills`, picks a template, clicks "Send to…".
+2. Dialog: choose recipients (Cohort dropdown / Organization dropdown / pick students). Preview the count.
+3. On confirm, the frontend calls a new edge function `send-lifeskills-survey`:
+   - Validates staff role + scope (admin / org_admin in scope / case_manager with assignment).
+   - Inserts one `impact_survey_assignments` row per recipient (idempotent: upsert on `(student_id, template_id)` when no completed response exists).
+   - Inserts one `survey_invitations` row per recipient with `survey_type = 'lifeskills'` so it shows up in existing student notification surfaces.
+   - Records a `scheduled_survey_distributions` row for audit + counts.
+   - Calls the existing Resend gateway to email each student with a link to `/surveys/<slug>`.
+
+### Student survey UI
+- New route `/surveys` lists all pending assignments + links to the relevant form.
+- New route `/surveys/:slug` renders the questions from the template JSON dynamically (radio for `scale_1_5`, textarea for `open`, radio group for the 5-point future-outlook scale, 0–10 slider for NPS).
+- On submit, writes to `impact_survey_responses` and marks the assignment `last_completed_at = now()`. If the post-survey requires its pre-survey, the loader checks for a completed pre-response and otherwise shows "Complete the pre-module survey first".
+
+### Reporting
+- `/admin/impact` adds a "Life Skills Module Impact" card that queries `impact_survey_responses` grouped by template slug, averaging the numeric fields from `score_summary` and computing pre→post deltas per module.
 
 ## Technical details
 
-- Files touched:
-  - `supabase/functions/send-checkin-reminders/index.ts` — rewrite to weekly + queued template + idempotency.
-  - `supabase/functions/_shared/transactional-email-templates/weekly-checkin-reminder.tsx` — new React Email template.
-  - `supabase/functions/_shared/transactional-email-templates/registry.ts` — register template.
-  - `supabase/migrations/<ts>_weekly_checkin_cron.sql` — `site_settings` key + RLS already exists; no schema additions besides the settings row.
-  - Insert (not migration) the two `cron.schedule` rows via `supabase--insert` since they contain the project-specific function URL + anon key.
-  - `src/pages/Dashboard.tsx` — banner threshold + overdue variant.
-  - `src/components/layouts/SidebarLayout.tsx` — "due" dot on Check-in nav item (student only).
-  - `src/pages/admin/...` (Notification Admin Controls component) — add toggle wired to `site_settings`.
-- Email content uses the existing queued `send-transactional-email` invocation pattern (idempotency key, suppression list honored, unsubscribe footer auto-appended).
-- The 7-day window is computed in UTC against `student_checkins.created_at` to match the dashboard logic.
+- **Migration**:
+  - Add columns `assigned_by uuid`, `cohort_id uuid` to `impact_survey_assignments`.
+  - Add `INSERT … ON CONFLICT (student_id, template_id) DO NOTHING` requires a unique index — add `UNIQUE (student_id, template_id)` on assignments (only one open assignment per template at a time; reset by `last_completed_at`).
+  - Seed the 15 templates via `INSERT` (data, not schema — uses `supabase--insert`).
+  - Extend the `survey_type` allowed values check (if any) to include `'lifeskills'`.
+- **New edge function** `supabase/functions/send-lifeskills-survey/index.ts` — input validated with zod (`template_slug`, recipients shape, optional `cohort_id`), staff auth check via JWT, batched inserts + email, returns counts. Uses the Resend connector pattern already established in `send-checkin-reminders`.
+- **New files**:
+  - `src/pages/admin/LifeSkillsSurveys.tsx` — staff dashboard listing modules with send buttons + completion stats.
+  - `src/components/admin/SendLifeSkillsDialog.tsx` — recipient picker (cohort / org / student multi-select).
+  - `src/pages/Surveys.tsx` — student list of pending Life Skills surveys.
+  - `src/pages/LifeSkillsSurvey.tsx` — dynamic survey renderer (one component handles all 15 slugs).
+  - `src/hooks/useLifeSkillsSurveys.ts` — template fetch, assignments, response mutations.
+  - `src/lib/lifeskillsTemplates.ts` — module metadata (id → name → topic phrase) for display + seed script reference.
+  - `src/components/admin/LifeSkillsImpactCard.tsx` — reporting card on `/admin/impact`.
+- **Edits**:
+  - `src/App.tsx` — register routes.
+  - `src/components/layouts/SidebarLayout.tsx` — "Life Skills" link under Workspace (staff) and "My Surveys" (student).
+  - `src/pages/Dashboard.tsx` — show "Pending Life Skills surveys" banner when student has open assignments.
+  - `src/pages/admin/ImpactAnalytics.tsx` — mount the new module-impact card.
+- **Security**:
+  - Existing RLS on `impact_survey_*` already restricts student visibility to own rows; staff scope handled by edge function inserting on their behalf.
+  - All inputs zod-validated; staff role + org scope verified server-side; email body uses `encodeURIComponent` for the slug in survey URLs.
 
 ```text
-Monday 14:00 UTC ──► send-checkin-reminders ──► queue "first nudge" for students with no check-in in 7+ days
-Thursday 14:00 UTC ─► send-checkin-reminders ──► queue "follow-up" for students still missing at 10+ days
-Student logs in    ─► Dashboard reads latest check-in
-                     ├─ < 7d   → no banner
-                     ├─ 7-13d  → accent banner, dismissible 24h
-                     └─ ≥ 14d  → red overdue alert, persistent
+Staff → /admin/lifeskills → pick template + cohort → send-lifeskills-survey edge
+     → impact_survey_assignments (one per student)
+     → survey_invitations (banner in student app)
+     → Resend email with link to /surveys/<slug>
+Student → /surveys/<slug> → impact_survey_responses (+ score_summary)
+     → /admin/impact aggregates pre vs post per module
 ```
 
-## Open question
+## Open questions
 
-Should the **first** weekly email go out to every existing student next Monday, or should we phase it in by only emailing students whose last check-in is already ≥ 7 days old (avoiding a sudden blast to students who happened to check in recently)? I'd recommend the phased approach — same code, just a gentler rollout.
+1. **Cohorts**: do you want bulk-send recipients restricted to **cohorts you already use**, or should "by organization" and "manually pick students" also be supported? (I've included all three; happy to trim.)
+2. **Pre/Post pairing**: should the student be hard-blocked from submitting the post-survey if they never completed the pre, or should we allow it and just note "no baseline" in reporting? Current plan: hard-block — let me know if you'd prefer soft.
