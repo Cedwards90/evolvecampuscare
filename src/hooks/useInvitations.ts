@@ -56,6 +56,7 @@ interface SendInvitationParams {
   notes?: string;
   autoAssignCaseManager?: string;
   organizationId?: string;
+  cohortId?: string;
 }
 
 export interface InvitationResult {
@@ -78,6 +79,7 @@ export function useSendInvitation() {
           notes: params.notes,
           autoAssignCaseManager: params.autoAssignCaseManager,
           organizationId: params.organizationId,
+          cohortId: params.cohortId,
         },
       });
 

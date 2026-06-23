@@ -36,6 +36,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useSendInvitation } from '@/hooks/useInvitations';
 import { useActiveOrganizations } from '@/hooks/useTrainingOrganizations';
+import { useOrgCohorts } from '@/hooks/useCohorts';
 import { useToast } from '@/hooks/use-toast';
 import type { AppRole } from '@/types/database';
 
@@ -84,8 +85,12 @@ export function InviteUserDialog({ trigger }: InviteUserDialogProps) {
   const [open, setOpen] = useState(false);
   const [inviteResult, setInviteResult] = useState<InviteResultState | null>(null);
   const [selectedOrgId, setSelectedOrgId] = useState<string>('');
+  const [selectedCohortId, setSelectedCohortId] = useState<string>('');
   const sendInvitation = useSendInvitation();
   const { data: organizations } = useActiveOrganizations();
+  const { data: cohorts } = useOrgCohorts(
+    selectedOrgId && selectedOrgId !== 'none' ? selectedOrgId : undefined
+  );
   const { toast } = useToast();
 
   const form = useForm<InviteFormData>({
@@ -106,14 +111,19 @@ export function InviteUserDialog({ trigger }: InviteUserDialogProps) {
       role: data.role,
       notes: data.notes,
       organizationId: selectedOrgId && selectedOrgId !== 'none' ? selectedOrgId : undefined,
+      cohortId:
+        data.role === 'student' && selectedCohortId && selectedCohortId !== 'none'
+          ? selectedCohortId
+          : undefined,
     });
-    
+
     setInviteResult({
       url: result.inviteUrl,
       email: data.email,
       emailSent: result.emailSent,
     });
     form.reset();
+    setSelectedCohortId('');
   };
 
   const copyToClipboard = async () => {
@@ -268,7 +278,13 @@ export function InviteUserDialog({ trigger }: InviteUserDialogProps) {
 
               <div className="space-y-2">
                 <Label htmlFor="organization">Organization (Optional)</Label>
-                <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
+                <Select
+                  value={selectedOrgId}
+                  onValueChange={(v) => {
+                    setSelectedOrgId(v);
+                    setSelectedCohortId('');
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select organization" />
                   </SelectTrigger>
@@ -280,6 +296,26 @@ export function InviteUserDialog({ trigger }: InviteUserDialogProps) {
                   </SelectContent>
                 </Select>
               </div>
+
+              {selectedRole === 'student' && selectedOrgId && selectedOrgId !== 'none' && (
+                <div className="space-y-2">
+                  <Label htmlFor="cohort">Cohort (Optional)</Label>
+                  <Select value={selectedCohortId} onValueChange={setSelectedCohortId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select cohort" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No cohort</SelectItem>
+                      {(cohorts || []).map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    The student will be placed in this cohort when they accept the invitation.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="notes">Personal Note (Optional)</Label>
