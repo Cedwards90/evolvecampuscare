@@ -423,6 +423,7 @@ export type Database = {
           category: string
           contact: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           id: string
           is_active: boolean
@@ -437,6 +438,7 @@ export type Database = {
           category: string
           contact?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
@@ -451,6 +453,7 @@ export type Database = {
           category?: string
           contact?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
