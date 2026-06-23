@@ -414,6 +414,13 @@ export default function Dashboard() {
               )}
             </section>
 
+            {/* Recommended Community Resources */}
+            {user?.id && (
+              <section className="space-y-4">
+                <RecommendedResourcesCard studentId={user.id} />
+              </section>
+            )}
+
             {/* Quick Actions */}
             <section className="space-y-4">
               <h2 className="font-display text-lg font-semibold">Quick Actions</h2>
