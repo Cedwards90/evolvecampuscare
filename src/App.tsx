@@ -299,6 +299,18 @@ function App() {
                 </ProtectedRoute>
               } />
 
+              {/* Community Resources */}
+              <Route path="/resources" element={
+                <ProtectedRoute>
+                  <Resources />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/resources" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <ResourcesAdmin />
+                </ProtectedRoute>
+              } />
+
               {/* Profile Completion */}
               <Route path="/complete-profile" element={
                 <ProtectedRoute>
