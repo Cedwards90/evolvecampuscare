@@ -30,6 +30,7 @@ import CaseManagersPage from "./pages/admin/CaseManagersPage";
 import TrainingOrganizations from "./pages/admin/TrainingOrganizations";
 import OrganizationDetail from "./pages/admin/OrganizationDetail";
 import SurveyResponses from "./pages/admin/SurveyResponses";
+import SurveysIndex from "./pages/admin/SurveysIndex";
 import QRCodesPage from "./pages/admin/QRCodesPage";
 import QRLanding from "./pages/QRLanding";
 import QRStandaloneRequest from "./pages/QRStandaloneRequest";
@@ -222,9 +223,15 @@ function App() {
             } />
             <Route path="/admin/surveys" element={
               <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
+                <SurveysIndex />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/surveys/responses" element={
+              <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
                 <SurveyResponses />
               </ProtectedRoute>
             } />
+
             <Route path="/admin/qr-codes" element={
               <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <QRCodesPage />
