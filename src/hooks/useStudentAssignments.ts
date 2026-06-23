@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Profile } from '@/types/database';
+import { invalidateAssignmentSurfaces } from '@/lib/assignmentInvalidations';
 
 export interface StudentAssignment {
   id: string;
@@ -172,15 +173,8 @@ export function useAssignStudent() {
 
       return { studentId, caseManagerId };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['student-assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['unassigned-students'] });
-      queryClient.invalidateQueries({ queryKey: ['requests'] });
-      queryClient.invalidateQueries({ queryKey: ['case-managers'] });
-      queryClient.invalidateQueries({ queryKey: ['case-manager-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['my-students'] });
-      queryClient.invalidateQueries({ queryKey: ['student-folders'] });
-      queryClient.invalidateQueries({ queryKey: ['my-assignment'] });
+    onSuccess: (_, variables) => {
+      invalidateAssignmentSurfaces(queryClient, variables.studentId);
       toast({
         title: 'Student assigned',
         description: 'The student has been assigned to the case manager.',
@@ -210,13 +204,8 @@ export function useRemoveStudentAssignment() {
       if (error) throw error;
       return studentId;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['student-assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['unassigned-students'] });
-      queryClient.invalidateQueries({ queryKey: ['my-students'] });
-      queryClient.invalidateQueries({ queryKey: ['student-folders'] });
-      queryClient.invalidateQueries({ queryKey: ['my-assignment'] });
-      queryClient.invalidateQueries({ queryKey: ['case-manager-stats'] });
+    onSuccess: (studentId) => {
+      invalidateAssignmentSurfaces(queryClient, studentId);
       toast({
         title: 'Assignment removed',
         description: 'The student assignment has been removed.',
@@ -276,14 +265,8 @@ export function useBulkAssignStudents() {
       return { studentIds, caseManagerId };
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['student-assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['unassigned-students'] });
-      queryClient.invalidateQueries({ queryKey: ['requests'] });
-      queryClient.invalidateQueries({ queryKey: ['case-managers'] });
-      queryClient.invalidateQueries({ queryKey: ['case-manager-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['my-students'] });
-      queryClient.invalidateQueries({ queryKey: ['student-folders'] });
-      queryClient.invalidateQueries({ queryKey: ['my-assignment'] });
+      invalidateAssignmentSurfaces(queryClient);
+      variables.studentIds.forEach((id) => invalidateAssignmentSurfaces(queryClient, id));
       toast({
         title: 'Students assigned',
         description: `${variables.studentIds.length} student(s) have been assigned to the case manager.`,

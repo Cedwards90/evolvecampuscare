@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { invalidateAssignmentSurfaces } from '@/lib/assignmentInvalidations';
 
 interface ReassignStudentParams {
   studentId: string;
@@ -114,16 +115,7 @@ export function useReassignStudent() {
       return { studentId, toCaseManagerId, updatedRequestIds };
     },
     onSuccess: (_data, variables) => {
-      // Invalidate every key that displays assignments so all surfaces refresh instantly.
-      queryClient.invalidateQueries({ queryKey: ['student-assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['unassigned-students'] });
-      queryClient.invalidateQueries({ queryKey: ['requests'] });
-      queryClient.invalidateQueries({ queryKey: ['case-managers'] });
-      queryClient.invalidateQueries({ queryKey: ['case-manager-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['my-students'] });
-      queryClient.invalidateQueries({ queryKey: ['my-assignment'] });
-      queryClient.invalidateQueries({ queryKey: ['student-detail', variables.studentId] });
-
+      invalidateAssignmentSurfaces(queryClient, variables.studentId);
       toast({
         title: 'Student reassigned',
         description: 'The student and their open requests have been moved to the new case manager.',

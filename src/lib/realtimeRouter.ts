@@ -62,10 +62,30 @@ export function invalidateForChange(
       inv(['student-folders']);
       inv(['my-assignment']);
       inv(['student-assignments']);
+      inv(['unassigned-students']);
       inv(['case-manager-stats']);
       inv(['workload-analytics']);
       inv(['requests']);
+      inv(['analytics']);
+      inv(['filter-options']);
+      inv(['users-with-roles']);
+      inv(['case-managers']);
       studentIds.forEach((id) => inv(['student-detail', id]));
+      studentIds.forEach((id) => inv(['student-progress-report', id]));
+      break;
+    }
+    case 'cohorts':
+    case 'cohort_case_managers': {
+      inv(['cohorts']);
+      inv(['student-assignments']);
+      inv(['unassigned-students']);
+      inv(['my-students']);
+      inv(['my-assignment']);
+      inv(['student-folders']);
+      inv(['case-manager-stats']);
+      inv(['workload-analytics']);
+      inv(['case-managers']);
+      inv(['filter-options']);
       break;
     }
     case 'appointments': {
@@ -243,4 +263,6 @@ export const REALTIME_TABLES = [
   'program_cost_settings',
   'participant_funnel_events',
   'participant_outcomes',
+  'cohorts',
+  'cohort_case_managers',
 ] as const;

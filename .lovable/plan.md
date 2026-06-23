@@ -1,34 +1,52 @@
-## Goal
-Let case managers browse the resource library and contribute new entries (and edit ones they added), without giving them admin-wide delete/edit powers over the full catalog.
+## Problem
+We already have client-side code that writes to `student_assignments` from multiple places (assign dialog, bulk assign, reassign, cohort UI, invitations) and a realtime bridge that re-queries assignments. But assignments still get out of sync because:
 
-## Changes
+1. The DB functions `sync_profile_cohort_assignments` and `sync_cohort_case_manager_assignments` exist but **no triggers are attached** — so adding a CM to a cohort, or moving a student into a cohort, does **not** propagate to `student_assignments`.
+2. `sync_profile_organization` likewise has no trigger — moving a student between orgs via `organization_memberships` does not update `profiles.organization_id`.
+3. `cohort_case_managers` is **not** in the `supabase_realtime` publication, so cohort-driven changes don't push to other sessions.
+4. Several mutation hooks (`useAssignStudent`, `useBulkAssignStudents`, `useRemoveStudentAssignment`, invitation acceptance) invalidate slightly different query keys, so some surfaces (folders / analytics / workload / filter options) lag behind.
 
-### 1. Database (RLS on `community_resources`)
-Add policies so case managers and org admins can contribute:
-- `INSERT` allowed for `case_manager` and `org_admin` (rows they create are visible to everyone via the existing active-read policy).
-- `UPDATE`/`DELETE` allowed for `case_manager`/`org_admin` **only on rows they created** (tracked via existing/owner column — add `created_by uuid` column defaulting to `auth.uid()` if not present).
-- Admin policy stays unchanged (full control).
+## Fix: make the database the source of truth, then mirror to every client
 
-If `created_by` doesn't exist on `community_resources`, add the column + backfill `NULL` (existing rows remain admin-only to edit).
+### 1. DB triggers (single migration)
 
-### 2. Route / Access
-- Change `/admin/resources` guard from `['admin']` to `['admin','case_manager','org_admin']` so case managers reach the management UI.
-- Keep sidebar "Manage Resources" link, expanding `roles` to include `case_manager` and `org_admin`.
+Wire up the existing sync functions and add new ones so every assignment path runs the same logic:
 
-### 3. `ResourcesAdmin.tsx` UI tweaks
-- Rename page header to "Resource Library" for non-admins (admins still see full management).
-- Hide Edit/Delete buttons on rows the current user didn't create (unless admin). Add a small "Added by you" badge on rows the user owns.
-- On create, the new `created_by` is set automatically by the DB default; no UI change needed for the form.
-- Everyone with access keeps the "Add resource" button.
+- `trg_sync_profile_org_on_membership` — `AFTER INSERT/UPDATE ON organization_memberships` → `sync_profile_organization()`
+- `trg_sync_cohort_cm_to_students` — `AFTER INSERT ON cohort_case_managers` → `sync_cohort_case_manager_assignments()`
+- `trg_sync_student_to_cohort_cms` — `AFTER UPDATE OF cohort_id ON profiles` → `sync_profile_cohort_assignments()`
+- New `sync_org_admin_visibility()` no-op refresher (touches `updated_at` on related profiles) so realtime fan-out fires when an `org_admins` row changes.
+- New `enforce_one_assignment_per_student` constraint check (unique on `student_id`) if not already enforced — guarantees `onConflict: 'student_id'` upserts behave the same everywhere.
+- `updated_at` triggers on `student_assignments` and `organization_memberships` for change detection.
 
-### 4. No changes to
-- `Resources.tsx` student-facing browse page.
-- Recommendation flow / `StudentResourcesPanel`.
-- Edge functions.
+### 2. Realtime publication
+
+`ALTER PUBLICATION supabase_realtime ADD TABLE public.cohort_case_managers, public.cohorts;` so cohort-driven changes propagate to every signed-in session.
+
+### 3. Realtime router
+
+In `src/lib/realtimeRouter.ts`, add cases for `cohort_case_managers` and `cohorts`. Both invalidate: `['student-assignments']`, `['my-students']`, `['student-folders']`, `['my-assignment']`, `['cohorts']`, `['case-manager-stats']`, `['workload-analytics']`, `['unassigned-students']`. Append both tables to `REALTIME_TABLES`.
+
+Also expand the existing `student_assignments` case to invalidate `['unassigned-students']`, `['filter-options']`, `['analytics']`, and `['users-with-roles']` so admin pages stay in sync.
+
+### 4. Unify mutation invalidations
+
+Create `src/lib/assignmentInvalidations.ts` exporting one helper `invalidateAssignmentSurfaces(qc, studentId?)`. Replace the ad-hoc lists in:
+- `useAssignStudent` / `useBulkAssignStudents` / `useRemoveStudentAssignment` (`useStudentAssignments.ts`)
+- `useReassignStudent`
+- Any other place that writes assignments (audit via grep first; current hits: `useSubmitRequest`, invitation acceptance handled by DB trigger — no client invalidation needed there).
+
+The helper invalidates: `student-assignments`, `unassigned-students`, `my-students`, `my-assignment`, `student-folders`, `case-managers`, `case-manager-stats`, `workload-analytics`, `requests`, `analytics`, `filter-options`, `users-with-roles`, and per-student `student-detail` / `student-progress-report` keys.
+
+### 5. No UI changes
+This is plumbing — existing assign dialogs, reassign dialog, cohort manager, and invitation flow keep their current UX. They'll just stay consistent automatically.
 
 ## Files touched
-- `supabase/migrations/<new>.sql` — add `created_by`, new RLS policies.
-- `src/App.tsx` — expand `allowedRoles` for `/admin/resources`.
-- `src/components/layouts/SidebarLayout.tsx` — expand `roles` on "Manage Resources" link (and maybe rename to "Contribute Resources" for non-admins).
-- `src/pages/admin/ResourcesAdmin.tsx` — ownership-aware action buttons + dynamic title.
-- `src/hooks/useCommunityResources.ts` — include `created_by` in select.
+- `supabase/migrations/<new>.sql` — attach triggers, add cohort tables to realtime publication.
+- `src/lib/realtimeRouter.ts` — new cases + expanded invalidations.
+- `src/lib/assignmentInvalidations.ts` — new helper.
+- `src/hooks/useStudentAssignments.ts` — use helper.
+- `src/hooks/useReassignStudent.ts` — use helper.
+
+## Out of scope
+No edge function changes. No new pages. Existing RLS policies stay the same.
