@@ -1,59 +1,86 @@
-## Group Sidebar Nav into Collapsible Sections
+# Community Resource Recommendations
 
-Today the sidebar is one long flat list of ~18 items mixed across roles. The fix is to group items into a few labeled, collapsible sections and let the section containing the active route auto-expand. No items get removed; nothing changes for students (their list is already short).
+Import the 156-row Chicago resource list (9 categories) into the platform and surface it to students automatically — after they finish the intake survey and whenever they submit a support request — with an AI agent that picks the best matches.
 
-### Section structure (role-filtered as today)
+## 1. Data: store resources in the database
 
-**Workspace** (always visible to that role)
-- Dashboard — all roles
-- Messages — all roles
-- My Submissions — student
-- Submit Request, Track Requests, Offline Drafts — student
-- Manage Requests — case_manager, org_admin
-- Student Folders — case_manager, admin, org_admin
+New table `community_resources`:
+- `category` (text) — one of: Basic Needs & Stability, Housing & Stability, Health & Wellness, Workforce & Economic Empowerment, Legal & Reentry Support, Transportation Services, Youth & Family Services, Senior Services, Community & Civic Engagement
+- `name`, `address`, `website`, `contact`, `phone`, `description` (optional/blank for now), `tags` (text[]), `is_active`, timestamps
+- RLS: any authenticated user can read; only admins can insert/update/delete
+- Admin UI: simple list + add/edit/delete page at `/admin/resources` (linked under Compliance group in sidebar)
+- One-time seed migration loads all 156 rows from the uploaded spreadsheet
 
-**People** — admin / org_admin / case_manager
-- User Management (admin)
-- Case Managers (admin, org_admin)
-- Organizations (admin)
+New table `resource_recommendations` (audit + dedup for student-facing history):
+- `student_id`, `resource_id`, `source` ('intake' | 'request' | 'manual'), `request_id?`, `reason` (short AI-generated rationale), `dismissed_at`, `clicked_at`, `created_at`
+- RLS: student reads/updates own; staff (admin/CM-assigned/org_admin in scope) reads
 
-**Engagement** — staff
-- Surveys
-- QR Codes
+## 2. Need → category mapping (rules layer)
 
-**Insights** — staff
-- Admin Dashboard (admin, org_admin)
-- Reports
-- Impact Analytics
+Before calling the AI, narrow the candidate set with deterministic rules so the agent stays fast/cheap and grounded. Examples:
 
-**Time** — case_manager / admin / org_admin
-- Time Tracking (case_manager)
-- Time Reports (admin, org_admin)
+| Intake / request signal | Candidate categories |
+|---|---|
+| `daily_challenges` includes "Food security concerns" | Basic Needs & Stability |
+| "Transportation challenges" | Transportation Services |
+| "Childcare needs" | Youth & Family Services |
+| `mainReason` = "Housing concerns" / living_situation = "Transitional/temporary" | Housing & Stability |
+| `mainReason` = "Personal/emotional wellbeing" or `stress_level` ≥ 4 or `interested_resources` includes Counseling/Crisis | Health & Wellness |
+| `mainReason` = "Financial hardship" / `work_status` = "Not working" / employment = unemployed | Workforce & Economic Empowerment, Basic Needs & Stability |
+| Support request `category` = legal | Legal & Reentry Support |
+| Support request `category` = academic/career | Workforce & Economic Empowerment |
 
-**Compliance** — admin
-- NDA
+Mapping lives in `src/lib/resourceMatching.ts` so it's easy to tune.
 
-**Bottom (unchanged)**
-- Help Center
-- Settings (moved here from the main list — it belongs with utility links)
+## 3. AI agent (Lovable AI Gateway)
 
-### Behavior
-- Each group uses shadcn `Collapsible` with a small uppercase `SidebarGroupLabel` + chevron.
-- The group containing the current route is open by default; others collapsed. Open/closed state persists in `localStorage` per user.
-- When the whole sidebar is in `collapsible="icon"` mode, group labels hide and items render as icon-only (tooltips on hover) — no nested chevrons in that mode.
-- A group with only one visible item (after role filtering) renders flat — no wrapper — to avoid pointless collapsibles for, e.g., students.
-- Students effectively see one short flat list (Workspace only), so they get the same simplified experience they have now.
+New edge function `recommend-resources`:
+- Input: `{ student_id, source: 'intake' | 'request', request_id? }`
+- Loads the student's intake responses (+ request if applicable) and the filtered candidate resources
+- Calls `google/gemini-3-flash-preview` via the AI SDK with structured output (`Output.object`) returning:
+  ```
+  { recommendations: [{ resource_id, reason }] } // top 3–5
+  ```
+- Inserts results into `resource_recommendations` (skips duplicates already recommended to that student in last 30 days)
+- Returns the rows so the UI can render immediately
+- Auth: requires logged-in student or staff acting on their behalf; CORS + Zod validation per edge-function rules
 
-### Out of scope
-- No route/permission changes.
-- No icon, label, or color overhaul.
-- No mobile sheet redesign beyond mirroring the same grouping.
-- No new pages, no removed pages.
+## 4. Where students see recommendations
 
-### Files touched
-- `src/components/layouts/SidebarLayout.tsx` — convert the flat `navItems` array into a grouped structure and render groups with `Collapsible`.
+- **End of intake survey** (`src/pages/IntakeSurvey.tsx`): after `completeIntake` succeeds, call `recommend-resources` with `source: 'intake'`, then show a new `RecommendedResourcesCard` on the post-intake screen and persist them so they appear on the dashboard.
+- **After submitting a request** (`src/hooks/useSubmitRequest.ts` or the submit success page): fire `recommend-resources` with `source: 'request'` and show matches inline on the request confirmation + request detail.
+- **Student dashboard**: new "Recommended for you" section listing the most recent non-dismissed recommendations with name, category, one-line AI reason, website/phone, and Dismiss / Mark helpful buttons.
 
-### Verification
-- Each role only sees their permitted items, same as before.
-- Active route's group is expanded on load; click a different group's item → that group expands, prior remembered state restored on next visit.
-- Collapsing the whole sidebar still shows all icons; expanding restores the grouped view.
+## 5. Where staff see them
+
+- On `StudentDetail.tsx` add a "Recommended Resources" subsection inside the student's profile/folder showing history of what was suggested and whether the student engaged.
+- Case managers can manually push a resource to a student from the resources admin page (creates a `source: 'manual'` row).
+
+## 6. Browse / search (bonus, lightweight)
+
+New student-facing page `/resources`:
+- Filter by category, free-text search across name/address
+- Used as the "see all" link from the recommendation card
+- Listed in the Workspace sidebar group for students
+
+## Technical notes
+
+- Seed migration uses a single `INSERT … VALUES (...)` batched insert generated from the spreadsheet.
+- Edge function uses the AI SDK + `createLovableAiGatewayProvider` helper, schema kept small (only `resource_id` enum of candidate IDs + short `reason` string) to stay under Gemini's structured-output state limit.
+- All gateway errors (402/429) surface to the UI as a soft message — the recommendations panel degrades to "Browse all resources" if the AI call fails.
+- No PII leaves the server: only de-identified intake answers are sent to the model.
+
+## Files touched
+
+- `supabase/migrations/<ts>_community_resources.sql` (new tables, RLS, seed)
+- `supabase/functions/recommend-resources/index.ts` (new)
+- `src/lib/resourceMatching.ts` (new — rules)
+- `src/hooks/useCommunityResources.ts`, `src/hooks/useResourceRecommendations.ts` (new)
+- `src/components/resources/RecommendedResourcesCard.tsx`, `ResourceCard.tsx` (new)
+- `src/pages/Resources.tsx`, `src/pages/admin/ResourcesAdmin.tsx` (new)
+- `src/pages/IntakeSurvey.tsx`, `src/pages/Dashboard.tsx`, `src/pages/StudentDetail.tsx`, `src/pages/SubmitRequest.tsx` / submit hook (edits)
+- `src/App.tsx`, `src/components/layouts/SidebarLayout.tsx` (route + nav)
+
+## Open question
+
+Do you want the AI agent to recommend resources only from this curated list, or should it also be able to suggest "no good match — try this national hotline" fallbacks when the list has nothing relevant?
