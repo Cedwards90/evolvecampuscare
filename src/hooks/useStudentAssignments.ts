@@ -265,14 +265,8 @@ export function useBulkAssignStudents() {
       return { studentIds, caseManagerId };
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['student-assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['unassigned-students'] });
-      queryClient.invalidateQueries({ queryKey: ['requests'] });
-      queryClient.invalidateQueries({ queryKey: ['case-managers'] });
-      queryClient.invalidateQueries({ queryKey: ['case-manager-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['my-students'] });
-      queryClient.invalidateQueries({ queryKey: ['student-folders'] });
-      queryClient.invalidateQueries({ queryKey: ['my-assignment'] });
+      invalidateAssignmentSurfaces(queryClient);
+      variables.studentIds.forEach((id) => invalidateAssignmentSurfaces(queryClient, id));
       toast({
         title: 'Students assigned',
         description: `${variables.studentIds.length} student(s) have been assigned to the case manager.`,
