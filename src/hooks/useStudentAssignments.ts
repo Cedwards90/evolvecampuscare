@@ -173,15 +173,8 @@ export function useAssignStudent() {
 
       return { studentId, caseManagerId };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['student-assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['unassigned-students'] });
-      queryClient.invalidateQueries({ queryKey: ['requests'] });
-      queryClient.invalidateQueries({ queryKey: ['case-managers'] });
-      queryClient.invalidateQueries({ queryKey: ['case-manager-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['my-students'] });
-      queryClient.invalidateQueries({ queryKey: ['student-folders'] });
-      queryClient.invalidateQueries({ queryKey: ['my-assignment'] });
+    onSuccess: (_, variables) => {
+      invalidateAssignmentSurfaces(queryClient, variables.studentId);
       toast({
         title: 'Student assigned',
         description: 'The student has been assigned to the case manager.',
