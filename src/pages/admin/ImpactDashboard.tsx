@@ -54,6 +54,7 @@ import { DataCoverageCard } from '@/components/impact/DataCoverageCard';
 import { CostSettingsEditor } from '@/components/impact/CostSettingsEditor';
 import { OutcomesEditor } from '@/components/impact/OutcomesEditor';
 import { OrgBreakdownTable } from '@/components/impact/OrgBreakdownTable';
+import { LifeSkillsImpactCard } from '@/components/admin/LifeSkillsImpactCard';
 
 const CURRENCY = new Intl.NumberFormat('en-US', {
   style: 'currency',
