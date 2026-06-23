@@ -309,7 +309,7 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="/admin/resources" element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'case_manager', 'org_admin']}>
                   <ResourcesAdmin />
                 </ProtectedRoute>
               } />
