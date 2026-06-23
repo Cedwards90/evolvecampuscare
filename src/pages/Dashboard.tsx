@@ -62,6 +62,8 @@ export default function Dashboard() {
   const { intakeCompleted } = useIntakeSurvey();
   const { data: latestCheckIn } = useLatestCheckIn();
   const { data: pendingSurveys = [] } = usePendingSurveys();
+  const { data: lifeSkillsAssignments = [] } = useMyLifeSkillsAssignments();
+  const pendingLifeSkills = (lifeSkillsAssignments as any[]).filter((a) => !a.last_completed_at);
   
   // Weekly check-in banner: due ≥ 7d, overdue ≥ 14d
   const checkInState = useMemo<'none' | 'due' | 'overdue'>(() => {
