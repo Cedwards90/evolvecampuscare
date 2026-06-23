@@ -67,6 +67,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { CertificationsSection } from '@/components/certifications/CertificationsSection';
+import { StudentResourcesPanel } from '@/components/resources/StudentResourcesPanel';
 import { ArrowRightLeft, Users as UsersIcon } from 'lucide-react';
 import { useOrgCohorts, useAssignStudentCohort } from '@/hooks/useCohorts';
 import { useMyOrgAdminOrgs } from '@/hooks/useOrgAdmins';
