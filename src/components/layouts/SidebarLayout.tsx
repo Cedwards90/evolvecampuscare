@@ -99,8 +99,7 @@ const navGroups: NavGroup[] = [
     label: 'Engagement',
     items: [
       { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: ['case_manager', 'admin', 'org_admin'] },
-      { label: 'Life Skills', href: '/admin/lifeskills', icon: ClipboardList, roles: ['case_manager', 'admin', 'org_admin'] },
-      { label: 'My Surveys', href: '/surveys', icon: ClipboardList, roles: ['student'] },
+      { label: 'Surveys', href: '/surveys', icon: ClipboardList, roles: ['student'] },
       { label: 'QR Codes', href: '/admin/qr-codes', icon: QrCode, roles: ['admin', 'org_admin'] },
     ],
   },
