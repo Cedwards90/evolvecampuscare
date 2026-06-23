@@ -62,13 +62,17 @@ export default function Dashboard() {
   const { data: latestCheckIn } = useLatestCheckIn();
   const { data: pendingSurveys = [] } = usePendingSurveys();
   
-  // Show check-in banner if no check-in or last one > 21 days ago
-  const showCheckInBanner = useMemo(() => {
-    if (role !== 'student') return false;
-    if (!latestCheckIn) return true;
-    const daysSince = (Date.now() - new Date(latestCheckIn.created_at).getTime()) / (1000 * 60 * 60 * 24);
-    return daysSince >= 21;
+  // Weekly check-in banner: due ≥ 7d, overdue ≥ 14d
+  const checkInState = useMemo<'none' | 'due' | 'overdue'>(() => {
+    if (role !== 'student') return 'none';
+    const daysSince = latestCheckIn
+      ? (Date.now() - new Date(latestCheckIn.created_at).getTime()) / (1000 * 60 * 60 * 24)
+      : Infinity;
+    if (daysSince >= 14) return 'overdue';
+    if (daysSince >= 7) return 'due';
+    return 'none';
   }, [role, latestCheckIn]);
+  const showCheckInBanner = checkInState !== 'none';
   
   // Filter requests based on role
   const { filters: globalFilters } = useGlobalFilters();
@@ -168,13 +172,21 @@ export default function Dashboard() {
         {role !== 'student' && <GlobalFilterBar />}
         {/* Check-In Banner */}
          {showCheckInBanner && (
-          <Card className="border-accent/50 bg-accent/10">
+          <Card className={checkInState === 'overdue' ? 'border-destructive/60 bg-destructive/10' : 'border-accent/50 bg-accent/10'}>
             <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-medium text-sm">📋 Time for your 3-week check-in!</p>
-                <p className="text-xs text-muted-foreground">Let us know how you're doing — it only takes a minute.</p>
+                <p className="font-medium text-sm">
+                  {checkInState === 'overdue'
+                    ? '⚠️ Your weekly check-in is overdue'
+                    : '📋 Time for your weekly check-in!'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {checkInState === 'overdue'
+                    ? "It's been over two weeks. Please take a minute so your case manager can support you."
+                    : "Let us know how you're doing — it only takes a minute."}
+                </p>
               </div>
-              <Button size="sm" asChild>
+              <Button size="sm" variant={checkInState === 'overdue' ? 'destructive' : 'default'} asChild>
                 <Link to="/check-in">Complete Check-In</Link>
               </Button>
             </CardContent>

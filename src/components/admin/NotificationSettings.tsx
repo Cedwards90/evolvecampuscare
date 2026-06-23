@@ -49,6 +49,12 @@ const NOTIFICATION_TYPES = [
     description: 'Send weekly digest emails to case managers',
     icon: Calendar,
   },
+  {
+    key: 'checkin_reminders' as const,
+    label: 'Weekly Student Check-In Reminders',
+    description: 'Automatically email students each week to complete their check-in',
+    icon: Bell,
+  },
 ];
 
 export function NotificationSettings() {

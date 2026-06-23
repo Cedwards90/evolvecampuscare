@@ -1,86 +1,66 @@
-# Community Resource Recommendations
+## Goal
 
-Import the 156-row Chicago resource list (9 categories) into the platform and surface it to students automatically — after they finish the intake survey and whenever they submit a support request — with an AI agent that picks the best matches.
+Move the student check-in from the current 3-week ad-hoc cadence to a fully automated **weekly** cycle: an email goes out every week, and when a student logs in without a completed check-in for the current week, they see a reminder banner that gets more prominent the longer it stays incomplete.
 
-## 1. Data: store resources in the database
+## What changes for users
 
-New table `community_resources`:
-- `category` (text) — one of: Basic Needs & Stability, Housing & Stability, Health & Wellness, Workforce & Economic Empowerment, Legal & Reentry Support, Transportation Services, Youth & Family Services, Senior Services, Community & Civic Engagement
-- `name`, `address`, `website`, `contact`, `phone`, `description` (optional/blank for now), `tags` (text[]), `is_active`, timestamps
-- RLS: any authenticated user can read; only admins can insert/update/delete
-- Admin UI: simple list + add/edit/delete page at `/admin/resources` (linked under Compliance group in sidebar)
-- One-time seed migration loads all 156 rows from the uploaded spreadsheet
+- **Students** receive one check-in email every Monday morning (their local time-of-day approximated to a single global send window). If they don't complete it, they get a reminder email 3 days later. On login, a banner prompts them to complete this week's check-in; after 7 days overdue it becomes a blocking-style alert at the top of the dashboard.
+- **Case managers / admins** see no new UI — existing check-in history views keep working. Admins get a new "Check-in reminders" toggle in Notification Admin Controls so they can pause the automation site-wide if needed.
 
-New table `resource_recommendations` (audit + dedup for student-facing history):
-- `student_id`, `resource_id`, `source` ('intake' | 'request' | 'manual'), `request_id?`, `reason` (short AI-generated rationale), `dismissed_at`, `clicked_at`, `created_at`
-- RLS: student reads/updates own; staff (admin/CM-assigned/org_admin in scope) reads
+## How it works
 
-## 2. Need → category mapping (rules layer)
+### 1. Cadence change (3 weeks → 1 week)
+- Update the dashboard banner threshold in `src/pages/Dashboard.tsx` from 21 days to 7 days.
+- Add a second "overdue" state (≥ 14 days) that renders a stronger destructive-style alert.
+- Update banner copy from "3-week check-in" to "weekly check-in".
 
-Before calling the AI, narrow the candidate set with deterministic rules so the agent stays fast/cheap and grounded. Examples:
+### 2. Rewrite `send-checkin-reminders` edge function
+- Change the eligibility window from 21 days to 7 days for the first nudge, plus a second pass for students whose last check-in is ≥ 10 days old (3-day follow-up).
+- Skip students whose account is < 7 days old, who are deactivated, or whose org is suspended.
+- Respect the existing `site_settings` notification toggles (add a new `checkin_reminders_enabled` key, default `true`).
+- Log every send to `email_send_log` with `template_name = 'weekly-checkin-reminder'` and an idempotency key of `checkin-<student_id>-<ISO week>` so the same student never gets two "first nudge" emails in one week even if the cron runs twice.
+- Switch the email body to a branded React-Email template (Forest Green / Sage, matches existing transactional emails) routed through the Lovable email queue instead of the current inline Resend call.
 
-| Intake / request signal | Candidate categories |
-|---|---|
-| `daily_challenges` includes "Food security concerns" | Basic Needs & Stability |
-| "Transportation challenges" | Transportation Services |
-| "Childcare needs" | Youth & Family Services |
-| `mainReason` = "Housing concerns" / living_situation = "Transitional/temporary" | Housing & Stability |
-| `mainReason` = "Personal/emotional wellbeing" or `stress_level` ≥ 4 or `interested_resources` includes Counseling/Crisis | Health & Wellness |
-| `mainReason` = "Financial hardship" / `work_status` = "Not working" / employment = unemployed | Workforce & Economic Empowerment, Basic Needs & Stability |
-| Support request `category` = legal | Legal & Reentry Support |
-| Support request `category` = academic/career | Workforce & Economic Empowerment |
+### 3. Schedule it weekly with pg_cron
+- Enable `pg_cron` + `pg_net` (already enabled for the email queue).
+- Schedule two jobs via `cron.schedule`:
+  - `weekly-checkin-monday-9am` — every Monday 14:00 UTC (~9am ET) → first nudge.
+  - `weekly-checkin-thursday-9am` — every Thursday 14:00 UTC → 3-day follow-up for anyone still missing.
+- Both call the `send-checkin-reminders` function via `net.http_post` with the service-role-protected anon key header.
 
-Mapping lives in `src/lib/resourceMatching.ts` so it's easy to tune.
+### 4. Login banner refinement
+- `src/pages/Dashboard.tsx` already renders a check-in banner; split it into:
+  - **Due** (no check-in for ≥ 7 days) → accent-colored card, dismissible for 24h via localStorage.
+  - **Overdue** (≥ 14 days) → destructive variant, not dismissible, anchored at the top.
+- Also surface a small badge in the sidebar nav next to "Check-in" when due.
 
-## 3. AI agent (Lovable AI Gateway)
+### 5. Admin pause switch
+- Add `checkin_reminders_enabled: boolean` to `site_settings` (default `true`).
+- Add a toggle in the existing Notification Admin Controls page; the edge function reads it on every run and exits early when off.
 
-New edge function `recommend-resources`:
-- Input: `{ student_id, source: 'intake' | 'request', request_id? }`
-- Loads the student's intake responses (+ request if applicable) and the filtered candidate resources
-- Calls `google/gemini-3-flash-preview` via the AI SDK with structured output (`Output.object`) returning:
-  ```
-  { recommendations: [{ resource_id, reason }] } // top 3–5
-  ```
-- Inserts results into `resource_recommendations` (skips duplicates already recommended to that student in last 30 days)
-- Returns the rows so the UI can render immediately
-- Auth: requires logged-in student or staff acting on their behalf; CORS + Zod validation per edge-function rules
+## Technical details
 
-## 4. Where students see recommendations
+- Files touched:
+  - `supabase/functions/send-checkin-reminders/index.ts` — rewrite to weekly + queued template + idempotency.
+  - `supabase/functions/_shared/transactional-email-templates/weekly-checkin-reminder.tsx` — new React Email template.
+  - `supabase/functions/_shared/transactional-email-templates/registry.ts` — register template.
+  - `supabase/migrations/<ts>_weekly_checkin_cron.sql` — `site_settings` key + RLS already exists; no schema additions besides the settings row.
+  - Insert (not migration) the two `cron.schedule` rows via `supabase--insert` since they contain the project-specific function URL + anon key.
+  - `src/pages/Dashboard.tsx` — banner threshold + overdue variant.
+  - `src/components/layouts/SidebarLayout.tsx` — "due" dot on Check-in nav item (student only).
+  - `src/pages/admin/...` (Notification Admin Controls component) — add toggle wired to `site_settings`.
+- Email content uses the existing queued `send-transactional-email` invocation pattern (idempotency key, suppression list honored, unsubscribe footer auto-appended).
+- The 7-day window is computed in UTC against `student_checkins.created_at` to match the dashboard logic.
 
-- **End of intake survey** (`src/pages/IntakeSurvey.tsx`): after `completeIntake` succeeds, call `recommend-resources` with `source: 'intake'`, then show a new `RecommendedResourcesCard` on the post-intake screen and persist them so they appear on the dashboard.
-- **After submitting a request** (`src/hooks/useSubmitRequest.ts` or the submit success page): fire `recommend-resources` with `source: 'request'` and show matches inline on the request confirmation + request detail.
-- **Student dashboard**: new "Recommended for you" section listing the most recent non-dismissed recommendations with name, category, one-line AI reason, website/phone, and Dismiss / Mark helpful buttons.
-
-## 5. Where staff see them
-
-- On `StudentDetail.tsx` add a "Recommended Resources" subsection inside the student's profile/folder showing history of what was suggested and whether the student engaged.
-- Case managers can manually push a resource to a student from the resources admin page (creates a `source: 'manual'` row).
-
-## 6. Browse / search (bonus, lightweight)
-
-New student-facing page `/resources`:
-- Filter by category, free-text search across name/address
-- Used as the "see all" link from the recommendation card
-- Listed in the Workspace sidebar group for students
-
-## Technical notes
-
-- Seed migration uses a single `INSERT … VALUES (...)` batched insert generated from the spreadsheet.
-- Edge function uses the AI SDK + `createLovableAiGatewayProvider` helper, schema kept small (only `resource_id` enum of candidate IDs + short `reason` string) to stay under Gemini's structured-output state limit.
-- All gateway errors (402/429) surface to the UI as a soft message — the recommendations panel degrades to "Browse all resources" if the AI call fails.
-- No PII leaves the server: only de-identified intake answers are sent to the model.
-
-## Files touched
-
-- `supabase/migrations/<ts>_community_resources.sql` (new tables, RLS, seed)
-- `supabase/functions/recommend-resources/index.ts` (new)
-- `src/lib/resourceMatching.ts` (new — rules)
-- `src/hooks/useCommunityResources.ts`, `src/hooks/useResourceRecommendations.ts` (new)
-- `src/components/resources/RecommendedResourcesCard.tsx`, `ResourceCard.tsx` (new)
-- `src/pages/Resources.tsx`, `src/pages/admin/ResourcesAdmin.tsx` (new)
-- `src/pages/IntakeSurvey.tsx`, `src/pages/Dashboard.tsx`, `src/pages/StudentDetail.tsx`, `src/pages/SubmitRequest.tsx` / submit hook (edits)
-- `src/App.tsx`, `src/components/layouts/SidebarLayout.tsx` (route + nav)
+```text
+Monday 14:00 UTC ──► send-checkin-reminders ──► queue "first nudge" for students with no check-in in 7+ days
+Thursday 14:00 UTC ─► send-checkin-reminders ──► queue "follow-up" for students still missing at 10+ days
+Student logs in    ─► Dashboard reads latest check-in
+                     ├─ < 7d   → no banner
+                     ├─ 7-13d  → accent banner, dismissible 24h
+                     └─ ≥ 14d  → red overdue alert, persistent
+```
 
 ## Open question
 
-Do you want the AI agent to recommend resources only from this curated list, or should it also be able to suggest "no good match — try this national hotline" fallbacks when the list has nothing relevant?
+Should the **first** weekly email go out to every existing student next Monday, or should we phase it in by only emailing students whose last check-in is already ≥ 7 days old (avoiding a sudden blast to students who happened to check in recently)? I'd recommend the phased approach — same code, just a gentler rollout.

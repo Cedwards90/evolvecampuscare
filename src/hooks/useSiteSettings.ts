@@ -12,6 +12,7 @@ export interface NotificationSettings {
     assignment: boolean;
     invitation: boolean;
     weekly_summary: boolean;
+    checkin_reminders: boolean;
   };
 }
 
@@ -24,6 +25,7 @@ const DEFAULT_SETTINGS: NotificationSettings = {
     assignment: true,
     invitation: true,
     weekly_summary: true,
+    checkin_reminders: true,
   },
 };
 
@@ -44,7 +46,12 @@ export function useNotificationSettings() {
       
       const value = data?.value;
       if (value && typeof value === 'object' && !Array.isArray(value)) {
-        return value as unknown as NotificationSettings;
+        const v = value as any;
+        return {
+          ...DEFAULT_SETTINGS,
+          ...v,
+          types: { ...DEFAULT_SETTINGS.types, ...(v.types || {}) },
+        } as NotificationSettings;
       }
       
       return DEFAULT_SETTINGS;

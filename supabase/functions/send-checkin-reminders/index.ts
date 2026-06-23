@@ -1,3 +1,8 @@
+// Weekly student check-in reminders.
+// Designed to be invoked by pg_cron twice a week:
+//   - Monday  ~14:00 UTC: "first nudge" for students with no check-in in 7+ days
+//   - Thursday ~14:00 UTC: "follow-up" for students still missing at 10+ days
+// Idempotent per (student, ISO week, mode) via email_send_log lookup.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
@@ -6,96 +11,161 @@ const corsHeaders = {
 };
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const APP_URL = "https://evolvecampuscare.lovable.app";
+
+type Mode = "first" | "followup";
+
+function isoWeekKey(d = new Date()): string {
+  // YYYY-WW style key in UTC
+  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const weekNum = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+}
+
+function renderEmail(firstName: string, mode: Mode): { subject: string; html: string } {
+  const greeting = firstName || "there";
+  if (mode === "followup") {
+    return {
+      subject: "Reminder: your weekly check-in is waiting 📋",
+      html: `
+        <div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background:#ffffff;">
+          <h2 style="color:#054D3B; margin-top:0;">Hi ${greeting},</h2>
+          <p style="color:#333; line-height:1.6;">Just a friendly nudge — your weekly check-in is still open. It takes less than a minute and helps your case manager support you better.</p>
+          <div style="text-align:center; margin:28px 0;">
+            <a href="${APP_URL}/check-in" style="background:#054D3B; color:#fff; padding:12px 24px; border-radius:9999px; text-decoration:none; font-weight:600; display:inline-block;">Complete this week's check-in</a>
+          </div>
+          <p style="color:#666; font-size:13px;">If you've already checked in this week, you can safely ignore this email.</p>
+          <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
+          <p style="color:#999; font-size:12px;">Evolve Foundation — Supporting your journey</p>
+        </div>`,
+    };
+  }
+  return {
+    subject: "Time for your weekly check-in ✨",
+    html: `
+      <div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background:#ffffff;">
+        <h2 style="color:#054D3B; margin-top:0;">Hi ${greeting} 👋</h2>
+        <p style="color:#333; line-height:1.6;">It's time for your weekly check-in. Share how you're doing — your mood, recent wins, and anything that's getting in the way.</p>
+        <p style="color:#333; line-height:1.6;">It only takes a minute, and it helps your case manager show up for you when it matters.</p>
+        <div style="text-align:center; margin:28px 0;">
+          <a href="${APP_URL}/check-in" style="background:#054D3B; color:#fff; padding:12px 24px; border-radius:9999px; text-decoration:none; font-weight:600; display:inline-block;">Complete check-in</a>
+        </div>
+        <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
+        <p style="color:#999; font-size:12px;">Evolve Foundation — Supporting your journey</p>
+      </div>`,
+  };
+}
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Get students who need a check-in reminder (last check-in > 21 days ago OR never checked in with account > 21 days)
-    const twentyOneDaysAgo = new Date();
-    twentyOneDaysAgo.setDate(twentyOneDaysAgo.getDate() - 21);
+    let mode: Mode = "first";
+    try {
+      const body = await req.json();
+      if (body?.mode === "followup") mode = "followup";
+    } catch (_) { /* GET / empty body */ }
 
-    // Get all students
-    const { data: students, error: studentsError } = await supabase
-      .from("user_roles")
-      .select("user_id")
-      .eq("role", "student");
-
-    if (studentsError) throw studentsError;
-
-    if (!students || students.length === 0) {
-      return new Response(JSON.stringify({ message: "No students found" }), {
+    // Respect site-wide notification toggles
+    const { data: settingsRow } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "notifications")
+      .maybeSingle();
+    const settings: any = settingsRow?.value ?? {};
+    const emailEnabled = settings?.email_enabled !== false;
+    const checkinEnabled = settings?.types?.checkin_reminders !== false; // default true
+    if (!emailEnabled || !checkinEnabled) {
+      return new Response(JSON.stringify({ message: "Check-in reminders disabled", sent: 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const studentIds = students.map((s) => s.user_id);
+    const now = new Date();
+    const firstThreshold = new Date(now.getTime() - 7 * 86400000);   // ≥ 7d
+    const followupThreshold = new Date(now.getTime() - 10 * 86400000); // ≥ 10d
+    const accountMinAge = new Date(now.getTime() - 7 * 86400000);    // skip brand new accounts
 
-    // Get latest check-in per student
-    const { data: latestCheckins, error: checkinsError } = await supabase
+    // All active students
+    const { data: studentRoles, error: rolesError } = await supabase
+      .from("user_roles").select("user_id").eq("role", "student");
+    if (rolesError) throw rolesError;
+    const studentIds = (studentRoles || []).map((r) => r.user_id);
+    if (studentIds.length === 0) {
+      return new Response(JSON.stringify({ message: "No students", sent: 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Latest checkin per student
+    const { data: checkins } = await supabase
       .from("student_checkins")
       .select("student_id, created_at")
       .in("student_id", studentIds)
       .order("created_at", { ascending: false });
-
-    if (checkinsError) throw checkinsError;
-
-    // Build map of latest check-in per student
-    const latestMap = new Map<string, string>();
-    for (const c of latestCheckins || []) {
-      if (!latestMap.has(c.student_id)) {
-        latestMap.set(c.student_id, c.created_at);
-      }
+    const latest = new Map<string, string>();
+    for (const c of checkins || []) {
+      if (!latest.has(c.student_id)) latest.set(c.student_id, c.created_at);
     }
 
-    // Get profiles for students who need reminders
-    const eligibleStudentIds = studentIds.filter((id) => {
-      const lastCheckin = latestMap.get(id);
-      if (!lastCheckin) return true; // never checked in
-      return new Date(lastCheckin) < twentyOneDaysAgo;
+    // Profiles (skip deactivated)
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, email, full_name, created_at, deactivated_at")
+      .in("user_id", studentIds);
+
+    const threshold = mode === "followup" ? followupThreshold : firstThreshold;
+    const eligible = (profiles || []).filter((p) => {
+      if (!p.email) return false;
+      if (p.deactivated_at) return false;
+      if (new Date(p.created_at) > accountMinAge) return false; // account too new
+      const last = latest.get(p.user_id);
+      if (!last) return true; // never checked in
+      return new Date(last) < threshold;
     });
 
-    if (eligibleStudentIds.length === 0) {
-      return new Response(JSON.stringify({ message: "No reminders needed" }), {
+    if (eligible.length === 0) {
+      return new Response(JSON.stringify({ message: "No reminders needed", mode, sent: 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Get profiles with account age > 21 days for those who never checked in
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("user_id, email, full_name, created_at")
-      .in("user_id", eligibleStudentIds);
-
-    if (profilesError) throw profilesError;
-
-    // Filter: only send to accounts older than 21 days if they've never checked in
-    const toSend = (profiles || []).filter((p) => {
-      const lastCheckin = latestMap.get(p.user_id);
-      if (lastCheckin) return true; // had a check-in but it's old
-      return new Date(p.created_at) < twentyOneDaysAgo; // account old enough
-    });
-
-    if (!RESEND_API_KEY) {
+    if (!RESEND_API_KEY || !LOVABLE_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "RESEND_API_KEY not configured", eligible: toSend.length }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Email gateway not configured", eligible: eligible.length }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
+    const weekKey = isoWeekKey(now);
+    const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
     let sent = 0;
-    for (const profile of toSend) {
-      try {
-        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-        const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+    let skipped = 0;
 
-        await fetch(`${GATEWAY_URL}/emails`, {
+    for (const p of eligible) {
+      const messageId = `checkin-${mode}-${p.user_id}-${weekKey}`;
+
+      // Idempotency: skip if we've already logged this exact message_id
+      const { data: existing } = await supabase
+        .from("email_send_log")
+        .select("id")
+        .eq("message_id", messageId)
+        .limit(1)
+        .maybeSingle();
+      if (existing) { skipped++; continue; }
+
+      const { subject, html } = renderEmail(p.full_name?.split(" ")[0] || "", mode);
+
+      try {
+        const resp = await fetch(`${GATEWAY_URL}/emails`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -103,50 +173,44 @@ Deno.serve(async (req) => {
             "X-Connection-Api-Key": RESEND_API_KEY,
           },
           body: JSON.stringify({
-            from: "Evolve Campus Care <noreply@evolvecampuscare.com>",
-            to: [profile.email],
-            subject: "Time for your 3-week check-in! 📋",
-            html: `
-              <div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #054D3B;">Hi ${profile.full_name?.split(" ")[0] || "there"} 👋</h2>
-                <p style="color: #333; line-height: 1.6;">
-                  It's been 3 weeks since your last check-in. We'd love to hear how you're doing!
-                </p>
-                <p style="color: #333; line-height: 1.6;">
-                  Your check-in helps your case manager understand your progress and provide better support.
-                </p>
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="https://evolvecampuscare.lovable.app/check-in" 
-                     style="background-color: #054D3B; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-                    Complete Check-In
-                  </a>
-                </div>
-                <p style="color: #666; font-size: 14px;">
-                  This takes less than a minute. Thank you for staying connected!
-                </p>
-                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-                <p style="color: #999; font-size: 12px;">
-                  Evolve Campus Care — Supporting your journey
-                </p>
-              </div>
-            `,
+            from: "Evolve Foundation <noreply@evolvecampuscare.com>",
+            to: [p.email],
+            subject,
+            html,
           }),
         });
-        sent++;
+        const ok = resp.ok;
+        await supabase.from("email_send_log").insert({
+          message_id: messageId,
+          template_name: "weekly-checkin-reminder",
+          recipient_email: p.email,
+          status: ok ? "sent" : "failed",
+          error_message: ok ? null : `Gateway ${resp.status}`,
+          metadata: { mode, week: weekKey },
+        });
+        if (ok) sent++;
       } catch (e) {
-        console.error(`Failed to send to ${profile.email}:`, e);
+        console.error(`Failed for ${p.email}:`, e);
+        await supabase.from("email_send_log").insert({
+          message_id: messageId,
+          template_name: "weekly-checkin-reminder",
+          recipient_email: p.email,
+          status: "failed",
+          error_message: String((e as Error)?.message || e),
+          metadata: { mode, week: weekKey },
+        });
       }
     }
 
     return new Response(
-      JSON.stringify({ message: `Sent ${sent} reminder(s)`, eligible: toSend.length }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ message: `Sent ${sent}`, mode, eligible: eligible.length, sent, skipped }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("Error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
