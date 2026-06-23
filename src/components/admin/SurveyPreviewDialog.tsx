@@ -253,7 +253,7 @@ interface SurveyPreviewDialogProps {
 }
 
 const TITLES: Record<string, string> = {
-  checkin: '3-Week Check-In',
+  checkin: 'Weekly Check-In',
   post_grad: '12-Month Post-Graduation Plan',
   intake: 'Student Intake Survey',
   career_intake: 'Career Intake Survey',

@@ -128,8 +128,8 @@ export default function SurveysIndex() {
 
   const core: SurveyRow[] = [
     {
-      title: '3-Week Check-In',
-      description: 'Recurring mood, progress, wins, and blockers — every 21 days.',
+      title: 'Weekly Check-In',
+      description: 'Recurring mood, progress, wins, and blockers.',
       preview: 'checkin',
       reviewHref: '/admin/surveys/responses?type=checkins',
       count: `${checkIns.length} submissions`,
