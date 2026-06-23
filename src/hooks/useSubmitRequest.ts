@@ -146,6 +146,13 @@ export function useSubmitRequest() {
         });
       }
 
+      // Fire-and-forget: generate community resource recommendations for this request
+      supabase.functions
+        .invoke('recommend-resources', {
+          body: { student_id: userId, source: 'request', request_id: data.id },
+        })
+        .catch((e) => console.warn('Recommendation generation failed', e));
+
       return data;
     },
     onSuccess: () => {

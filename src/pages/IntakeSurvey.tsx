@@ -150,6 +150,12 @@ export default function IntakeSurvey() {
           userId: user?.id ?? null,
           organizationId: profile?.organization_id ?? null,
         });
+        // Fire-and-forget: generate community resource recommendations.
+        if (user?.id) {
+          supabase.functions
+            .invoke('recommend-resources', { body: { student_id: user.id, source: 'intake' } })
+            .catch((e) => console.warn('Recommendation generation failed', e));
+        }
         toast({ title: 'Thank you!', description: 'Your responses have been saved. We are here for you.' });
         navigate('/onboarding/career-intake');
       }

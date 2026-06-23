@@ -67,6 +67,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { CertificationsSection } from '@/components/certifications/CertificationsSection';
+import { StudentResourcesPanel } from '@/components/resources/StudentResourcesPanel';
 import { ArrowRightLeft, Users as UsersIcon } from 'lucide-react';
 import { useOrgCohorts, useAssignStudentCohort } from '@/hooks/useCohorts';
 import { useMyOrgAdminOrgs } from '@/hooks/useOrgAdmins';
@@ -360,6 +361,7 @@ export default function StudentDetail() {
               { value: 'checkins', label: 'Check-Ins' },
               { value: 'grad-plan', label: 'Post-Grad Plan' },
               { value: 'certifications', label: 'Certifications' },
+              { value: 'resources', label: 'Resources' },
               { value: 'profile', label: 'Profile & Intake' },
             ];
             return (
@@ -557,6 +559,13 @@ export default function StudentDetail() {
           <TabsContent value="certifications" className="space-y-4">
             <CertificationsSection studentId={id!} canManage={role !== 'student'} />
           </TabsContent>
+
+          {/* Resources Tab */}
+          <TabsContent value="resources" className="space-y-4">
+            <StudentResourcesPanel studentId={id!} />
+          </TabsContent>
+
+
 
           {/* Profile & Intake Tab */}
           <TabsContent value="profile" className="space-y-4">

@@ -15,6 +15,7 @@ import { AIBadge } from '@/components/AIBadge';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
 import { GenerateReportCard } from '@/components/reports/GenerateReportCard';
+import { RecommendedResourcesCard } from '@/components/resources/RecommendedResourcesCard';
 import { GenerateStudentReportCard } from '@/components/reports/GenerateStudentReportCard';
 import { ExpiringCertificationsCard } from '@/components/certifications/ExpiringCertificationsCard';
 import { Button } from '@/components/ui/button';
@@ -413,6 +414,13 @@ export default function Dashboard() {
                 </Card>
               )}
             </section>
+
+            {/* Recommended Community Resources */}
+            {user?.id && (
+              <section className="space-y-4">
+                <RecommendedResourcesCard studentId={user.id} />
+              </section>
+            )}
 
             {/* Quick Actions */}
             <section className="space-y-4">

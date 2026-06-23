@@ -417,6 +417,51 @@ export type Database = {
           },
         ]
       }
+      community_resources: {
+        Row: {
+          address: string | null
+          category: string
+          contact: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          tags: string[]
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          category: string
+          contact?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          tags?: string[]
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          category?: string
+          contact?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          tags?: string[]
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       donor_report_templates: {
         Row: {
           branding: Json
@@ -1701,6 +1746,60 @@ export type Database = {
             columns: ["request_id"]
             isOneToOne: false
             referencedRelation: "support_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resource_recommendations: {
+        Row: {
+          clicked_at: string | null
+          created_at: string
+          created_by: string | null
+          dismissed_at: string | null
+          id: string
+          reason: string | null
+          request_id: string | null
+          resource_id: string
+          source: string
+          student_id: string
+        }
+        Insert: {
+          clicked_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          dismissed_at?: string | null
+          id?: string
+          reason?: string | null
+          request_id?: string | null
+          resource_id: string
+          source: string
+          student_id: string
+        }
+        Update: {
+          clicked_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          dismissed_at?: string | null
+          id?: string
+          reason?: string | null
+          request_id?: string | null
+          resource_id?: string
+          source?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_recommendations_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "support_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_recommendations_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "community_resources"
             referencedColumns: ["id"]
           },
         ]
