@@ -62,6 +62,9 @@ import TimeTrackingAdmin from "./pages/admin/TimeTrackingAdmin";
 import CareerIntakeOnboarding from "./pages/onboarding/CareerIntakeOnboarding";
 import CmfBasicsOnboarding from "./pages/onboarding/CmfBasicsOnboarding";
 import PersonalityQuizOnboarding from "./pages/onboarding/PersonalityQuizOnboarding";
+import Surveys from "./pages/Surveys";
+import LifeSkillsSurvey from "./pages/LifeSkillsSurvey";
+import LifeSkillsSurveysAdmin from "./pages/admin/LifeSkillsSurveys";
 
 // Create query client outside component to ensure stable reference.
 // Defaults tuned to avoid stale UI after mutations or returning to a tab,
@@ -335,6 +338,24 @@ function App() {
               <Route path="/onboarding/personality-quiz" element={
                 <ProtectedRoute allowedRoles={['student']}>
                   <PersonalityQuizOnboarding />
+                </ProtectedRoute>
+              } />
+
+
+              {/* Life Skills surveys */}
+              <Route path="/surveys" element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <Surveys />
+                </ProtectedRoute>
+              } />
+              <Route path="/surveys/:slug" element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <LifeSkillsSurvey />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/lifeskills" element={
+                <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
+                  <LifeSkillsSurveysAdmin />
                 </ProtectedRoute>
               } />
 
