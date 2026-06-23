@@ -36,6 +36,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCommunityResources, type CommunityResource } from '@/hooks/useCommunityResources';
 import { RESOURCE_CATEGORIES } from '@/lib/resourceMatching';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
 
 interface FormState {
   id?: string;
