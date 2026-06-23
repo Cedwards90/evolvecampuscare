@@ -740,6 +740,8 @@ export type Database = {
       }
       impact_survey_assignments: {
         Row: {
+          assigned_by: string | null
+          cohort_id: string | null
           created_at: string
           id: string
           last_completed_at: string | null
@@ -748,6 +750,8 @@ export type Database = {
           template_id: string
         }
         Insert: {
+          assigned_by?: string | null
+          cohort_id?: string | null
           created_at?: string
           id?: string
           last_completed_at?: string | null
@@ -756,6 +760,8 @@ export type Database = {
           template_id: string
         }
         Update: {
+          assigned_by?: string | null
+          cohort_id?: string | null
           created_at?: string
           id?: string
           last_completed_at?: string | null
@@ -764,6 +770,13 @@ export type Database = {
           template_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "impact_survey_assignments_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "impact_survey_assignments_template_id_fkey"
             columns: ["template_id"]
