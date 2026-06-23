@@ -12,6 +12,7 @@ export interface NotificationSettings {
     assignment: boolean;
     invitation: boolean;
     weekly_summary: boolean;
+    checkin_reminders: boolean;
   };
 }
 
@@ -24,6 +25,7 @@ const DEFAULT_SETTINGS: NotificationSettings = {
     assignment: true,
     invitation: true,
     weekly_summary: true,
+    checkin_reminders: true,
   },
 };
 
