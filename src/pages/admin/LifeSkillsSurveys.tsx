@@ -49,11 +49,17 @@ export default function LifeSkillsSurveys() {
 
   return (
     <SidebarLayout>
+      <div className="mb-2">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/admin/surveys"><ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Back to Surveys</Link>
+        </Button>
+      </div>
       <PageHeader
-        title="Surveys"
+        title="Life Skills Surveys"
         description="Send pre and post-module Life Skills surveys to a class, cohort, or organization to measure impact."
       />
-      <SurveyViewSwitcher />
+
+
 
 
       {isLoading ? (
