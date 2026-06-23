@@ -36,6 +36,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCommunityResources, type CommunityResource } from '@/hooks/useCommunityResources';
 import { RESOURCE_CATEGORIES } from '@/lib/resourceMatching';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
 
 interface FormState {
   id?: string;
@@ -67,6 +69,9 @@ export default function ResourcesAdmin() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { user, role } = useAuth();
+  const isAdmin = role === 'admin';
+  const canEditRow = (r: CommunityResource) => isAdmin || (!!user && r.created_by === user.id);
 
   const { data, isLoading } = useCommunityResources({
     category: category === 'all' ? undefined : category,
@@ -136,7 +141,12 @@ export default function ResourcesAdmin() {
   return (
     <SidebarLayout>
       <div className="space-y-6 p-4 md:p-6">
-        <PageHeader title="Community Resources" description="Manage the curated resource database.">
+        <PageHeader
+          title="Community Resources"
+          description={isAdmin
+            ? 'Manage the curated resource database.'
+            : 'Browse the resource library and contribute new community resources. You can edit or remove the ones you added.'}
+        >
           <Button onClick={openNew} className="rounded-full">
             <Plus className="h-4 w-4 mr-1" /> Add resource
           </Button>
@@ -183,29 +193,46 @@ export default function ResourcesAdmin() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(data || []).map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.name}</TableCell>
-                    <TableCell className="text-xs">{r.category}</TableCell>
-                    <TableCell className="text-xs hidden md:table-cell">{r.address}</TableCell>
-                    <TableCell className="text-xs hidden lg:table-cell">{r.phone}</TableCell>
-                    <TableCell className="text-xs">{r.is_active ? 'Active' : 'Hidden'}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(r)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          if (confirm(`Delete "${r.name}"?`)) del.mutate(r.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {(data || []).map((r) => {
+                  const editable = canEditRow(r);
+                  const mine = !!user && r.created_by === user.id;
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <span>{r.name}</span>
+                          {mine && !isAdmin && (
+                            <Badge variant="secondary" className="text-[10px]">Added by you</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs">{r.category}</TableCell>
+                      <TableCell className="text-xs hidden md:table-cell">{r.address}</TableCell>
+                      <TableCell className="text-xs hidden lg:table-cell">{r.phone}</TableCell>
+                      <TableCell className="text-xs">{r.is_active ? 'Active' : 'Hidden'}</TableCell>
+                      <TableCell className="text-right">
+                        {editable ? (
+                          <>
+                            <Button size="icon" variant="ghost" onClick={() => openEdit(r)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => {
+                                if (confirm(`Delete "${r.name}"?`)) del.mutate(r.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
