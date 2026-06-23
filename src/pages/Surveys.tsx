@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
+import { SurveyViewSwitcher } from '@/components/SurveyViewSwitcher';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,9 +24,10 @@ export default function Surveys() {
   return (
     <SidebarLayout>
       <PageHeader
-        title="My Surveys"
+        title="Surveys"
         description="Pre/post-module and wrap-up surveys for the Life Skills curriculum."
       />
+      <SurveyViewSwitcher />
 
       <section className="space-y-3">
         <h3 className="text-sm font-medium uppercase text-muted-foreground tracking-wide">Pending</h3>
