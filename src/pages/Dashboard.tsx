@@ -62,13 +62,17 @@ export default function Dashboard() {
   const { data: latestCheckIn } = useLatestCheckIn();
   const { data: pendingSurveys = [] } = usePendingSurveys();
   
-  // Show check-in banner if no check-in or last one > 21 days ago
-  const showCheckInBanner = useMemo(() => {
-    if (role !== 'student') return false;
-    if (!latestCheckIn) return true;
-    const daysSince = (Date.now() - new Date(latestCheckIn.created_at).getTime()) / (1000 * 60 * 60 * 24);
-    return daysSince >= 21;
+  // Weekly check-in banner: due ≥ 7d, overdue ≥ 14d
+  const checkInState = useMemo<'none' | 'due' | 'overdue'>(() => {
+    if (role !== 'student') return 'none';
+    const daysSince = latestCheckIn
+      ? (Date.now() - new Date(latestCheckIn.created_at).getTime()) / (1000 * 60 * 60 * 24)
+      : Infinity;
+    if (daysSince >= 14) return 'overdue';
+    if (daysSince >= 7) return 'due';
+    return 'none';
   }, [role, latestCheckIn]);
+  const showCheckInBanner = checkInState !== 'none';
   
   // Filter requests based on role
   const { filters: globalFilters } = useGlobalFilters();
