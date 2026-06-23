@@ -75,7 +75,7 @@ export function SendSurveyDialog({ studentId, studentName, trigger }: SendSurvey
                 <SelectValue placeholder="Select a survey…" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="checkin">3-Week Check-In</SelectItem>
+                <SelectItem value="checkin">Weekly Check-In</SelectItem>
                 <SelectItem value="post_graduation_plan">12-Month Post-Graduation Plan</SelectItem>
               </SelectContent>
             </Select>

@@ -108,7 +108,7 @@ export default function StudentCheckIn() {
         <PageNav fallback="/dashboard" />
 
         <PageHeader
-          title="3-Week Check-In"
+          title="Weekly Check-In"
           description="Let us know how you're doing — this only takes a minute."
         />
 
