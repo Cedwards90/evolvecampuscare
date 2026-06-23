@@ -141,7 +141,12 @@ export default function ResourcesAdmin() {
   return (
     <SidebarLayout>
       <div className="space-y-6 p-4 md:p-6">
-        <PageHeader title="Community Resources" description="Manage the curated resource database.">
+        <PageHeader
+          title="Community Resources"
+          description={isAdmin
+            ? 'Manage the curated resource database.'
+            : 'Browse the resource library and contribute new community resources. You can edit or remove the ones you added.'}
+        >
           <Button onClick={openNew} className="rounded-full">
             <Plus className="h-4 w-4 mr-1" /> Add resource
           </Button>
