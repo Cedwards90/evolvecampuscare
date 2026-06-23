@@ -129,7 +129,8 @@ export default function SurveyResponses() {
 
   return (
     <SidebarLayout>
-      <PageHeader title="Survey Responses" description="View all student check-ins and post-graduation plans" />
+      <PageHeader title="Surveys" description="View all student check-ins and post-graduation plans" />
+      <SurveyViewSwitcher />
 
       <GlobalFilterBar visible={['cohort', 'yearOfStudy', 'organizationId']} />
 
