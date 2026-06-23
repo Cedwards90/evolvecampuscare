@@ -204,13 +204,8 @@ export function useRemoveStudentAssignment() {
       if (error) throw error;
       return studentId;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['student-assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['unassigned-students'] });
-      queryClient.invalidateQueries({ queryKey: ['my-students'] });
-      queryClient.invalidateQueries({ queryKey: ['student-folders'] });
-      queryClient.invalidateQueries({ queryKey: ['my-assignment'] });
-      queryClient.invalidateQueries({ queryKey: ['case-manager-stats'] });
+    onSuccess: (studentId) => {
+      invalidateAssignmentSurfaces(queryClient, studentId);
       toast({
         title: 'Assignment removed',
         description: 'The student assignment has been removed.',
