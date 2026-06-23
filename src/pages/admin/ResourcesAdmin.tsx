@@ -69,6 +69,9 @@ export default function ResourcesAdmin() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { user, role } = useAuth();
+  const isAdmin = role === 'admin';
+  const canEditRow = (r: CommunityResource) => isAdmin || (!!user && r.created_by === user.id);
 
   const { data, isLoading } = useCommunityResources({
     category: category === 'all' ? undefined : category,
