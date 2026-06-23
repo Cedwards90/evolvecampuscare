@@ -341,6 +341,24 @@ function App() {
                 </ProtectedRoute>
               } />
 
+
+              {/* Life Skills surveys */}
+              <Route path="/surveys" element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <Surveys />
+                </ProtectedRoute>
+              } />
+              <Route path="/surveys/:slug" element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <LifeSkillsSurvey />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/lifeskills" element={
+                <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
+                  <LifeSkillsSurveysAdmin />
+                </ProtectedRoute>
+              } />
+
               {/* Catch-all route */}
               <Route path="*" element={<NotFound />} />
                 </Routes>
