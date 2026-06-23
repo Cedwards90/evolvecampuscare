@@ -360,6 +360,7 @@ export default function StudentDetail() {
               { value: 'checkins', label: 'Check-Ins' },
               { value: 'grad-plan', label: 'Post-Grad Plan' },
               { value: 'certifications', label: 'Certifications' },
+              { value: 'resources', label: 'Resources' },
               { value: 'profile', label: 'Profile & Intake' },
             ];
             return (
