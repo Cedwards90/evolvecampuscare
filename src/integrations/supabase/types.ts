@@ -2461,6 +2461,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           auto_assign_case_manager: string | null
+          cohort_id: string | null
           created_at: string | null
           email: string
           expires_at: string
@@ -2475,6 +2476,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           auto_assign_case_manager?: string | null
+          cohort_id?: string | null
           created_at?: string | null
           email: string
           expires_at: string
@@ -2489,6 +2491,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           auto_assign_case_manager?: string | null
+          cohort_id?: string | null
           created_at?: string | null
           email?: string
           expires_at?: string
@@ -2501,6 +2504,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "user_invitations_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_invitations_organization_id_fkey"
             columns: ["organization_id"]

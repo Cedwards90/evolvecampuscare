@@ -1,26 +1,28 @@
-## Root cause
+Diagnosis:
+- Dominic’s account is now accepted, active, has the student role, is assigned to Englewood shared Renewables, and has a student file.
+- The current Users page URL is filtered to Cohort 3. Dominic’s profile has no cohort assigned, so the global cohort filter hides him from `/admin/users` and `/student-folders` even though the signup data exists.
+- The systemic gap is that invitations currently capture organization and role, but not cohort, so students invited for a cohort can sign up without being placed into that cohort.
 
-For Dominic specifically:
-- `auth.users.email` is normalized to lowercase by Supabase: `dominiheath5007@gmail.com`.
-- `user_invitations.email` was saved as typed: `Dominiheath5007@gmail.com`.
-- The `handle_invited_signup` trigger matches with `WHERE email = NEW.email` (case-sensitive), so the invitation lookup misses on any invite created with a capital letter. As a result `accepted_at` never gets set and any invitation-driven side effects (role swap, org membership, auto-assign CM) never run.
-- His profile, student role, org membership, and student file all exist (they were filled in later by other flows), so once the invitation is marked accepted he will stop showing as "Invitation pending" and Student Folders should list him on the next refresh.
+Plan:
+1. Add cohort support to the invitation flow
+   - Add a Cohort selector to the Invite User dialog, scoped to the selected organization.
+   - Send the selected cohort with the invitation request.
+   - Store the cohort on the invitation record.
 
-This is a recurring bug: every invited user whose email contains uppercase letters will get stuck the same way.
+2. Apply cohort during invited signup
+   - Update the invited-signup database function so accepted invitees get `profiles.cohort_id` from the invitation.
+   - Keep existing behavior for role, organization membership, student file creation, and case-manager auto-assignment.
+   - If the cohort has assigned case managers, preserve the existing auto-assignment trigger behavior so newly cohorted students are routed correctly.
 
-## Fix (permanent + backfill)
+3. Repair current affected data
+   - Assign Dominic Heath to Cohort 3 in Englewood shared Renewables so he appears in the currently filtered Users section and Student Folders.
+   - Add a safe one-time repair for accepted invitations that already have a stored cohort after this change, without altering unrelated student/org data.
 
-1. **Make the signup trigger case-insensitive** — update `public.handle_invited_signup` so the invitation lookup and the "mark all pending accepted" update use `lower(email) = lower(NEW.email)` instead of `=`.
+4. Make the UI less misleading when filters hide valid users
+   - On Users and Student Folders, ensure the active global filter state is visible and easy to clear so accepted users are not mistaken as missing when they are only filtered out.
 
-2. **Normalize stored invitation emails going forward** — add a `BEFORE INSERT/UPDATE` trigger on `public.user_invitations` that does `NEW.email := lower(trim(NEW.email))`. Belt-and-suspenders so even if a future code path inserts a mixed-case address the trigger still matches.
-
-3. **Lowercase in the edge function too** — in `supabase/functions/generate-invitation-token/index.ts`, lowercase + trim `email` before insert (and validation). Keeps the data clean at the source.
-
-4. **One-time backfill** for users already stuck:
-   - `UPDATE public.user_invitations SET accepted_at = now() WHERE accepted_at IS NULL AND lower(email) IN (SELECT lower(email) FROM auth.users WHERE confirmed_at IS NOT NULL);`
-   - Lowercase existing rows: `UPDATE public.user_invitations SET email = lower(trim(email)) WHERE email <> lower(trim(email));`
-   - This clears Dominic and any other invitee whose signup already happened but whose invitation row never flipped.
-
-## Out of scope / verification
-
-No frontend changes. After the migration runs, refresh `/admin/users` — Dominic should disappear from the Pending Invitations list, and he should already be in Student Folders (his profile, role, and org membership are intact in the DB). If he's still missing from Student Folders after that, it's a separate UI filter issue and we'll diagnose from there.
+Technical details:
+- Database migration: add `cohort_id` to `user_invitations`, with validation that the cohort belongs to the selected organization when both are present.
+- Edge function: update `generate-invitation-token` to accept and validate `cohortId`.
+- Frontend: update `InviteUserDialog` and `useSendInvitation` types/payloads.
+- Data repair: set Dominic’s `profiles.cohort_id` to Cohort 3 only; no destructive updates and no active/deactivated filtering changes.
