@@ -127,10 +127,17 @@ export default function SurveyResponses() {
     !active ? <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-50" /> :
     dir === 'asc' ? <ArrowUp className="ml-1 inline h-3 w-3" /> : <ArrowDown className="ml-1 inline h-3 w-3" />;
 
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('type') === 'plans' ? 'plans' : 'checkins';
+
   return (
     <SidebarLayout>
-      <PageHeader title="Surveys" description="View all student check-ins and post-graduation plans" />
-      <SurveyViewSwitcher />
+      <div className="mb-2">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/admin/surveys"><ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Back to Surveys</Link>
+        </Button>
+      </div>
+      <PageHeader title="Survey Responses" description="Check-ins and post-graduation plan submissions" />
 
       <GlobalFilterBar visible={['cohort', 'yearOfStudy', 'organizationId']} />
 
@@ -160,11 +167,12 @@ export default function SurveyResponses() {
         surveyType={previewType || 'checkin'}
       />
 
-      <Tabs defaultValue="checkins">
+      <Tabs defaultValue={initialTab}>
         <TabsList>
           <TabsTrigger value="checkins">Check-Ins ({filteredCheckIns.length} · {filteredPendingCheck.length} pending)</TabsTrigger>
           <TabsTrigger value="plans">Post-Graduation Plans ({filteredPlans.length} · {filteredPendingPlans.length} pending)</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="checkins">
           <ViewToggle value={checkView} onChange={setCheckView} pendingCount={filteredPendingCheck.length} completedCount={filteredCheckIns.length} />
