@@ -302,6 +302,7 @@ export default function ImpactDashboard() {
         {data && (
           <>
             <DataCoverageCard coverage={data.coverage} />
+            <LifeSkillsImpactCard />
 
             {canFilterOrgs && breakdownOrgs.length > 1 && (
               <OrgBreakdownTable filters={filters} orgOptions={breakdownOrgs} />
