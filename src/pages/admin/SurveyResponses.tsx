@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
+import { SurveyViewSwitcher } from '@/components/SurveyViewSwitcher';
 import {
   useAllCheckIns,
   useAllPostGradPlans,
