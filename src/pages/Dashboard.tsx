@@ -199,28 +199,53 @@ export default function Dashboard() {
         {/* Pending Survey Invitations Banner */}
         {role === 'student' && pendingSurveys.length > 0 && (
           <>
-            {pendingSurveys.map((survey) => (
-              <Card key={survey.id} className="border-primary/50 bg-primary/5">
-                <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-medium text-sm">
-                      📝 {survey.survey_type === 'checkin' ? 'Check-In Requested' : 'Post-Graduation Plan Requested'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {survey.notes || (survey.survey_type === 'checkin'
-                        ? 'Your case manager has asked you to complete a check-in.'
-                        : 'Your case manager has asked you to complete your 12-month plan.')}
-                    </p>
-                  </div>
-                  <Button size="sm" asChild>
-                    <Link to={survey.survey_type === 'checkin' ? '/check-in' : '/post-graduation-plan'}>
-                      {survey.survey_type === 'checkin' ? 'Complete Check-In' : 'Start Plan'}
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+            {pendingSurveys.map((survey) => {
+              const isLifeSkills = typeof survey.survey_type === 'string' && survey.survey_type.startsWith('lifeskills:');
+              const lifeSkillsSlug = isLifeSkills ? survey.survey_type.slice('lifeskills:'.length) : '';
+              const title = isLifeSkills
+                ? 'Life Skills Survey Requested'
+                : survey.survey_type === 'checkin'
+                  ? 'Check-In Requested'
+                  : 'Post-Graduation Plan Requested';
+              const desc = survey.notes || (
+                isLifeSkills
+                  ? 'Your case manager has invited you to complete a Life Skills survey.'
+                  : survey.survey_type === 'checkin'
+                    ? 'Your case manager has asked you to complete a check-in.'
+                    : 'Your case manager has asked you to complete your 12-month plan.'
+              );
+              const link = isLifeSkills
+                ? `/surveys/${lifeSkillsSlug}`
+                : survey.survey_type === 'checkin' ? '/check-in' : '/post-graduation-plan';
+              const cta = isLifeSkills ? 'Open Survey' : survey.survey_type === 'checkin' ? 'Complete Check-In' : 'Start Plan';
+              return (
+                <Card key={survey.id} className="border-primary/50 bg-primary/5">
+                  <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium text-sm">📝 {title}</p>
+                      <p className="text-xs text-muted-foreground">{desc}</p>
+                    </div>
+                    <Button size="sm" asChild>
+                      <Link to={link}>{cta}</Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </>
+        )}
+
+        {/* Life Skills assignments without invitation rows (older or imported) */}
+        {role === 'student' && pendingLifeSkills.length > 0 && pendingSurveys.filter((s: any) => typeof s.survey_type === 'string' && s.survey_type.startsWith('lifeskills:')).length === 0 && (
+          <Card className="border-primary/40 bg-primary/5">
+            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium text-sm">📋 {pendingLifeSkills.length} Life Skills survey{pendingLifeSkills.length === 1 ? '' : 's'} pending</p>
+                <p className="text-xs text-muted-foreground">Help us measure the impact of the curriculum — only takes a minute each.</p>
+              </div>
+              <Button size="sm" asChild><Link to="/surveys">Open</Link></Button>
+            </CardContent>
+          </Card>
         )}
 
         {role === 'student' && (
