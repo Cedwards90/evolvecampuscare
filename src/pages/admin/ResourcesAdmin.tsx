@@ -193,29 +193,46 @@ export default function ResourcesAdmin() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(data || []).map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.name}</TableCell>
-                    <TableCell className="text-xs">{r.category}</TableCell>
-                    <TableCell className="text-xs hidden md:table-cell">{r.address}</TableCell>
-                    <TableCell className="text-xs hidden lg:table-cell">{r.phone}</TableCell>
-                    <TableCell className="text-xs">{r.is_active ? 'Active' : 'Hidden'}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(r)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          if (confirm(`Delete "${r.name}"?`)) del.mutate(r.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {(data || []).map((r) => {
+                  const editable = canEditRow(r);
+                  const mine = !!user && r.created_by === user.id;
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <span>{r.name}</span>
+                          {mine && !isAdmin && (
+                            <Badge variant="secondary" className="text-[10px]">Added by you</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs">{r.category}</TableCell>
+                      <TableCell className="text-xs hidden md:table-cell">{r.address}</TableCell>
+                      <TableCell className="text-xs hidden lg:table-cell">{r.phone}</TableCell>
+                      <TableCell className="text-xs">{r.is_active ? 'Active' : 'Hidden'}</TableCell>
+                      <TableCell className="text-right">
+                        {editable ? (
+                          <>
+                            <Button size="icon" variant="ghost" onClick={() => openEdit(r)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => {
+                                if (confirm(`Delete "${r.name}"?`)) del.mutate(r.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
