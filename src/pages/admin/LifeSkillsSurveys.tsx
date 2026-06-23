@@ -49,9 +49,11 @@ export default function LifeSkillsSurveys() {
   return (
     <SidebarLayout>
       <PageHeader
-        title="Life Skills Surveys"
-        description="Send pre and post-module surveys to a class, cohort, or organization to measure impact."
+        title="Surveys"
+        description="Send pre and post-module Life Skills surveys to a class, cohort, or organization to measure impact."
       />
+      <SurveyViewSwitcher />
+
 
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[200px]"><LoadingSpinner /></div>
