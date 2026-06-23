@@ -54,6 +54,8 @@ import AcceptNda from "./pages/AcceptNda";
 import AdminNda from "./pages/admin/AdminNda";
 
 import ImpactDashboard from "./pages/admin/ImpactDashboard";
+import Resources from "./pages/Resources";
+import ResourcesAdmin from "./pages/admin/ResourcesAdmin";
 import AdminStudentSubmissions from "./pages/admin/AdminStudentSubmissions";
 import TimeTracking from "./pages/TimeTracking";
 import TimeTrackingAdmin from "./pages/admin/TimeTrackingAdmin";
