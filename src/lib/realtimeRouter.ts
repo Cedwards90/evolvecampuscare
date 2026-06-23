@@ -263,4 +263,6 @@ export const REALTIME_TABLES = [
   'program_cost_settings',
   'participant_funnel_events',
   'participant_outcomes',
+  'cohorts',
+  'cohort_case_managers',
 ] as const;
