@@ -46,7 +46,12 @@ export function useNotificationSettings() {
       
       const value = data?.value;
       if (value && typeof value === 'object' && !Array.isArray(value)) {
-        return value as unknown as NotificationSettings;
+        const v = value as any;
+        return {
+          ...DEFAULT_SETTINGS,
+          ...v,
+          types: { ...DEFAULT_SETTINGS.types, ...(v.types || {}) },
+        } as NotificationSettings;
       }
       
       return DEFAULT_SETTINGS;
