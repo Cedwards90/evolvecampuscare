@@ -12,6 +12,7 @@ export interface CommunityResource {
   description: string | null;
   tags: string[];
   is_active: boolean;
+  created_by?: string | null;
 }
 
 export function useCommunityResources(opts?: { category?: string; search?: string; includeInactive?: boolean }) {
