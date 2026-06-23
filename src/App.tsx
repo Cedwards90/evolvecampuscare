@@ -223,9 +223,15 @@ function App() {
             } />
             <Route path="/admin/surveys" element={
               <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
+                <SurveysIndex />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/surveys/responses" element={
+              <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
                 <SurveyResponses />
               </ProtectedRoute>
             } />
+
             <Route path="/admin/qr-codes" element={
               <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <QRCodesPage />
