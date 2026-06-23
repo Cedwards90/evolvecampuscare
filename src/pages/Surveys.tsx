@@ -24,9 +24,10 @@ export default function Surveys() {
   return (
     <SidebarLayout>
       <PageHeader
-        title="My Surveys"
+        title="Surveys"
         description="Pre/post-module and wrap-up surveys for the Life Skills curriculum."
       />
+      <SurveyViewSwitcher />
 
       <section className="space-y-3">
         <h3 className="text-sm font-medium uppercase text-muted-foreground tracking-wide">Pending</h3>
