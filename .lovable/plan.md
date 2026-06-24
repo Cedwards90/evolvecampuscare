@@ -1,41 +1,46 @@
-## Goal
+# Survey Impact Reports
 
-On `/admin/surveys`, let staff click into any survey card and see the list of students who have completed it.
+Add a way to generate impact summaries for each survey type, with filters, an on-screen dashboard, PDF download, and CSV export.
 
-## What changes
+## Scope (surveys)
+- Life Skills (pre/post confidence per module + final NPS)
+- Wellbeing check-ins (mood trends, wins/blockers volume)
+- Intake & Career Intake (response counts, key field distributions)
+- Post-graduation plans (status/destination breakdown, completion rate)
 
-### New "Completions" button on every SurveyCard
+## Where it lives
+- New page `/admin/surveys/reports` (also reachable from each card on `/admin/surveys` via a new "Impact report" button next to "Completions").
+- Access: Admin, Org Admin, Case Manager. Data scoping reuses existing RLS — staff only see what they can already see (CM = assigned students; Org Admin = their orgs; Admin = all).
 
-Adds a third action next to **Preview** and the review/manage link. Clicking it opens a dialog titled "Completed by — {survey name}" with:
+## Filters
+- Date range (preset: 7d / 30d / 90d / custom) applied to `submitted_at`/`created_at`.
+- `GlobalFilterBar` (organization, cohort, year of study, assigned case manager) — reuses existing context, same pattern as `Reports.tsx`.
+- Survey selector (which survey the report is for).
 
-- Search box (filter by student name or email)
-- Table: Student (links to `/students/:id`) · Organization · Submissions count · Last submitted
-- Empty state when nobody has completed it yet ("No completions yet")
-- Loading + error states
+## On-screen dashboard (per survey)
+A `SurveyImpactReport` component renders sections tailored to the selected survey:
 
-The dialog respects role: case managers / org admins see only students they have access to (existing RLS already enforces this — the query just runs through the authenticated client).
+- **Header KPIs**: total responses, unique respondents, completion rate (where applicable), date range.
+- **Life Skills**: reuse logic from `LifeSkillsImpactCard` — pre vs post avg confidence bar chart per module, delta column, final-survey NPS + n.
+- **Wellbeing check-ins**: avg mood over time (line), mood distribution (bar), counts of wins/blockers, top recurring themes (simple word/keyword frequency from text fields).
+- **Intake / Career Intake**: response volume over time, breakdowns of structured fields (e.g. goals, top needs, industries) as bar charts; list top free-text themes.
+- **Post-grad plans**: status breakdown (employed / continuing ed / seeking / other), destination org/school list, plan-confidence avg if present.
+- Empty / loading / error states consistent with existing dashboards.
 
-### Single shared dialog component
+## Exports
+- **PDF**: Evolve-branded report via `jsPDF` + `jspdf-autotable`, mirroring `src/lib/reportExport.ts` styling (Forest Green header, footer with page numbers, "Powered by Evolve Foundation"). One section per chart/table with KPI summary on page 1.
+- **CSV**: per-survey row-level export of the filtered responses (respects RLS/global filters). Multi-section CSV for aggregated metrics, same pattern as `exportReportCsv`.
 
-`SurveyCompletionsDialog` accepts a `source` describing which table to read:
+## New / changed files
+- `src/pages/admin/SurveyImpactReports.tsx` — page shell, filter bar, survey picker, export buttons.
+- `src/components/admin/impact/SurveyImpactReport.tsx` — dispatcher rendering the right section per survey.
+- `src/components/admin/impact/sections/` — `LifeSkillsSection.tsx`, `CheckinsSection.tsx`, `IntakeSection.tsx`, `CareerIntakeSection.tsx`, `PostGradSection.tsx`.
+- `src/hooks/useSurveyImpact.ts` — one hook per survey kind returning aggregates + raw rows for export, applying date range + global filters via `src/lib/applyGlobalFilters.ts`.
+- `src/lib/surveyImpactExport.ts` — `exportSurveyImpactPdf()` and `exportSurveyImpactCsv()`.
+- `src/pages/admin/SurveysIndex.tsx` — add "Impact report" button on each `SurveyCard` linking to `/admin/surveys/reports?survey=<source>`.
+- `src/App.tsx` — register the new route, gated to admin / org_admin / case_manager.
 
-- `checkin` → `student_checkins`
-- `post_grad` → `post_graduation_plans`
-- `intake` → `intake_responses`
-- `career_intake` → `career_intake_responses`
-- `impact:<slug>` → `impact_survey_responses` filtered by joined `impact_survey_templates.slug`
-
-The dialog groups rows by `student_id`, computes count + max(submitted/created at), then joins to `profiles` (full_name, email, organization_id) and `training_organizations` (name) in one follow-up query.
-
-### Wiring
-
-- `SurveysIndex` passes the existing `preview` identifier as the completions source — no new IDs to invent.
-- Life Skills cards keep "Manage & send"; the new "Completions" button replaces nothing, it adds.
-
-## Technical details
-
-- New file `src/components/admin/SurveyCompletionsDialog.tsx` — controlled dialog reading from the right table based on `source` prop.
-- New hook `src/hooks/useSurveyCompletions.ts` — one `useQuery` that switches on source, returns `{ student_id, count, last_at, full_name, email, organization_name }[]`.
-- Edit `src/pages/admin/SurveysIndex.tsx` — render the new button on `SurveyCard`, wire it to open the dialog with the row's `preview` value.
-
-No database, RLS, or edge function changes.
+## Out of scope
+- No DB schema changes — all aggregations are client-side over existing tables (`student_checkins`, `intake_responses`, `career_intake_responses`, `post_graduation_plans`, `impact_survey_responses` + templates).
+- No new edge functions; PDF generated in the browser like the existing Reports page.
+- No new permissions/roles.
