@@ -173,13 +173,14 @@ async function fetchSource(source: CompletionSource, from: Date, to: Date): Prom
 
 
 function computeSourceMetrics(source: CompletionSource, rows: SurveyImpactRow[]): {
-  metrics: Record<string, number | string | null>;
-  distributions: { title: string; data: { name: string; value: number }[] }[];
-  textHighlights: { title: string; items: { text: string; count: number }[] }[];
+  metrics: SurveyImpactResult['metrics'];
+  distributions: SurveyImpactResult['distributions'];
+  textHighlights: SurveyImpactResult['textHighlights'];
 } {
-  const metrics: Record<string, number | string | null> = {};
-  const distributions: { title: string; data: { name: string; value: number }[] }[] = [];
-  const textHighlights: { title: string; items: { text: string; count: number }[] }[] = [];
+  const metrics: SurveyImpactResult['metrics'] = {};
+  const distributions: SurveyImpactResult['distributions'] = [];
+  const textHighlights: SurveyImpactResult['textHighlights'] = [];
+
 
   if (source === 'checkin') {
     const moods = rows.map((r) => Number(r.data.mood_rating)).filter((n) => Number.isFinite(n));
