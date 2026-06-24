@@ -14,8 +14,9 @@ import type { CompletionSource } from '@/hooks/useSurveyCompletions';
 import { exportSurveyImpactCsv, exportSurveyImpactPdf } from '@/lib/surveyImpactExport';
 import { toast } from '@/hooks/use-toast';
 import {
-  Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
+
 import { LIFESKILLS_MODULES, preSlug, postSlug, LIFESKILLS_FINAL_SLUG, FINAL_TEMPLATE } from '@/lib/lifeskillsTemplates';
 
 interface SurveyOption {
@@ -33,6 +34,7 @@ const BASE_OPTIONS: SurveyOption[] = [
 
 function lifeskillsOptions(): SurveyOption[] {
   const list: SurveyOption[] = [];
+  list.push({ value: 'impact:lifeskills-all' as CompletionSource, label: 'All modules — Pre vs Post summary', group: 'Life Skills' });
   for (const m of LIFESKILLS_MODULES) {
     const tag = `M${String(m.number).padStart(2, '0')} · ${m.title}`;
     list.push({ value: `impact:${preSlug(m.id)}` as CompletionSource, label: `${tag} — Pre`, group: 'Life Skills' });
@@ -41,6 +43,7 @@ function lifeskillsOptions(): SurveyOption[] {
   list.push({ value: `impact:${LIFESKILLS_FINAL_SLUG}` as CompletionSource, label: FINAL_TEMPLATE.title, group: 'Life Skills' });
   return list;
 }
+
 
 const ALL_OPTIONS: SurveyOption[] = [...BASE_OPTIONS, ...lifeskillsOptions()];
 
@@ -202,40 +205,81 @@ export default function SurveyImpactReports() {
               </CardContent>
             </Card>
 
-            {data.distributions.map((d) => (
-              <Card key={d.title}>
-                <CardHeader><CardTitle className="text-base">{d.title}</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="h-[260px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={d.data}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                        <YAxis allowDecimals={false} />
-                        <Tooltip />
-                        <Bar dataKey="value" fill="hsl(var(--primary))" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {data.distributions.map((d) => {
+              const series = d.series && d.series.length ? d.series : [{ key: 'value', label: 'Count' }];
+              const palette = ['hsl(var(--muted-foreground))', 'hsl(var(--primary))', 'hsl(var(--accent))'];
+              const isAvgChart = d.title.toLowerCase().includes('confidence');
+              return (
+                <Card key={d.title}>
+                  <CardHeader><CardTitle className="text-base">{d.title}</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="h-[280px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={d.data}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                          <YAxis allowDecimals domain={isAvgChart ? [0, 5] : undefined as any} />
+                          <Tooltip />
+                          {series.length > 1 && <Legend />}
+                          {series.map((s, i) => (
+                            <Bar key={s.key} dataKey={s.key} name={s.label} fill={palette[i % palette.length]} />
+                          ))}
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
 
-            {data.textHighlights.map((t) => (
-              <Card key={t.title}>
-                <CardHeader><CardTitle className="text-base">{t.title}</CardTitle></CardHeader>
-                <CardContent>
-                  <ul className="space-y-1 text-sm">
-                    {t.items.map((i) => (
-                      <li key={i.text} className="flex justify-between gap-4 border-b border-border/40 py-1">
-                        <span className="truncate">{i.text}</span>
-                        <span className="text-muted-foreground tabular-nums">{i.count}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
+            {data.textHighlights.map((t) => {
+              if (t.extraColumns && t.extraColumns.length) {
+                return (
+                  <Card key={t.title}>
+                    <CardHeader><CardTitle className="text-base">{t.title}</CardTitle></CardHeader>
+                    <CardContent className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left text-xs text-muted-foreground">
+                            <th className="py-2 pr-4 font-medium">Module</th>
+                            {t.extraColumns.map((c) => (
+                              <th key={c} className="py-2 px-3 font-medium tabular-nums">{c}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {t.items.map((i) => (
+                            <tr key={i.text} className="border-b border-border/40">
+                              <td className="py-2 pr-4">{i.text}</td>
+                              {t.extraColumns!.map((c) => (
+                                <td key={c} className="py-2 px-3 tabular-nums text-muted-foreground">{(i.extra?.[c] as any) ?? '—'}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </CardContent>
+                  </Card>
+                );
+              }
+              return (
+                <Card key={t.title}>
+                  <CardHeader><CardTitle className="text-base">{t.title}</CardTitle></CardHeader>
+                  <CardContent>
+                    <ul className="space-y-1 text-sm">
+                      {t.items.map((i) => (
+                        <li key={i.text} className="flex justify-between gap-4 border-b border-border/40 py-1">
+                          <span className="truncate">{i.text}</span>
+                          <span className="text-muted-foreground tabular-nums">{i.count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+
           </div>
         )}
       </div>

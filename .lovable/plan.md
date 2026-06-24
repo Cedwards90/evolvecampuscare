@@ -1,46 +1,49 @@
-# Survey Impact Reports
+## Goal
 
-Add a way to generate impact summaries for each survey type, with filters, an on-screen dashboard, PDF download, and CSV export.
+Add a Life Skills "By module" impact view that pairs **pre vs post** results for each of the 7 modules in one report, so staff can see actual learning gains rather than viewing pre and post as separate, disconnected surveys.
 
-## Scope (surveys)
-- Life Skills (pre/post confidence per module + final NPS)
-- Wellbeing check-ins (mood trends, wins/blockers volume)
-- Intake & Career Intake (response counts, key field distributions)
-- Post-graduation plans (status/destination breakdown, completion rate)
+## Changes
 
-## Where it lives
-- New page `/admin/surveys/reports` (also reachable from each card on `/admin/surveys` via a new "Impact report" button next to "Completions").
-- Access: Admin, Org Admin, Case Manager. Data scoping reuses existing RLS — staff only see what they can already see (CM = assigned students; Org Admin = their orgs; Admin = all).
+### 1. New survey option: "Life Skills — All modules (Pre vs Post)"
+- Add a synthetic source value `impact:lifeskills-all` to the survey dropdown in `SurveyImpactReports.tsx`, listed first under the Life Skills group and also set as the destination of the SurveysIndex "Impact report" button when clicking the Life Skills card.
+- Existing per-slug pre/post options remain (for users who want to drill into one module).
 
-## Filters
-- Date range (preset: 7d / 30d / 90d / custom) applied to `submitted_at`/`created_at`.
-- `GlobalFilterBar` (organization, cohort, year of study, assigned case manager) — reuses existing context, same pattern as `Reports.tsx`.
-- Survey selector (which survey the report is for).
+### 2. New hook branch in `useSurveyImpact.ts`
+When `source === 'impact:lifeskills-all'`:
+- Fetch every `impact_survey_responses` row whose template slug matches `lifeskills-m%-pre` or `lifeskills-m%-post` within the date range (single query joining `impact_survey_templates`).
+- Apply the same profile/org/cohort/CM global filters already used for other sources.
+- Aggregate per module:
+  - `pre_n`, `post_n` (response counts)
+  - `pre_avg_confidence`, `post_avg_confidence` (1–5)
+  - `delta = post_avg − pre_avg`
+  - `paired_n` = students with both a pre and post response
+  - `paired_avg_delta` = mean of per-student (post − pre) confidence among paired
+- Return data shaped to fit the existing report renderer:
+  - `metrics`: totals across all modules (e.g. "Modules with post data", "Avg pre", "Avg post", "Avg gain", "Paired respondents")
+  - `distributions`: two charts — **"Avg confidence by module (Pre vs Post)"** (grouped bars) and **"Confidence gain by module"** (single-bar delta)
+  - `textHighlights`: per-module table rows (module name, pre avg / n, post avg / n, delta, paired n)
+  - `rows`: per-response rows tagged with module + pre/post (used for CSV)
 
-## On-screen dashboard (per survey)
-A `SurveyImpactReport` component renders sections tailored to the selected survey:
+### 3. Renderer tweak in `SurveyImpactReports.tsx`
+- Support a grouped bar chart for the Pre vs Post distribution (extend the distribution shape with optional `series` so the renderer knows to draw two bars). Other distributions remain single-bar — backward compatible.
+- The per-module summary table renders through the existing `textHighlights` block (already a label + count list), but with a small change to allow extra columns when items carry `extra` fields. Falls back to current display otherwise.
 
-- **Header KPIs**: total responses, unique respondents, completion rate (where applicable), date range.
-- **Life Skills**: reuse logic from `LifeSkillsImpactCard` — pre vs post avg confidence bar chart per module, delta column, final-survey NPS + n.
-- **Wellbeing check-ins**: avg mood over time (line), mood distribution (bar), counts of wins/blockers, top recurring themes (simple word/keyword frequency from text fields).
-- **Intake / Career Intake**: response volume over time, breakdowns of structured fields (e.g. goals, top needs, industries) as bar charts; list top free-text themes.
-- **Post-grad plans**: status breakdown (employed / continuing ed / seeking / other), destination org/school list, plan-confidence avg if present.
-- Empty / loading / error states consistent with existing dashboards.
+### 4. PDF / CSV export
+- `surveyImpactExport.ts`:
+  - PDF: when source is `impact:lifeskills-all`, render a "Module impact summary" table (Module · Pre avg (n) · Post avg (n) · Delta · Paired n) before the generic distribution tables.
+  - CSV: emit a `## Module impact` section with the same columns, then the existing raw-rows section (one row per response, tagged with module and pre/post).
 
-## Exports
-- **PDF**: Evolve-branded report via `jsPDF` + `jspdf-autotable`, mirroring `src/lib/reportExport.ts` styling (Forest Green header, footer with page numbers, "Powered by Evolve Foundation"). One section per chart/table with KPI summary on page 1.
-- **CSV**: per-survey row-level export of the filtered responses (respects RLS/global filters). Multi-section CSV for aggregated metrics, same pattern as `exportReportCsv`.
-
-## New / changed files
-- `src/pages/admin/SurveyImpactReports.tsx` — page shell, filter bar, survey picker, export buttons.
-- `src/components/admin/impact/SurveyImpactReport.tsx` — dispatcher rendering the right section per survey.
-- `src/components/admin/impact/sections/` — `LifeSkillsSection.tsx`, `CheckinsSection.tsx`, `IntakeSection.tsx`, `CareerIntakeSection.tsx`, `PostGradSection.tsx`.
-- `src/hooks/useSurveyImpact.ts` — one hook per survey kind returning aggregates + raw rows for export, applying date range + global filters via `src/lib/applyGlobalFilters.ts`.
-- `src/lib/surveyImpactExport.ts` — `exportSurveyImpactPdf()` and `exportSurveyImpactCsv()`.
-- `src/pages/admin/SurveysIndex.tsx` — add "Impact report" button on each `SurveyCard` linking to `/admin/surveys/reports?survey=<source>`.
-- `src/App.tsx` — register the new route, gated to admin / org_admin / case_manager.
+### 5. Entry point
+- `SurveysIndex.tsx`: the Life Skills card's "Impact report" button links to `/admin/surveys/reports?survey=impact:lifeskills-all` (per-module pre/post option). Other survey cards unchanged.
 
 ## Out of scope
-- No DB schema changes — all aggregations are client-side over existing tables (`student_checkins`, `intake_responses`, `career_intake_responses`, `post_graduation_plans`, `impact_survey_responses` + templates).
-- No new edge functions; PDF generated in the browser like the existing Reports page.
-- No new permissions/roles.
+- No DB schema changes, no edge function changes, no new permissions.
+- Final-survey NPS report stays as its own option.
+- No changes to how surveys are taken or assigned.
+
+## Files
+
+- `src/hooks/useSurveyImpact.ts` — add `impact:lifeskills-all` branch and aggregator
+- `src/pages/admin/SurveyImpactReports.tsx` — new option, grouped-bar support, per-module table rendering
+- `src/lib/surveyImpactExport.ts` — module-impact section in PDF and CSV
+- `src/pages/admin/SurveysIndex.tsx` — Life Skills card button target

@@ -58,11 +58,21 @@ export function exportSurveyImpactCsv(
   );
   sections.push(toCsvSection('Volume by Day', ['Date', 'Count'], result.volumeByDay.map((v) => [v.date, v.count])));
   for (const d of result.distributions) {
-    sections.push(toCsvSection(d.title, ['Bucket', 'Count'], d.data.map((row) => [row.name, row.value])));
+    if (d.series && d.series.length) {
+      const headers = ['Bucket', ...d.series.map((s) => s.label)];
+      sections.push(toCsvSection(d.title, headers, d.data.map((row: any) => [row.name, ...d.series!.map((s) => row[s.key] ?? '')])));
+    } else {
+      sections.push(toCsvSection(d.title, ['Bucket', 'Count'], d.data.map((row: any) => [row.name, row.value ?? ''])));
+    }
   }
   for (const t of result.textHighlights) {
-    sections.push(toCsvSection(t.title, ['Text', 'Count'], t.items.map((i) => [i.text, i.count])));
+    if (t.extraColumns && t.extraColumns.length) {
+      sections.push(toCsvSection(t.title, ['Item', ...t.extraColumns], t.items.map((i) => [i.text, ...t.extraColumns!.map((c) => i.extra?.[c] ?? '')])));
+    } else {
+      sections.push(toCsvSection(t.title, ['Text', 'Count'], t.items.map((i) => [i.text, i.count])));
+    }
   }
+
   sections.push(
     toCsvSection(
       'Responses',
@@ -119,26 +129,47 @@ export function exportSurveyImpactPdf(
 
   for (const d of result.distributions) {
     if (!d.data.length) continue;
-    autoTable(doc, {
-      head: [[d.title, 'Count']],
-      body: d.data.map((row) => [row.name, String(row.value)]),
-      headStyles: { fillColor: [136, 169, 140] },
-      theme: 'striped',
-      styles: { fontSize: 10 },
-    });
+    if (d.series && d.series.length) {
+      autoTable(doc, {
+        head: [[d.title, ...d.series.map((s) => s.label)]],
+        body: d.data.map((row: any) => [row.name, ...d.series!.map((s) => String(row[s.key] ?? '—'))]),
+        headStyles: { fillColor: [136, 169, 140] },
+        theme: 'striped',
+        styles: { fontSize: 10 },
+      });
+    } else {
+      autoTable(doc, {
+        head: [[d.title, 'Count']],
+        body: d.data.map((row: any) => [row.name, String(row.value ?? '—')]),
+        headStyles: { fillColor: [136, 169, 140] },
+        theme: 'striped',
+        styles: { fontSize: 10 },
+      });
+    }
   }
 
   for (const t of result.textHighlights) {
     if (!t.items.length) continue;
-    autoTable(doc, {
-      head: [[t.title, 'Mentions']],
-      body: t.items.map((i) => [i.text, String(i.count)]),
-      headStyles: { fillColor: [136, 169, 140] },
-      theme: 'striped',
-      styles: { fontSize: 9 },
-      columnStyles: { 0: { cellWidth: 400 } },
-    });
+    if (t.extraColumns && t.extraColumns.length) {
+      autoTable(doc, {
+        head: [['Item', ...t.extraColumns]],
+        body: t.items.map((i) => [i.text, ...t.extraColumns!.map((c) => String(i.extra?.[c] ?? '—'))]),
+        headStyles: { fillColor: [5, 77, 59] },
+        theme: 'striped',
+        styles: { fontSize: 9 },
+      });
+    } else {
+      autoTable(doc, {
+        head: [[t.title, 'Mentions']],
+        body: t.items.map((i) => [i.text, String(i.count)]),
+        headStyles: { fillColor: [136, 169, 140] },
+        theme: 'striped',
+        styles: { fontSize: 9 },
+        columnStyles: { 0: { cellWidth: 400 } },
+      });
+    }
   }
+
 
   if (result.volumeByDay.length) {
     autoTable(doc, {
