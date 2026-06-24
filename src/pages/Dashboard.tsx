@@ -50,10 +50,13 @@ import { useMyLifeSkillsAssignments } from '@/hooks/useLifeSkillsSurveys';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 import { applyToRequests } from '@/lib/applyGlobalFilters';
+import { useProductTour } from '@/hooks/useProductTour';
 
 export default function Dashboard() {
   const { role, user, profile } = useAuth();
   const navigate = useNavigate();
+  const { startTour, hasCompletedTour, getLoginCount } = useProductTour();
+  const showOnboardingTip = !hasCompletedTour() && getLoginCount() <= 3;
   
   // Fetch real data from Supabase
   const { data: allRequests = [], isLoading: requestsLoading } = useRequests({});
