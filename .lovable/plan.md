@@ -1,61 +1,62 @@
 ## Goal
 
-Right now the tour shows tooltips but rarely changes pages — only a few steps set `navigateTo`, and navigation only fires from the "Next" button (so the first step's destination is never visited, and back/jump don't navigate). Make the tour a true guided walkthrough that takes the user to each page as it describes it.
+Give admins a way to see when users last signed in, plus a running history of logins going forward. Backfill the history with each user's most recent sign-in that Lovable Cloud already tracks (`auth.users.last_sign_in_at`) so the page isn't empty on day one.
 
-## Changes
+Note: Lovable Cloud's auth only stores the *most recent* sign-in per user — it does not keep a per-login history. We can backfill exactly one historical row per user (their last sign-in to date); new logins from this point forward will be captured individually.
 
-### 1. Add a destination to every step (`src/lib/tour/steps.ts`)
-Give each step a `navigateTo` so the user lands on the page being described.
+## What gets built
 
-- Student
-  - Dashboard → `/dashboard`
-  - Submit a Support Request → `/submit-request`
-  - Track Your Requests → `/track-requests`
-  - Messages → `/messages`
-  - Weekly Check-Ins → `/check-in`
-  - Privacy → `/settings`
-- Case Manager
-  - Dashboard → `/dashboard`
-  - Manage Requests → `/manage-requests`
-  - Student Folders → `/students`
-  - Messages → `/messages`
-  - Reports & Surveys → `/reports`
-  - Time Tracking → `/time-tracking`
-  - MFA → `/settings`
-- Admin / Org Admin
-  - Dashboard → `/dashboard`
-  - People Management → `/admin/users` (admin) or `/admin/case-managers` (org admin)
-  - Surveys & Engagement → `/admin/surveys`
-  - QR Codes → `/admin/qr-codes`
-  - Impact Analytics → `/admin/impact`
-  - Time Tracking Approvals → `/admin/time-tracking`
-  - Security → `/admin/nda`
-- `helpStep` → `/support`
+### 1. New table `public.user_login_events`
+Append-only log, one row per sign-in.
 
-I'll verify each path against `src/App.tsx` before writing so we don't navigate to a 404.
+- `id uuid pk`
+- `user_id uuid` (references `auth.users(id)` via app code, no FK to auth)
+- `signed_in_at timestamptz`
+- `source text` — `'backfill'` for the seeded row, `'client'` for live sign-ins
+- `created_at timestamptz default now()`
 
-### 2. Navigate on every step transition (`src/hooks/useProductTour.ts`)
-Replace the current "only on Next" logic with handlers that fire for Next, Previous, and the initial render so navigation always matches the current step:
+Indexes on `(user_id, signed_in_at desc)` and `(signed_in_at desc)`.
 
-- `onHighlightStarted` (or `onPopoverRender`): if the active step has a `navigateTo` and `location.pathname !== navigateTo`, call `navigate(navigateTo)` and wait briefly for the route to mount before driver.js positions the popover.
-- Keep handlers for `onNextClick` / `onPrevClick` that compute the *target* step's path and navigate before `moveNext` / `movePrevious`.
-- Because routes mount asynchronously, wrap navigation with a short `setTimeout` (≈150 ms) before `d.refresh()` so the tooltip re-anchors after the new page renders.
+RLS:
+- Admin and org_admin can `SELECT` (org_admin scoped to users in their org via existing `user_in_org_admin_scope_v2`).
+- `INSERT` allowed for the authenticated user inserting their own row (so the client can log live sign-ins).
+- No UPDATE/DELETE for anyone except service_role.
 
-### 3. Make the tour resilient to route changes
-- The driver instance is created once per `startTour`. After navigation, call `d.refresh()` so it recalculates the highlighted element on the new page.
-- Steps without an `element` will continue to render as centered modals — that's fine for intro/closing steps.
+Grants: `SELECT, INSERT` to `authenticated`; `ALL` to `service_role`.
 
-### 4. No other behavior changes
-- Auto-trigger on first login, login-count tracking, "Got it" persistence, and `resetTour` all stay the same.
-- No new dependencies, no styling changes, no backend changes.
+### 2. Backfill migration
+One historical row per user using `auth.users.last_sign_in_at` (skip users who have never signed in):
 
-## Technical notes
+```sql
+INSERT INTO public.user_login_events (user_id, signed_in_at, source)
+SELECT id, last_sign_in_at, 'backfill'
+FROM auth.users
+WHERE last_sign_in_at IS NOT NULL;
+```
 
-- `driver.js` exposes per-step `onHighlightStarted`, `onNextClick`, `onPrevClick`, and an instance `refresh()` method — all already available in the version installed.
-- We must read the *target* step (`steps[idx + 1]` for Next, `steps[idx - 1]` for Prev) and navigate before advancing so the popover anchors on the right page.
-- Centered/no-`element` steps don't need DOM presence, so they work on any route.
+### 3. Live capture in `AuthContext`
+On `SIGNED_IN` events from `onAuthStateChange`, insert a row into `user_login_events` with `source: 'client'`. Dedupe in code: only insert if the last logged event for this user is more than 5 minutes ago (so token refreshes and tab focus don't flood the table).
+
+### 4. Admin page `/admin/login-activity`
+New route, admin + org_admin only, linked from the Admin sidebar.
+
+Two sections:
+- **Summary table** — one row per user: name, email, role, organization, last sign-in (relative + absolute), total logins recorded. Sortable by last sign-in. Search by name/email. Respects existing global org/cohort filters where applicable.
+- **Recent activity feed** — most recent 100 login events across the platform with user name, time, and source.
+
+Pull data via two queries: an aggregated `user_id → max(signed_in_at), count(*)` joined to `profiles` + `user_roles`, and a recent-events list joined to `profiles`.
+
+### 5. Sidebar entry
+Add "Login Activity" under the existing Admin section of `SidebarLayout`, visible to `admin` and `org_admin`.
 
 ## Out of scope
 
-- No changes to onboarding cards, `HelpButton`, `GettingStartedSection`, or `HowItWorks`.
-- No new tour content beyond updating `navigateTo` values.
+- No edits to `auth` schema, no auth triggers (Lovable rule).
+- No IP/user-agent tracking — that would need an edge function and wasn't requested.
+- No changes to existing settings, profile, or notification flows.
+
+## Technical notes
+
+- Live logging happens client-side in `AuthContext` after `onAuthStateChange` fires `SIGNED_IN`. Wrapped in try/catch so a failed insert never blocks auth.
+- Org_admin scoping reuses the existing `user_in_org_admin_scope_v2(_actor, _target_user)` helper inside an RLS policy.
+- The page reuses existing `PageHeader`, table primitives, and `TimeAgo` component for consistent styling.
