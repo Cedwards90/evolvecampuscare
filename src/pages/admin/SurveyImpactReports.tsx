@@ -279,7 +279,7 @@ export default function SurveyImpactReports() {
               );
             })}
 
-            ))}
+
           </div>
         )}
       </div>
