@@ -5,8 +5,10 @@ import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, ListChecks, ChevronRight, GraduationCap, ClipboardList, Sparkles, Briefcase, Send } from 'lucide-react';
+import { Eye, ListChecks, ChevronRight, GraduationCap, ClipboardList, Sparkles, Briefcase, Send, Users } from 'lucide-react';
 import { SurveyPreviewDialog, type PreviewSurveyType } from '@/components/admin/SurveyPreviewDialog';
+import { SurveyCompletionsDialog } from '@/components/admin/SurveyCompletionsDialog';
+import type { CompletionSource } from '@/hooks/useSurveyCompletions';
 import { useAllCheckIns, useAllPostGradPlans } from '@/hooks/useSurveyResponses';
 import { useLifeSkillsCompletionStats } from '@/hooks/useLifeSkillsSurveys';
 import { useQuery } from '@tanstack/react-query';
@@ -56,7 +58,15 @@ function useCareerIntakeCount() {
   });
 }
 
-function SurveyCard({ row, onPreview }: { row: SurveyRow; onPreview: (t: PreviewSurveyType) => void }) {
+function SurveyCard({
+  row,
+  onPreview,
+  onCompletions,
+}: {
+  row: SurveyRow;
+  onPreview: (t: PreviewSurveyType) => void;
+  onCompletions: (source: CompletionSource, title: string) => void;
+}) {
   return (
     <Card>
       <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4">
@@ -71,6 +81,9 @@ function SurveyCard({ row, onPreview }: { row: SurveyRow; onPreview: (t: Preview
         <div className="flex flex-wrap gap-2 shrink-0">
           <Button size="sm" variant="outline" onClick={() => onPreview(row.preview)}>
             <Eye className="mr-1.5 h-3.5 w-3.5" /> Preview
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => onCompletions(row.preview as CompletionSource, row.title)}>
+            <Users className="mr-1.5 h-3.5 w-3.5" /> Completions
           </Button>
           {row.sendHref && (
             <Button size="sm" variant="outline" asChild>
@@ -107,6 +120,7 @@ function Section({ icon: Icon, title, description, children }: { icon: any; titl
 
 export default function SurveysIndex() {
   const [preview, setPreview] = useState<PreviewSurveyType | null>(null);
+  const [completions, setCompletions] = useState<{ source: CompletionSource; title: string } | null>(null);
 
   const { data: checkIns = [] } = useAllCheckIns();
   const { data: plans = [] } = useAllPostGradPlans();
@@ -205,7 +219,7 @@ export default function SurveysIndex() {
           title="Core student surveys"
           description="Recurring check-ins and the long-term plan every student fills out."
         >
-          {core.map((r) => <SurveyCard key={r.title} row={r} onPreview={setPreview} />)}
+          {core.map((r) => <SurveyCard key={r.title} row={r} onPreview={setPreview} onCompletions={(s, t) => setCompletions({ source: s, title: t })} />)}
         </Section>
 
         <Section
@@ -213,7 +227,7 @@ export default function SurveysIndex() {
           title="Onboarding intake"
           description="Surveys students complete when they join the platform."
         >
-          {intake.map((r) => <SurveyCard key={r.title} row={r} onPreview={setPreview} />)}
+          {intake.map((r) => <SurveyCard key={r.title} row={r} onPreview={setPreview} onCompletions={(s, t) => setCompletions({ source: s, title: t })} />)}
         </Section>
 
         <Section
@@ -226,7 +240,7 @@ export default function SurveysIndex() {
               <Link to="/admin/lifeskills">Open Life Skills manager <ChevronRight className="ml-1 h-3.5 w-3.5" /></Link>
             </Button>
           </div>
-          {lifeskills.map((r) => <SurveyCard key={r.title} row={r} onPreview={setPreview} />)}
+          {lifeskills.map((r) => <SurveyCard key={r.title} row={r} onPreview={setPreview} onCompletions={(s, t) => setCompletions({ source: s, title: t })} />)}
         </Section>
       </div>
 
@@ -234,6 +248,13 @@ export default function SurveysIndex() {
         open={preview !== null}
         onOpenChange={(o) => !o && setPreview(null)}
         surveyType={preview || 'checkin'}
+      />
+
+      <SurveyCompletionsDialog
+        open={completions !== null}
+        onOpenChange={(o) => !o && setCompletions(null)}
+        source={completions?.source ?? null}
+        title={completions?.title ?? ''}
       />
     </SidebarLayout>
   );
