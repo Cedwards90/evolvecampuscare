@@ -55,6 +55,35 @@ const profileSchema = z.object({
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
+function HelpWalkthroughCard() {
+  const { startTour, hasCompletedTour } = useProductTour();
+  return (
+    <Card className="border border-border/50">
+      <CardHeader>
+        <CardTitle className="font-display flex items-center gap-2">
+          <PlayCircle className="h-5 w-5" />
+          Help & Walkthrough
+        </CardTitle>
+        <CardDescription>
+          Replay the guided tour anytime, or visit the Help Center for FAQs and contact options.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        <Button onClick={startTour} className="gap-2">
+          <PlayCircle className="h-4 w-4" />
+          {hasCompletedTour() ? 'Replay walkthrough' : 'Start walkthrough'}
+        </Button>
+        <Button variant="outline" asChild className="gap-2">
+          <Link to="/support">
+            <BookOpen className="h-4 w-4" />
+            Open Help Center
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function AccountDeletionCard() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
