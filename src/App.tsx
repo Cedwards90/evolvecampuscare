@@ -54,6 +54,7 @@ import StudentProgressReportPage from "./pages/StudentProgressReport";
 import NotFound from "./pages/NotFound";
 import AcceptNda from "./pages/AcceptNda";
 import AdminNda from "./pages/admin/AdminNda";
+import LoginActivity from "./pages/admin/LoginActivity";
 
 import ImpactDashboard from "./pages/admin/ImpactDashboard";
 import Resources from "./pages/Resources";
@@ -247,6 +248,11 @@ function App() {
             <Route path="/admin/nda" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminNda />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/login-activity" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                <LoginActivity />
               </ProtectedRoute>
             } />
             <Route path="/admin/impact" element={

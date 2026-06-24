@@ -87,6 +87,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setRole(null);
         }
         
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Log a login event, dedupe within 5 minutes via sessionStorage
+          setTimeout(() => {
+            try {
+              const key = `login_logged_${session.user.id}`;
+              const last = Number(sessionStorage.getItem(key) || '0');
+              if (Date.now() - last > 5 * 60 * 1000) {
+                sessionStorage.setItem(key, String(Date.now()));
+                supabase
+                  .from('user_login_events')
+                  .insert({ user_id: session.user.id, source: 'client' })
+                  .then(({ error }) => {
+                    if (error) console.warn('login event insert failed', error.message);
+                  });
+              }
+            } catch (e) {
+              console.warn('login event capture skipped', e);
+            }
+          }, 0);
+        }
+
         if (event === 'SIGNED_OUT') {
           setProfile(null);
           setRole(null);
