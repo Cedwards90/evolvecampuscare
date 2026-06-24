@@ -34,6 +34,7 @@ const BASE_OPTIONS: SurveyOption[] = [
 
 function lifeskillsOptions(): SurveyOption[] {
   const list: SurveyOption[] = [];
+  list.push({ value: 'impact:lifeskills-all' as CompletionSource, label: 'All modules — Pre vs Post summary', group: 'Life Skills' });
   for (const m of LIFESKILLS_MODULES) {
     const tag = `M${String(m.number).padStart(2, '0')} · ${m.title}`;
     list.push({ value: `impact:${preSlug(m.id)}` as CompletionSource, label: `${tag} — Pre`, group: 'Life Skills' });
@@ -42,6 +43,7 @@ function lifeskillsOptions(): SurveyOption[] {
   list.push({ value: `impact:${LIFESKILLS_FINAL_SLUG}` as CompletionSource, label: FINAL_TEMPLATE.title, group: 'Life Skills' });
   return list;
 }
+
 
 const ALL_OPTIONS: SurveyOption[] = [...BASE_OPTIONS, ...lifeskillsOptions()];
 
