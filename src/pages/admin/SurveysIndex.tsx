@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, ListChecks, ChevronRight, GraduationCap, ClipboardList, Sparkles, Briefcase, Send, Users } from 'lucide-react';
+import { Eye, ListChecks, ChevronRight, GraduationCap, ClipboardList, Sparkles, Briefcase, Send, Users, BarChart3, FileBarChart } from 'lucide-react';
 import { SurveyPreviewDialog, type PreviewSurveyType } from '@/components/admin/SurveyPreviewDialog';
 import { SurveyCompletionsDialog } from '@/components/admin/SurveyCompletionsDialog';
 import type { CompletionSource } from '@/hooks/useSurveyCompletions';
@@ -84,6 +84,11 @@ function SurveyCard({
           </Button>
           <Button size="sm" variant="outline" onClick={() => onCompletions(row.preview as CompletionSource, row.title)}>
             <Users className="mr-1.5 h-3.5 w-3.5" /> Completions
+          </Button>
+          <Button size="sm" variant="outline" asChild>
+            <Link to={`/admin/surveys/reports?survey=${encodeURIComponent(row.preview as string)}`}>
+              <BarChart3 className="mr-1.5 h-3.5 w-3.5" /> Impact report
+            </Link>
           </Button>
           {row.sendHref && (
             <Button size="sm" variant="outline" asChild>
@@ -212,6 +217,12 @@ export default function SurveysIndex() {
   return (
     <SidebarLayout>
       <PageHeader title="Surveys" description="Every survey running on the platform. Preview the questions students see, or review the answers they've submitted." />
+
+      <div className="flex justify-end mb-4">
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/admin/surveys/reports"><FileBarChart className="mr-1.5 h-3.5 w-3.5" /> Open impact reports</Link>
+        </Button>
+      </div>
 
       <div className="space-y-8">
         <Section
