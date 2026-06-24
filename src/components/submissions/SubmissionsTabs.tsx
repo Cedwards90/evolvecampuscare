@@ -51,6 +51,16 @@ type Props = {
   studentId?: string;
   /** Show delete buttons. Admin only. */
   allowDelete?: boolean;
+  /** Hide edit + delete controls; render read-only cards. */
+  readOnly?: boolean;
+  /** Default tab to open. */
+  defaultTab?: 'checkins' | 'plan' | 'intake' | 'impact';
+};
+
+type TabProps = {
+  studentId?: string;
+  allowDelete?: boolean;
+  readOnly?: boolean;
 };
 
 function DeleteConfirm({ onConfirm, label = 'this submission' }: { onConfirm: () => void; label?: string }) {
