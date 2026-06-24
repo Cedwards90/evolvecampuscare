@@ -7,7 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
 };
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -17,6 +17,42 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const APP_URL = "https://evolvecampuscare.lovable.app";
 
 type Mode = "first" | "followup";
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  const aB = new TextEncoder().encode(a);
+  const bB = new TextEncoder().encode(b);
+  let r = 0;
+  for (let i = 0; i < aB.length; i++) r |= aB[i] ^ bB[i];
+  return r === 0;
+}
+
+function validateCronSecret(provided: string | null): boolean {
+  const s = Deno.env.get("CRON_SECRET");
+  if (!s || s.length < 32) {
+    console.error("CRON_SECRET not configured or too weak (must be 32+ chars)");
+    return false;
+  }
+  if (!provided) return false;
+  return timingSafeEqual(provided, s);
+}
+
+async function isAdminCaller(req: Request): Promise<boolean> {
+  const auth = req.headers.get("Authorization");
+  if (!auth?.startsWith("Bearer ")) return false;
+  try {
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.49.1");
+    const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const client = createClient(SUPABASE_URL, anon, { global: { headers: { Authorization: auth } } });
+    const { data: { user } } = await client.auth.getUser();
+    if (!user) return false;
+    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", user.id);
+    return (roles || []).some((r: any) => r.role === "admin");
+  } catch {
+    return false;
+  }
+}
 
 function isoWeekKey(d = new Date()): string {
   // YYYY-WW style key in UTC
@@ -64,6 +100,17 @@ function renderEmail(firstName: string, mode: Mode): { subject: string; html: st
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  // Require either cron secret or admin user
+  const cronHeader = req.headers.get("X-Cron-Secret");
+  const authorized = validateCronSecret(cronHeader) || (await isAdminCaller(req));
+  if (!authorized) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
