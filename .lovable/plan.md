@@ -1,49 +1,59 @@
 ## Goal
+Help new users learn the platform via (1) an in-app guided walkthrough that fires on first login, and (2) an always-available Support Center with role-specific "Getting Started" guides alongside the existing FAQs.
 
-Add a Life Skills "By module" impact view that pairs **pre vs post** results for each of the 7 modules in one report, so staff can see actual learning gains rather than viewing pre and post as separate, disconnected surveys.
+## What exists today
+- `/support` (`SupportCenter.tsx`) already hosts a searchable FAQ with categories for students. Staff FAQs are partial.
+- `ContextualFaqTips` shows category-specific tips inside the request wizard.
+- No first-run product tour, no "How it works" overview, no Help link in the top nav for all roles.
 
-## Changes
+## What we'll add
 
-### 1. New survey option: "Life Skills — All modules (Pre vs Post)"
-- Add a synthetic source value `impact:lifeskills-all` to the survey dropdown in `SurveyImpactReports.tsx`, listed first under the Life Skills group and also set as the destination of the SurveysIndex "Impact report" button when clicking the Life Skills card.
-- Existing per-slug pre/post options remain (for users who want to drill into one module).
+### 1. Guided walkthrough (first-login product tour)
+- Add a lightweight tour using `driver.js` (small, no React coupling, works with our existing DOM/shadcn).
+- Per-role tour scripts:
+  - **Student**: Dashboard → Submit Request → Track Requests → Messages → Check-in → Support.
+  - **Case Manager**: Dashboard → Manage Requests → My Students → Messages → Reports → Time Tracking.
+  - **Org Admin / Admin**: Admin Dashboard → Users/Case Managers → Surveys & Impact → QR Codes → Settings.
+- Trigger: auto-runs once after first successful login (flag stored in `profiles.tour_completed_at` so it persists across devices; fallback to `localStorage` if column missing). User can "Skip" or "Don't show again."
+- Re-runnable anytime from: Support Center top banner ("Replay walkthrough") and Settings → Help.
+- Each step: title + 1–2 sentence description + "Next/Back/Skip" + optional "Learn more" link into Support Center anchor.
 
-### 2. New hook branch in `useSurveyImpact.ts`
-When `source === 'impact:lifeskills-all'`:
-- Fetch every `impact_survey_responses` row whose template slug matches `lifeskills-m%-pre` or `lifeskills-m%-post` within the date range (single query joining `impact_survey_templates`).
-- Apply the same profile/org/cohort/CM global filters already used for other sources.
-- Aggregate per module:
-  - `pre_n`, `post_n` (response counts)
-  - `pre_avg_confidence`, `post_avg_confidence` (1–5)
-  - `delta = post_avg − pre_avg`
-  - `paired_n` = students with both a pre and post response
-  - `paired_avg_delta` = mean of per-student (post − pre) confidence among paired
-- Return data shaped to fit the existing report renderer:
-  - `metrics`: totals across all modules (e.g. "Modules with post data", "Avg pre", "Avg post", "Avg gain", "Paired respondents")
-  - `distributions`: two charts — **"Avg confidence by module (Pre vs Post)"** (grouped bars) and **"Confidence gain by module"** (single-bar delta)
-  - `textHighlights`: per-module table rows (module name, pre avg / n, post avg / n, delta, paired n)
-  - `rows`: per-response rows tagged with module + pre/post (used for CSV)
+### 2. Support Center upgrades (`/support`)
+- New top section **"Getting Started"** with role-aware cards:
+  - "Platform overview" (what Evolve does, who does what)
+  - "Your first 5 minutes" checklist (role-specific)
+  - "Replay the guided tour" button
+  - "Watch a 2-minute video" placeholder (optional; embed link slot only — no video produced)
+- New FAQ categories for **Case Manager** and **Admin/Org Admin** (assignments, approvals, surveys, time tracking, QR codes, impact reports). Reuses the existing FAQ accordion + search.
+- "How it works" expandable section explaining roles, request lifecycle, messaging rules, MFA, and data privacy — links to relevant pages.
 
-### 3. Renderer tweak in `SurveyImpactReports.tsx`
-- Support a grouped bar chart for the Pre vs Post distribution (extend the distribution shape with optional `series` so the renderer knows to draw two bars). Other distributions remain single-bar — backward compatible.
-- The per-module summary table renders through the existing `textHighlights` block (already a label + count list), but with a small change to allow extra columns when items carry `extra` fields. Falls back to current display otherwise.
+### 3. Navigation & discoverability
+- Add a persistent **Help (?)** icon in the top bar (all roles) → opens Support Center.
+- Add an "Onboarding tip" toast on the Dashboard for the first 3 logins ("New here? Take the 60-second tour →").
+- Settings page gets a "Help & walkthrough" row.
 
-### 4. PDF / CSV export
-- `surveyImpactExport.ts`:
-  - PDF: when source is `impact:lifeskills-all`, render a "Module impact summary" table (Module · Pre avg (n) · Post avg (n) · Delta · Paired n) before the generic distribution tables.
-  - CSV: emit a `## Module impact` section with the same columns, then the existing raw-rows section (one row per response, tagged with module and pre/post).
+## Files to add
+- `src/lib/tour/driver.ts` — driver.js setup + role tour definitions.
+- `src/lib/tour/steps.ts` — per-role step arrays (selectors, titles, copy).
+- `src/hooks/useProductTour.ts` — controls auto-trigger, persistence, replay.
+- `src/components/support/GettingStartedSection.tsx` — role-aware getting-started cards + replay-tour button.
+- `src/components/support/HowItWorks.tsx` — collapsible platform explainer.
+- `src/components/navigation/HelpButton.tsx` — top-bar help icon.
 
-### 5. Entry point
-- `SurveysIndex.tsx`: the Life Skills card's "Impact report" button links to `/admin/surveys/reports?survey=impact:lifeskills-all` (per-module pre/post option). Other survey cards unchanged.
+## Files to edit
+- `src/pages/SupportCenter.tsx` — mount Getting Started + How It Works; add staff/admin FAQ entries.
+- `src/components/layouts/SidebarLayout.tsx` (or top header component) — add HelpButton.
+- `src/pages/Dashboard.tsx` — first-N-logins onboarding toast + tour auto-trigger hook.
+- `src/pages/Settings.tsx` — "Replay walkthrough" row.
+- Targeted pages need `data-tour="…"` attributes on a handful of key elements (sidebar items, primary CTAs) so the tour can anchor steps.
+- `package.json` — add `driver.js`.
 
 ## Out of scope
-- No DB schema changes, no edge function changes, no new permissions.
-- Final-survey NPS report stays as its own option.
-- No changes to how surveys are taken or assigned.
+- No video production; only an embed slot if a URL is supplied later.
+- No DB migration required for v1 (localStorage flag is fine). Optional follow-up: add `profiles.tour_completed_at` column for cross-device persistence.
+- No translations beyond English in v1 (Spanish copy can follow our existing i18n pattern in a later pass).
 
-## Files
-
-- `src/hooks/useSurveyImpact.ts` — add `impact:lifeskills-all` branch and aggregator
-- `src/pages/admin/SurveyImpactReports.tsx` — new option, grouped-bar support, per-module table rendering
-- `src/lib/surveyImpactExport.ts` — module-impact section in PDF and CSV
-- `src/pages/admin/SurveysIndex.tsx` — Life Skills card button target
+## Open questions
+1. Should the tour auto-launch for **existing** users too (one-time), or only brand-new signups going forward?
+2. Want a short embedded explainer video slot now (URL TBD), or skip video entirely?
+3. Should Admin/Org Admin see the same tour, or a separate Org-Admin-scoped one?
