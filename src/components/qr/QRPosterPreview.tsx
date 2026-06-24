@@ -17,11 +17,18 @@ export function QRPosterPreview({ code, label, organizationName }: Props) {
     generateQRDataURL(url, { size: 800 }).then(setDataUrl);
   }, [url]);
 
+  const escHtml = (s: string) =>
+    String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
   const handlePrint = () => {
     const win = window.open('', '_blank', 'width=900,height=1200');
     if (!win) return;
+    const safeLabel = escHtml(label);
+    const safeOrg = escHtml(organizationName || label);
+    const safeUrl = escHtml(url);
+    const safeDataUrl = escHtml(dataUrl);
     win.document.write(`
-      <html><head><title>${label} — QR Poster</title>
+      <html><head><title>${safeLabel} — QR Poster</title>
       <style>
         body{font-family:'Inter',sans-serif;color:#054D3B;text-align:center;padding:48px;margin:0}
         img{width:380px;height:380px}
@@ -32,15 +39,15 @@ export function QRPosterPreview({ code, label, organizationName }: Props) {
         .step{display:flex;gap:16px;margin-bottom:12px;align-items:start}
         .num{width:32px;height:32px;border-radius:50%;background:#054D3B;color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;flex-shrink:0}
       </style></head><body>
-        <img src="${dataUrl}" alt="QR Code" />
+        <img src="${safeDataUrl}" alt="QR Code" />
         <h1>Need Support?</h1>
-        <h2>${organizationName || label}</h2>
+        <h2>${safeOrg}</h2>
         <div class="steps">
           <div class="step"><div class="num">1</div><div>Open your phone camera and point it at this code</div></div>
           <div class="step"><div class="num">2</div><div>Sign in (or skip if remembered)</div></div>
           <div class="step"><div class="num">3</div><div>Submit a request or schedule a meeting</div></div>
         </div>
-        <div class="url">${url}</div>
+        <div class="url">${safeUrl}</div>
         <script>window.onload=()=>setTimeout(()=>window.print(),300)</script>
       </body></html>
     `);
