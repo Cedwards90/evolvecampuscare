@@ -246,11 +246,17 @@ export default function SurveysIndex() {
           title="Life Skills curriculum"
           description="Pre/post-module surveys and a final wrap-up — sent through the Life Skills manager."
         >
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/admin/surveys/reports?survey=impact:lifeskills-all">
+                <BarChart3 className="mr-1.5 h-3.5 w-3.5" /> Pre vs Post impact report
+              </Link>
+            </Button>
             <Button variant="ghost" size="sm" asChild>
               <Link to="/admin/lifeskills">Open Life Skills manager <ChevronRight className="ml-1 h-3.5 w-3.5" /></Link>
             </Button>
           </div>
+
           {lifeskills.map((r) => <SurveyCard key={r.title} row={r} onPreview={setPreview} onCompletions={(s, t) => setCompletions({ source: s, title: t })} />)}
         </Section>
       </div>
