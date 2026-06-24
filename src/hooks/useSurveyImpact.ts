@@ -244,7 +244,7 @@ function computeSourceMetrics(source: CompletionSource, rows: SurveyImpactRow[])
 
   if (source === 'impact:lifeskills-all') {
     // Group by module → pre/post
-    const { LIFESKILLS_MODULES } = require('@/lib/lifeskillsTemplates');
+    // LIFESKILLS_MODULES imported at top
     type Acc = { preSum: number; preN: number; postSum: number; postN: number; preByStu: Map<string, number>; postByStu: Map<string, number> };
     const byMod = new Map<string, Acc>();
     for (const m of LIFESKILLS_MODULES) byMod.set(m.id, { preSum: 0, preN: 0, postSum: 0, postN: 0, preByStu: new Map(), postByStu: new Map() });
