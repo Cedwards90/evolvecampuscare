@@ -12,20 +12,21 @@ type Tab = typeof VALID_TABS[number];
 
 function normalizeTab(value: string | null): Tab | undefined {
   if (!value) return undefined;
+  // accept "plans" alias used in the summary card
   if (value === 'plans') return 'plan';
   return (VALID_TABS as readonly string[]).includes(value) ? (value as Tab) : undefined;
 }
 
-export default function AdminStudentSubmissions() {
+export default function StudentSubmissionsView() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const { role } = useAuth();
   const { data: student } = useStudentDetail(id);
 
-  if (role !== 'admin') {
+  if (role !== 'case_manager' && role !== 'org_admin' && role !== 'admin') {
     return (
       <SidebarLayout>
-        <PageHeader title="Submissions" description="Only admins can edit and delete student submissions." />
+        <PageHeader title="Submissions" description="You do not have access to this page." />
       </SidebarLayout>
     );
   }
@@ -44,9 +45,9 @@ export default function AdminStudentSubmissions() {
         </Button>
         <PageHeader
           title={`Submissions — ${name}`}
-          description="View, edit, or delete any of this student's check-ins, plans, intake, and impact survey responses."
+          description="Review every check-in, plan, intake response, and Life Skills survey this student has shared."
         />
-        {id && <SubmissionsTabs studentId={id} allowDelete defaultTab={tab} />}
+        {id && <SubmissionsTabs studentId={id} readOnly defaultTab={tab} />}
       </div>
     </SidebarLayout>
   );

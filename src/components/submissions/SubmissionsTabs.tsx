@@ -51,6 +51,16 @@ type Props = {
   studentId?: string;
   /** Show delete buttons. Admin only. */
   allowDelete?: boolean;
+  /** Hide edit + delete controls; render read-only cards. */
+  readOnly?: boolean;
+  /** Default tab to open. */
+  defaultTab?: 'checkins' | 'plan' | 'intake' | 'impact';
+};
+
+type TabProps = {
+  studentId?: string;
+  allowDelete?: boolean;
+  readOnly?: boolean;
 };
 
 function DeleteConfirm({ onConfirm, label = 'this submission' }: { onConfirm: () => void; label?: string }) {
@@ -139,7 +149,7 @@ function CheckInEditor({ checkIn, onClose }: { checkIn: StudentCheckIn; onClose:
   );
 }
 
-function CheckInsTab({ studentId, allowDelete }: Props) {
+function CheckInsTab({ studentId, allowDelete, readOnly }: TabProps) {
   const my = useMyCheckIns();
   const other = useStudentCheckIns(studentId);
   const { data: checkIns = [], isLoading } = studentId ? other : my;
@@ -186,7 +196,7 @@ function CheckInsTab({ studentId, allowDelete }: Props) {
                   )}
                 </CardDescription>
               </div>
-              {editingId !== c.id && (
+              {editingId !== c.id && !readOnly && (
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" className="rounded-full" onClick={() => setEditingId(c.id)}>
                     <Pencil className="mr-2 h-4 w-4" />Edit
@@ -287,7 +297,7 @@ function PlanEditor({ plan, onClose }: { plan: any; onClose: () => void }) {
   );
 }
 
-function PostGradTab({ studentId, allowDelete }: Props) {
+function PostGradTab({ studentId, allowDelete, readOnly }: TabProps) {
   const my = useMyPlans();
   const other = useStudentPlans(studentId);
   const { data: plans = [], isLoading } = studentId ? other : my;
@@ -329,7 +339,7 @@ function PostGradTab({ studentId, allowDelete }: Props) {
                   )}
                 </CardDescription>
               </div>
-              {editingId !== p.id && (
+              {editingId !== p.id && !readOnly && (
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" className="rounded-full" onClick={() => setEditingId(p.id)}>
                     <Pencil className="mr-2 h-4 w-4" />Edit
@@ -443,7 +453,7 @@ function IntakeSectionEditor({ row, onClose }: { row: any; onClose: () => void }
   );
 }
 
-function IntakeTab({ studentId, allowDelete }: Props) {
+function IntakeTab({ studentId, allowDelete, readOnly }: TabProps) {
   const self = useIntakeSurvey();
   const other = useStudentIntake(studentId);
   const responses = (studentId ? other.data : self.responses) || [];
@@ -494,7 +504,7 @@ function IntakeTab({ studentId, allowDelete }: Props) {
                   )}
                 </CardDescription>
               </div>
-              {editingId !== r.id && (
+              {editingId !== r.id && !readOnly && (
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" className="rounded-full" onClick={() => setEditingId(r.id)}>
                     <Pencil className="mr-2 h-4 w-4" />Edit
@@ -599,7 +609,7 @@ function ImpactEditor({ row, onClose }: { row: ImpactResponseRow; onClose: () =>
   );
 }
 
-function ImpactTab({ studentId, allowDelete }: Props) {
+function ImpactTab({ studentId, allowDelete, readOnly }: TabProps) {
   const my = useMyImpactResponses();
   const other = useStudentImpactResponses(studentId);
   const { data: responses = [], isLoading } = studentId ? other : my;
@@ -635,7 +645,7 @@ function ImpactTab({ studentId, allowDelete }: Props) {
                 <CardTitle className="text-base">{r.template?.title || 'Impact Survey'}</CardTitle>
                 <CardDescription>Last submitted {format(new Date(r.submitted_at), 'PPP')}</CardDescription>
               </div>
-              {editingId !== r.id && (
+              {editingId !== r.id && !readOnly && (
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" className="rounded-full" onClick={() => setEditingId(r.id)}>
                     <Pencil className="mr-2 h-4 w-4" />Edit
@@ -665,7 +675,7 @@ function ImpactTab({ studentId, allowDelete }: Props) {
   );
 }
 
-export function SubmissionsTabs({ studentId, allowDelete }: Props) {
+export function SubmissionsTabs({ studentId, allowDelete, readOnly, defaultTab }: Props) {
   // counts for tab badges
   const myCheckIns = useMyCheckIns();
   const otherCheckIns = useStudentCheckIns(studentId);
@@ -683,8 +693,10 @@ export function SubmissionsTabs({ studentId, allowDelete }: Props) {
     impact: ((studentId ? otherImpact.data : myImpact.data) || []).length,
   };
 
+  const tabProps: TabProps = { studentId, allowDelete, readOnly };
+
   return (
-    <Tabs defaultValue="checkins" className="w-full">
+    <Tabs defaultValue={defaultTab || 'checkins'} className="w-full">
       <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 rounded-full p-1">
         <TabsTrigger value="checkins" className="rounded-full">
           Check-ins <Badge variant="secondary" className="ml-2">{counts.checkins}</Badge>
@@ -699,10 +711,10 @@ export function SubmissionsTabs({ studentId, allowDelete }: Props) {
           Impact <Badge variant="secondary" className="ml-2">{counts.impact}</Badge>
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="checkins" className="mt-6"><CheckInsTab studentId={studentId} allowDelete={allowDelete} /></TabsContent>
-      <TabsContent value="plan" className="mt-6"><PostGradTab studentId={studentId} allowDelete={allowDelete} /></TabsContent>
-      <TabsContent value="intake" className="mt-6"><IntakeTab studentId={studentId} allowDelete={allowDelete} /></TabsContent>
-      <TabsContent value="impact" className="mt-6"><ImpactTab studentId={studentId} allowDelete={allowDelete} /></TabsContent>
+      <TabsContent value="checkins" className="mt-6"><CheckInsTab {...tabProps} /></TabsContent>
+      <TabsContent value="plan" className="mt-6"><PostGradTab {...tabProps} /></TabsContent>
+      <TabsContent value="intake" className="mt-6"><IntakeTab {...tabProps} /></TabsContent>
+      <TabsContent value="impact" className="mt-6"><ImpactTab {...tabProps} /></TabsContent>
     </Tabs>
   );
 }
