@@ -1,48 +1,61 @@
-# Fix: Description textarea loses focus on every keystroke
+## Goal
 
-## Root cause
+Right now the tour shows tooltips but rarely changes pages — only a few steps set `navigateTo`, and navigation only fires from the "Next" button (so the first step's destination is never visited, and back/jump don't navigate). Make the tour a true guided walkthrough that takes the user to each page as it describes it.
 
-In `src/pages/SubmitRequest.tsx`, a component is defined **inside** the render body:
+## Changes
 
-```tsx
-// line 243 — runs on every render, creates a brand-new component type each time
-const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
-  standalone ? <>{children}</> : <SidebarLayout>{children}</SidebarLayout>;
-```
+### 1. Add a destination to every step (`src/lib/tour/steps.ts`)
+Give each step a `navigateTo` so the user lands on the page being described.
 
-The page also calls `form.watch('description')` on line 369 to render the live "x/2000 characters" counter, which triggers a re-render on every keystroke. Each re-render produces a *new* `Wrapper` function reference, so React treats it as a different component type and **unmounts + remounts the whole subtree** (sidebar, form, inputs). The textarea is destroyed and recreated → focus is lost.
+- Student
+  - Dashboard → `/dashboard`
+  - Submit a Support Request → `/submit-request`
+  - Track Your Requests → `/track-requests`
+  - Messages → `/messages`
+  - Weekly Check-Ins → `/check-in`
+  - Privacy → `/settings`
+- Case Manager
+  - Dashboard → `/dashboard`
+  - Manage Requests → `/manage-requests`
+  - Student Folders → `/students`
+  - Messages → `/messages`
+  - Reports & Surveys → `/reports`
+  - Time Tracking → `/time-tracking`
+  - MFA → `/settings`
+- Admin / Org Admin
+  - Dashboard → `/dashboard`
+  - People Management → `/admin/users` (admin) or `/admin/case-managers` (org admin)
+  - Surveys & Engagement → `/admin/surveys`
+  - QR Codes → `/admin/qr-codes`
+  - Impact Analytics → `/admin/impact`
+  - Time Tracking Approvals → `/admin/time-tracking`
+  - Security → `/admin/nda`
+- `helpStep` → `/support`
 
-This matches every symptom in the report and is the single most common cause of "click back into the field after each character" in Lovable/React apps.
+I'll verify each path against `src/App.tsx` before writing so we don't navigate to a 404.
 
-## Fix
+### 2. Navigate on every step transition (`src/hooks/useProductTour.ts`)
+Replace the current "only on Next" logic with handlers that fire for Next, Previous, and the initial render so navigation always matches the current step:
 
-Stop creating a component inside the render. Inline the conditional wrapping instead, so the JSX tree's component identities stay stable across renders.
+- `onHighlightStarted` (or `onPopoverRender`): if the active step has a `navigateTo` and `location.pathname !== navigateTo`, call `navigate(navigateTo)` and wait briefly for the route to mount before driver.js positions the popover.
+- Keep handlers for `onNextClick` / `onPrevClick` that compute the *target* step's path and navigate before `moveNext` / `movePrevious`.
+- Because routes mount asynchronously, wrap navigation with a short `setTimeout` (≈150 ms) before `d.refresh()` so the tooltip re-anchors after the new page renders.
 
-### Edit: `src/pages/SubmitRequest.tsx`
+### 3. Make the tour resilient to route changes
+- The driver instance is created once per `startTour`. After navigation, call `d.refresh()` so it recalculates the highlighted element on the new page.
+- Steps without an `element` will continue to render as centered modals — that's fine for intro/closing steps.
 
-1. Delete the `Wrapper` definition (line 243-244).
-2. Replace `<Wrapper>…</Wrapper>` in the `return` with an inline conditional that renders the same DOM:
+### 4. No other behavior changes
+- Auto-trigger on first login, login-count tracking, "Got it" persistence, and `resetTour` all stay the same.
+- No new dependencies, no styling changes, no backend changes.
 
-```tsx
-const content = (
-  <div className="space-y-12 max-w-3xl mx-auto">
-    {/* …existing children unchanged… */}
-  </div>
-);
+## Technical notes
 
-return standalone ? content : <SidebarLayout>{content}</SidebarLayout>;
-```
-
-`SidebarLayout` is a stable import, so its component identity no longer changes between renders, and the textarea keeps its DOM node + focus.
-
-## Verification
-
-- Type a long sentence into the Description field on `/student-submitting-a-support-request` (both the standalone QR flow and the in-app flow) and confirm focus is retained and the character counter still updates.
-- Confirm Title, Priority radio, Requested Amount, file upload, emergency switch, and step navigation still work.
-- No other behavioral changes — only the Wrapper indirection is removed.
+- `driver.js` exposes per-step `onHighlightStarted`, `onNextClick`, `onPrevClick`, and an instance `refresh()` method — all already available in the version installed.
+- We must read the *target* step (`steps[idx + 1]` for Next, `steps[idx - 1]` for Prev) and navigate before advancing so the popover anchors on the right page.
+- Centered/no-`element` steps don't need DOM presence, so they work on any route.
 
 ## Out of scope
 
-- No changes to `react-hook-form` config, schema, autosave, or any other field.
-- No changes to `SidebarLayout`, routing, or `App.tsx`.
-- No styling changes.
+- No changes to onboarding cards, `HelpButton`, `GettingStartedSection`, or `HowItWorks`.
+- No new tour content beyond updating `navigateTo` values.
