@@ -1,28 +1,41 @@
-Diagnosis:
-- Dominic’s account is now accepted, active, has the student role, is assigned to Englewood shared Renewables, and has a student file.
-- The current Users page URL is filtered to Cohort 3. Dominic’s profile has no cohort assigned, so the global cohort filter hides him from `/admin/users` and `/student-folders` even though the signup data exists.
-- The systemic gap is that invitations currently capture organization and role, but not cohort, so students invited for a cohort can sign up without being placed into that cohort.
+## Goal
 
-Plan:
-1. Add cohort support to the invitation flow
-   - Add a Cohort selector to the Invite User dialog, scoped to the selected organization.
-   - Send the selected cohort with the invitation request.
-   - Store the cohort on the invitation record.
+Make every survey response a student has submitted visible inside their student folder, so staff don't have to bounce between screens to know what's been completed.
 
-2. Apply cohort during invited signup
-   - Update the invited-signup database function so accepted invitees get `profiles.cohort_id` from the invitation.
-   - Keep existing behavior for role, organization membership, student file creation, and case-manager auto-assignment.
-   - If the cohort has assigned case managers, preserve the existing auto-assignment trigger behavior so newly cohorted students are routed correctly.
+The per-student folder (Student Detail) already has a "Manage Submissions" button for admins that opens a four-tab view (check-ins, post-grad plan, intake, Life Skills/Impact). The problem: case managers and org admins can't see that at a glance, and even admins have to click in to know whether anything is there. We'll surface a compact summary card directly on the folder.
 
-3. Repair current affected data
-   - Assign Dominic Heath to Cohort 3 in Englewood shared Renewables so he appears in the currently filtered Users section and Student Folders.
-   - Add a safe one-time repair for accepted invitations that already have a stored cohort after this change, without altering unrelated student/org data.
+## What changes
 
-4. Make the UI less misleading when filters hide valid users
-   - On Users and Student Folders, ensure the active global filter state is visible and easy to clear so accepted users are not mistaken as missing when they are only filtered out.
+### Student Detail page — new "Surveys & Submissions" card
 
-Technical details:
-- Database migration: add `cohort_id` to `user_invitations`, with validation that the cohort belongs to the selected organization when both are present.
-- Edge function: update `generate-invitation-token` to accept and validate `cohortId`.
-- Frontend: update `InviteUserDialog` and `useSendInvitation` types/payloads.
-- Data repair: set Dominic’s `profiles.cohort_id` to Cohort 3 only; no destructive updates and no active/deactivated filtering changes.
+Placed under the existing stats cards, visible to admin, case manager, and org admin. Shows four rows:
+
+- Wellbeing check-ins — count + most recent submission date
+- Post-graduation plan — submitted / not submitted (+ last edit date)
+- Intake survey — completed / in progress / not started
+- Life Skills / Impact surveys — count + most recent submission date
+
+Each row has a "View" link:
+- Admins → `/admin/students/:id/submissions` (existing full edit/delete view) opened on the matching tab
+- Case managers / org admins → a new read-only view at `/students/:id/submissions` showing the same four tabs without edit/delete controls
+
+Empty rows render as muted "None yet" so staff can immediately see gaps.
+
+### Read-only submissions view for case managers and org admins
+
+New route `/students/:id/submissions` reusing `SubmissionsTabs` with `studentId` set and `allowDelete={false}`. Edit buttons inside the tabs are already hidden when `allowDelete` is false for non-admin contexts; we'll gate the per-tab Edit buttons on role so case managers and org admins see read-only cards. Access is restricted to staff who can already see the student (same guard as Student Detail).
+
+### Default tab via query param
+
+`SubmissionsTabs` accepts an optional `defaultTab` prop (`checkins | plans | intake | impact`) so the summary card's "View" links land on the right tab.
+
+## Technical details
+
+- New component `src/components/students/SurveysSummaryCard.tsx` — fetches counts via existing hooks (`useStudentCheckIns`, `useStudentPlans`, intake query already in `SubmissionsTabs`, `useStudentImpactResponses`) in one card.
+- Edit `src/pages/StudentDetail.tsx` — render the card after the stats grid; pass `student.id`.
+- Edit `src/components/submissions/SubmissionsTabs.tsx` — add optional `defaultTab` prop wired to the `Tabs` `value`/`defaultValue`; hide per-row Edit buttons unless the viewer is an admin or the student themselves.
+- New page `src/pages/StudentSubmissionsView.tsx` — staff read-only wrapper; reads `?tab=` from the URL.
+- Edit `src/App.tsx` — add the new route, protected to admin / case_manager / org_admin.
+- Edit `src/pages/admin/AdminStudentSubmissions.tsx` — pass `defaultTab` from `?tab=` so admin links also land on the right tab.
+
+No database, RLS, or edge function changes — existing per-student hooks already enforce access.
