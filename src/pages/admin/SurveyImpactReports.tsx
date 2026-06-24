@@ -14,8 +14,9 @@ import type { CompletionSource } from '@/hooks/useSurveyCompletions';
 import { exportSurveyImpactCsv, exportSurveyImpactPdf } from '@/lib/surveyImpactExport';
 import { toast } from '@/hooks/use-toast';
 import {
-  Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
+
 import { LIFESKILLS_MODULES, preSlug, postSlug, LIFESKILLS_FINAL_SLUG, FINAL_TEMPLATE } from '@/lib/lifeskillsTemplates';
 
 interface SurveyOption {
