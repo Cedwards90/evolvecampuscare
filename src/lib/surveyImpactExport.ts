@@ -58,11 +58,21 @@ export function exportSurveyImpactCsv(
   );
   sections.push(toCsvSection('Volume by Day', ['Date', 'Count'], result.volumeByDay.map((v) => [v.date, v.count])));
   for (const d of result.distributions) {
-    sections.push(toCsvSection(d.title, ['Bucket', 'Count'], d.data.map((row) => [row.name, row.value])));
+    if (d.series && d.series.length) {
+      const headers = ['Bucket', ...d.series.map((s) => s.label)];
+      sections.push(toCsvSection(d.title, headers, d.data.map((row: any) => [row.name, ...d.series!.map((s) => row[s.key] ?? '')])));
+    } else {
+      sections.push(toCsvSection(d.title, ['Bucket', 'Count'], d.data.map((row: any) => [row.name, row.value ?? ''])));
+    }
   }
   for (const t of result.textHighlights) {
-    sections.push(toCsvSection(t.title, ['Text', 'Count'], t.items.map((i) => [i.text, i.count])));
+    if (t.extraColumns && t.extraColumns.length) {
+      sections.push(toCsvSection(t.title, ['Item', ...t.extraColumns], t.items.map((i) => [i.text, ...t.extraColumns!.map((c) => i.extra?.[c] ?? '')])));
+    } else {
+      sections.push(toCsvSection(t.title, ['Text', 'Count'], t.items.map((i) => [i.text, i.count])));
+    }
   }
+
   sections.push(
     toCsvSection(
       'Responses',
