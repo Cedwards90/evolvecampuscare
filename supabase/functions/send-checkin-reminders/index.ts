@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
             "X-Connection-Api-Key": RESEND_API_KEY,
           },
           body: JSON.stringify({
-            from: "Evolve Foundation <noreply@evolvecampuscare.com>",
+            from: "Evolve Foundation <noreply@evolvefoundation.us>",
             to: [p.email],
             subject,
             html,
