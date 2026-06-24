@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 import type { CompletionSource } from '@/hooks/useSurveyCompletions';
+import { LIFESKILLS_MODULES } from '@/lib/lifeskillsTemplates';
+
 
 export interface SurveyImpactRow {
   id: string;
