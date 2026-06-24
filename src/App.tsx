@@ -250,6 +250,11 @@ function App() {
                 <AdminNda />
               </ProtectedRoute>
             } />
+            <Route path="/admin/login-activity" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                <LoginActivity />
+              </ProtectedRoute>
+            } />
             <Route path="/admin/impact" element={
               <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <ImpactDashboard />
