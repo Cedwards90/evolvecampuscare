@@ -27,6 +27,8 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { useAuth } from '@/contexts/AuthContext';
+import { GettingStartedSection } from '@/components/support/GettingStartedSection';
+import { HowItWorks } from '@/components/support/HowItWorks';
 
 // ── FAQ Data ────────────────────────────────────────────────
 
@@ -139,6 +141,12 @@ export default function SupportCenter() {
           title="Support Center"
           description="Find answers, resources, and ways to get help"
         />
+
+        {/* Getting Started: guided tour + first-5-minutes checklist */}
+        <GettingStartedSection />
+
+        {/* How the platform works */}
+        <HowItWorks />
 
         {/* Emergency Contact Banner */}
         <Card className="border-destructive/50 bg-destructive/5">
