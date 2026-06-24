@@ -355,6 +355,8 @@ export default function StudentDetail() {
           </CardContent>
         </Card>
 
+        <SurveysSummaryCard studentId={id!} />
+
         <GenerateStudentReportCard studentId={id} />
 
         {/* Tabs */}
