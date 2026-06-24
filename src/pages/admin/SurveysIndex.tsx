@@ -218,6 +218,12 @@ export default function SurveysIndex() {
     <SidebarLayout>
       <PageHeader title="Surveys" description="Every survey running on the platform. Preview the questions students see, or review the answers they've submitted." />
 
+      <div className="flex justify-end mb-4">
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/admin/surveys/reports"><FileBarChart className="mr-1.5 h-3.5 w-3.5" /> Open impact reports</Link>
+        </Button>
+      </div>
+
       <div className="space-y-8">
         <Section
           icon={ClipboardList}
