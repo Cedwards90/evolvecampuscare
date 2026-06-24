@@ -47,6 +47,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
+import { HelpButton } from '@/components/navigation/HelpButton';
 import { cn } from '@/lib/utils';
 import type { AppRole } from '@/types/database';
 
@@ -535,6 +536,9 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Help */}
+          <HelpButton />
 
           {/* Notifications */}
           <NotificationsDropdown />
