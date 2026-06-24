@@ -134,6 +134,23 @@ async function fetchSource(source: CompletionSource, from: Date, to: Date): Prom
     if (error) throw error;
     return (data || []).map((r: any) => ({ id: r.id, student_id: r.student_id, ts: r.updated_at || r.created_at, data: r }));
   }
+  if (source === 'impact:lifeskills-all') {
+    const { data, error } = await supabase
+      .from('impact_survey_responses')
+      .select('*, impact_survey_templates!inner(slug)')
+      .like('impact_survey_templates.slug', 'lifeskills-m%')
+      .gte('submitted_at', fromIso)
+      .lte('submitted_at', toIso);
+    if (error) throw error;
+    return (data || [])
+      .filter((r: any) => /^lifeskills-m\d{2}-(pre|post)$/.test(r.impact_survey_templates?.slug || ''))
+      .map((r: any) => ({
+        id: r.id,
+        student_id: r.student_id,
+        ts: r.submitted_at,
+        data: { ...r, _slug: r.impact_survey_templates?.slug as string },
+      }));
+  }
   if (source.startsWith('impact:')) {
     const slug = source.slice('impact:'.length);
     const { data: tpl } = await supabase
@@ -153,6 +170,7 @@ async function fetchSource(source: CompletionSource, from: Date, to: Date): Prom
   }
   return [];
 }
+
 
 function computeSourceMetrics(source: CompletionSource, rows: SurveyImpactRow[]): {
   metrics: Record<string, number | string | null>;
