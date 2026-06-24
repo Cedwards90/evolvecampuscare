@@ -12,13 +12,15 @@ export interface TourStep {
 const welcomeStep = (name: string): TourStep => ({
   title: `Welcome to Evolve, ${name}! 👋`,
   description:
-    "Let's take a 60-second tour of the platform so you know where everything lives. You can skip anytime, and replay it later from the Help Center.",
+    "Let's take a 60-second tour of the platform so you know where everything lives. We'll hop between pages as we go — you can skip anytime, and replay it later from the Help Center.",
+  navigateTo: '/dashboard',
 });
 
 const helpStep: TourStep = {
   title: '❓ Need help later?',
   description:
-    "Click the Help icon in the top bar (or 'Help Center' in the sidebar) anytime to read FAQs, contact support, or replay this walkthrough.",
+    "This is the Help Center — FAQs, how-tos, and a button to replay this walkthrough anytime. You can also click the Help icon in the top bar from any page.",
+  navigateTo: '/support',
 };
 
 const studentSteps = (name: string): TourStep[] => [
@@ -32,28 +34,32 @@ const studentSteps = (name: string): TourStep[] => [
   {
     title: '📝 Submit a Support Request',
     description:
-      'Need help with academics, finances, housing, or mental health? Submit a request and your assigned case manager will respond. Mark it as Emergency for crisis situations.',
-    navigateTo: '/dashboard',
+      'Need help with academics, finances, housing, or mental health? Fill out a request here and your assigned case manager will respond. Mark it Emergency for crisis situations.',
+    navigateTo: '/student/support-request',
   },
   {
     title: '⏱ Track Your Requests',
     description:
-      'See the status of every request you\'ve submitted, schedule meetings with your case manager, and get real-time updates.',
+      "See the status of every request you've submitted, schedule meetings with your case manager, and get real-time updates.",
+    navigateTo: '/requests',
   },
   {
     title: '💬 Messages',
     description:
       'You have a private, secure 1-on-1 chat with your assigned case manager. Use it for quick questions or follow-ups.',
+    navigateTo: '/messages',
   },
   {
-    title: '📋 Weekly Check-Ins & Surveys',
+    title: '📋 Weekly Check-Ins',
     description:
-      'Every few weeks we ask how you\'re doing — your wins, blockers, and mood. These help your case manager support you better. You\'ll also be invited to short Life Skills surveys.',
+      "Every few weeks we ask how you're doing — your wins, blockers, and mood. These help your case manager support you better.",
+    navigateTo: '/check-in',
   },
   {
-    title: '🔒 Your Privacy',
+    title: '🔒 Privacy & Settings',
     description:
-      'Only your assigned case manager and admins can see your information. All data is encrypted and handled under FERPA/GDPR standards.',
+      'Manage your profile, language, and notification preferences here. Only your assigned case manager and admins can see your information — all data is encrypted and handled under FERPA/GDPR standards.',
+    navigateTo: '/settings',
   },
   helpStep,
 ];
@@ -70,31 +76,37 @@ const caseManagerSteps = (name: string): TourStep[] => [
     title: '📂 Manage Requests',
     description:
       'Review, respond to, and resolve student support requests. Use filters to focus on priority, category, or status.',
+    navigateTo: '/case-manager-managing-student-requests',
   },
   {
     title: '👥 Student Folders',
     description:
       'Each student has a full case file: profile, intake, check-ins, certifications, case notes, and submitted plans. You can also generate an AI-powered folder summary.',
+    navigateTo: '/student-folders',
   },
   {
     title: '💬 Messages',
     description:
       'Private 1-to-1 messaging with each of your students. Use it to coordinate without waiting for an email.',
+    navigateTo: '/messages',
   },
   {
     title: '📊 Reports & Surveys',
     description:
       'Generate student progress reports, send check-in or Life Skills surveys, and view aggregated impact metrics.',
+    navigateTo: '/reports',
   },
   {
     title: '⏱ Time Tracking',
     description:
       'Log the hours you spend supporting students. Entries are reviewed by an admin and exportable to CSV.',
+    navigateTo: '/time-tracking',
   },
   {
     title: '🔐 Security: MFA Required',
     description:
-      'Two-factor authentication is required for all staff. If you haven\'t set it up yet, go to Settings → Security.',
+      "Two-factor authentication is required for all staff. If you haven't set it up yet, head to the Security section of your settings.",
+    navigateTo: '/settings',
   },
   helpStep,
 ];
@@ -113,31 +125,37 @@ const adminSteps = (name: string, isOrgAdmin: boolean): TourStep[] => [
     description: isOrgAdmin
       ? 'Manage case managers in your organization and view student rosters. Only data for your org(s) is visible.'
       : 'Invite new users, assign roles, manage organizations, and reassign students between case managers.',
+    navigateTo: isOrgAdmin ? '/admin/case-managers' : '/admin/users',
   },
   {
     title: '📋 Surveys & Engagement',
     description:
       'Send Life Skills surveys, check-ins, and post-graduation plans. View aggregated responses and per-module impact reports.',
+    navigateTo: '/admin/surveys',
   },
   {
     title: '📱 QR Codes',
     description:
       'Generate organization-wide QR codes so students can scan to submit a request or schedule a meeting — perfect for posters and orientations.',
+    navigateTo: '/admin/qr-codes',
   },
   {
     title: '📊 Impact Analytics',
     description:
       'Track program ROI: cost-per-participant, outcomes by org, request resolution times, and longitudinal student growth.',
+    navigateTo: '/admin/impact',
   },
   {
     title: '⏱ Time Tracking & Approvals',
     description:
       'Review and approve case manager time entries, then export to CSV for payroll or grant reporting.',
+    navigateTo: '/admin/time-tracking',
   },
   {
     title: '🔐 Security & Compliance',
     description:
-      'MFA is mandatory for all staff. NDA acceptance is required at first login. Audit logs track every sensitive action.',
+      'Manage the platform NDA and acceptance log here. MFA is mandatory for all staff, and audit logs track every sensitive action.',
+    navigateTo: '/admin/nda',
   },
   helpStep,
 ];

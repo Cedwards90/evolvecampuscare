@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { driver, type Driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useAuth } from '@/contexts/AuthContext';
-import { getTourSteps } from '@/lib/tour/steps';
+import { getTourSteps, type TourStep } from '@/lib/tour/steps';
 
 function storageKey(userId: string | undefined) {
   return `evolve:tour-completed:${userId ?? 'anon'}`;
@@ -17,9 +17,28 @@ export function useProductTour() {
   const { user, profile, role } = useAuth();
   const navigate = useNavigate();
   const driverRef = useRef<Driver | null>(null);
+  const stepsRef = useRef<TourStep[]>([]);
+
+  const goTo = useCallback(
+    (path: string | undefined, then: () => void) => {
+      if (path && typeof window !== 'undefined' && window.location.pathname !== path) {
+        navigate(path);
+        // Wait for the route to mount before letting driver.js position the popover.
+        setTimeout(() => {
+          then();
+          // Re-anchor highlight against any newly mounted element.
+          setTimeout(() => driverRef.current?.refresh(), 50);
+        }, 250);
+      } else {
+        then();
+      }
+    },
+    [navigate],
+  );
 
   const buildDriver = useCallback(() => {
     const steps = getTourSteps(role, profile?.full_name || '');
+    stepsRef.current = steps;
     const d = driver({
       showProgress: true,
       animate: true,
@@ -38,11 +57,13 @@ export function useProductTour() {
           align: 'center' as any,
           onNextClick: () => {
             const idx = d.getActiveIndex() ?? 0;
-            const next = steps[idx + 1];
-            if (next?.navigateTo && typeof window !== 'undefined' && window.location.pathname !== next.navigateTo) {
-              navigate(next.navigateTo);
-            }
-            d.moveNext();
+            const next = stepsRef.current[idx + 1];
+            goTo(next?.navigateTo, () => d.moveNext());
+          },
+          onPrevClick: () => {
+            const idx = d.getActiveIndex() ?? 0;
+            const prev = stepsRef.current[idx - 1];
+            goTo(prev?.navigateTo, () => d.movePrevious());
           },
         },
       })),
@@ -55,15 +76,17 @@ export function useProductTour() {
       },
     });
     return d;
-  }, [navigate, profile?.full_name, role, user?.id]);
+  }, [goTo, profile?.full_name, role, user?.id]);
 
   const startTour = useCallback(() => {
     if (!role) return;
     driverRef.current?.destroy();
     const d = buildDriver();
     driverRef.current = d;
-    d.drive();
-  }, [buildDriver, role]);
+    // Navigate to the first step's destination before starting so the popover anchors correctly.
+    const first = stepsRef.current[0];
+    goTo(first?.navigateTo, () => d.drive());
+  }, [buildDriver, goTo, role]);
 
   // Auto-trigger on first login (per user, persisted in localStorage)
   useEffect(() => {
@@ -71,7 +94,6 @@ export function useProductTour() {
     try {
       const seen = localStorage.getItem(storageKey(user.id));
       if (seen) return;
-      // Slight delay to let dashboard mount
       const t = setTimeout(() => startTour(), 800);
       return () => clearTimeout(t);
     } catch {
