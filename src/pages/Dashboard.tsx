@@ -176,6 +176,25 @@ export default function Dashboard() {
     <SidebarLayout>
       <div className="space-y-6">
         {role !== 'student' && <GlobalFilterBar />}
+
+        {/* Onboarding tip for first 3 logins */}
+        {showOnboardingTip && (
+          <Card className="border-primary/40 bg-primary/5">
+            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium text-sm">👋 New here? Take the 60-second tour</p>
+                <p className="text-xs text-muted-foreground">A quick guided walkthrough of where everything lives on the platform.</p>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" asChild>
+                  <Link to="/support">Help Center</Link>
+                </Button>
+                <Button size="sm" onClick={startTour}>Start tour</Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Check-In Banner */}
          {showCheckInBanner && (
           <Card className={checkInState === 'overdue' ? 'border-destructive/60 bg-destructive/10' : 'border-accent/50 bg-accent/10'}>
