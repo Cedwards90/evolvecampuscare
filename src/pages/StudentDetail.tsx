@@ -48,6 +48,7 @@ import {
 import { useStudentDetail } from '@/hooks/useStudentDetail';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
 import { GenerateStudentReportCard } from '@/components/reports/GenerateStudentReportCard';
+import { SurveysSummaryCard } from '@/components/students/SurveysSummaryCard';
 import { useFileNotes } from '@/hooks/useFileNotes';
 import { useStudentCheckIns } from '@/hooks/useStudentCheckIns';
 import { useOrgName } from '@/hooks/useOrgName';
@@ -311,14 +312,21 @@ export default function StudentDetail() {
                     studentId={id!}
                     studentName={student.profile?.full_name || 'Student'}
                   />
-                  {role === 'admin' && (
+                  {role === 'admin' ? (
                     <Button asChild variant="outline" size="sm">
                       <Link to={`/admin/students/${id}/submissions`}>
                         <ClipboardCheck className="mr-2 h-4 w-4" />
                         Manage Submissions
                       </Link>
                     </Button>
-                  )}
+                  ) : (role === 'case_manager' || role === 'org_admin') ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link to={`/students/${id}/submissions`}>
+                        <ClipboardCheck className="mr-2 h-4 w-4" />
+                        View Submissions
+                      </Link>
+                    </Button>
+                  ) : null}
                 </div>
               </div>
 

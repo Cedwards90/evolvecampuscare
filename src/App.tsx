@@ -58,6 +58,7 @@ import ImpactDashboard from "./pages/admin/ImpactDashboard";
 import Resources from "./pages/Resources";
 import ResourcesAdmin from "./pages/admin/ResourcesAdmin";
 import AdminStudentSubmissions from "./pages/admin/AdminStudentSubmissions";
+import StudentSubmissionsView from "./pages/StudentSubmissionsView";
 import TimeTracking from "./pages/TimeTracking";
 import TimeTrackingAdmin from "./pages/admin/TimeTrackingAdmin";
 import CareerIntakeOnboarding from "./pages/onboarding/CareerIntakeOnboarding";
@@ -292,6 +293,11 @@ function App() {
               <Route path="/admin/students/:id/submissions" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminStudentSubmissions />
+                </ProtectedRoute>
+              } />
+              <Route path="/students/:id/submissions" element={
+                <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
+                  <StudentSubmissionsView />
                 </ProtectedRoute>
               } />
 
