@@ -799,6 +799,13 @@ function CreateDialog({
   );
 }
 
+function safeFormat(value: unknown, fmt: string): string {
+  if (!value) return '—';
+  const d = typeof value === 'string' || typeof value === 'number' ? new Date(value) : (value as Date);
+  if (!d || isNaN(d.getTime())) return '—';
+  return format(d, fmt);
+}
+
 function ViewDialog({ entry, onClose }: { entry: TimeEntry; onClose: () => void }) {
   const { data: audit = [] } = useTimeEntryAudit(entry.id);
   return (
@@ -807,13 +814,13 @@ function ViewDialog({ entry, onClose }: { entry: TimeEntry; onClose: () => void 
         <DialogHeader>
           <DialogTitle>Time entry details</DialogTitle>
           <DialogDescription>
-            {format(parseISO(entry.entry_date), 'PP')} •{' '}
+            {safeFormat(entry.entry_date, 'PP')} •{' '}
             {entry.case_manager_name || entry.case_manager_email}
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <Field label="Start" value={format(new Date(entry.start_time), 'PPp')} />
-          <Field label="End" value={format(new Date(entry.end_time), 'PPp')} />
+          <Field label="Start" value={safeFormat(entry.start_time, 'PPp')} />
+          <Field label="End" value={safeFormat(entry.end_time, 'PPp')} />
           <Field label="Duration" value={formatDuration(entry.duration_minutes)} />
           <Field label="Service" value={entry.service_type.replace('_', ' ')} />
           <Field label="Billable" value={entry.billable ? 'Yes' : 'No'} />
@@ -845,7 +852,7 @@ function ViewDialog({ entry, onClose }: { entry: TimeEntry; onClose: () => void 
                 <div key={a.id} className="flex justify-between">
                   <span className="capitalize">{a.action}</span>
                   <span className="text-muted-foreground">
-                    {format(new Date(a.created_at), 'PPp')}
+                    {safeFormat(a.created_at, 'PPp')}
                   </span>
                 </div>
               ))
