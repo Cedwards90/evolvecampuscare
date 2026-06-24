@@ -26,11 +26,20 @@ export interface SurveyImpactResult {
   volumeByDay: { date: string; count: number }[];
   /** Aggregates specific to source. */
   metrics: Record<string, number | string | null>;
-  /** Distribution charts for the source. */
-  distributions: { title: string; data: { name: string; value: number }[] }[];
+  /** Distribution charts for the source. Optional `series` enables grouped bars. */
+  distributions: {
+    title: string;
+    data: { name: string; value?: number; [k: string]: any }[];
+    series?: { key: string; label: string }[];
+  }[];
   /** Top free-text items (for surveys with open fields). */
-  textHighlights: { title: string; items: { text: string; count: number }[] }[];
+  textHighlights: {
+    title: string;
+    items: { text: string; count: number; extra?: Record<string, string | number> }[];
+    extraColumns?: string[];
+  }[];
 }
+
 
 interface Args {
   source: CompletionSource | null;
