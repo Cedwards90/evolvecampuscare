@@ -852,7 +852,7 @@ function ViewDialog({ entry, onClose }: { entry: TimeEntry; onClose: () => void 
                 <div key={a.id} className="flex justify-between">
                   <span className="capitalize">{a.action}</span>
                   <span className="text-muted-foreground">
-                    {format(new Date(a.created_at), 'PPp')}
+                    {safeFormat(a.created_at, 'PPp')}
                   </span>
                 </div>
               ))
