@@ -21,6 +21,15 @@ function sanitizeError(error: unknown, context: string): string {
   return `An error occurred. Reference: ${requestId}`;
 }
 
+function escHtml(s: unknown): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Constant-time string comparison to prevent timing attacks
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -331,7 +340,7 @@ const handler = async (req: Request): Promise<Response> => {
                 .map(
                   (r: { title: string; daysSinceUpdate: number }) => `
                 <tr style="border-bottom: 1px solid #e5e7eb;">
-                  <td style="padding: 8px 0; color: #374151; font-size: 14px;">${r.title}</td>
+                  <td style="padding: 8px 0; color: #374151; font-size: 14px;">${escHtml(r.title)}</td>
                   <td style="padding: 8px 0; color: #ef4444; font-size: 14px; text-align: right;">${r.daysSinceUpdate} days</td>
                 </tr>
               `
@@ -359,7 +368,7 @@ const handler = async (req: Request): Promise<Response> => {
                 .map(
                   ([cat, count]) => `
                 <span style="background-color: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 9999px; font-size: 14px;">
-                  ${cat.replace(/_/g, " ")}: ${count}
+                  ${escHtml(cat.replace(/_/g, " "))}: ${count}
                 </span>
               `
                 )
@@ -393,7 +402,7 @@ const handler = async (req: Request): Promise<Response> => {
               
               <div style="padding: 32px;">
                 <p style="color: #374151; font-size: 16px; margin-bottom: 24px;">
-                  Hi ${stats.fullName},
+                  Hi ${escHtml(stats.fullName)},
                 </p>
                 
                 <p style="color: #6b7280; font-size: 14px; margin-bottom: 24px;">

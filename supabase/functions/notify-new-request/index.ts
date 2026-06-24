@@ -21,6 +21,15 @@ function sanitizeError(error: unknown, context: string): string {
   return `An error occurred. Reference: ${requestId}`;
 }
 
+function escHtml(s: unknown): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 interface NewRequestNotification {
   requestId: string;
   requestTitle: string;
@@ -327,7 +336,7 @@ const handler = async (req: Request): Promise<Response> => {
       const priorityColor = priorityColors[priority] || "#6b7280";
 
       const greeting = recipientType === "case_manager" && caseManagerName
-        ? `<p style="color: #374151; font-size: 16px; margin-bottom: 16px;">Hello ${caseManagerName},</p>`
+        ? `<p style="color: #374151; font-size: 16px; margin-bottom: 16px;">Hello ${escHtml(caseManagerName)},</p>`
         : "";
       
       const contextMessage = recipientType === "case_manager"
@@ -363,19 +372,19 @@ const handler = async (req: Request): Promise<Response> => {
                 ${contextMessage}
                 
                 <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-                  <h2 style="color: #1f2937; font-size: 18px; margin: 0 0 16px 0;">${requestTitle}</h2>
+                  <h2 style="color: #1f2937; font-size: 18px; margin: 0 0 16px 0;">${escHtml(requestTitle)}</h2>
                   
                   <div style="display: flex; gap: 12px; margin-bottom: 12px;">
                     <span style="background-color: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 500;">
-                      ${categoryDisplay}
+                      ${escHtml(categoryDisplay)}
                     </span>
                     <span style="background-color: ${priorityColor}20; color: ${priorityColor}; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 500;">
-                      ${priorityDisplay} Priority
+                      ${escHtml(priorityDisplay)} Priority
                     </span>
                   </div>
                   
                   <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                    <strong>Submitted by:</strong> ${studentName || "Student"}
+                    <strong>Submitted by:</strong> ${escHtml(studentName || "Student")}
                   </p>
                 </div>
                 
@@ -398,8 +407,8 @@ const handler = async (req: Request): Promise<Response> => {
       `;
 
       const subject = isEmergency
-        ? `🚨 [EMERGENCY] New Support Request: ${requestTitle}`
-        : `[${priorityDisplay}] New Support Request: ${requestTitle}`;
+        ? `🚨 [EMERGENCY] New Support Request: ${requestTitle}`.slice(0, 200)
+        : `[${priorityDisplay}] New Support Request: ${requestTitle}`.slice(0, 200);
 
       console.log(`Sending email notification to ${recipientEmails.length} recipient(s)`);
 

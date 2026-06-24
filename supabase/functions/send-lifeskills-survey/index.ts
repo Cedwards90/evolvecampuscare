@@ -27,6 +27,15 @@ function sanitizeError(e: unknown): string {
   return m.length > 200 ? m.slice(0, 200) : m;
 }
 
+function escHtml(s: unknown): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -191,9 +200,9 @@ Deno.serve(async (req) => {
           const first = (p.full_name || "").split(" ")[0] || "there";
           const html = `
             <div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background:#ffffff;">
-              <h2 style="color:#054D3B; margin-top:0;">Hi ${first} 👋</h2>
-              <p style="color:#333; line-height:1.6;">You've been invited to complete: <strong>${tpl.title}</strong>.</p>
-              ${body.notes ? `<p style="color:#555; line-height:1.6;">${body.notes}</p>` : ""}
+              <h2 style="color:#054D3B; margin-top:0;">Hi ${escHtml(first)} 👋</h2>
+              <p style="color:#333; line-height:1.6;">You've been invited to complete: <strong>${escHtml(tpl.title)}</strong>.</p>
+              ${body.notes ? `<p style="color:#555; line-height:1.6;">${escHtml(body.notes)}</p>` : ""}
               <div style="text-align:center; margin:28px 0;">
                 <a href="${surveyUrl}" style="background:#054D3B; color:#fff; padding:12px 24px; border-radius:9999px; text-decoration:none; font-weight:600; display:inline-block;">Open the survey</a>
               </div>
