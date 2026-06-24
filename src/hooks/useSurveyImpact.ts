@@ -239,7 +239,97 @@ function computeSourceMetrics(source: CompletionSource, rows: SurveyImpactRow[])
     }
   }
 
-  if (source.startsWith('impact:')) {
+  if (source === 'impact:lifeskills-all') {
+    // Group by module → pre/post
+    const { LIFESKILLS_MODULES } = require('@/lib/lifeskillsTemplates');
+    type Acc = { preSum: number; preN: number; postSum: number; postN: number; preByStu: Map<string, number>; postByStu: Map<string, number> };
+    const byMod = new Map<string, Acc>();
+    for (const m of LIFESKILLS_MODULES) byMod.set(m.id, { preSum: 0, preN: 0, postSum: 0, postN: 0, preByStu: new Map(), postByStu: new Map() });
+    for (const r of rows) {
+      const slug: string = r.data?._slug || '';
+      const match = slug.match(/^lifeskills-(m\d{2})-(pre|post)$/);
+      if (!match) continue;
+      const acc = byMod.get(match[1]);
+      if (!acc) continue;
+      const conf = Number(r.data?.score_summary?.confidence);
+      if (!Number.isFinite(conf)) continue;
+      if (match[2] === 'pre') { acc.preSum += conf; acc.preN += 1; acc.preByStu.set(r.student_id, conf); }
+      else { acc.postSum += conf; acc.postN += 1; acc.postByStu.set(r.student_id, conf); }
+    }
+    const moduleRows = LIFESKILLS_MODULES.map((m: any) => {
+      const a = byMod.get(m.id)!;
+      const preAvg = a.preN ? a.preSum / a.preN : null;
+      const postAvg = a.postN ? a.postSum / a.postN : null;
+      const delta = preAvg != null && postAvg != null ? postAvg - preAvg : null;
+      let pairedN = 0; let pairedDeltaSum = 0;
+      for (const [sid, pre] of a.preByStu) {
+        const post = a.postByStu.get(sid);
+        if (post != null) { pairedN += 1; pairedDeltaSum += post - pre; }
+      }
+      const pairedAvgDelta = pairedN ? pairedDeltaSum / pairedN : null;
+      return {
+        id: m.id,
+        name: `M${String(m.number).padStart(2, '0')} ${m.title}`,
+        short: `M${String(m.number).padStart(2, '0')}`,
+        preAvg, postAvg, delta, preN: a.preN, postN: a.postN, pairedN, pairedAvgDelta,
+      };
+    });
+
+    // Grouped bar: Pre vs Post per module
+    distributions.push({
+      title: 'Average confidence by module (Pre vs Post)',
+      series: [{ key: 'pre', label: 'Pre' }, { key: 'post', label: 'Post' }],
+      data: moduleRows.map((r: any) => ({
+        name: r.short,
+        pre: r.preAvg != null ? +r.preAvg.toFixed(2) : 0,
+        post: r.postAvg != null ? +r.postAvg.toFixed(2) : 0,
+      })),
+    });
+    // Delta bar
+    distributions.push({
+      title: 'Confidence gain by module (Post − Pre)',
+      data: moduleRows.map((r: any) => ({
+        name: r.short,
+        value: r.delta != null ? +r.delta.toFixed(2) : 0,
+      })),
+    });
+
+    // Per-module summary table via textHighlights
+    textHighlights.push({
+      title: 'Module impact summary',
+      extraColumns: ['Pre avg', 'Pre n', 'Post avg', 'Post n', 'Δ', 'Paired n', 'Paired Δ'],
+      items: moduleRows.map((r: any) => ({
+        text: r.name,
+        count: r.preN + r.postN,
+        extra: {
+          'Pre avg': r.preAvg != null ? r.preAvg.toFixed(2) : '—',
+          'Pre n': r.preN,
+          'Post avg': r.postAvg != null ? r.postAvg.toFixed(2) : '—',
+          'Post n': r.postN,
+          'Δ': r.delta != null ? (r.delta >= 0 ? `+${r.delta.toFixed(2)}` : r.delta.toFixed(2)) : '—',
+          'Paired n': r.pairedN,
+          'Paired Δ': r.pairedAvgDelta != null ? (r.pairedAvgDelta >= 0 ? `+${r.pairedAvgDelta.toFixed(2)}` : r.pairedAvgDelta.toFixed(2)) : '—',
+        },
+      })),
+    });
+
+    // Top-level metrics
+    const modsWithBoth = moduleRows.filter((r: any) => r.preAvg != null && r.postAvg != null);
+    const allPre = moduleRows.flatMap((r: any) => r.preAvg != null ? [{ avg: r.preAvg, n: r.preN }] : []);
+    const allPost = moduleRows.flatMap((r: any) => r.postAvg != null ? [{ avg: r.postAvg, n: r.postN }] : []);
+    const weighted = (arr: { avg: number; n: number }[]) => {
+      const totalN = arr.reduce((s, x) => s + x.n, 0);
+      return totalN ? arr.reduce((s, x) => s + x.avg * x.n, 0) / totalN : null;
+    };
+    const preW = weighted(allPre);
+    const postW = weighted(allPost);
+    metrics['Modules with pre+post data'] = `${modsWithBoth.length} / ${moduleRows.length}`;
+    metrics['Avg pre confidence (1–5)'] = preW != null ? +preW.toFixed(2) : null;
+    metrics['Avg post confidence (1–5)'] = postW != null ? +postW.toFixed(2) : null;
+    metrics['Avg gain (Post − Pre)'] = preW != null && postW != null ? +(postW - preW).toFixed(2) : null;
+    const totalPaired = moduleRows.reduce((s: number, r: any) => s + r.pairedN, 0);
+    metrics['Paired pre/post responses'] = totalPaired;
+  } else if (source.startsWith('impact:')) {
     const summaries = rows.map((r) => r.data.score_summary || {});
     const confidences = summaries.map((s: any) => Number(s.confidence)).filter((n) => Number.isFinite(n));
     if (confidences.length) {
@@ -258,6 +348,7 @@ function computeSourceMetrics(source: CompletionSource, rows: SurveyImpactRow[])
       metrics['NPS score'] = Math.round(((promoters - detractors) / npsVals.length) * 100);
     }
   }
+
 
   return { metrics, distributions, textHighlights };
 }
