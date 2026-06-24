@@ -1,41 +1,41 @@
 ## Goal
 
-Make every survey response a student has submitted visible inside their student folder, so staff don't have to bounce between screens to know what's been completed.
-
-The per-student folder (Student Detail) already has a "Manage Submissions" button for admins that opens a four-tab view (check-ins, post-grad plan, intake, Life Skills/Impact). The problem: case managers and org admins can't see that at a glance, and even admins have to click in to know whether anything is there. We'll surface a compact summary card directly on the folder.
+On `/admin/surveys`, let staff click into any survey card and see the list of students who have completed it.
 
 ## What changes
 
-### Student Detail page — new "Surveys & Submissions" card
+### New "Completions" button on every SurveyCard
 
-Placed under the existing stats cards, visible to admin, case manager, and org admin. Shows four rows:
+Adds a third action next to **Preview** and the review/manage link. Clicking it opens a dialog titled "Completed by — {survey name}" with:
 
-- Wellbeing check-ins — count + most recent submission date
-- Post-graduation plan — submitted / not submitted (+ last edit date)
-- Intake survey — completed / in progress / not started
-- Life Skills / Impact surveys — count + most recent submission date
+- Search box (filter by student name or email)
+- Table: Student (links to `/students/:id`) · Organization · Submissions count · Last submitted
+- Empty state when nobody has completed it yet ("No completions yet")
+- Loading + error states
 
-Each row has a "View" link:
-- Admins → `/admin/students/:id/submissions` (existing full edit/delete view) opened on the matching tab
-- Case managers / org admins → a new read-only view at `/students/:id/submissions` showing the same four tabs without edit/delete controls
+The dialog respects role: case managers / org admins see only students they have access to (existing RLS already enforces this — the query just runs through the authenticated client).
 
-Empty rows render as muted "None yet" so staff can immediately see gaps.
+### Single shared dialog component
 
-### Read-only submissions view for case managers and org admins
+`SurveyCompletionsDialog` accepts a `source` describing which table to read:
 
-New route `/students/:id/submissions` reusing `SubmissionsTabs` with `studentId` set and `allowDelete={false}`. Edit buttons inside the tabs are already hidden when `allowDelete` is false for non-admin contexts; we'll gate the per-tab Edit buttons on role so case managers and org admins see read-only cards. Access is restricted to staff who can already see the student (same guard as Student Detail).
+- `checkin` → `student_checkins`
+- `post_grad` → `post_graduation_plans`
+- `intake` → `intake_responses`
+- `career_intake` → `career_intake_responses`
+- `impact:<slug>` → `impact_survey_responses` filtered by joined `impact_survey_templates.slug`
 
-### Default tab via query param
+The dialog groups rows by `student_id`, computes count + max(submitted/created at), then joins to `profiles` (full_name, email, organization_id) and `training_organizations` (name) in one follow-up query.
 
-`SubmissionsTabs` accepts an optional `defaultTab` prop (`checkins | plans | intake | impact`) so the summary card's "View" links land on the right tab.
+### Wiring
+
+- `SurveysIndex` passes the existing `preview` identifier as the completions source — no new IDs to invent.
+- Life Skills cards keep "Manage & send"; the new "Completions" button replaces nothing, it adds.
 
 ## Technical details
 
-- New component `src/components/students/SurveysSummaryCard.tsx` — fetches counts via existing hooks (`useStudentCheckIns`, `useStudentPlans`, intake query already in `SubmissionsTabs`, `useStudentImpactResponses`) in one card.
-- Edit `src/pages/StudentDetail.tsx` — render the card after the stats grid; pass `student.id`.
-- Edit `src/components/submissions/SubmissionsTabs.tsx` — add optional `defaultTab` prop wired to the `Tabs` `value`/`defaultValue`; hide per-row Edit buttons unless the viewer is an admin or the student themselves.
-- New page `src/pages/StudentSubmissionsView.tsx` — staff read-only wrapper; reads `?tab=` from the URL.
-- Edit `src/App.tsx` — add the new route, protected to admin / case_manager / org_admin.
-- Edit `src/pages/admin/AdminStudentSubmissions.tsx` — pass `defaultTab` from `?tab=` so admin links also land on the right tab.
+- New file `src/components/admin/SurveyCompletionsDialog.tsx` — controlled dialog reading from the right table based on `source` prop.
+- New hook `src/hooks/useSurveyCompletions.ts` — one `useQuery` that switches on source, returns `{ student_id, count, last_at, full_name, email, organization_name }[]`.
+- Edit `src/pages/admin/SurveysIndex.tsx` — render the new button on `SurveyCard`, wire it to open the dialog with the row's `preview` value.
 
-No database, RLS, or edge function changes — existing per-student hooks already enforce access.
+No database, RLS, or edge function changes.
