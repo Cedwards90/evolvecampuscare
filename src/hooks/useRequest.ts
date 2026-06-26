@@ -134,7 +134,7 @@ export function useApproveRequest() {
 
       // Only update status if not already in_progress, otherwise just update approved_amount if provided
       if (!isAlreadyInProgress) {
-        const updateData: Record<string, unknown> = { 
+        const updateData: { status: RequestStatus; approved_amount?: number } = { 
           status: 'in_progress' as RequestStatus 
         };
         
