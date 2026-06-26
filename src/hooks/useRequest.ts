@@ -134,7 +134,7 @@ export function useApproveRequest() {
 
       // Only update status if not already in_progress, otherwise just update approved_amount if provided
       if (!isAlreadyInProgress) {
-        const updateData: Record<string, unknown> = { 
+        const updateData: { status: RequestStatus; approved_amount?: number } = { 
           status: 'in_progress' as RequestStatus 
         };
         
@@ -453,7 +453,13 @@ export function useEditRequest() {
       };
     }) => {
       // Build update payload with only changed fields
-      const updatePayload: Record<string, unknown> = {};
+      const updatePayload: {
+        title?: string;
+        description?: string;
+        category?: 'academic' | 'financial' | 'housing' | 'mental_health' | 'other';
+        priority?: 'low' | 'medium' | 'high' | 'emergency';
+        requested_amount?: number | null;
+      } = {};
       const changeNotes: string[] = [];
 
       if (changes.title && changes.title !== original.title) {
@@ -465,11 +471,11 @@ export function useEditRequest() {
         changeNotes.push('description updated');
       }
       if (changes.category && changes.category !== original.category) {
-        updatePayload.category = changes.category;
+        updatePayload.category = changes.category as typeof updatePayload.category;
         changeNotes.push(`category changed from ${original.category} to ${changes.category}`);
       }
       if (changes.priority && changes.priority !== original.priority) {
-        updatePayload.priority = changes.priority;
+        updatePayload.priority = changes.priority as typeof updatePayload.priority;
         changeNotes.push(`priority changed from ${original.priority} to ${changes.priority}`);
       }
       if (changes.requested_amount !== undefined && changes.requested_amount !== original.requested_amount) {
