@@ -475,7 +475,7 @@ export function useEditRequest() {
         changeNotes.push(`category changed from ${original.category} to ${changes.category}`);
       }
       if (changes.priority && changes.priority !== original.priority) {
-        updatePayload.priority = changes.priority;
+        updatePayload.priority = changes.priority as typeof updatePayload.priority;
         changeNotes.push(`priority changed from ${original.priority} to ${changes.priority}`);
       }
       if (changes.requested_amount !== undefined && changes.requested_amount !== original.requested_amount) {
