@@ -453,7 +453,13 @@ export function useEditRequest() {
       };
     }) => {
       // Build update payload with only changed fields
-      const updatePayload: Record<string, unknown> = {};
+      const updatePayload: {
+        title?: string;
+        description?: string;
+        category?: 'academic' | 'financial' | 'housing' | 'mental_health' | 'other';
+        priority?: 'low' | 'medium' | 'high' | 'emergency';
+        requested_amount?: number | null;
+      } = {};
       const changeNotes: string[] = [];
 
       if (changes.title && changes.title !== original.title) {
