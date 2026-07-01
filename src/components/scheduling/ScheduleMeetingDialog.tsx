@@ -94,10 +94,21 @@ export function ScheduleMeetingDialog({
       duration: 30,
     },
   });
-  const watchedValues = form.watch();
+  const watchedTitle = form.watch('title');
+  const watchedDescription = form.watch('description');
+  const watchedDate = form.watch('date');
+  const watchedTime = form.watch('time');
+  const watchedDuration = form.watch('duration');
+  const draftValues = {
+    title: watchedTitle || `Meeting with ${studentName}`,
+    description: watchedDescription || '',
+    date: watchedDate,
+    time: watchedTime || '',
+    duration: watchedDuration || 30,
+  };
   const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence(
     `schedule-meeting:${studentId}:${requestId || 'general'}`,
-    watchedValues,
+    draftValues,
     (v) => {
       form.reset({
         title: v.title || `Meeting with ${studentName}`,
