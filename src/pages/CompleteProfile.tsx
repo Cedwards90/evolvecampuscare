@@ -92,15 +92,25 @@ export default function CompleteProfile() {
     },
   });
 
-  const watchedValues = watch();
+  const watchedFullName = watch('full_name');
+  const watchedPhone = watch('phone');
+  const watchedStudentId = watch('student_id');
+  const watchedDepartment = watch('department');
+  const watchedYearOfStudy = watch('year_of_study');
+  const watchedPreferredContact = watch('preferred_contact');
   const draftValues = useMemo<CompleteProfileDraft>(
     () => ({
-      ...watchedValues,
+      full_name: watchedFullName || '',
+      phone: watchedPhone || '',
+      student_id: watchedStudentId || '',
+      department: watchedDepartment || '',
+      year_of_study: watchedYearOfStudy || '',
+      preferred_contact: watchedPreferredContact || 'email',
       selectedOrgId,
       cohortStartDate: cohortStartDate ? cohortStartDate.toISOString() : null,
       graduationDate: graduationDate ? graduationDate.toISOString() : null,
     }),
-    [watchedValues, selectedOrgId, cohortStartDate, graduationDate],
+    [watchedFullName, watchedPhone, watchedStudentId, watchedDepartment, watchedYearOfStudy, watchedPreferredContact, selectedOrgId, cohortStartDate, graduationDate],
   );
   const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence<CompleteProfileDraft>(
     'complete-profile',
