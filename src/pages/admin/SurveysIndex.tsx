@@ -68,10 +68,14 @@ function SurveyCard({
   row,
   onPreview,
   onCompletions,
+  onSendInvitation,
+  onSendLifeSkills,
 }: {
   row: SurveyRow;
   onPreview: (t: PreviewSurveyType) => void;
   onCompletions: (source: CompletionSource, title: string) => void;
+  onSendInvitation: (invitationType: string, title: string) => void;
+  onSendLifeSkills: (slug: string, title: string) => void;
 }) {
   return (
     <Card>
