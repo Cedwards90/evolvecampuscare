@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 import { useStudentPersonality } from '@/hooks/useStudentPersonality';
 import { useToast } from '@/hooks/use-toast';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
 import {
   QUIZ_QUESTIONS,
   LIKERT_OPTIONS,
@@ -33,6 +35,20 @@ export default function PersonalityQuizOnboarding() {
   const total = QUIZ_QUESTIONS.length;
   const current = QUIZ_QUESTIONS[index];
   const progress = useMemo(() => Math.round(((index) / total) * 100), [index, total]);
+  const draftValues = useMemo(() => ({ index, answers }), [index, answers]);
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence(
+    'personality-quiz-onboarding',
+    draftValues,
+    (v) => {
+      setIndex(typeof v.index === 'number' && v.index >= 0 && v.index < total ? v.index : 0);
+      setAnswers((v.answers ?? {}) as Record<string, LikertValue>);
+    },
+    {
+      enabled: !result,
+      label: 'the Personality Quiz',
+      shouldPersist: (v) => Object.keys(v.answers ?? {}).length > 0,
+    },
+  );
 
   const answer = async (v: LikertValue) => {
     const next = { ...answers, [current.id]: v };
@@ -68,6 +84,7 @@ export default function PersonalityQuizOnboarding() {
           .eq('user_id', user!.id);
         await refreshProfile();
         await qc.invalidateQueries({ queryKey: ['onboarding-status'] });
+        clearDraft();
         setResult(score);
       } catch (e: any) {
         toast({ title: 'Could not save quiz', description: e.message, variant: 'destructive' });
@@ -163,6 +180,7 @@ export default function PersonalityQuizOnboarding() {
         <Button variant="ghost" onClick={back} disabled={index === 0 || submitting}>Back</Button>
         {submitting && <span className="text-sm text-muted-foreground">Saving your results…</span>}
       </div>
+      <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={() => { clearDraft(); setIndex(0); setAnswers({}); }} />
     </OnboardingShell>
   );
 }
