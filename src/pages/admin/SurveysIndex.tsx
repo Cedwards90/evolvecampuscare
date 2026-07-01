@@ -34,6 +34,10 @@ interface SurveyRow {
   count?: string;
   badge?: string;
   sendHref?: string;
+  /** Invitation-style survey type ('checkin' | 'post_graduation_plan' | 'intake' | 'career_intake'). */
+  invitationType?: string;
+  /** Life Skills template slug for bulk send dialog. */
+  lifeskillsSlug?: string;
 }
 
 function useIntakeCount() {
