@@ -33,11 +33,12 @@ export function buildDraftKey(formKey: string, userId: string | null | undefined
  */
 function sanitizeForStorage<T>(values: T): T {
   if (values == null || typeof values !== 'object') return values;
+  if (values instanceof Date) return values.toISOString() as T;
   const clone: any = Array.isArray(values) ? [] : {};
   for (const [k, v] of Object.entries(values as any)) {
     if (typeof File !== 'undefined' && v instanceof File) continue;
     if (typeof Blob !== 'undefined' && v instanceof Blob) continue;
-    clone[k] = v;
+    clone[k] = v != null && typeof v === 'object' ? sanitizeForStorage(v) : v;
   }
   return clone;
 }
