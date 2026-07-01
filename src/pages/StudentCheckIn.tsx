@@ -88,6 +88,7 @@ export default function StudentCheckIn() {
       });
       setSubmittedAt(new Date().toISOString());
       setSubmitted(true);
+      clearDraft();
       toast.success('Check-in submitted! Thank you for sharing.');
       // Mark any pending survey invitation as complete
       markComplete.mutate('checkin');
@@ -95,6 +96,7 @@ export default function StudentCheckIn() {
       toast.error('Failed to submit check-in. Please try again.');
     }
   };
+
 
   if (submitted) {
     return (
