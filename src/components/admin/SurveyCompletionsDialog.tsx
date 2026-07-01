@@ -28,6 +28,21 @@ interface Props {
 export function SurveyCompletionsDialog({ open, onOpenChange, source, title }: Props) {
   const [search, setSearch] = useState('');
   const { data: rows = [], isLoading, error } = useSurveyCompletions(source, open);
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
+
+  const manageTab = (() => {
+    if (!source) return null;
+    if (source === 'checkin') return 'checkins';
+    if (source === 'post_grad') return 'plan';
+    if (source === 'intake' || source === 'career_intake') return 'intake';
+    if (source.startsWith('impact:')) return 'impact';
+    return null;
+  })();
+  const manageHref = (studentId: string) =>
+    isAdmin && manageTab
+      ? `/admin/students/${studentId}/submissions?tab=${manageTab}`
+      : `/students/${studentId}/submissions?tab=${manageTab || 'checkins'}`;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -77,6 +92,7 @@ export function SurveyCompletionsDialog({ open, onOpenChange, source, title }: P
                   <TableHead>Organization</TableHead>
                   <TableHead className="text-right">Submissions</TableHead>
                   <TableHead>Last submitted</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -103,7 +119,23 @@ export function SurveyCompletionsDialog({ open, onOpenChange, source, title }: P
                     <TableCell className="text-sm text-muted-foreground">
                       {r.last_at ? format(new Date(r.last_at), 'PPP') : '—'}
                     </TableCell>
-                  </TableRow>
+                    <TableCell className="text-right">
+                      {manageTab && (
+                        <Button asChild size="sm" variant="outline" onClick={() => onOpenChange(false)}>
+                          <Link to={manageHref(r.student_id)}>
+                            {isAdmin ? (
+                              <>
+                                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Manage
+                              </>
+                            ) : (
+                              <>
+                                <Pencil className="mr-1.5 h-3.5 w-3.5" /> View
+                              </>
+                            )}
+                          </Link>
+                        </Button>
+                      )}
+                    </TableCell>
                 ))}
               </TableBody>
             </Table>
