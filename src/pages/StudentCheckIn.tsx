@@ -244,14 +244,18 @@ export default function StudentCheckIn() {
               />
             </div>
 
-            <Button
-              onClick={handleSubmit}
-              disabled={submitCheckIn.isPending}
-              className="w-full"
-              size="lg"
-            >
-              {submitCheckIn.isPending ? 'Submitting...' : 'Submit Check-In'}
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={handleSubmit}
+                disabled={submitCheckIn.isPending}
+                className="w-full"
+                size="lg"
+              >
+                {submitCheckIn.isPending ? 'Submitting...' : 'Submit Check-In'}
+              </Button>
+              <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={handleDiscardDraft} className="justify-center" />
+            </div>
+
           </CardContent>
         </Card>
       </div>
