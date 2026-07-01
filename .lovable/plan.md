@@ -1,56 +1,39 @@
-## Goal
-Enable **per-student survey sending** for all survey types and let **admins delete any survey submission**.
+## Fix "case notes not visible" and prevent recurrence
 
-## 1. Send surveys to individual students
+Jade's notes exist in the database; this is a UI/visibility problem. The fix has two goals: (a) prove to any staff member that a note landed, and (b) make notes discoverable outside a single student's folder.
 
-### Life Skills surveys (`SendLifeSkillsDialog`)
-Add a third "Send to" mode: **Individual student**.
-- New radio option "A specific student" alongside Cohort / Organization.
-- Student picker (searchable Combobox) using existing `useStudentFolders`/similar hook, scoped to what the current user can see (admin = all, org_admin = their orgs, case_manager = assigned students).
-- Update `send-lifeskills-survey` Edge Function to accept `student_id` and, when provided, assign + email only that one student (bypass cohort/org query).
+### 1. Post-save confirmation + verification
+- `CaseNotesSection` save handler: show a success toast that includes the student's name and the note's contact date, plus a link "View note".
+- After a successful insert, re-fetch and scroll to the new row so the author immediately sees it in the list.
+- Require a non-empty title OR default it to `{note_type} - {contact_date}` when blank so nothing renders as an empty row.
 
-### Check-In / Post-Grad surveys (`SendSurveyDialog`)
-Already sends to one student — no change needed. Add a matching entry point on the Surveys index card so staff can pick a student without going through the Student Detail page:
-- New "Send to student…" button on each Check-In and Post-Grad card in `SurveysIndex.tsx` → opens a lightweight dialog that first picks a student, then reuses `SendSurveyDialog` logic.
+### 2. Realtime + cross-tab freshness
+- Subscribe `file_notes` to the `supabase_realtime` publication.
+- Add a channel in `useFileNotes` filtered by `student_id` that invalidates `['file-notes', studentId]` on INSERT/UPDATE/DELETE, so a second open tab or a peer viewer sees new notes without refresh.
 
-### Intake / Career Intake
-These are self-serve onboarding surveys; add a "Request from student" action that creates a `survey_invitations` row + notification (mirrors check-in flow) so staff can nudge one student.
+### 3. Global "Recent Case Notes" activity feed
+- New page `/admin/case-notes` (admins + org admins, plus case managers scoped to their own students) listing the last 30 days of notes across all accessible students: date, student, author, type, title, snippet, and a link to the student's folder.
+- Add a compact "Recent notes" card to the admin dashboard and to each case manager's dashboard showing the last 5 notes they authored.
 
-## 2. Admin delete of submissions
+### 4. Close the org-suspension + reassignment blind spots
+- Change `cm_can_access_student` policy path for `file_notes` SELECT so authors can always read notes they wrote, even after reassignment or org suspension. New policy: `author_id = auth.uid()`.
+- Add a policy so admins and org admins in the student's org always see notes regardless of suspension (they already do via existing policies — verify and leave as is).
+- No change to INSERT/UPDATE/DELETE policies.
 
-Submission tables involved:
-- `student_checkins`
-- `post_graduation_plans`
-- `intake_responses`
-- `career_intake_responses`
-- `impact_survey_responses` (Life Skills)
-- `survey_invitations` (the request itself)
+### 5. Surface notes on the admin submissions view
+- Add a "Case Notes" tab to `AdminStudentSubmissions` (`/admin/students/:id/submissions`) reusing `CaseNotesSection` in read-only mode, so admins investigating a student never miss them.
 
-### Database
-Migration adding admin DELETE RLS policies to any of the above missing one (audit each; most already allow admin via existing policies — confirm and patch gaps only). No schema changes.
+### Files touched
+- `src/hooks/useFileNotes.ts` (realtime subscription, toast payload)
+- `src/components/casemanager/CaseNotesSection.tsx` or equivalent (title fallback, scroll-to-new)
+- `src/pages/admin/CaseNotesActivity.tsx` (new)
+- `src/App.tsx` + `src/components/layouts/SidebarLayout.tsx` (route + nav)
+- `src/pages/Dashboard.tsx` (recent-notes card)
+- `src/pages/admin/AdminStudentSubmissions.tsx` (new tab)
+- One migration: add `file_notes` to realtime publication + SELECT policy `Authors always see their own notes`.
 
-### UI
-`SubmissionsTabs` already has an `allowDelete` mode used by `AdminStudentSubmissions`. Extend it:
-- Add Life Skills responses tab delete affordance (currently read-only there).
-- Add a **"View completions" → row action → Delete** in `SurveyCompletionsDialog` for admins (opens confirm, calls delete on the underlying row(s), invalidates queries).
-- Add per-submission delete button in `MySubmissions`/admin views wherever an entry currently lacks one.
-
-All deletes gated by `role === 'admin'` on the client and by RLS on the server.
-
-## Files to change
-
-**Frontend**
-- `src/components/admin/SendLifeSkillsDialog.tsx` — add Individual mode + student picker
-- `src/pages/admin/SurveysIndex.tsx` — add "Send to student" action on Check-in/Post-Grad/Intake cards
-- `src/components/admin/SendSurveyDialog.tsx` — allow opening without a preset student (picker inside)
-- `src/components/admin/SurveyCompletionsDialog.tsx` — admin delete action per row
-- `src/components/submissions/SubmissionsTabs.tsx` — ensure delete works for Life Skills responses tab
-- `src/hooks/useLifeSkillsSurveys.ts` — pass `student_id` through `sendLifeSkillsSurvey`
-
-**Backend**
-- `supabase/functions/send-lifeskills-survey/index.ts` — support single `student_id`
-- New migration — admin DELETE policies on any submission table lacking one (audit first)
-
-## Out of scope
-- Bulk multi-student picker (single student only for this pass)
-- Undo / soft-delete (hard delete with confirm dialog)
+### Verification
+- Add a note as Jade → toast appears, row scrolls into view.
+- Open the same folder as admin in a second browser → new note appears without refresh.
+- Visit `/admin/case-notes` → the June 29–30 notes appear.
+- Suspend a test org → the note author still sees their own notes.
