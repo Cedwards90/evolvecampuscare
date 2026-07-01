@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -17,9 +17,19 @@ import { downloadCheckInPdf } from '@/lib/wellbeingExport';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrgName } from '@/hooks/useOrgName';
 import { InlineAdminDeletePanel } from '@/components/submissions/InlineAdminDeletePanel';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
 
 const moodLabels = ['😔 Struggling', '😕 Not Great', '😐 Okay', '🙂 Good', '😊 Great'];
 const progressLabels = ['Struggling', 'Behind', 'On Track', 'Progressing Well', 'Thriving'];
+
+interface CheckInDraft {
+  moodRating: number;
+  progressRating: number;
+  wins: string;
+  blockers: string;
+  additionalNotes: string;
+}
 
 export default function StudentCheckIn() {
   const navigate = useNavigate();
@@ -34,6 +44,38 @@ export default function StudentCheckIn() {
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
+
+  const draftValues = useMemo<CheckInDraft>(
+    () => ({ moodRating, progressRating, wins, blockers, additionalNotes }),
+    [moodRating, progressRating, wins, blockers, additionalNotes],
+  );
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence<CheckInDraft>(
+    'student-checkin',
+    draftValues,
+    (v) => {
+      setMoodRating(v.moodRating ?? 3);
+      setProgressRating(v.progressRating ?? 3);
+      setWins(v.wins ?? '');
+      setBlockers(v.blockers ?? '');
+      setAdditionalNotes(v.additionalNotes ?? '');
+    },
+    {
+      enabled: !submitted,
+      label: 'the Weekly Check-In',
+      shouldPersist: (v) =>
+        !!(v.wins?.trim() || v.blockers?.trim() || v.additionalNotes?.trim() || v.moodRating !== 3 || v.progressRating !== 3),
+    },
+  );
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setMoodRating(3);
+    setProgressRating(3);
+    setWins('');
+    setBlockers('');
+    setAdditionalNotes('');
+  };
+
 
   const handleSubmit = async () => {
     try {
