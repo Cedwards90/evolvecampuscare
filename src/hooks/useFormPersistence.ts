@@ -1,19 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { clearDraft, loadDraft, saveDraft } from '@/lib/formDraftStorage';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  beaconSaveDraft,
+  clearDraft,
+  clearDraftRemote,
+  loadDraft,
+  loadDraftRemote,
+  saveDraft,
+  saveDraftRemote,
+} from '@/lib/formDraftStorage';
 
 interface UseFormPersistenceOptions<T> {
-  /** Debounce delay (ms) before writing to storage. Defaults to 500. */
   debounceMs?: number;
-  /** Disable persistence conditionally (e.g. after a successful submit). */
   enabled?: boolean;
-  /** Optional predicate — return false to skip persisting a specific snapshot. */
   shouldPersist?: (values: T) => boolean;
-  /** Called after the user chooses "Restore" from the toast. */
   onRestore?: (values: T) => void;
-  /** Human-readable form name for the restore toast. */
   label?: string;
+  /** Delay between remote (Supabase) writes. Defaults to 2500ms. */
+  remoteDebounceMs?: number;
 }
 
 function safeStringify(value: unknown): string {
@@ -25,16 +31,8 @@ function safeStringify(value: unknown): string {
 }
 
 /**
- * Persist a form's in-progress values to localStorage so users don't lose
- * their work when a browser tab is discarded, reloaded, or accidentally
- * closed.
- *
- * The hook is intentionally state-shape agnostic: pass the full values
- * object and a setter that can rehydrate the form when the user chooses to
- * restore a previously-saved draft.
- *
- * Returns a small API with `clear()` (call after a successful submit) and
- * `savedAt` for a "Draft saved" indicator.
+ * Persist a form's in-progress values to localStorage AND Supabase so users
+ * don't lose their work across tab discards, reloads, or devices.
  */
 export function useFormPersistence<T>(
   formKey: string,
@@ -45,6 +43,7 @@ export function useFormPersistence<T>(
   const { user } = useAuth();
   const {
     debounceMs = 500,
+    remoteDebounceMs = 2500,
     enabled = true,
     shouldPersist,
     onRestore,
@@ -56,65 +55,112 @@ export function useFormPersistence<T>(
   const hydratedKeyRef = useRef<string | null>(null);
   const firstSaveEffectRef = useRef(true);
   const skipNextSaveRef = useRef(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const localTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const remoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shouldPersistRef = useRef<typeof shouldPersist>(shouldPersist);
   const latestValuesRef = useRef<T>(values);
   latestValuesRef.current = values;
   shouldPersistRef.current = shouldPersist;
 
+  const clearTimers = () => {
+    if (localTimerRef.current) {
+      clearTimeout(localTimerRef.current);
+      localTimerRef.current = null;
+    }
+    if (remoteTimerRef.current) {
+      clearTimeout(remoteTimerRef.current);
+      remoteTimerRef.current = null;
+    }
+  };
+
   const clear = useCallback(() => {
     clearDraft(formKey, user?.id);
+    if (user?.id) void clearDraftRemote(formKey, user.id);
     setSavedAt(null);
     setHasDraft(false);
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
+    clearTimers();
   }, [formKey, user?.id]);
 
-  const persistNow = useCallback((snapshot: T): boolean => {
-    if (!enabled) return false;
-    if (!user?.id) return false;
-    if (shouldPersistRef.current && !shouldPersistRef.current(snapshot)) return false;
+  const persistLocal = useCallback((snapshot: T): string | null => {
+    if (!enabled) return null;
+    if (!user?.id) return null;
+    if (shouldPersistRef.current && !shouldPersistRef.current(snapshot)) return null;
     const ok = saveDraft(formKey, user.id, snapshot);
-    if (ok) {
-      setSavedAt(new Date().toISOString());
-      setHasDraft(true);
-    }
-    return ok;
+    if (!ok) return null;
+    const at = new Date().toISOString();
+    setSavedAt(at);
+    setHasDraft(true);
+    return at;
   }, [enabled, formKey, user?.id]);
 
-  // Hydrate once per (form, user) — offer to restore if there's a saved draft.
+  const persistRemote = useCallback((snapshot: T, at: string) => {
+    if (!user?.id) return;
+    void saveDraftRemote(formKey, user.id, snapshot, at);
+  }, [formKey, user?.id]);
+
+  // Hydrate: prefer whichever draft (local or remote) has the newer savedAt.
   useEffect(() => {
     const hydrateKey = `${formKey}:${user?.id || ''}`;
     if (hydratedKeyRef.current === hydrateKey) return;
-    if (!user?.id) return; // wait for auth
+    if (!user?.id) return;
     hydratedKeyRef.current = hydrateKey;
     firstSaveEffectRef.current = true;
-    const envelope = loadDraft<T>(formKey, user.id);
-    if (!envelope || envelope.values == null) return;
-    skipNextSaveRef.current = true;
-    setHasDraft(true);
-    setSavedAt(envelope.savedAt);
 
-    setValues(envelope.values);
-    if (onRestore) onRestore(envelope.values);
+    const local = loadDraft<T>(formKey, user.id);
+    let applied: { values: T; savedAt: string } | null = local
+      ? { values: local.values, savedAt: local.savedAt }
+      : null;
 
-    const discard = () => {
-      clear();
-      toast('Draft discarded');
-    };
+    if (applied) {
+      skipNextSaveRef.current = true;
+      setHasDraft(true);
+      setSavedAt(applied.savedAt);
+      setValues(applied.values);
+      if (onRestore) onRestore(applied.values);
+      toast.success(label ? `Draft restored for ${label}` : 'Draft restored', {
+        description: `Saved ${new Date(applied.savedAt).toLocaleString()}`,
+        duration: 10000,
+        action: {
+          label: 'Discard',
+          onClick: () => {
+            clear();
+            toast('Draft discarded');
+          },
+        },
+      });
+    }
 
-    toast.success(label ? `Draft restored for ${label}` : 'Draft restored', {
-      description: `Saved ${new Date(envelope.savedAt).toLocaleString()}`,
-      duration: 12000,
-      action: { label: 'Discard', onClick: discard },
-    });
-    // Intentionally exclude setValues/onRestore/label/clear — hydrate exactly once per user.
+    // Background: check remote and prefer it if newer.
+    (async () => {
+      const remote = await loadDraftRemote<T>(formKey, user.id);
+      if (!remote || remote.values == null) return;
+      const remoteTs = new Date(remote.savedAt).getTime();
+      const localTs = applied ? new Date(applied.savedAt).getTime() : 0;
+      if (remoteTs <= localTs) return;
+      skipNextSaveRef.current = true;
+      setHasDraft(true);
+      setSavedAt(remote.savedAt);
+      setValues(remote.values);
+      saveDraft(formKey, user.id, remote.values);
+      if (onRestore) onRestore(remote.values);
+      if (!applied) {
+        toast.success(label ? `Draft restored for ${label}` : 'Draft restored', {
+          description: `Synced from another device — saved ${new Date(remote.savedAt).toLocaleString()}`,
+          duration: 10000,
+          action: {
+            label: 'Discard',
+            onClick: () => {
+              clear();
+              toast('Draft discarded');
+            },
+          },
+        });
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formKey, user?.id]);
 
-  // Debounced writes on any change.
+  // Debounced writes on any change (local fast, remote slower).
   useEffect(() => {
     if (!enabled) return;
     if (!user?.id) return;
@@ -128,27 +174,43 @@ export function useFormPersistence<T>(
     }
     if (shouldPersistRef.current && !shouldPersistRef.current(values)) return;
 
-    if (timerRef.current) clearTimeout(timerRef.current);
+    if (localTimerRef.current) clearTimeout(localTimerRef.current);
     const serializedAtSchedule = safeStringify(values);
-    timerRef.current = setTimeout(() => {
+    localTimerRef.current = setTimeout(() => {
       if (serializedAtSchedule !== safeStringify(latestValuesRef.current)) return;
-      persistNow(latestValuesRef.current);
+      const at = persistLocal(latestValuesRef.current);
+      if (!at) return;
+      if (remoteTimerRef.current) clearTimeout(remoteTimerRef.current);
+      remoteTimerRef.current = setTimeout(() => {
+        persistRemote(latestValuesRef.current, new Date().toISOString());
+      }, Math.max(0, remoteDebounceMs - debounceMs));
     }, debounceMs);
 
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (localTimerRef.current) clearTimeout(localTimerRef.current);
     };
-  }, [values, enabled, formKey, user?.id, debounceMs, persistNow]);
+  }, [values, enabled, formKey, user?.id, debounceMs, remoteDebounceMs, persistLocal, persistRemote]);
 
-  // Flush immediately when the tab becomes hidden (Chrome tab discard scenario).
+  // Flush immediately when the tab becomes hidden — Chrome tab discard scenario.
   useEffect(() => {
     if (!enabled || !user?.id) return;
     const flush = () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      persistNow(latestValuesRef.current);
+      clearTimers();
+      const at = persistLocal(latestValuesRef.current);
+      if (!at) return;
+      // Use fetch keepalive so the write survives tab discard / navigation.
+      supabase.auth.getSession().then(({ data }) => {
+        beaconSaveDraft(
+          formKey,
+          user.id,
+          latestValuesRef.current,
+          at,
+          data.session?.access_token ?? null,
+        );
+      }).catch(() => {
+        // If we can't get the session synchronously enough, fall back to normal upsert.
+        persistRemote(latestValuesRef.current, at);
+      });
     };
     const flushWhenHidden = () => {
       if (document.visibilityState === 'hidden') flush();
@@ -161,7 +223,7 @@ export function useFormPersistence<T>(
       window.removeEventListener('pagehide', flush);
       window.removeEventListener('beforeunload', flush);
     };
-  }, [enabled, persistNow, user?.id]);
+  }, [enabled, persistLocal, persistRemote, formKey, user?.id]);
 
   return { clear, savedAt, hasDraft };
 }
