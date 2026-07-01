@@ -13,6 +13,7 @@ import { useAllCohorts } from '@/hooks/useCohorts';
 import { useActiveOrganizations } from '@/hooks/useTrainingOrganizations';
 import { sendLifeSkillsSurvey } from '@/hooks/useLifeSkillsSurveys';
 import { useToast } from '@/hooks/use-toast';
+import { StudentPicker } from './StudentPicker';
 
 interface Props {
   open: boolean;
@@ -21,7 +22,7 @@ interface Props {
   templateTitle: string;
 }
 
-type Mode = 'cohort' | 'organization';
+type Mode = 'cohort' | 'organization' | 'student';
 
 export function SendLifeSkillsDialog({ open, onOpenChange, templateSlug, templateTitle }: Props) {
   const { toast } = useToast();
@@ -30,20 +31,23 @@ export function SendLifeSkillsDialog({ open, onOpenChange, templateSlug, templat
   const [mode, setMode] = useState<Mode>('cohort');
   const [cohortId, setCohortId] = useState<string>('');
   const [orgId, setOrgId] = useState<string>('');
+  const [studentId, setStudentId] = useState<string>('');
   const [notes, setNotes] = useState('');
   const [sending, setSending] = useState(false);
 
-  const reset = () => { setCohortId(''); setOrgId(''); setNotes(''); };
+  const reset = () => { setCohortId(''); setOrgId(''); setStudentId(''); setNotes(''); };
 
   const onSend = async () => {
     if (mode === 'cohort' && !cohortId) { toast({ title: 'Pick a cohort', variant: 'destructive' }); return; }
     if (mode === 'organization' && !orgId) { toast({ title: 'Pick an organization', variant: 'destructive' }); return; }
+    if (mode === 'student' && !studentId) { toast({ title: 'Pick a student', variant: 'destructive' }); return; }
     setSending(true);
     try {
       const res = await sendLifeSkillsSurvey({
         template_slug: templateSlug,
         cohort_id: mode === 'cohort' ? cohortId : undefined,
         organization_id: mode === 'organization' ? orgId : undefined,
+        student_ids: mode === 'student' ? [studentId] : undefined,
         notes: notes.trim() || undefined,
       });
       toast({
@@ -70,7 +74,7 @@ export function SendLifeSkillsDialog({ open, onOpenChange, templateSlug, templat
         <div className="space-y-4">
           <div>
             <Label className="text-sm">Send to</Label>
-            <RadioGroup value={mode} onValueChange={(v) => setMode(v as Mode)} className="mt-2 flex gap-4">
+            <RadioGroup value={mode} onValueChange={(v) => setMode(v as Mode)} className="mt-2 flex flex-wrap gap-4">
               <div className="flex items-center gap-2">
                 <RadioGroupItem id="m-cohort" value="cohort" />
                 <Label htmlFor="m-cohort" className="text-sm font-normal">A cohort</Label>
@@ -78,6 +82,10 @@ export function SendLifeSkillsDialog({ open, onOpenChange, templateSlug, templat
               <div className="flex items-center gap-2">
                 <RadioGroupItem id="m-org" value="organization" />
                 <Label htmlFor="m-org" className="text-sm font-normal">An entire organization</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem id="m-student" value="student" />
+                <Label htmlFor="m-student" className="text-sm font-normal">A specific student</Label>
               </div>
             </RadioGroup>
           </div>
