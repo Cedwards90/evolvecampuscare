@@ -100,6 +100,16 @@ function SurveyCard({
               <BarChart3 className="mr-1.5 h-3.5 w-3.5" /> Impact report
             </Link>
           </Button>
+          {row.invitationType && (
+            <Button size="sm" variant="outline" onClick={() => onSendInvitation(row.invitationType!, row.title)}>
+              <Send className="mr-1.5 h-3.5 w-3.5" /> Send to student
+            </Button>
+          )}
+          {row.lifeskillsSlug && (
+            <Button size="sm" variant="outline" onClick={() => onSendLifeSkills(row.lifeskillsSlug!, row.title)}>
+              <Send className="mr-1.5 h-3.5 w-3.5" /> Send
+            </Button>
+          )}
           {row.sendHref && (
             <Button size="sm" variant="outline" asChild>
               <Link to={row.sendHref}><Send className="mr-1.5 h-3.5 w-3.5" /> Send</Link>
