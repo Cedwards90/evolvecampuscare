@@ -1,62 +1,56 @@
 ## Goal
+Enable **per-student survey sending** for all survey types and let **admins delete any survey submission**.
 
-Give admins a way to see when users last signed in, plus a running history of logins going forward. Backfill the history with each user's most recent sign-in that Lovable Cloud already tracks (`auth.users.last_sign_in_at`) so the page isn't empty on day one.
+## 1. Send surveys to individual students
 
-Note: Lovable Cloud's auth only stores the *most recent* sign-in per user — it does not keep a per-login history. We can backfill exactly one historical row per user (their last sign-in to date); new logins from this point forward will be captured individually.
+### Life Skills surveys (`SendLifeSkillsDialog`)
+Add a third "Send to" mode: **Individual student**.
+- New radio option "A specific student" alongside Cohort / Organization.
+- Student picker (searchable Combobox) using existing `useStudentFolders`/similar hook, scoped to what the current user can see (admin = all, org_admin = their orgs, case_manager = assigned students).
+- Update `send-lifeskills-survey` Edge Function to accept `student_id` and, when provided, assign + email only that one student (bypass cohort/org query).
 
-## What gets built
+### Check-In / Post-Grad surveys (`SendSurveyDialog`)
+Already sends to one student — no change needed. Add a matching entry point on the Surveys index card so staff can pick a student without going through the Student Detail page:
+- New "Send to student…" button on each Check-In and Post-Grad card in `SurveysIndex.tsx` → opens a lightweight dialog that first picks a student, then reuses `SendSurveyDialog` logic.
 
-### 1. New table `public.user_login_events`
-Append-only log, one row per sign-in.
+### Intake / Career Intake
+These are self-serve onboarding surveys; add a "Request from student" action that creates a `survey_invitations` row + notification (mirrors check-in flow) so staff can nudge one student.
 
-- `id uuid pk`
-- `user_id uuid` (references `auth.users(id)` via app code, no FK to auth)
-- `signed_in_at timestamptz`
-- `source text` — `'backfill'` for the seeded row, `'client'` for live sign-ins
-- `created_at timestamptz default now()`
+## 2. Admin delete of submissions
 
-Indexes on `(user_id, signed_in_at desc)` and `(signed_in_at desc)`.
+Submission tables involved:
+- `student_checkins`
+- `post_graduation_plans`
+- `intake_responses`
+- `career_intake_responses`
+- `impact_survey_responses` (Life Skills)
+- `survey_invitations` (the request itself)
 
-RLS:
-- Admin and org_admin can `SELECT` (org_admin scoped to users in their org via existing `user_in_org_admin_scope_v2`).
-- `INSERT` allowed for the authenticated user inserting their own row (so the client can log live sign-ins).
-- No UPDATE/DELETE for anyone except service_role.
+### Database
+Migration adding admin DELETE RLS policies to any of the above missing one (audit each; most already allow admin via existing policies — confirm and patch gaps only). No schema changes.
 
-Grants: `SELECT, INSERT` to `authenticated`; `ALL` to `service_role`.
+### UI
+`SubmissionsTabs` already has an `allowDelete` mode used by `AdminStudentSubmissions`. Extend it:
+- Add Life Skills responses tab delete affordance (currently read-only there).
+- Add a **"View completions" → row action → Delete** in `SurveyCompletionsDialog` for admins (opens confirm, calls delete on the underlying row(s), invalidates queries).
+- Add per-submission delete button in `MySubmissions`/admin views wherever an entry currently lacks one.
 
-### 2. Backfill migration
-One historical row per user using `auth.users.last_sign_in_at` (skip users who have never signed in):
+All deletes gated by `role === 'admin'` on the client and by RLS on the server.
 
-```sql
-INSERT INTO public.user_login_events (user_id, signed_in_at, source)
-SELECT id, last_sign_in_at, 'backfill'
-FROM auth.users
-WHERE last_sign_in_at IS NOT NULL;
-```
+## Files to change
 
-### 3. Live capture in `AuthContext`
-On `SIGNED_IN` events from `onAuthStateChange`, insert a row into `user_login_events` with `source: 'client'`. Dedupe in code: only insert if the last logged event for this user is more than 5 minutes ago (so token refreshes and tab focus don't flood the table).
+**Frontend**
+- `src/components/admin/SendLifeSkillsDialog.tsx` — add Individual mode + student picker
+- `src/pages/admin/SurveysIndex.tsx` — add "Send to student" action on Check-in/Post-Grad/Intake cards
+- `src/components/admin/SendSurveyDialog.tsx` — allow opening without a preset student (picker inside)
+- `src/components/admin/SurveyCompletionsDialog.tsx` — admin delete action per row
+- `src/components/submissions/SubmissionsTabs.tsx` — ensure delete works for Life Skills responses tab
+- `src/hooks/useLifeSkillsSurveys.ts` — pass `student_id` through `sendLifeSkillsSurvey`
 
-### 4. Admin page `/admin/login-activity`
-New route, admin + org_admin only, linked from the Admin sidebar.
-
-Two sections:
-- **Summary table** — one row per user: name, email, role, organization, last sign-in (relative + absolute), total logins recorded. Sortable by last sign-in. Search by name/email. Respects existing global org/cohort filters where applicable.
-- **Recent activity feed** — most recent 100 login events across the platform with user name, time, and source.
-
-Pull data via two queries: an aggregated `user_id → max(signed_in_at), count(*)` joined to `profiles` + `user_roles`, and a recent-events list joined to `profiles`.
-
-### 5. Sidebar entry
-Add "Login Activity" under the existing Admin section of `SidebarLayout`, visible to `admin` and `org_admin`.
+**Backend**
+- `supabase/functions/send-lifeskills-survey/index.ts` — support single `student_id`
+- New migration — admin DELETE policies on any submission table lacking one (audit first)
 
 ## Out of scope
-
-- No edits to `auth` schema, no auth triggers (Lovable rule).
-- No IP/user-agent tracking — that would need an edge function and wasn't requested.
-- No changes to existing settings, profile, or notification flows.
-
-## Technical notes
-
-- Live logging happens client-side in `AuthContext` after `onAuthStateChange` fires `SIGNED_IN`. Wrapped in try/catch so a failed insert never blocks auth.
-- Org_admin scoping reuses the existing `user_in_org_admin_scope_v2(_actor, _target_user)` helper inside an RLS policy.
-- The page reuses existing `PageHeader`, table primitives, and `TimeAgo` component for consistent styling.
+- Bulk multi-student picker (single student only for this pass)
+- Undo / soft-delete (hard delete with confirm dialog)
