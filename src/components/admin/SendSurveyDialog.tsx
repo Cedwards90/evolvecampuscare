@@ -21,30 +21,64 @@ import {
 } from '@/components/ui/select';
 import { useSendSurvey } from '@/hooks/useSurveyInvitations';
 import { toast } from 'sonner';
+import { StudentPicker } from './StudentPicker';
 
-interface SendSurveyDialogProps {
-  studentId: string;
-  studentName: string;
+type ControlledProps = {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+};
+
+interface SendSurveyDialogProps extends ControlledProps {
+  /** When provided, sends to this student without showing a picker. */
+  studentId?: string;
+  studentName?: string;
+  /** Optional default survey type. */
+  defaultSurveyType?: string;
   trigger?: React.ReactNode;
 }
 
-export function SendSurveyDialog({ studentId, studentName, trigger }: SendSurveyDialogProps) {
-  const [open, setOpen] = useState(false);
-  const [surveyType, setSurveyType] = useState('');
+export function SendSurveyDialog({
+  studentId: presetId,
+  studentName: presetName,
+  defaultSurveyType,
+  trigger,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
+}: SendSurveyDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? !!openProp : internalOpen;
+  const setOpen = (o: boolean) => {
+    if (!isControlled) setInternalOpen(o);
+    onOpenChangeProp?.(o);
+  };
+
+  const [pickedId, setPickedId] = useState<string>('');
+  const [pickedName, setPickedName] = useState<string>('');
+  const [surveyType, setSurveyType] = useState(defaultSurveyType || '');
   const [notes, setNotes] = useState('');
   const sendSurvey = useSendSurvey();
 
+  const activeId = presetId || pickedId;
+  const activeName = presetName || pickedName || 'this student';
+
   const handleSubmit = async () => {
+    if (!activeId) {
+      toast.error('Please select a student.');
+      return;
+    }
     if (!surveyType) {
       toast.error('Please select a survey type.');
       return;
     }
     try {
-      await sendSurvey.mutateAsync({ studentId, surveyType, notes: notes.trim() || undefined });
-      toast.success(`Survey request sent to ${studentName}.`);
+      await sendSurvey.mutateAsync({ studentId: activeId, surveyType, notes: notes.trim() || undefined });
+      toast.success(`Survey request sent to ${activeName}.`);
       setOpen(false);
-      setSurveyType('');
+      setSurveyType(defaultSurveyType || '');
       setNotes('');
+      setPickedId('');
+      setPickedName('');
     } catch {
       toast.error('Failed to send survey request.');
     }
@@ -52,22 +86,33 @@ export function SendSurveyDialog({ studentId, studentName, trigger }: SendSurvey
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm">
-            <ClipboardList className="mr-2 h-4 w-4" />
-            Send Survey
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger !== undefined ? (
+        <DialogTrigger asChild>
+          {trigger || (
+            <Button variant="outline" size="sm">
+              <ClipboardList className="mr-2 h-4 w-4" />
+              Send Survey
+            </Button>
+          )}
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Send Survey to {studentName}</DialogTitle>
+          <DialogTitle>Send Survey{presetName ? ` to ${presetName}` : ''}</DialogTitle>
           <DialogDescription>
-            Request the student to complete a survey. They'll receive an in-app notification.
+            Request a student to complete a survey. They'll receive an in-app notification.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
+          {!presetId && (
+            <div className="space-y-2">
+              <Label>Student</Label>
+              <StudentPicker
+                value={pickedId}
+                onChange={(id, name) => { setPickedId(id); setPickedName(name); }}
+              />
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Survey Type</Label>
             <Select value={surveyType} onValueChange={setSurveyType}>
@@ -77,6 +122,8 @@ export function SendSurveyDialog({ studentId, studentName, trigger }: SendSurvey
               <SelectContent>
                 <SelectItem value="checkin">Weekly Check-In</SelectItem>
                 <SelectItem value="post_graduation_plan">12-Month Post-Graduation Plan</SelectItem>
+                <SelectItem value="intake">Student Intake Survey</SelectItem>
+                <SelectItem value="career_intake">Career Intake Survey</SelectItem>
               </SelectContent>
             </Select>
           </div>
