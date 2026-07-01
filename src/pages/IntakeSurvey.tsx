@@ -196,8 +196,10 @@ export default function IntakeSurvey() {
             .invoke('recommend-resources', { body: { student_id: user.id, source: 'intake' } })
             .catch((e) => console.warn('Recommendation generation failed', e));
         }
+        clearDraft();
         toast({ title: 'Thank you!', description: 'Your responses have been saved. We are here for you.' });
         navigate('/onboarding/career-intake');
+
       }
     } catch {
       toast({ title: 'Error', description: 'Failed to save. Please try again.', variant: 'destructive' });
