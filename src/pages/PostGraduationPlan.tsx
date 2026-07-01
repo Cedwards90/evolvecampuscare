@@ -52,7 +52,69 @@ export default function PostGraduationPlan() {
   const [month1012, setMonth1012] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
 
+  const draftValues = useMemo(
+    () => ({
+      graduationDate,
+      careerGoals,
+      educationGoals,
+      housingPlan,
+      financialPlan,
+      healthWellness,
+      supportNeeded,
+      month13,
+      month46,
+      month79,
+      month1012,
+      additionalNotes,
+      currentStep,
+    }),
+    [graduationDate, careerGoals, educationGoals, housingPlan, financialPlan, healthWellness, supportNeeded, month13, month46, month79, month1012, additionalNotes, currentStep],
+  );
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence(
+    'post-graduation-plan',
+    draftValues,
+    (v) => {
+      setGraduationDate(v.graduationDate ?? '');
+      setCareerGoals(v.careerGoals ?? '');
+      setEducationGoals(v.educationGoals ?? '');
+      setHousingPlan(v.housingPlan ?? '');
+      setFinancialPlan(v.financialPlan ?? '');
+      setHealthWellness(v.healthWellness ?? '');
+      setSupportNeeded(v.supportNeeded ?? '');
+      setMonth13(v.month13 ?? '');
+      setMonth46(v.month46 ?? '');
+      setMonth79(v.month79 ?? '');
+      setMonth1012(v.month1012 ?? '');
+      setAdditionalNotes(v.additionalNotes ?? '');
+      setCurrentStep(typeof v.currentStep === 'number' ? v.currentStep : 0);
+    },
+    {
+      enabled: !submitted,
+      label: 'the 12-Month Plan',
+      shouldPersist: (v) =>
+        !!(v.careerGoals || v.educationGoals || v.housingPlan || v.financialPlan || v.healthWellness || v.supportNeeded || v.month13 || v.month46 || v.month79 || v.month1012 || v.additionalNotes || v.graduationDate),
+    },
+  );
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setGraduationDate('');
+    setCareerGoals('');
+    setEducationGoals('');
+    setHousingPlan('');
+    setFinancialPlan('');
+    setHealthWellness('');
+    setSupportNeeded('');
+    setMonth13('');
+    setMonth46('');
+    setMonth79('');
+    setMonth1012('');
+    setAdditionalNotes('');
+    setCurrentStep(0);
+  };
+
   const step = STEPS[currentStep];
+
   const progress = ((currentStep + 1) / STEPS.length) * 100;
 
   const handleNext = () => {
