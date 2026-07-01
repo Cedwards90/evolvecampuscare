@@ -72,6 +72,24 @@ export function useFileNotes(studentId: string | undefined) {
     enabled: !!studentId,
   });
 
+  // Realtime: keep this student's notes list fresh across tabs and viewers
+  useEffect(() => {
+    if (!studentId) return;
+    const channel = supabase
+      .channel(`file_notes:${studentId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'file_notes', filter: `student_id=eq.${studentId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['file-notes', studentId] });
+          queryClient.invalidateQueries({ queryKey: ['recent-case-notes'] });
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [studentId, queryClient]);
+
+
   const authorIds = Array.from(new Set(notes.map((n) => n.author_id)));
   const { data: authors = [] } = useQuery({
     queryKey: ['file-notes-authors', authorIds.sort().join(',')],
