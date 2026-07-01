@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +11,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { CMF_NEEDS } from '@/lib/cmfNeeds';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
 
 const PREFERRED_CONTACT = ['In-Person', 'Phone', 'Video', 'Email'];
 
@@ -19,6 +21,7 @@ export default function CmfBasicsOnboarding() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { toast } = useToast();
+  const restoredDraftRef = useRef(false);
 
   const { data: file } = useQuery({
     queryKey: ['student-file', user?.id],
@@ -38,7 +41,29 @@ export default function CmfBasicsOnboarding() {
   const [contactType, setContactType] = useState<string>('');
   const [saving, setSaving] = useState(false);
 
+  const draftValues = useMemo(
+    () => ({ reason, needs, contactType }),
+    [reason, needs, contactType],
+  );
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence(
+    'cmf-basics-onboarding',
+    draftValues,
+    (v) => {
+      setReason(v.reason ?? '');
+      setNeeds(Array.isArray(v.needs) ? v.needs : []);
+      setContactType(v.contactType ?? '');
+    },
+    {
+      label: 'Case Management Basics',
+      onRestore: () => {
+        restoredDraftRef.current = true;
+      },
+      shouldPersist: (v) => !!(v.reason?.trim() || v.needs?.length || v.contactType),
+    },
+  );
+
   useEffect(() => {
+    if (restoredDraftRef.current) return;
     if (file?.primary_reason_for_contact) setReason(file.primary_reason_for_contact);
   }, [file]);
 
@@ -69,6 +94,7 @@ export default function CmfBasicsOnboarding() {
 
       await qc.invalidateQueries({ queryKey: ['onboarding-status'] });
       await qc.invalidateQueries({ queryKey: ['student-file', user?.id] });
+      clearDraft();
       navigate('/onboarding/personality-quiz');
     } catch (e: any) {
       toast({ title: 'Could not save', description: e.message, variant: 'destructive' });
@@ -122,6 +148,7 @@ export default function CmfBasicsOnboarding() {
           {saving ? 'Saving…' : 'Continue'}
         </Button>
       </div>
+      <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={() => { clearDraft(); setReason(''); setNeeds([]); setContactType(''); }} className="justify-end" />
     </OnboardingShell>
   );
 }
