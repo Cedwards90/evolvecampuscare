@@ -86,7 +86,7 @@ export function SendSurveyDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {trigger !== undefined ? (
+      {!isControlled && (
         <DialogTrigger asChild>
           {trigger || (
             <Button variant="outline" size="sm">
@@ -95,7 +95,7 @@ export function SendSurveyDialog({
             </Button>
           )}
         </DialogTrigger>
-      ) : null}
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Send Survey{presetName ? ` to ${presetName}` : ''}</DialogTitle>
