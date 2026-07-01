@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Search, Users } from 'lucide-react';
+import { Search, Users, Trash2, Pencil } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,10 +11,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EmptyState } from '@/components/EmptyState';
 import { useSurveyCompletions, type CompletionSource } from '@/hooks/useSurveyCompletions';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
   open: boolean;
