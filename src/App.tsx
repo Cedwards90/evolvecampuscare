@@ -55,6 +55,8 @@ import NotFound from "./pages/NotFound";
 import AcceptNda from "./pages/AcceptNda";
 import AdminNda from "./pages/admin/AdminNda";
 import LoginActivity from "./pages/admin/LoginActivity";
+import CaseNotesActivity from "./pages/admin/CaseNotesActivity";
+
 
 import ImpactDashboard from "./pages/admin/ImpactDashboard";
 import Resources from "./pages/Resources";
@@ -255,6 +257,12 @@ function App() {
                 <LoginActivity />
               </ProtectedRoute>
             } />
+            <Route path="/admin/case-notes" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin', 'case_manager']}>
+                <CaseNotesActivity />
+              </ProtectedRoute>
+            } />
+
             <Route path="/admin/impact" element={
               <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <ImpactDashboard />
