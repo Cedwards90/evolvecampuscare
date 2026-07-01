@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, GraduationCap, Home, DollarSign, Heart, Target, ChevronRight, ChevronLeft, CheckCircle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,9 @@ import { downloadPlanPdf } from '@/lib/wellbeingExport';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrgName } from '@/hooks/useOrgName';
 import { InlineAdminDeletePanel } from '@/components/submissions/InlineAdminDeletePanel';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
+
 
 const STEPS = [
   { key: 'goals', title: 'Career & Education', icon: GraduationCap, description: 'Your career and education goals for the first year after graduation.' },
@@ -49,7 +52,69 @@ export default function PostGraduationPlan() {
   const [month1012, setMonth1012] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
 
+  const draftValues = useMemo(
+    () => ({
+      graduationDate,
+      careerGoals,
+      educationGoals,
+      housingPlan,
+      financialPlan,
+      healthWellness,
+      supportNeeded,
+      month13,
+      month46,
+      month79,
+      month1012,
+      additionalNotes,
+      currentStep,
+    }),
+    [graduationDate, careerGoals, educationGoals, housingPlan, financialPlan, healthWellness, supportNeeded, month13, month46, month79, month1012, additionalNotes, currentStep],
+  );
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence(
+    'post-graduation-plan',
+    draftValues,
+    (v) => {
+      setGraduationDate(v.graduationDate ?? '');
+      setCareerGoals(v.careerGoals ?? '');
+      setEducationGoals(v.educationGoals ?? '');
+      setHousingPlan(v.housingPlan ?? '');
+      setFinancialPlan(v.financialPlan ?? '');
+      setHealthWellness(v.healthWellness ?? '');
+      setSupportNeeded(v.supportNeeded ?? '');
+      setMonth13(v.month13 ?? '');
+      setMonth46(v.month46 ?? '');
+      setMonth79(v.month79 ?? '');
+      setMonth1012(v.month1012 ?? '');
+      setAdditionalNotes(v.additionalNotes ?? '');
+      setCurrentStep(typeof v.currentStep === 'number' ? v.currentStep : 0);
+    },
+    {
+      enabled: !submitted,
+      label: 'the 12-Month Plan',
+      shouldPersist: (v) =>
+        !!(v.careerGoals || v.educationGoals || v.housingPlan || v.financialPlan || v.healthWellness || v.supportNeeded || v.month13 || v.month46 || v.month79 || v.month1012 || v.additionalNotes || v.graduationDate),
+    },
+  );
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setGraduationDate('');
+    setCareerGoals('');
+    setEducationGoals('');
+    setHousingPlan('');
+    setFinancialPlan('');
+    setHealthWellness('');
+    setSupportNeeded('');
+    setMonth13('');
+    setMonth46('');
+    setMonth79('');
+    setMonth1012('');
+    setAdditionalNotes('');
+    setCurrentStep(0);
+  };
+
   const step = STEPS[currentStep];
+
   const progress = ((currentStep + 1) / STEPS.length) * 100;
 
   const handleNext = () => {
@@ -82,7 +147,9 @@ export default function PostGraduationPlan() {
       });
       setSubmittedAt(new Date().toISOString());
       setSubmitted(true);
+      clearDraft();
       toast({ title: 'Plan submitted!', description: 'Your 12-month post-graduation plan has been saved.' });
+
       markComplete.mutate('post_graduation_plan');
     } catch {
       toast({ title: 'Error', description: 'Failed to submit your plan. Please try again.', variant: 'destructive' });
@@ -288,10 +355,11 @@ export default function PostGraduationPlan() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <Button variant="outline" onClick={handleBack} disabled={currentStep === 0}>
             <ChevronLeft className="mr-2 h-4 w-4" /> Back
           </Button>
+          <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={handleDiscardDraft} />
           {currentStep < STEPS.length - 1 ? (
             <Button onClick={handleNext}>
               Next <ChevronRight className="ml-2 h-4 w-4" />
@@ -302,6 +370,7 @@ export default function PostGraduationPlan() {
             </Button>
           )}
         </div>
+
       </div>
     </SidebarLayout>
   );

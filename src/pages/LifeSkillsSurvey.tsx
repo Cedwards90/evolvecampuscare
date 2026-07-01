@@ -15,6 +15,8 @@ import {
 } from '@/hooks/useLifeSkillsSurveys';
 import { moduleFromSlug } from '@/lib/lifeskillsTemplates';
 import { cn } from '@/lib/utils';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
 
 type AnswerMap = Record<string, string | number>;
 
@@ -26,6 +28,19 @@ export default function LifeSkillsSurvey() {
   const { data: myResponses = [] } = useMyLifeSkillsResponses();
   const submit = useSubmitLifeSkillsResponse();
   const [answers, setAnswers] = useState<AnswerMap>({});
+
+  const persistKey = slug ? `lifeskills:${slug}` : 'lifeskills:unknown';
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence<AnswerMap>(
+    persistKey,
+    answers,
+    (v) => setAnswers(v ?? {}),
+    {
+      enabled: !!slug,
+      label: template?.title,
+      shouldPersist: (v) => v && Object.keys(v).length > 0,
+    },
+  );
+
 
   const meta = useMemo(() => (slug ? moduleFromSlug(slug) : { kind: 'unknown' as const }), [slug]);
 
@@ -114,8 +129,10 @@ export default function LifeSkillsSurvey() {
         responses: answers,
         score_summary: buildScoreSummary(),
       });
+      clearDraft();
       toast({ title: 'Thank you!', description: 'Your response has been recorded.' });
       navigate('/surveys');
+
     } catch (e: any) {
       toast({ title: 'Could not submit', description: e?.message || 'Try again', variant: 'destructive' });
     }
@@ -210,14 +227,16 @@ export default function LifeSkillsSurvey() {
             </div>
           ))}
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-wrap items-center gap-3 pt-2">
             <Button onClick={onSubmit} disabled={submit.isPending || !!blockedReason}>
               {submit.isPending ? 'Submitting…' : 'Submit'}
             </Button>
             <Button variant="outline" onClick={() => navigate('/surveys')}>Cancel</Button>
+            <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={() => { clearDraft(); setAnswers({}); }} className="ml-auto" />
           </div>
         </CardContent>
       </Card>
+
     </SidebarLayout>
   );
 }

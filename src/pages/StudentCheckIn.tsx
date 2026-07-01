@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -17,9 +17,19 @@ import { downloadCheckInPdf } from '@/lib/wellbeingExport';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrgName } from '@/hooks/useOrgName';
 import { InlineAdminDeletePanel } from '@/components/submissions/InlineAdminDeletePanel';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
 
 const moodLabels = ['😔 Struggling', '😕 Not Great', '😐 Okay', '🙂 Good', '😊 Great'];
 const progressLabels = ['Struggling', 'Behind', 'On Track', 'Progressing Well', 'Thriving'];
+
+interface CheckInDraft {
+  moodRating: number;
+  progressRating: number;
+  wins: string;
+  blockers: string;
+  additionalNotes: string;
+}
 
 export default function StudentCheckIn() {
   const navigate = useNavigate();
@@ -35,6 +45,38 @@ export default function StudentCheckIn() {
   const [submitted, setSubmitted] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
 
+  const draftValues = useMemo<CheckInDraft>(
+    () => ({ moodRating, progressRating, wins, blockers, additionalNotes }),
+    [moodRating, progressRating, wins, blockers, additionalNotes],
+  );
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence<CheckInDraft>(
+    'student-checkin',
+    draftValues,
+    (v) => {
+      setMoodRating(v.moodRating ?? 3);
+      setProgressRating(v.progressRating ?? 3);
+      setWins(v.wins ?? '');
+      setBlockers(v.blockers ?? '');
+      setAdditionalNotes(v.additionalNotes ?? '');
+    },
+    {
+      enabled: !submitted,
+      label: 'the Weekly Check-In',
+      shouldPersist: (v) =>
+        !!(v.wins?.trim() || v.blockers?.trim() || v.additionalNotes?.trim() || v.moodRating !== 3 || v.progressRating !== 3),
+    },
+  );
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setMoodRating(3);
+    setProgressRating(3);
+    setWins('');
+    setBlockers('');
+    setAdditionalNotes('');
+  };
+
+
   const handleSubmit = async () => {
     try {
       await submitCheckIn.mutateAsync({
@@ -46,6 +88,7 @@ export default function StudentCheckIn() {
       });
       setSubmittedAt(new Date().toISOString());
       setSubmitted(true);
+      clearDraft();
       toast.success('Check-in submitted! Thank you for sharing.');
       // Mark any pending survey invitation as complete
       markComplete.mutate('checkin');
@@ -53,6 +96,7 @@ export default function StudentCheckIn() {
       toast.error('Failed to submit check-in. Please try again.');
     }
   };
+
 
   if (submitted) {
     return (
@@ -200,14 +244,18 @@ export default function StudentCheckIn() {
               />
             </div>
 
-            <Button
-              onClick={handleSubmit}
-              disabled={submitCheckIn.isPending}
-              className="w-full"
-              size="lg"
-            >
-              {submitCheckIn.isPending ? 'Submitting...' : 'Submit Check-In'}
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={handleSubmit}
+                disabled={submitCheckIn.isPending}
+                className="w-full"
+                size="lg"
+              >
+                {submitCheckIn.isPending ? 'Submitting...' : 'Submit Check-In'}
+              </Button>
+              <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={handleDiscardDraft} className="justify-center" />
+            </div>
+
           </CardContent>
         </Card>
       </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Home, Target, Sparkles, ChevronRight, ChevronLeft, SkipForward, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { logFunnelEvent } from '@/lib/funnelEvents';
 import { InlineAdminDeletePanel } from '@/components/submissions/InlineAdminDeletePanel';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
+
 
 const STEPS = [
   { key: 'about_you', title: 'About You', icon: Home, description: 'Let us get to know you a little better.' },
@@ -59,8 +62,45 @@ export default function IntakeSurvey() {
   const [successVision, setSuccessVision] = useState('');
   const [anythingElse, setAnythingElse] = useState('');
 
+  const draftValues = useMemo(
+    () => ({
+      currentStep,
+      livingSituation, workStatus, supportNetwork,
+      basicNeedsComfort, dailyChallenges, focusChallenges,
+      stressLevel, talkSupport, interestedResources,
+      currentlyEmployed, baselineHourlyWage, baselineWeeklyHours, baselineEmployer,
+      mainReason, successVision, anythingElse,
+    }),
+    [currentStep, livingSituation, workStatus, supportNetwork, basicNeedsComfort, dailyChallenges, focusChallenges, stressLevel, talkSupport, interestedResources, currentlyEmployed, baselineHourlyWage, baselineWeeklyHours, baselineEmployer, mainReason, successVision, anythingElse],
+  );
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence(
+    'intake-survey',
+    draftValues,
+    (v) => {
+      setCurrentStep(typeof v.currentStep === 'number' ? v.currentStep : 0);
+      setLivingSituation(v.livingSituation ?? '');
+      setWorkStatus(v.workStatus ?? '');
+      setSupportNetwork(v.supportNetwork ?? '');
+      setBasicNeedsComfort(Array.isArray(v.basicNeedsComfort) ? v.basicNeedsComfort : [3]);
+      setDailyChallenges(Array.isArray(v.dailyChallenges) ? v.dailyChallenges : []);
+      setFocusChallenges(v.focusChallenges ?? '');
+      setStressLevel(Array.isArray(v.stressLevel) ? v.stressLevel : [3]);
+      setTalkSupport(v.talkSupport ?? '');
+      setInterestedResources(Array.isArray(v.interestedResources) ? v.interestedResources : []);
+      setCurrentlyEmployed(v.currentlyEmployed ?? '');
+      setBaselineHourlyWage(v.baselineHourlyWage ?? '');
+      setBaselineWeeklyHours(v.baselineWeeklyHours ?? '');
+      setBaselineEmployer(v.baselineEmployer ?? '');
+      setMainReason(v.mainReason ?? '');
+      setSuccessVision(v.successVision ?? '');
+      setAnythingElse(v.anythingElse ?? '');
+    },
+    { label: 'the Intake Survey' },
+  );
+
   const step = STEPS[currentStep];
   const progress = ((currentStep + 1) / STEPS.length) * 100;
+
 
   const toggleChallenge = (value: string) => {
     setDailyChallenges(prev =>
@@ -156,8 +196,10 @@ export default function IntakeSurvey() {
             .invoke('recommend-resources', { body: { student_id: user.id, source: 'intake' } })
             .catch((e) => console.warn('Recommendation generation failed', e));
         }
+        clearDraft();
         toast({ title: 'Thank you!', description: 'Your responses have been saved. We are here for you.' });
         navigate('/onboarding/career-intake');
+
       }
     } catch {
       toast({ title: 'Error', description: 'Failed to save. Please try again.', variant: 'destructive' });
@@ -400,25 +442,29 @@ export default function IntakeSurvey() {
           )}
 
           {/* Navigation */}
-          <div className="flex items-center justify-between pt-4 border-t">
-            <div className="flex gap-2">
-              {currentStep > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => setCurrentStep(currentStep - 1)}>
-                  <ChevronLeft className="mr-1 h-4 w-4" /> Back
-                </Button>
-              )}
-            </div>
+          <div className="flex flex-col gap-3 pt-4 border-t">
+            <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={clearDraft} className="justify-center" />
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                {currentStep > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setCurrentStep(currentStep - 1)}>
+                    <ChevronLeft className="mr-1 h-4 w-4" /> Back
+                  </Button>
+                )}
+              </div>
 
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleSkip}>
-                <SkipForward className="mr-1 h-4 w-4" /> Skip for Now
-              </Button>
-              <Button size="sm" onClick={handleNext} disabled={saving}>
-                {saving ? 'Saving...' : currentStep === STEPS.length - 1 ? 'Finish' : 'Next'}
-                {currentStep < STEPS.length - 1 && <ChevronRight className="ml-1 h-4 w-4" />}
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleSkip}>
+                  <SkipForward className="mr-1 h-4 w-4" /> Skip for Now
+                </Button>
+                <Button size="sm" onClick={handleNext} disabled={saving}>
+                  {saving ? 'Saving...' : currentStep === STEPS.length - 1 ? 'Finish' : 'Next'}
+                  {currentStep < STEPS.length - 1 && <ChevronRight className="ml-1 h-4 w-4" />}
+                </Button>
+              </div>
             </div>
           </div>
+
         </CardContent>
       </Card>
       </div>
