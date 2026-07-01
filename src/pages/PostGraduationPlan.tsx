@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, GraduationCap, Home, DollarSign, Heart, Target, ChevronRight, ChevronLeft, CheckCircle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,9 @@ import { downloadPlanPdf } from '@/lib/wellbeingExport';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrgName } from '@/hooks/useOrgName';
 import { InlineAdminDeletePanel } from '@/components/submissions/InlineAdminDeletePanel';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
+
 
 const STEPS = [
   { key: 'goals', title: 'Career & Education', icon: GraduationCap, description: 'Your career and education goals for the first year after graduation.' },
