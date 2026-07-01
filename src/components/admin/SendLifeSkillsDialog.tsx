@@ -118,6 +118,14 @@ export function SendLifeSkillsDialog({ open, onOpenChange, templateSlug, templat
             </div>
           )}
 
+          {mode === 'student' && (
+            <div>
+              <Label className="text-sm">Student</Label>
+              <StudentPicker value={studentId} onChange={(id) => setStudentId(id)} />
+            </div>
+          )}
+
+
           <div>
             <Label className="text-sm">Note to students (optional)</Label>
             <Textarea
