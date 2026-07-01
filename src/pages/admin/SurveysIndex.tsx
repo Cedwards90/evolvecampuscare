@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Eye, ListChecks, ChevronRight, GraduationCap, ClipboardList, Sparkles, Briefcase, Send, Users, BarChart3, FileBarChart } from 'lucide-react';
 import { SurveyPreviewDialog, type PreviewSurveyType } from '@/components/admin/SurveyPreviewDialog';
 import { SurveyCompletionsDialog } from '@/components/admin/SurveyCompletionsDialog';
+import { SendSurveyDialog } from '@/components/admin/SendSurveyDialog';
+import { SendLifeSkillsDialog } from '@/components/admin/SendLifeSkillsDialog';
 import type { CompletionSource } from '@/hooks/useSurveyCompletions';
 import { useAllCheckIns, useAllPostGradPlans } from '@/hooks/useSurveyResponses';
 import { useLifeSkillsCompletionStats } from '@/hooks/useLifeSkillsSurveys';
@@ -32,6 +34,10 @@ interface SurveyRow {
   count?: string;
   badge?: string;
   sendHref?: string;
+  /** Invitation-style survey type ('checkin' | 'post_graduation_plan' | 'intake' | 'career_intake'). */
+  invitationType?: string;
+  /** Life Skills template slug for bulk send dialog. */
+  lifeskillsSlug?: string;
 }
 
 function useIntakeCount() {
@@ -62,10 +68,14 @@ function SurveyCard({
   row,
   onPreview,
   onCompletions,
+  onSendInvitation,
+  onSendLifeSkills,
 }: {
   row: SurveyRow;
   onPreview: (t: PreviewSurveyType) => void;
   onCompletions: (source: CompletionSource, title: string) => void;
+  onSendInvitation: (invitationType: string, title: string) => void;
+  onSendLifeSkills: (slug: string, title: string) => void;
 }) {
   return (
     <Card>
@@ -90,6 +100,16 @@ function SurveyCard({
               <BarChart3 className="mr-1.5 h-3.5 w-3.5" /> Impact report
             </Link>
           </Button>
+          {row.invitationType && (
+            <Button size="sm" variant="outline" onClick={() => onSendInvitation(row.invitationType!, row.title)}>
+              <Send className="mr-1.5 h-3.5 w-3.5" /> Send to student
+            </Button>
+          )}
+          {row.lifeskillsSlug && (
+            <Button size="sm" variant="outline" onClick={() => onSendLifeSkills(row.lifeskillsSlug!, row.title)}>
+              <Send className="mr-1.5 h-3.5 w-3.5" /> Send
+            </Button>
+          )}
           {row.sendHref && (
             <Button size="sm" variant="outline" asChild>
               <Link to={row.sendHref}><Send className="mr-1.5 h-3.5 w-3.5" /> Send</Link>
@@ -126,6 +146,8 @@ function Section({ icon: Icon, title, description, children }: { icon: any; titl
 export default function SurveysIndex() {
   const [preview, setPreview] = useState<PreviewSurveyType | null>(null);
   const [completions, setCompletions] = useState<{ source: CompletionSource; title: string } | null>(null);
+  const [invitationSend, setInvitationSend] = useState<{ type: string; title: string } | null>(null);
+  const [lifeSkillsSend, setLifeSkillsSend] = useState<{ slug: string; title: string } | null>(null);
 
   const { data: checkIns = [] } = useAllCheckIns();
   const { data: plans = [] } = useAllPostGradPlans();
@@ -152,6 +174,7 @@ export default function SurveysIndex() {
       preview: 'checkin',
       reviewHref: '/admin/surveys/responses?type=checkins',
       count: `${checkIns.length} submissions`,
+      invitationType: 'checkin',
     },
     {
       title: '12-Month Post-Graduation Plan',
@@ -159,6 +182,7 @@ export default function SurveysIndex() {
       preview: 'post_grad',
       reviewHref: '/admin/surveys/responses?type=plans',
       count: `${plans.length} submissions`,
+      invitationType: 'post_graduation_plan',
     },
   ];
 
@@ -170,6 +194,7 @@ export default function SurveysIndex() {
       reviewHref: '/admin/student-management',
       reviewLabel: 'Open student folders',
       count: typeof intakeCount === 'number' ? `${intakeCount} section responses` : undefined,
+      invitationType: 'intake',
     },
     {
       title: 'Career Intake Survey',
@@ -178,6 +203,7 @@ export default function SurveysIndex() {
       reviewHref: '/admin/student-management',
       reviewLabel: 'Open student folders',
       count: typeof careerCount === 'number' ? `${careerCount} completed` : undefined,
+      invitationType: 'career_intake',
     },
   ];
 
@@ -194,6 +220,7 @@ export default function SurveysIndex() {
       reviewHref: '/admin/lifeskills',
       reviewLabel: 'Manage & send',
       count: statText(pre.slug),
+      lifeskillsSlug: pre.slug,
     });
     lifeskills.push({
       title: postLabel,
@@ -202,6 +229,7 @@ export default function SurveysIndex() {
       reviewHref: '/admin/lifeskills',
       reviewLabel: 'Manage & send',
       count: statText(post.slug),
+      lifeskillsSlug: post.slug,
     });
   }
   lifeskills.push({
@@ -212,6 +240,7 @@ export default function SurveysIndex() {
     reviewLabel: 'Manage & send',
     count: statText(LIFESKILLS_FINAL_SLUG),
     badge: 'Final',
+    lifeskillsSlug: LIFESKILLS_FINAL_SLUG,
   });
 
   return (
@@ -230,7 +259,16 @@ export default function SurveysIndex() {
           title="Core student surveys"
           description="Recurring check-ins and the long-term plan every student fills out."
         >
-          {core.map((r) => <SurveyCard key={r.title} row={r} onPreview={setPreview} onCompletions={(s, t) => setCompletions({ source: s, title: t })} />)}
+          {core.map((r) => (
+            <SurveyCard
+              key={r.title}
+              row={r}
+              onPreview={setPreview}
+              onCompletions={(s, t) => setCompletions({ source: s, title: t })}
+              onSendInvitation={(type, title) => setInvitationSend({ type, title })}
+              onSendLifeSkills={(slug, title) => setLifeSkillsSend({ slug, title })}
+            />
+          ))}
         </Section>
 
         <Section
@@ -238,7 +276,16 @@ export default function SurveysIndex() {
           title="Onboarding intake"
           description="Surveys students complete when they join the platform."
         >
-          {intake.map((r) => <SurveyCard key={r.title} row={r} onPreview={setPreview} onCompletions={(s, t) => setCompletions({ source: s, title: t })} />)}
+          {intake.map((r) => (
+            <SurveyCard
+              key={r.title}
+              row={r}
+              onPreview={setPreview}
+              onCompletions={(s, t) => setCompletions({ source: s, title: t })}
+              onSendInvitation={(type, title) => setInvitationSend({ type, title })}
+              onSendLifeSkills={(slug, title) => setLifeSkillsSend({ slug, title })}
+            />
+          ))}
         </Section>
 
         <Section
@@ -257,7 +304,16 @@ export default function SurveysIndex() {
             </Button>
           </div>
 
-          {lifeskills.map((r) => <SurveyCard key={r.title} row={r} onPreview={setPreview} onCompletions={(s, t) => setCompletions({ source: s, title: t })} />)}
+          {lifeskills.map((r) => (
+            <SurveyCard
+              key={r.title}
+              row={r}
+              onPreview={setPreview}
+              onCompletions={(s, t) => setCompletions({ source: s, title: t })}
+              onSendInvitation={(type, title) => setInvitationSend({ type, title })}
+              onSendLifeSkills={(slug, title) => setLifeSkillsSend({ slug, title })}
+            />
+          ))}
         </Section>
       </div>
 
@@ -273,6 +329,25 @@ export default function SurveysIndex() {
         source={completions?.source ?? null}
         title={completions?.title ?? ''}
       />
+
+      {invitationSend && (
+        <SendSurveyDialog
+          key={`inv-${invitationSend.type}`}
+          open={!!invitationSend}
+          onOpenChange={(o) => !o && setInvitationSend(null)}
+          defaultSurveyType={invitationSend.type}
+        />
+      )}
+
+      {lifeSkillsSend && (
+        <SendLifeSkillsDialog
+          key={`ls-${lifeSkillsSend.slug}`}
+          open={!!lifeSkillsSend}
+          onOpenChange={(o) => !o && setLifeSkillsSend(null)}
+          templateSlug={lifeSkillsSend.slug}
+          templateTitle={lifeSkillsSend.title}
+        />
+      )}
     </SidebarLayout>
   );
 }

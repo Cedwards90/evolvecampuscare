@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Search, Users } from 'lucide-react';
+import { Search, Users, Trash2, Pencil } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,10 +11,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EmptyState } from '@/components/EmptyState';
 import { useSurveyCompletions, type CompletionSource } from '@/hooks/useSurveyCompletions';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
   open: boolean;
@@ -26,6 +28,21 @@ interface Props {
 export function SurveyCompletionsDialog({ open, onOpenChange, source, title }: Props) {
   const [search, setSearch] = useState('');
   const { data: rows = [], isLoading, error } = useSurveyCompletions(source, open);
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
+
+  const manageTab = (() => {
+    if (!source) return null;
+    if (source === 'checkin') return 'checkins';
+    if (source === 'post_grad') return 'plan';
+    if (source === 'intake' || source === 'career_intake') return 'intake';
+    if (source.startsWith('impact:')) return 'impact';
+    return null;
+  })();
+  const manageHref = (studentId: string) =>
+    isAdmin && manageTab
+      ? `/admin/students/${studentId}/submissions?tab=${manageTab}`
+      : `/students/${studentId}/submissions?tab=${manageTab || 'checkins'}`;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -75,6 +92,7 @@ export function SurveyCompletionsDialog({ open, onOpenChange, source, title }: P
                   <TableHead>Organization</TableHead>
                   <TableHead className="text-right">Submissions</TableHead>
                   <TableHead>Last submitted</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -100,6 +118,23 @@ export function SurveyCompletionsDialog({ open, onOpenChange, source, title }: P
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {r.last_at ? format(new Date(r.last_at), 'PPP') : '—'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {manageTab && (
+                        <Button asChild size="sm" variant="outline" onClick={() => onOpenChange(false)}>
+                          <Link to={manageHref(r.student_id)}>
+                            {isAdmin ? (
+                              <>
+                                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Manage
+                              </>
+                            ) : (
+                              <>
+                                <Pencil className="mr-1.5 h-3.5 w-3.5" /> View
+                              </>
+                            )}
+                          </Link>
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
