@@ -17,11 +17,33 @@ export function useSendSurvey() {
       if (error) throw error;
 
       // Create in-app notification for the student
-      const title = surveyType === 'checkin' ? 'Check-In Requested' : 'Post-Graduation Plan Requested';
-      const message = surveyType === 'checkin'
-        ? 'Your case manager has requested you complete a check-in.'
-        : 'Your case manager has requested you complete your 12-month post-graduation plan.';
-      const link = surveyType === 'checkin' ? '/check-in' : '/post-graduation-plan';
+      const map: Record<string, { title: string; message: string; link: string }> = {
+        checkin: {
+          title: 'Check-In Requested',
+          message: 'Your case manager has requested you complete a check-in.',
+          link: '/check-in',
+        },
+        post_graduation_plan: {
+          title: 'Post-Graduation Plan Requested',
+          message: 'Your case manager has requested you complete your 12-month post-graduation plan.',
+          link: '/post-graduation-plan',
+        },
+        intake: {
+          title: 'Intake Survey Requested',
+          message: 'Your case manager has requested you complete the intake survey.',
+          link: '/intake-survey',
+        },
+        career_intake: {
+          title: 'Career Intake Requested',
+          message: 'Your case manager has requested you complete the career intake survey.',
+          link: '/onboarding/career-intake',
+        },
+      };
+      const { title, message, link } = map[surveyType] || {
+        title: 'Survey Requested',
+        message: 'Your case manager has requested you complete a survey.',
+        link: '/surveys',
+      };
 
       await supabase.from('notifications').insert({
         user_id: studentId,
