@@ -146,6 +146,8 @@ function Section({ icon: Icon, title, description, children }: { icon: any; titl
 export default function SurveysIndex() {
   const [preview, setPreview] = useState<PreviewSurveyType | null>(null);
   const [completions, setCompletions] = useState<{ source: CompletionSource; title: string } | null>(null);
+  const [invitationSend, setInvitationSend] = useState<{ type: string; title: string } | null>(null);
+  const [lifeSkillsSend, setLifeSkillsSend] = useState<{ slug: string; title: string } | null>(null);
 
   const { data: checkIns = [] } = useAllCheckIns();
   const { data: plans = [] } = useAllPostGradPlans();
@@ -172,6 +174,7 @@ export default function SurveysIndex() {
       preview: 'checkin',
       reviewHref: '/admin/surveys/responses?type=checkins',
       count: `${checkIns.length} submissions`,
+      invitationType: 'checkin',
     },
     {
       title: '12-Month Post-Graduation Plan',
@@ -179,6 +182,7 @@ export default function SurveysIndex() {
       preview: 'post_grad',
       reviewHref: '/admin/surveys/responses?type=plans',
       count: `${plans.length} submissions`,
+      invitationType: 'post_graduation_plan',
     },
   ];
 
@@ -190,6 +194,7 @@ export default function SurveysIndex() {
       reviewHref: '/admin/student-management',
       reviewLabel: 'Open student folders',
       count: typeof intakeCount === 'number' ? `${intakeCount} section responses` : undefined,
+      invitationType: 'intake',
     },
     {
       title: 'Career Intake Survey',
@@ -198,6 +203,7 @@ export default function SurveysIndex() {
       reviewHref: '/admin/student-management',
       reviewLabel: 'Open student folders',
       count: typeof careerCount === 'number' ? `${careerCount} completed` : undefined,
+      invitationType: 'career_intake',
     },
   ];
 
