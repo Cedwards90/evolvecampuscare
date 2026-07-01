@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Home, Target, Sparkles, ChevronRight, ChevronLeft, SkipForward, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { logFunnelEvent } from '@/lib/funnelEvents';
 import { InlineAdminDeletePanel } from '@/components/submissions/InlineAdminDeletePanel';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
+
 
 const STEPS = [
   { key: 'about_you', title: 'About You', icon: Home, description: 'Let us get to know you a little better.' },
