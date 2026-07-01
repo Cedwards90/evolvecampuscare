@@ -27,6 +27,7 @@ import {
   ClipboardCheck,
   Timer,
   Heart,
+  NotebookPen,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
