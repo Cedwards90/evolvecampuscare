@@ -442,25 +442,29 @@ export default function IntakeSurvey() {
           )}
 
           {/* Navigation */}
-          <div className="flex items-center justify-between pt-4 border-t">
-            <div className="flex gap-2">
-              {currentStep > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => setCurrentStep(currentStep - 1)}>
-                  <ChevronLeft className="mr-1 h-4 w-4" /> Back
-                </Button>
-              )}
-            </div>
+          <div className="flex flex-col gap-3 pt-4 border-t">
+            <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={clearDraft} className="justify-center" />
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                {currentStep > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setCurrentStep(currentStep - 1)}>
+                    <ChevronLeft className="mr-1 h-4 w-4" /> Back
+                  </Button>
+                )}
+              </div>
 
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleSkip}>
-                <SkipForward className="mr-1 h-4 w-4" /> Skip for Now
-              </Button>
-              <Button size="sm" onClick={handleNext} disabled={saving}>
-                {saving ? 'Saving...' : currentStep === STEPS.length - 1 ? 'Finish' : 'Next'}
-                {currentStep < STEPS.length - 1 && <ChevronRight className="ml-1 h-4 w-4" />}
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleSkip}>
+                  <SkipForward className="mr-1 h-4 w-4" /> Skip for Now
+                </Button>
+                <Button size="sm" onClick={handleNext} disabled={saving}>
+                  {saving ? 'Saving...' : currentStep === STEPS.length - 1 ? 'Finish' : 'Next'}
+                  {currentStep < STEPS.length - 1 && <ChevronRight className="ml-1 h-4 w-4" />}
+                </Button>
+              </div>
             </div>
           </div>
+
         </CardContent>
       </Card>
       </div>
