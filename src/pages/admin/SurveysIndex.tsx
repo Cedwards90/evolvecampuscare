@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Eye, ListChecks, ChevronRight, GraduationCap, ClipboardList, Sparkles, Briefcase, Send, Users, BarChart3, FileBarChart } from 'lucide-react';
 import { SurveyPreviewDialog, type PreviewSurveyType } from '@/components/admin/SurveyPreviewDialog';
 import { SurveyCompletionsDialog } from '@/components/admin/SurveyCompletionsDialog';
+import { SendSurveyDialog } from '@/components/admin/SendSurveyDialog';
+import { SendLifeSkillsDialog } from '@/components/admin/SendLifeSkillsDialog';
 import type { CompletionSource } from '@/hooks/useSurveyCompletions';
 import { useAllCheckIns, useAllPostGradPlans } from '@/hooks/useSurveyResponses';
 import { useLifeSkillsCompletionStats } from '@/hooks/useLifeSkillsSurveys';
