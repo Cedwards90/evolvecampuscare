@@ -62,8 +62,45 @@ export default function IntakeSurvey() {
   const [successVision, setSuccessVision] = useState('');
   const [anythingElse, setAnythingElse] = useState('');
 
+  const draftValues = useMemo(
+    () => ({
+      currentStep,
+      livingSituation, workStatus, supportNetwork,
+      basicNeedsComfort, dailyChallenges, focusChallenges,
+      stressLevel, talkSupport, interestedResources,
+      currentlyEmployed, baselineHourlyWage, baselineWeeklyHours, baselineEmployer,
+      mainReason, successVision, anythingElse,
+    }),
+    [currentStep, livingSituation, workStatus, supportNetwork, basicNeedsComfort, dailyChallenges, focusChallenges, stressLevel, talkSupport, interestedResources, currentlyEmployed, baselineHourlyWage, baselineWeeklyHours, baselineEmployer, mainReason, successVision, anythingElse],
+  );
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence(
+    'intake-survey',
+    draftValues,
+    (v) => {
+      setCurrentStep(typeof v.currentStep === 'number' ? v.currentStep : 0);
+      setLivingSituation(v.livingSituation ?? '');
+      setWorkStatus(v.workStatus ?? '');
+      setSupportNetwork(v.supportNetwork ?? '');
+      setBasicNeedsComfort(Array.isArray(v.basicNeedsComfort) ? v.basicNeedsComfort : [3]);
+      setDailyChallenges(Array.isArray(v.dailyChallenges) ? v.dailyChallenges : []);
+      setFocusChallenges(v.focusChallenges ?? '');
+      setStressLevel(Array.isArray(v.stressLevel) ? v.stressLevel : [3]);
+      setTalkSupport(v.talkSupport ?? '');
+      setInterestedResources(Array.isArray(v.interestedResources) ? v.interestedResources : []);
+      setCurrentlyEmployed(v.currentlyEmployed ?? '');
+      setBaselineHourlyWage(v.baselineHourlyWage ?? '');
+      setBaselineWeeklyHours(v.baselineWeeklyHours ?? '');
+      setBaselineEmployer(v.baselineEmployer ?? '');
+      setMainReason(v.mainReason ?? '');
+      setSuccessVision(v.successVision ?? '');
+      setAnythingElse(v.anythingElse ?? '');
+    },
+    { label: 'the Intake Survey' },
+  );
+
   const step = STEPS[currentStep];
   const progress = ((currentStep + 1) / STEPS.length) * 100;
+
 
   const toggleChallenge = (value: string) => {
     setDailyChallenges(prev =>
