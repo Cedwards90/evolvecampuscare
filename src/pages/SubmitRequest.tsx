@@ -156,11 +156,21 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
   const watchCategory = form.watch('category');
   const watchPriority = form.watch('priority');
   const watchIsEmergency = form.watch('isEmergency');
-  const watchedFormValues = form.watch();
+  const watchTitle = form.watch('title');
+  const watchDescription = form.watch('description');
+  const watchRequestedAmount = form.watch('requestedAmount');
 
   const draftValues = useMemo<RequestDraft>(
-    () => ({ ...watchedFormValues, step }),
-    [watchedFormValues, step],
+    () => ({
+      category: watchCategory,
+      title: watchTitle || '',
+      description: watchDescription || '',
+      priority: watchPriority || 'medium',
+      isEmergency: !!watchIsEmergency,
+      requestedAmount: watchRequestedAmount,
+      step,
+    }),
+    [watchCategory, watchTitle, watchDescription, watchPriority, watchIsEmergency, watchRequestedAmount, step],
   );
   const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence<RequestDraft>(
     standalone ? `support-request:${qrCodeParam || 'standalone'}` : 'support-request',
