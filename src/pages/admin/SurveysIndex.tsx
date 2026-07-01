@@ -259,7 +259,16 @@ export default function SurveysIndex() {
           title="Core student surveys"
           description="Recurring check-ins and the long-term plan every student fills out."
         >
-          {core.map((r) => <SurveyCard key={r.title} row={r} onPreview={setPreview} onCompletions={(s, t) => setCompletions({ source: s, title: t })} />)}
+          {core.map((r) => (
+            <SurveyCard
+              key={r.title}
+              row={r}
+              onPreview={setPreview}
+              onCompletions={(s, t) => setCompletions({ source: s, title: t })}
+              onSendInvitation={(type, title) => setInvitationSend({ type, title })}
+              onSendLifeSkills={(slug, title) => setLifeSkillsSend({ slug, title })}
+            />
+          ))}
         </Section>
 
         <Section
@@ -267,7 +276,16 @@ export default function SurveysIndex() {
           title="Onboarding intake"
           description="Surveys students complete when they join the platform."
         >
-          {intake.map((r) => <SurveyCard key={r.title} row={r} onPreview={setPreview} onCompletions={(s, t) => setCompletions({ source: s, title: t })} />)}
+          {intake.map((r) => (
+            <SurveyCard
+              key={r.title}
+              row={r}
+              onPreview={setPreview}
+              onCompletions={(s, t) => setCompletions({ source: s, title: t })}
+              onSendInvitation={(type, title) => setInvitationSend({ type, title })}
+              onSendLifeSkills={(slug, title) => setLifeSkillsSend({ slug, title })}
+            />
+          ))}
         </Section>
 
         <Section
@@ -286,7 +304,16 @@ export default function SurveysIndex() {
             </Button>
           </div>
 
-          {lifeskills.map((r) => <SurveyCard key={r.title} row={r} onPreview={setPreview} onCompletions={(s, t) => setCompletions({ source: s, title: t })} />)}
+          {lifeskills.map((r) => (
+            <SurveyCard
+              key={r.title}
+              row={r}
+              onPreview={setPreview}
+              onCompletions={(s, t) => setCompletions({ source: s, title: t })}
+              onSendInvitation={(type, title) => setInvitationSend({ type, title })}
+              onSendLifeSkills={(slug, title) => setLifeSkillsSend({ slug, title })}
+            />
+          ))}
         </Section>
       </div>
 
@@ -302,6 +329,25 @@ export default function SurveysIndex() {
         source={completions?.source ?? null}
         title={completions?.title ?? ''}
       />
+
+      {invitationSend && (
+        <SendSurveyDialog
+          key={`inv-${invitationSend.type}`}
+          open={!!invitationSend}
+          onOpenChange={(o) => !o && setInvitationSend(null)}
+          defaultSurveyType={invitationSend.type}
+        />
+      )}
+
+      {lifeSkillsSend && (
+        <SendLifeSkillsDialog
+          key={`ls-${lifeSkillsSend.slug}`}
+          open={!!lifeSkillsSend}
+          onOpenChange={(o) => !o && setLifeSkillsSend(null)}
+          templateSlug={lifeSkillsSend.slug}
+          templateTitle={lifeSkillsSend.title}
+        />
+      )}
     </SidebarLayout>
   );
 }
