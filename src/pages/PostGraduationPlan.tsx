@@ -355,10 +355,11 @@ export default function PostGraduationPlan() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <Button variant="outline" onClick={handleBack} disabled={currentStep === 0}>
             <ChevronLeft className="mr-2 h-4 w-4" /> Back
           </Button>
+          <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={handleDiscardDraft} />
           {currentStep < STEPS.length - 1 ? (
             <Button onClick={handleNext}>
               Next <ChevronRight className="ml-2 h-4 w-4" />
@@ -369,6 +370,7 @@ export default function PostGraduationPlan() {
             </Button>
           )}
         </div>
+
       </div>
     </SidebarLayout>
   );
