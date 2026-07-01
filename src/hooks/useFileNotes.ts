@@ -81,7 +81,7 @@ export function useFileNotes(studentId: string | undefined) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'file_notes', filter: `student_id=eq.${studentId}` },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['file-notes', studentId] });
+          queryClient.invalidateQueries({ queryKey: ['file-notes', studentId] }); queryClient.invalidateQueries({ queryKey: ['recent-case-notes'] });
           queryClient.invalidateQueries({ queryKey: ['recent-case-notes'] });
         },
       )
@@ -127,7 +127,7 @@ export function useFileNotes(studentId: string | undefined) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['file-notes', studentId] });
+      queryClient.invalidateQueries({ queryKey: ['file-notes', studentId] }); queryClient.invalidateQueries({ queryKey: ['recent-case-notes'] });
     },
   });
 
@@ -140,7 +140,7 @@ export function useFileNotes(studentId: string | undefined) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['file-notes', studentId] });
+      queryClient.invalidateQueries({ queryKey: ['file-notes', studentId] }); queryClient.invalidateQueries({ queryKey: ['recent-case-notes'] });
     },
   });
 
@@ -150,7 +150,7 @@ export function useFileNotes(studentId: string | undefined) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['file-notes', studentId] });
+      queryClient.invalidateQueries({ queryKey: ['file-notes', studentId] }); queryClient.invalidateQueries({ queryKey: ['recent-case-notes'] });
     },
   });
 
