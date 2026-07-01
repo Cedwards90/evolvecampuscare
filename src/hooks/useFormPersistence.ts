@@ -57,8 +57,10 @@ export function useFormPersistence<T>(
   const firstSaveEffectRef = useRef(true);
   const skipNextSaveRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shouldPersistRef = useRef<typeof shouldPersist>(shouldPersist);
   const latestValuesRef = useRef<T>(values);
   latestValuesRef.current = values;
+  shouldPersistRef.current = shouldPersist;
 
   const clear = useCallback(() => {
     clearDraft(formKey, user?.id);
@@ -73,14 +75,14 @@ export function useFormPersistence<T>(
   const persistNow = useCallback((snapshot: T): boolean => {
     if (!enabled) return false;
     if (!user?.id) return false;
-    if (shouldPersist && !shouldPersist(snapshot)) return false;
+    if (shouldPersistRef.current && !shouldPersistRef.current(snapshot)) return false;
     const ok = saveDraft(formKey, user.id, snapshot);
     if (ok) {
       setSavedAt(new Date().toISOString());
       setHasDraft(true);
     }
     return ok;
-  }, [enabled, formKey, shouldPersist, user?.id]);
+  }, [enabled, formKey, user?.id]);
 
   // Hydrate once per (form, user) — offer to restore if there's a saved draft.
   useEffect(() => {
@@ -124,7 +126,7 @@ export function useFormPersistence<T>(
       skipNextSaveRef.current = false;
       return;
     }
-    if (shouldPersist && !shouldPersist(values)) return;
+    if (shouldPersistRef.current && !shouldPersistRef.current(values)) return;
 
     if (timerRef.current) clearTimeout(timerRef.current);
     const serializedAtSchedule = safeStringify(values);
@@ -136,7 +138,7 @@ export function useFormPersistence<T>(
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [values, enabled, formKey, user?.id, debounceMs, shouldPersist, persistNow]);
+  }, [values, enabled, formKey, user?.id, debounceMs, persistNow]);
 
   // Flush immediately when the tab becomes hidden (Chrome tab discard scenario).
   useEffect(() => {
