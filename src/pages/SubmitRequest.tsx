@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { uploadAttachment, MAX_FILE_SIZE, MAX_FILES_PER_REQUEST, ALLOWED_MIME_TYPES } from '@/hooks/useRequestAttachments';
 import { X as XIcon } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -38,6 +38,8 @@ import { logQREvent, getQRSession } from '@/hooks/useQRSession';
 import { cn } from '@/lib/utils';
 import { ContextualFaqTips } from '@/components/requests/ContextualFaqTips';
 import type { RequestCategory, RequestPriority } from '@/types/database';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
 
 const categories: { value: RequestCategory; label: string; icon: React.ComponentType<{ className?: string }>; description: string; examples: string[] }[] = [
   { value: 'academic', label: 'Academic', icon: GraduationCap, description: 'Course registration, grades, academic advising', examples: ['Trouble enrolling in a required class', 'Appealing a grade or academic probation', 'Need to change your major or advisor'] },
@@ -64,6 +66,17 @@ const requestSchema = z.object({
 });
 
 type RequestFormData = z.infer<typeof requestSchema>;
+
+type RequestDraft = RequestFormData & { step: number };
+
+const requestDefaultValues: RequestFormData = {
+  category: undefined as unknown as RequestCategory,
+  title: '',
+  description: '',
+  priority: 'medium',
+  isEmergency: false,
+  requestedAmount: undefined,
+};
 
 interface SubmitRequestProps {
   /** Renders without the app sidebar (used in standalone QR flow). */
@@ -137,19 +150,42 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
 
   const form = useForm<RequestFormData>({
     resolver: zodResolver(requestSchema),
-    defaultValues: {
-      category: undefined,
-      title: '',
-      description: '',
-      priority: 'medium',
-      isEmergency: false,
-      requestedAmount: undefined,
-    },
+    defaultValues: requestDefaultValues,
   });
 
   const watchCategory = form.watch('category');
   const watchPriority = form.watch('priority');
   const watchIsEmergency = form.watch('isEmergency');
+  const watchedFormValues = form.watch();
+
+  const draftValues = useMemo<RequestDraft>(
+    () => ({ ...watchedFormValues, step }),
+    [watchedFormValues, step],
+  );
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence<RequestDraft>(
+    standalone ? `support-request:${qrCodeParam || 'standalone'}` : 'support-request',
+    draftValues,
+    (v) => {
+      form.reset({
+        ...requestDefaultValues,
+        ...v,
+        requestedAmount: Number.isFinite(Number(v?.requestedAmount)) ? Number(v.requestedAmount) : undefined,
+      });
+      setStep(typeof v?.step === 'number' && v.step >= 1 && v.step <= 4 ? v.step : 1);
+    },
+    {
+      label: 'the Support Request',
+      shouldPersist: (v) =>
+        !!(v?.category || v?.title?.trim() || v?.description?.trim() || v?.priority !== 'medium' || v?.isEmergency || v?.requestedAmount),
+    },
+  );
+
+  const discardDraft = () => {
+    clearDraft();
+    form.reset(requestDefaultValues);
+    setStep(1);
+    setPendingFiles([]);
+  };
 
   const nextStep = async () => {
     if (step === 1 && !watchCategory) {
@@ -225,6 +261,8 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
           description: `${uploaded} of ${pendingFiles.length} files uploaded. You can retry the rest from the request page.`,
         });
       }
+
+      clearDraft();
 
       if (standalone && qrCodeParam) {
         navigate(`/qr/${qrCodeParam}/request/success${newId ? `?id=${newId}` : ''}`, { replace: true });
@@ -583,6 +621,7 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
               </Button>
             )}
           </div>
+          <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={discardDraft} className="justify-center pt-2" />
         </form>
       </div>
   );
