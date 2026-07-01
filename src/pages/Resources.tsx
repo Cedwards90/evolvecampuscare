@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Search } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -15,10 +17,13 @@ import { ResourceCard } from '@/components/resources/ResourceCard';
 import { RESOURCE_CATEGORIES } from '@/lib/resourceMatching';
 import { EmptyState } from '@/components/EmptyState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Resources() {
   const [category, setCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const { role } = useAuth();
+  const canContribute = role === 'admin' || role === 'case_manager' || role === 'org_admin';
   const { data, isLoading } = useCommunityResources({
     category: category === 'all' ? undefined : category,
     search,
@@ -30,7 +35,15 @@ export default function Resources() {
         <PageHeader
           title="Community Resources"
           description="Curated Chicago-area organizations offering food, housing, health, legal, employment, and more."
-        />
+        >
+          {canContribute && (
+            <Button asChild className="rounded-full">
+              <Link to="/admin/resources">
+                <Plus className="h-4 w-4 mr-1" /> Add resource
+              </Link>
+            </Button>
+          )}
+        </PageHeader>
 
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
