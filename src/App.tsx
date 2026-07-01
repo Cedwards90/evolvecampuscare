@@ -257,6 +257,12 @@ function App() {
                 <LoginActivity />
               </ProtectedRoute>
             } />
+            <Route path="/admin/case-notes" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin', 'case_manager']}>
+                <CaseNotesActivity />
+              </ProtectedRoute>
+            } />
+
             <Route path="/admin/impact" element={
               <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <ImpactDashboard />
