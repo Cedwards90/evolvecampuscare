@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
@@ -11,6 +11,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCareerIntake } from '@/hooks/useCareerIntake';
 import { useToast } from '@/hooks/use-toast';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
 
 const STUDENT_STATUSES = ['Prospective', 'Continuing', 'Alumni', 'New', 'Returning', 'Other'];
 const ASSISTANCE_AREAS = [
@@ -29,6 +31,7 @@ export default function CareerIntakeOnboarding() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const { intake, upsert } = useCareerIntake(user?.id);
+  const restoredDraftRef = useRef(false);
 
   const [studentStatus, setStudentStatus] = useState<string>('');
   const [educationalGoal, setEducationalGoal] = useState<string>('');
@@ -40,8 +43,47 @@ export default function CareerIntakeOnboarding() {
   const [assistanceAreas, setAssistanceAreas] = useState<string[]>([]);
   const [obstacles, setObstacles] = useState<string[]>([]);
 
+  const draftValues = useMemo(
+    () => ({
+      studentStatus,
+      educationalGoal,
+      currentMajor,
+      dreamCareer,
+      careerInfluences,
+      favoriteSubjects,
+      strengthsSkills,
+      assistanceAreas,
+      obstacles,
+    }),
+    [studentStatus, educationalGoal, currentMajor, dreamCareer, careerInfluences, favoriteSubjects, strengthsSkills, assistanceAreas, obstacles],
+  );
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence(
+    'career-intake-onboarding',
+    draftValues,
+    (v) => {
+      setStudentStatus(v.studentStatus ?? '');
+      setEducationalGoal(v.educationalGoal ?? '');
+      setCurrentMajor(v.currentMajor ?? '');
+      setDreamCareer(v.dreamCareer ?? '');
+      setCareerInfluences(v.careerInfluences ?? '');
+      setFavoriteSubjects(v.favoriteSubjects ?? '');
+      setStrengthsSkills(v.strengthsSkills ?? '');
+      setAssistanceAreas(Array.isArray(v.assistanceAreas) ? v.assistanceAreas : []);
+      setObstacles(Array.isArray(v.obstacles) ? v.obstacles : []);
+    },
+    {
+      label: 'the Career Intake',
+      onRestore: () => {
+        restoredDraftRef.current = true;
+      },
+      shouldPersist: (v) =>
+        !!(v.studentStatus || v.educationalGoal || v.currentMajor || v.dreamCareer || v.careerInfluences || v.favoriteSubjects || v.strengthsSkills || v.assistanceAreas?.length || v.obstacles?.length),
+    },
+  );
+
   useEffect(() => {
     if (!intake) return;
+    if (restoredDraftRef.current) return;
     setStudentStatus(intake.student_status ?? '');
     setEducationalGoal(intake.educational_goal ?? '');
     setCurrentMajor(intake.current_major ?? '');
@@ -75,6 +117,7 @@ export default function CareerIntakeOnboarding() {
         completed_at: new Date().toISOString(),
       });
       await qc.invalidateQueries({ queryKey: ['onboarding-status'] });
+      clearDraft();
       navigate('/onboarding/cmf-basics');
     } catch (e: any) {
       toast({ title: 'Could not save', description: e.message, variant: 'destructive' });
@@ -164,6 +207,7 @@ export default function CareerIntakeOnboarding() {
           {upsert.isPending ? 'Saving…' : 'Continue'}
         </Button>
       </div>
+      <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={() => { clearDraft(); setStudentStatus(''); setEducationalGoal(''); setCurrentMajor(''); setDreamCareer(''); setCareerInfluences(''); setFavoriteSubjects(''); setStrengthsSkills(''); setAssistanceAreas([]); setObstacles([]); }} className="justify-end" />
     </OnboardingShell>
   );
 }

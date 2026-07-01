@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,6 +18,8 @@ import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { logFunnelEvent } from '@/lib/funnelEvents';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
 
 const profileSchema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -29,6 +31,12 @@ const profileSchema = z.object({
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
+
+type CompleteProfileDraft = ProfileFormData & {
+  selectedOrgId: string;
+  cohortStartDate: string | null;
+  graduationDate: string | null;
+};
 
 const yearOptions = [
   { value: 'freshman', label: 'Freshman (1st Year)' },
@@ -73,6 +81,7 @@ export default function CompleteProfile() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -82,6 +91,57 @@ export default function CompleteProfile() {
       preferred_contact: 'email',
     },
   });
+
+  const watchedFullName = watch('full_name');
+  const watchedPhone = watch('phone');
+  const watchedStudentId = watch('student_id');
+  const watchedDepartment = watch('department');
+  const watchedYearOfStudy = watch('year_of_study');
+  const watchedPreferredContact = watch('preferred_contact');
+  const draftValues = useMemo<CompleteProfileDraft>(
+    () => ({
+      full_name: watchedFullName || '',
+      phone: watchedPhone || '',
+      student_id: watchedStudentId || '',
+      department: watchedDepartment || '',
+      year_of_study: watchedYearOfStudy || '',
+      preferred_contact: watchedPreferredContact || 'email',
+      selectedOrgId,
+      cohortStartDate: cohortStartDate ? cohortStartDate.toISOString() : null,
+      graduationDate: graduationDate ? graduationDate.toISOString() : null,
+    }),
+    [watchedFullName, watchedPhone, watchedStudentId, watchedDepartment, watchedYearOfStudy, watchedPreferredContact, selectedOrgId, cohortStartDate, graduationDate],
+  );
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence<CompleteProfileDraft>(
+    'complete-profile',
+    draftValues,
+    (v) => {
+      reset({
+        full_name: v.full_name ?? profile?.full_name ?? '',
+        phone: v.phone ?? profile?.phone ?? '',
+        student_id: v.student_id ?? '',
+        department: v.department ?? '',
+        year_of_study: v.year_of_study ?? '',
+        preferred_contact: v.preferred_contact ?? 'email',
+      });
+      setSelectedOrgId(v.selectedOrgId ?? '');
+      setCohortStartDate(v.cohortStartDate ? new Date(v.cohortStartDate) : undefined);
+      setGraduationDate(v.graduationDate ? new Date(v.graduationDate) : undefined);
+    },
+    {
+      label: 'your profile',
+      shouldPersist: (v) =>
+        !!(v.full_name?.trim() || v.phone?.trim() || v.student_id?.trim() || v.department || v.year_of_study || v.selectedOrgId || v.cohortStartDate || v.graduationDate),
+    },
+  );
+
+  const discardDraft = () => {
+    clearDraft();
+    reset({ full_name: profile?.full_name || '', phone: profile?.phone || '', preferred_contact: 'email' });
+    setSelectedOrgId('');
+    setCohortStartDate(undefined);
+    setGraduationDate(undefined);
+  };
 
   const onSubmit = async (data: ProfileFormData) => {
     if (!user) return;
@@ -112,6 +172,8 @@ export default function CompleteProfile() {
         userId: user.id,
         organizationId: selectedOrgId || null,
       });
+
+      clearDraft();
 
       toast({
         title: 'Profile completed!',
@@ -196,7 +258,7 @@ export default function CompleteProfile() {
                 <Label htmlFor="department">Department/School</Label>
                 <Select
                   onValueChange={(value) => setValue('department', value)}
-                  defaultValue={watch('department')}
+                  value={watch('department') || ''}
                 >
                   <SelectTrigger>
                     <Building className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -216,7 +278,7 @@ export default function CompleteProfile() {
                 <Label htmlFor="year_of_study">Year of Study</Label>
                 <Select
                   onValueChange={(value) => setValue('year_of_study', value)}
-                  defaultValue={watch('year_of_study')}
+                  value={watch('year_of_study') || ''}
                 >
                   <SelectTrigger>
                     <GraduationCap className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -237,7 +299,7 @@ export default function CompleteProfile() {
               <Label htmlFor="preferred_contact">Preferred Contact Method</Label>
               <Select
                 onValueChange={(value) => setValue('preferred_contact', value)}
-                defaultValue={watch('preferred_contact') || 'email'}
+                value={watch('preferred_contact') || 'email'}
               >
                 <SelectTrigger>
                   <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -312,6 +374,7 @@ export default function CompleteProfile() {
                 {isSubmitting ? 'Saving...' : 'Complete Profile'}
               </Button>
             </div>
+            <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={discardDraft} className="justify-center" />
           </form>
         </CardContent>
       </Card>

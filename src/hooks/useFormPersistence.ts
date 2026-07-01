@@ -16,6 +16,14 @@ interface UseFormPersistenceOptions<T> {
   label?: string;
 }
 
+function safeStringify(value: unknown): string {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(Date.now());
+  }
+}
+
 /**
  * Persist a form's in-progress values to localStorage so users don't lose
  * their work when a browser tab is discarded, reloaded, or accidentally
@@ -45,10 +53,14 @@ export function useFormPersistence<T>(
 
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [hasDraft, setHasDraft] = useState(false);
-  const hydratedRef = useRef(false);
+  const hydratedKeyRef = useRef<string | null>(null);
+  const firstSaveEffectRef = useRef(true);
+  const skipNextSaveRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shouldPersistRef = useRef<typeof shouldPersist>(shouldPersist);
   const latestValuesRef = useRef<T>(values);
   latestValuesRef.current = values;
+  shouldPersistRef.current = shouldPersist;
 
   const clear = useCallback(() => {
     clearDraft(formKey, user?.id);
@@ -60,31 +72,43 @@ export function useFormPersistence<T>(
     }
   }, [formKey, user?.id]);
 
+  const persistNow = useCallback((snapshot: T): boolean => {
+    if (!enabled) return false;
+    if (!user?.id) return false;
+    if (shouldPersistRef.current && !shouldPersistRef.current(snapshot)) return false;
+    const ok = saveDraft(formKey, user.id, snapshot);
+    if (ok) {
+      setSavedAt(new Date().toISOString());
+      setHasDraft(true);
+    }
+    return ok;
+  }, [enabled, formKey, user?.id]);
+
   // Hydrate once per (form, user) — offer to restore if there's a saved draft.
   useEffect(() => {
-    if (hydratedRef.current) return;
+    const hydrateKey = `${formKey}:${user?.id || ''}`;
+    if (hydratedKeyRef.current === hydrateKey) return;
     if (!user?.id) return; // wait for auth
-    hydratedRef.current = true;
+    hydratedKeyRef.current = hydrateKey;
+    firstSaveEffectRef.current = true;
     const envelope = loadDraft<T>(formKey, user.id);
     if (!envelope || envelope.values == null) return;
+    skipNextSaveRef.current = true;
     setHasDraft(true);
     setSavedAt(envelope.savedAt);
 
-    const restore = () => {
-      setValues(envelope.values);
-      if (onRestore) onRestore(envelope.values);
-      toast.success('Draft restored');
-    };
+    setValues(envelope.values);
+    if (onRestore) onRestore(envelope.values);
+
     const discard = () => {
       clear();
       toast('Draft discarded');
     };
 
-    toast(label ? `You have an unsaved draft for ${label}` : 'You have an unsaved draft', {
+    toast.success(label ? `Draft restored for ${label}` : 'Draft restored', {
       description: `Saved ${new Date(envelope.savedAt).toLocaleString()}`,
       duration: 12000,
-      action: { label: 'Restore', onClick: restore },
-      cancel: { label: 'Discard', onClick: discard },
+      action: { label: 'Discard', onClick: discard },
     });
     // Intentionally exclude setValues/onRestore/label/clear — hydrate exactly once per user.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -94,38 +118,50 @@ export function useFormPersistence<T>(
   useEffect(() => {
     if (!enabled) return;
     if (!user?.id) return;
-    if (shouldPersist && !shouldPersist(values)) return;
+    if (firstSaveEffectRef.current) {
+      firstSaveEffectRef.current = false;
+      return;
+    }
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
+    if (shouldPersistRef.current && !shouldPersistRef.current(values)) return;
 
     if (timerRef.current) clearTimeout(timerRef.current);
+    const serializedAtSchedule = safeStringify(values);
     timerRef.current = setTimeout(() => {
-      const ok = saveDraft(formKey, user.id, latestValuesRef.current);
-      if (ok) {
-        setSavedAt(new Date().toISOString());
-        setHasDraft(true);
-      }
+      if (serializedAtSchedule !== safeStringify(latestValuesRef.current)) return;
+      persistNow(latestValuesRef.current);
     }, debounceMs);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [values, enabled, formKey, user?.id, debounceMs, shouldPersist]);
+  }, [values, enabled, formKey, user?.id, debounceMs, persistNow]);
 
   // Flush immediately when the tab becomes hidden (Chrome tab discard scenario).
   useEffect(() => {
     if (!enabled || !user?.id) return;
     const flush = () => {
-      if (document.visibilityState === 'hidden') {
-        if (shouldPersist && !shouldPersist(latestValuesRef.current)) return;
-        saveDraft(formKey, user.id, latestValuesRef.current);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
       }
+      persistNow(latestValuesRef.current);
     };
-    document.addEventListener('visibilitychange', flush);
+    const flushWhenHidden = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    document.addEventListener('visibilitychange', flushWhenHidden);
     window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
     return () => {
-      document.removeEventListener('visibilitychange', flush);
+      document.removeEventListener('visibilitychange', flushWhenHidden);
       window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', flush);
     };
-  }, [enabled, formKey, user?.id, shouldPersist]);
+  }, [enabled, persistNow, user?.id]);
 
   return { clear, savedAt, hasDraft };
 }

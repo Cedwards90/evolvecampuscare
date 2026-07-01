@@ -76,6 +76,8 @@ import { PersonalityCard } from '@/components/students/PersonalityCard';
 import { CareerIntakeCard } from '@/components/students/CareerIntakeCard';
 import { CMF_NEEDS, CMF_CONTACT_TYPES, needLabel } from '@/lib/cmfNeeds';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -782,6 +784,17 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
   const [form, setForm] = useState(blank);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence(
+    `case-note:${studentId}`,
+    form,
+    (v) => setForm({ ...blank, ...v }),
+    {
+      enabled: !editingId,
+      label: 'the case note',
+      shouldPersist: (v) =>
+        !!(v.content?.trim() || v.title?.trim() || v.contactType || v.durationMinutes || v.identifiedNeeds?.length || v.referralAgency?.trim() || v.referralContact?.trim() || v.nextSteps?.trim()),
+    },
+  );
 
   const toggleNeed = (code: number) => {
     setForm((f) => ({
@@ -818,6 +831,7 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
       }
       setForm(blank);
       setEditingId(null);
+      clearDraft();
     } catch (err: any) {
       toast({ title: 'Could not save note', description: err.message, variant: 'destructive' });
     } finally {
@@ -826,6 +840,7 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
   };
 
   const startEdit = (note: any) => {
+    clearDraft();
     setEditingId(note.id);
     setForm({
       content: note.content,
@@ -844,6 +859,11 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
 
   const cancelEdit = () => {
     setEditingId(null);
+    setForm(blank);
+  };
+
+  const discardDraft = () => {
+    clearDraft();
     setForm(blank);
   };
 
@@ -949,6 +969,7 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
               {submitting ? 'Saving...' : editingId ? 'Update Note' : 'Save Note'}
             </Button>
           </div>
+          {!editingId && <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={discardDraft} className="justify-end" />}
         </CardContent>
       </Card>
 

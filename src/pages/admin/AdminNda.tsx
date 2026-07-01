@@ -29,6 +29,8 @@ import {
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { toast } from "sonner";
 import { Download, Plus } from "lucide-react";
+import { useFormPersistence } from "@/hooks/useFormPersistence";
+import { DraftIndicator } from "@/components/forms/DraftIndicator";
 
 export default function AdminNda() {
   const qc = useQueryClient();
@@ -36,6 +38,20 @@ export default function AdminNda() {
   const [publishOpen, setPublishOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newBody, setNewBody] = useState("");
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence(
+    "admin-nda-publish",
+    { newTitle, newBody },
+    (v) => {
+      setNewTitle(v.newTitle ?? "");
+      setNewBody(v.newBody ?? "");
+      setPublishOpen(true);
+    },
+    {
+      label: "the NDA editor",
+      enabled: publishOpen || !!newTitle || !!newBody,
+      shouldPersist: (v) => !!(v.newTitle?.trim() || v.newBody?.trim()),
+    },
+  );
 
   const { data: documents, isLoading: docsLoading } = useQuery({
     queryKey: ["admin", "nda", "documents"],
@@ -98,6 +114,7 @@ export default function AdminNda() {
       setPublishOpen(false);
       setNewTitle("");
       setNewBody("");
+      clearDraft();
       qc.invalidateQueries({ queryKey: ["admin", "nda"] });
       qc.invalidateQueries({ queryKey: ["nda"] });
     },
@@ -304,6 +321,7 @@ export default function AdminNda() {
               Publishing will mark this as the current version and require all
               users — including admins — to re-accept on their next page load.
             </p>
+            <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={() => { clearDraft(); setNewTitle(""); setNewBody(""); }} />
           </div>
           <DialogFooter>
             <Button

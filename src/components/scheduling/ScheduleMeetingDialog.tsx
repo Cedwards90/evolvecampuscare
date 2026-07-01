@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -38,6 +38,8 @@ import {
 import { useScheduleMeeting } from '@/hooks/useScheduleMeeting';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
 
 const meetingSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
@@ -92,6 +94,40 @@ export function ScheduleMeetingDialog({
       duration: 30,
     },
   });
+  const watchedTitle = form.watch('title');
+  const watchedDescription = form.watch('description');
+  const watchedDate = form.watch('date');
+  const watchedTime = form.watch('time');
+  const watchedDuration = form.watch('duration');
+  const draftValues = useMemo(
+    () => ({
+      title: watchedTitle || `Meeting with ${studentName}`,
+      description: watchedDescription || '',
+      date: watchedDate,
+      time: watchedTime || '',
+      duration: watchedDuration || 30,
+    }),
+    [watchedTitle, watchedDescription, watchedDate, watchedTime, watchedDuration, studentName],
+  );
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence(
+    `schedule-meeting:${studentId}:${requestId || 'general'}`,
+    draftValues,
+    (v) => {
+      form.reset({
+        title: v.title || `Meeting with ${studentName}`,
+        description: v.description || '',
+        duration: Number(v.duration) || 30,
+        date: v.date ? new Date(v.date) : undefined,
+        time: v.time || '',
+      });
+      setOpen(true);
+    },
+    {
+      enabled: open,
+      label: `meeting notes for ${studentName}`,
+      shouldPersist: (v) => !!(v.description?.trim() || v.date || v.time),
+    },
+  );
 
   const onSubmit = async (data: MeetingFormData) => {
     const [hours, minutes] = data.time.split(':').map(Number);
@@ -108,6 +144,7 @@ export function ScheduleMeetingDialog({
     });
 
     form.reset();
+    clearDraft();
     setOpen(false);
   };
 
@@ -245,6 +282,7 @@ export function ScheduleMeetingDialog({
               Schedule Meeting
             </Button>
           </DialogFooter>
+          <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={() => { clearDraft(); form.reset({ title: `Meeting with ${studentName}`, description: '', duration: 30 }); }} className="justify-end" />
         </form>
       </DialogContent>
     </Dialog>
