@@ -227,14 +227,16 @@ export default function LifeSkillsSurvey() {
             </div>
           ))}
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-wrap items-center gap-3 pt-2">
             <Button onClick={onSubmit} disabled={submit.isPending || !!blockedReason}>
               {submit.isPending ? 'Submitting…' : 'Submit'}
             </Button>
             <Button variant="outline" onClick={() => navigate('/surveys')}>Cancel</Button>
+            <DraftIndicator savedAt={savedAt} hasDraft={hasDraft} onDiscard={() => { clearDraft(); setAnswers({}); }} className="ml-auto" />
           </div>
         </CardContent>
       </Card>
+
     </SidebarLayout>
   );
 }
