@@ -220,6 +220,7 @@ export default function SurveysIndex() {
       reviewHref: '/admin/lifeskills',
       reviewLabel: 'Manage & send',
       count: statText(pre.slug),
+      lifeskillsSlug: pre.slug,
     });
     lifeskills.push({
       title: postLabel,
@@ -228,6 +229,7 @@ export default function SurveysIndex() {
       reviewHref: '/admin/lifeskills',
       reviewLabel: 'Manage & send',
       count: statText(post.slug),
+      lifeskillsSlug: post.slug,
     });
   }
   lifeskills.push({
@@ -238,6 +240,7 @@ export default function SurveysIndex() {
     reviewLabel: 'Manage & send',
     count: statText(LIFESKILLS_FINAL_SLUG),
     badge: 'Final',
+    lifeskillsSlug: LIFESKILLS_FINAL_SLUG,
   });
 
   return (
