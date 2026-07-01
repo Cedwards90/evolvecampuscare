@@ -672,6 +672,33 @@ export type Database = {
         }
         Relationships: []
       }
+      form_drafts: {
+        Row: {
+          created_at: string
+          form_key: string
+          saved_at: string
+          updated_at: string
+          user_id: string
+          values: Json
+        }
+        Insert: {
+          created_at?: string
+          form_key: string
+          saved_at?: string
+          updated_at?: string
+          user_id: string
+          values?: Json
+        }
+        Update: {
+          created_at?: string
+          form_key?: string
+          saved_at?: string
+          updated_at?: string
+          user_id?: string
+          values?: Json
+        }
+        Relationships: []
+      }
       funding_goals: {
         Row: {
           created_at: string
