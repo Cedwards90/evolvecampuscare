@@ -136,6 +136,7 @@ export function SurveyCompletionsDialog({ open, onOpenChange, source, title }: P
                         </Button>
                       )}
                     </TableCell>
+                  </TableRow>
                 ))}
               </TableBody>
             </Table>
