@@ -15,6 +15,8 @@ import {
 } from '@/hooks/useLifeSkillsSurveys';
 import { moduleFromSlug } from '@/lib/lifeskillsTemplates';
 import { cn } from '@/lib/utils';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { DraftIndicator } from '@/components/forms/DraftIndicator';
 
 type AnswerMap = Record<string, string | number>;
 
@@ -26,6 +28,19 @@ export default function LifeSkillsSurvey() {
   const { data: myResponses = [] } = useMyLifeSkillsResponses();
   const submit = useSubmitLifeSkillsResponse();
   const [answers, setAnswers] = useState<AnswerMap>({});
+
+  const persistKey = slug ? `lifeskills:${slug}` : 'lifeskills:unknown';
+  const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence<AnswerMap>(
+    persistKey,
+    answers,
+    (v) => setAnswers(v ?? {}),
+    {
+      enabled: !!slug,
+      label: template?.title,
+      shouldPersist: (v) => v && Object.keys(v).length > 0,
+    },
+  );
+
 
   const meta = useMemo(() => (slug ? moduleFromSlug(slug) : { kind: 'unknown' as const }), [slug]);
 
