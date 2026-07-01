@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -99,13 +99,16 @@ export function ScheduleMeetingDialog({
   const watchedDate = form.watch('date');
   const watchedTime = form.watch('time');
   const watchedDuration = form.watch('duration');
-  const draftValues = {
-    title: watchedTitle || `Meeting with ${studentName}`,
-    description: watchedDescription || '',
-    date: watchedDate,
-    time: watchedTime || '',
-    duration: watchedDuration || 30,
-  };
+  const draftValues = useMemo(
+    () => ({
+      title: watchedTitle || `Meeting with ${studentName}`,
+      description: watchedDescription || '',
+      date: watchedDate,
+      time: watchedTime || '',
+      duration: watchedDuration || 30,
+    }),
+    [watchedTitle, watchedDescription, watchedDate, watchedTime, watchedDuration, studentName],
+  );
   const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence(
     `schedule-meeting:${studentId}:${requestId || 'general'}`,
     draftValues,
