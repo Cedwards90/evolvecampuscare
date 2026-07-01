@@ -129,8 +129,10 @@ export default function LifeSkillsSurvey() {
         responses: answers,
         score_summary: buildScoreSummary(),
       });
+      clearDraft();
       toast({ title: 'Thank you!', description: 'Your response has been recorded.' });
       navigate('/surveys');
+
     } catch (e: any) {
       toast({ title: 'Could not submit', description: e?.message || 'Try again', variant: 'destructive' });
     }
