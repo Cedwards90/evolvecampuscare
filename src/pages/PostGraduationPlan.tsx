@@ -147,7 +147,9 @@ export default function PostGraduationPlan() {
       });
       setSubmittedAt(new Date().toISOString());
       setSubmitted(true);
+      clearDraft();
       toast({ title: 'Plan submitted!', description: 'Your 12-month post-graduation plan has been saved.' });
+
       markComplete.mutate('post_graduation_plan');
     } catch {
       toast({ title: 'Error', description: 'Failed to submit your plan. Please try again.', variant: 'destructive' });
