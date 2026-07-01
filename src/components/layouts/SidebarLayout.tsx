@@ -127,6 +127,8 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'NDA', href: '/admin/nda', icon: FileText, roles: ['admin'] },
       { label: 'Login Activity', href: '/admin/login-activity', icon: Clock, roles: ['admin', 'org_admin'] },
+      { label: 'Recent Case Notes', href: '/admin/case-notes', icon: NotebookPen, roles: ['admin', 'org_admin', 'case_manager'] },
+
       { label: 'Manage Resources', href: '/admin/resources', icon: Heart, roles: ['admin', 'case_manager', 'org_admin'] },
     ],
   },
