@@ -1,73 +1,42 @@
+# Fix: Guided tour keeps popping up + duplicate survey requests
 
-# Staff Appointment Scheduling
+## Problem 1: Guided tour re-appears repeatedly
 
-Extend the existing `ScheduleMeetingDialog` / `appointments` foundation into a full scheduling feature for Case Managers, Org Admins, and Admins.
+Root causes in `src/hooks/useProductTour.ts`:
 
-## 1. Dedicated Appointments page (`/appointments`)
+1. **Hook is mounted in 4 places** (`Dashboard`, `Settings`, `HelpButton`, `GettingStartedSection`). Each instance runs its own auto-start `useEffect` + login-count increment, so on every navigation the login counter re-increments and the auto-start effect fires again.
+2. **Closing (skip) never persists any dismissal.** `onCloseClick` just destroys the driver — next mount sees no completion flag and re-triggers after 1.5s.
+3. **No cross-instance guard.** Even inside one page, remounts (route change, filter change) re-arm the 1.5s auto-start timer.
 
-New page for all staff roles (sidebar entry "Appointments", calendar icon):
+## Fix
 
-- **Views:** Toggle between List (upcoming / past tabs) and Month calendar (react-day-picker with dots on booked days).
-- **Row/card content:** student name + org, date/time, duration, status pill, meeting link, quick actions (Reschedule, Cancel, Join).
-- **Filters:** date range, status, student search. Respects `GlobalFilters` (org/cohort/CM) — admins see all, org_admins scoped to their org, case_managers scoped to their assigned students.
-- **"New appointment" button** opens an enhanced `ScheduleMeetingDialog` with a student picker (see §3).
+Edit `src/hooks/useProductTour.ts` only:
 
-Files: `src/pages/Appointments.tsx`, `src/hooks/useStaffAppointments.ts`, route added in `App.tsx`, sidebar entry in `SidebarLayout.tsx`.
+- Add **module-level singletons**: `autoStartedThisSession: boolean` and `loginCountedThisSession: Set<userId>`. Guard the auto-start effect and login-count effect with these so they run at most once per browser tab session, no matter how many components call the hook.
+- Add a **per-user "dismissed" flag** in storage (`evolve:tour-dismissed:${userId}`) written from `onCloseClick` and checked alongside the completion flag in the auto-start effect and the migration effect. The Help menu "Replay guided tour" clears this flag (via `resetTour`, which will also remove the dismissed key) so users can always re-open it manually.
+- Keep `startTour` (manual) unchanged so the Help button still works on demand.
 
-## 2. Quick "Schedule" button on student lists
+Result: tour auto-starts once per new user, and if they X out it stays closed until they click "Replay guided tour."
 
-Add a small calendar-icon button (using existing `ScheduleMeetingDialog`) inline on:
+## Problem 2: Resending a survey sends to students who already received it
 
-- `MyStudentsSection` rows
-- `StudentFolders` table rows
-- `ManageRequests` request rows (prefills `requestId`)
+In `supabase/functions/send-lifeskills-survey/index.ts`, recipient resolution never filters out students who already have an open `survey_invitations` row (or an active `impact_survey_assignments` row) for this template. So re-clicking "Send" duplicates invitations, notifications, and emails.
 
-No behavior change to the existing dialog on student detail pages.
+## Fix
 
-## 3. Staff-selectable student in the dialog
+- Add optional `skip_already_sent: boolean` (default **true**) to `BodySchema`.
+- After resolving `recipientIds` and before the send loop, when `skip_already_sent` is true:
+  - Query `survey_invitations` for rows where `student_id IN recipientIds AND survey_type = 'lifeskills:{slug}' AND completed_at IS NULL`.
+  - Remove those student_ids from `recipientIds`, count them into `skipped`.
+- Return the skipped count in the response so the UI can show e.g. "Sent to 8, skipped 12 already-invited students."
+- Update `src/hooks/useLifeSkillsSurveys.ts` `sendLifeSkillsSurvey` typing to include the new field and the returned counts (already typed loosely, just add `skip_already_sent?: boolean`).
+- Update the bulk-send UI (`src/pages/admin/LifeSkillsSurveys.tsx` — the "Send" dialog that calls `sendLifeSkillsSurvey`) with a checkbox **"Only send to students who haven't received this survey yet"**, checked by default, and surface the returned `skipped` count in the success toast.
 
-When opened without a preset `studentId` (e.g. from the Appointments page), the dialog renders a searchable student picker:
+Individual `SendSurveyDialog` (single-student) is unaffected — it's an explicit one-off send.
 
-- Case managers: only their assigned students.
-- Org admins: students in orgs where they are org admin.
-- Admins: all students (searchable, paginated).
+## Files touched
 
-Reuse the existing `StudentPicker` component.
-
-## 4. Availability slots
-
-Case managers (and org admins/admins for themselves) define weekly recurring availability. Students only see these slots when scheduling.
-
-**New table `case_manager_availability`:**
-- `case_manager_id`, `day_of_week` (0-6), `start_time`, `end_time`, `slot_minutes` (default 30), `timezone`, `is_active`.
-- RLS: owner + admins manage; authenticated users can read active rows (students need this to see slots).
-
-**New table `appointment_blackouts`** (one-off exceptions / time off): `case_manager_id`, `start_at`, `end_at`, `reason`. Same RLS shape.
-
-**UI:**
-- Settings → new "Availability" tab (for staff): weekly grid editor + blackout list.
-- `ScheduleMeetingDialog` for students: replace the free time-select with slots computed from the assigned CM's availability minus existing appointments and blackouts.
-- For staff scheduling on behalf: keep free time-select but warn if outside availability.
-
-New hooks: `useAvailability`, `useAvailableSlots(caseManagerId, date)`.
-
-## 5. Reschedule & cancel with notifications
-
-- **Reschedule:** dialog opens the existing form prefilled; on save, updates `scheduled_at`/`duration_minutes` and calls `create-calendar-event` edge function in "update" mode (patch Google Calendar event, resend invite).
-- **Cancel:** confirm dialog; sets `status='cancelled'`, cancels the calendar event, and triggers a new `notify-appointment-change` transactional email (queued via existing app-email infrastructure) to both parties. In-app notification also inserted.
-- Edge function updates:
-  - Extend `supabase/functions/create-calendar-event/index.ts` to accept `mode: 'create' | 'update' | 'cancel'`.
-  - New template `appointment-changed.tsx` (Reschedule + Cancel variants driven by `templateData.action`).
-
-## 6. Technical notes
-
-- Migration adds two tables with `GRANT`s and RLS as noted above; no changes to existing `appointments` schema.
-- `useMyAppointments` unchanged; new `useStaffAppointments` mirrors it for staff role scope.
-- All new UI uses existing pill/rounded-full Evolve tokens; no color hardcoding.
-- Sidebar count badge for today's appointments (optional, cheap query).
-
-## Out of scope
-
-- External calendar imports (only Google Meet link generation, already present).
-- Group/multi-student appointments.
-- Public booking links for non-students.
+- `src/hooks/useProductTour.ts` — module-level session guards + dismissed flag.
+- `supabase/functions/send-lifeskills-survey/index.ts` — filter out open invitations; deploy after edit.
+- `src/hooks/useLifeSkillsSurveys.ts` — extend payload/return types.
+- `src/pages/admin/LifeSkillsSurveys.tsx` (the bulk-send dialog) — checkbox + toast copy.
