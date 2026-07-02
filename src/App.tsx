@@ -197,7 +197,14 @@ function App() {
                     </ProtectedRoute>
                   } />
                   
+                  <Route path="/appointments" element={
+                    <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
+                      <Appointments />
+                    </ProtectedRoute>
+                  } />
+
                   {/* Admin routes */}
+
             <Route path="/admin-monitoring-reassigning-requests" element={
               <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <AdminDashboard />
