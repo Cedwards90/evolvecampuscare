@@ -143,6 +143,21 @@ export function SendLifeSkillsDialog({ open, onOpenChange, templateSlug, templat
               rows={3}
             />
           </div>
+
+          <div className="flex items-start gap-2 rounded-md border p-3">
+            <Checkbox
+              id="skip-already-sent"
+              checked={skipAlreadySent}
+              onCheckedChange={(v) => setSkipAlreadySent(v === true)}
+              className="mt-0.5"
+            />
+            <Label htmlFor="skip-already-sent" className="text-sm font-normal leading-snug">
+              Only send to students who haven't received this survey yet
+              <span className="block text-xs text-muted-foreground">
+                Skips anyone with an open (uncompleted) invitation for this survey.
+              </span>
+            </Label>
+          </div>
         </div>
 
         <DialogFooter>
