@@ -42,7 +42,9 @@ function safeRemove(key: string) {
 function storageKey(userId: string) {
   return `evolve:tour-completed:${userId}`;
 }
-
+function dismissedKey(userId: string) {
+  return `evolve:tour-dismissed:${userId}`;
+}
 function loginsKey(userId: string) {
   return `evolve:login-count:${userId}`;
 }
@@ -60,6 +62,12 @@ async function waitForElement(selector: string | undefined, maxFrames = 20): Pro
     await new Promise((r) => requestAnimationFrame(() => r(null)));
   }
 }
+
+// Module-level guards so multiple mounts of this hook (Dashboard, Settings,
+// HelpButton, GettingStartedSection) do not each auto-start the tour or
+// re-increment the login counter on every navigation.
+const autoStartedThisSession = new Set<string>();
+const loginCountedThisSession = new Set<string>();
 
 export function useProductTour() {
   const { user, profile, role } = useAuth();
@@ -113,7 +121,10 @@ export function useProductTour() {
             setTimeout(() => d.refresh?.(), 30);
           },
           onCloseClick: () => {
-            // Explicit skip — do not mark completed.
+            // Explicit skip — persist dismissal so we don't re-pop on next mount.
+            if (user?.id) {
+              safeSet(dismissedKey(user.id), new Date().toISOString());
+            }
             d.destroy();
           },
         },
@@ -134,6 +145,8 @@ export function useProductTour() {
 
   const startTour = useCallback(async () => {
     if (!role) return;
+    // Manual start clears any transient dismissed flag so a full session run works.
+    if (user?.id) safeRemove(dismissedKey(user.id));
     driverRef.current?.destroy();
     const d = buildDriver();
     driverRef.current = d;
@@ -146,10 +159,8 @@ export function useProductTour() {
     } else if (first?.element) {
       await waitForElement(first.element);
     }
-    // Mark completedRef when driver reaches the last step through Done.
-    // driver.js will call onDestroyed after done; we detect via active index there.
     d.drive();
-  }, [buildDriver, navigate, role]);
+  }, [buildDriver, navigate, role, user?.id]);
 
   // One-time recovery: unblock users who had the tour incorrectly marked complete
   // by the previous buggy version. Only clears the flag once per user.
@@ -166,22 +177,32 @@ export function useProductTour() {
   }, [user?.id]);
 
   // Auto-trigger on first login, once profile+role are hydrated.
+  // Module-level guard ensures this runs at most once per browser session
+  // across all hook instances.
   useEffect(() => {
     if (!user?.id || !role || !profile) return;
+    if (autoStartedThisSession.has(user.id)) return;
     if (safeGet(storageKey(user.id))) return;
+    if (safeGet(dismissedKey(user.id))) return;
     if (shouldSkipAutoStart()) return;
 
     const t = setTimeout(() => {
+      if (autoStartedThisSession.has(user.id!)) return;
       if (shouldSkipAutoStart()) return;
       if (safeGet(storageKey(user.id!))) return;
+      if (safeGet(dismissedKey(user.id!))) return;
+      autoStartedThisSession.add(user.id!);
       startTour();
     }, 1500);
     return () => clearTimeout(t);
   }, [user?.id, role, profile, startTour]);
 
-  // Track login count (used for nudges + migration heuristic)
+  // Track login count (used for nudges + migration heuristic). Guarded to once
+  // per browser session so navigating doesn't inflate the counter.
   useEffect(() => {
     if (!user?.id) return;
+    if (loginCountedThisSession.has(user.id)) return;
+    loginCountedThisSession.add(user.id);
     const raw = safeGet(loginsKey(user.id));
     const n = raw ? parseInt(raw, 10) : 0;
     if (!Number.isNaN(n)) safeSet(loginsKey(user.id), String(n + 1));
@@ -201,6 +222,8 @@ export function useProductTour() {
   const resetTour = useCallback(() => {
     if (!user?.id) return;
     safeRemove(storageKey(user.id));
+    safeRemove(dismissedKey(user.id));
+    autoStartedThisSession.delete(user.id);
     driverRef.current?.destroy();
     driverRef.current = null;
   }, [user?.id]);
