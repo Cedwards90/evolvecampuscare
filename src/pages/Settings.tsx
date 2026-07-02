@@ -42,6 +42,8 @@ import { useMFA } from '@/hooks/useMFA';
 import { MFAEnrollment } from '@/components/auth/MFAEnrollment';
 import { StudentQRShortcut } from '@/components/qr/StudentQRShortcut';
 import { CertificationCatalogManager } from '@/components/admin/CertificationCatalogManager';
+import { AvailabilityEditor } from '@/components/scheduling/AvailabilityEditor';
+
 
 const profileSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
