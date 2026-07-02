@@ -13,6 +13,7 @@ import { useAllCohorts } from '@/hooks/useCohorts';
 import { useActiveOrganizations } from '@/hooks/useTrainingOrganizations';
 import { sendLifeSkillsSurvey } from '@/hooks/useLifeSkillsSurveys';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 import { StudentPicker } from './StudentPicker';
 
 interface Props {
