@@ -1,51 +1,73 @@
-## Goal
-Back the existing `useFormPersistence` hook with a Supabase-backed draft store so in-progress form data survives Chrome tab discards, device switches, and localStorage clears — not just page reloads on the same device.
 
-## Why
-Today drafts live only in `localStorage`. When Chrome discards a tab under memory pressure and later restores it, the site sometimes reloads from a clean state on a different profile/window where the localStorage entry isn't present (or was evicted), and users lose progress. A server-side copy keyed to the user + form makes recovery reliable across tabs, devices, and reloads.
+# Staff Appointment Scheduling
 
-## Approach
+Extend the existing `ScheduleMeetingDialog` / `appointments` foundation into a full scheduling feature for Case Managers, Org Admins, and Admins.
 
-### 1. New `form_drafts` table (Cloud / Supabase)
-One row per (user, form key). Small, JSON-only, no PII beyond what the user already typed.
+## 1. Dedicated Appointments page (`/appointments`)
 
-Columns:
-- `user_id` (uuid, FK auth.users)
-- `form_key` (text) — e.g. `weekly-checkin`, `lifeskills-survey`, `cmf-basics-onboarding`
-- `values` (jsonb) — sanitized draft payload
-- `saved_at` (timestamptz)
-- Primary key: `(user_id, form_key)`
+New page for all staff roles (sidebar entry "Appointments", calendar icon):
 
-RLS: user can only read/write their own row. Explicit GRANTs to `authenticated` and `service_role`. No `anon` access.
+- **Views:** Toggle between List (upcoming / past tabs) and Month calendar (react-day-picker with dots on booked days).
+- **Row/card content:** student name + org, date/time, duration, status pill, meeting link, quick actions (Reschedule, Cancel, Join).
+- **Filters:** date range, status, student search. Respects `GlobalFilters` (org/cohort/CM) — admins see all, org_admins scoped to their org, case_managers scoped to their assigned students.
+- **"New appointment" button** opens an enhanced `ScheduleMeetingDialog` with a student picker (see §3).
 
-### 2. Extend `useFormPersistence`
-- Keep localStorage as the fast synchronous layer (unchanged behavior for typing latency).
-- Add a debounced background upsert to `form_drafts` (~2s after typing settles, plus a forced flush on `visibilitychange`, `pagehide`, and `beforeunload`).
-- On mount:
-  1. Load local draft synchronously (current behavior) so restore is instant.
-  2. Fire a background fetch of the server draft. If server `saved_at` is newer than local, hydrate form state from server and refresh localStorage.
-- On successful `clear()` (form submitted or discarded), delete the server row alongside the local one.
+Files: `src/pages/Appointments.tsx`, `src/hooks/useStaffAppointments.ts`, route added in `App.tsx`, sidebar entry in `SidebarLayout.tsx`.
 
-### 3. Flush reliability for tab discard
-- Use a single `flushNow()` path shared by debounce, `visibilitychange` (hidden), `pagehide`, and `beforeunload`.
-- For the tab-hide path, use `navigator.sendBeacon` against a lightweight edge function OR a direct `supabase.from('form_drafts').upsert()` with `keepalive`-style fetch — whichever the Supabase client supports. If neither is reliable, add a tiny `save-form-draft` edge function that accepts a beacon POST with the user's JWT.
+## 2. Quick "Schedule" button on student lists
 
-### 4. Coverage
-No new forms wired this pass — the hook already covers Weekly Check-In, Life Skills Survey, Intake Survey, Post-Graduation Plan, Support Request, Complete Profile, Career Intake, CMF Basics, Personality Quiz, NDA editor, Schedule Meeting, and Case Notes. They all inherit server persistence automatically once the hook is upgraded.
+Add a small calendar-icon button (using existing `ScheduleMeetingDialog`) inline on:
 
-### 5. Housekeeping
-- Add a scheduled cleanup (pg_cron, daily) that deletes `form_drafts` rows older than 30 days to keep the table bounded.
-- Do NOT persist auth/password/invite-token forms (explicit denylist in the hook — already excluded).
+- `MyStudentsSection` rows
+- `StudentFolders` table rows
+- `ManageRequests` request rows (prefills `requestId`)
 
-## Technical details
+No behavior change to the existing dialog on student detail pages.
 
-- Migration creates `public.form_drafts` with the schema above, GRANTs, RLS (`auth.uid() = user_id` for all commands), and an updated_at trigger.
-- Hook changes are confined to `src/hooks/useFormPersistence.ts` and `src/lib/formDraftStorage.ts`; no component-level changes needed.
-- Conflict resolution rule when server and local drafts both exist: newest `saved_at` wins. Ties break to local (already in the UI).
-- Sanitization (Files/Blobs stripped, Dates → ISO) already handled in `formDraftStorage`; server payload reuses the same sanitized object.
-- Network failures during save are swallowed silently — localStorage remains the source of truth for that session.
+## 3. Staff-selectable student in the dialog
+
+When opened without a preset `studentId` (e.g. from the Appointments page), the dialog renders a searchable student picker:
+
+- Case managers: only their assigned students.
+- Org admins: students in orgs where they are org admin.
+- Admins: all students (searchable, paginated).
+
+Reuse the existing `StudentPicker` component.
+
+## 4. Availability slots
+
+Case managers (and org admins/admins for themselves) define weekly recurring availability. Students only see these slots when scheduling.
+
+**New table `case_manager_availability`:**
+- `case_manager_id`, `day_of_week` (0-6), `start_time`, `end_time`, `slot_minutes` (default 30), `timezone`, `is_active`.
+- RLS: owner + admins manage; authenticated users can read active rows (students need this to see slots).
+
+**New table `appointment_blackouts`** (one-off exceptions / time off): `case_manager_id`, `start_at`, `end_at`, `reason`. Same RLS shape.
+
+**UI:**
+- Settings → new "Availability" tab (for staff): weekly grid editor + blackout list.
+- `ScheduleMeetingDialog` for students: replace the free time-select with slots computed from the assigned CM's availability minus existing appointments and blackouts.
+- For staff scheduling on behalf: keep free time-select but warn if outside availability.
+
+New hooks: `useAvailability`, `useAvailableSlots(caseManagerId, date)`.
+
+## 5. Reschedule & cancel with notifications
+
+- **Reschedule:** dialog opens the existing form prefilled; on save, updates `scheduled_at`/`duration_minutes` and calls `create-calendar-event` edge function in "update" mode (patch Google Calendar event, resend invite).
+- **Cancel:** confirm dialog; sets `status='cancelled'`, cancels the calendar event, and triggers a new `notify-appointment-change` transactional email (queued via existing app-email infrastructure) to both parties. In-app notification also inserted.
+- Edge function updates:
+  - Extend `supabase/functions/create-calendar-event/index.ts` to accept `mode: 'create' | 'update' | 'cancel'`.
+  - New template `appointment-changed.tsx` (Reschedule + Cancel variants driven by `templateData.action`).
+
+## 6. Technical notes
+
+- Migration adds two tables with `GRANT`s and RLS as noted above; no changes to existing `appointments` schema.
+- `useMyAppointments` unchanged; new `useStaffAppointments` mirrors it for staff role scope.
+- All new UI uses existing pill/rounded-full Evolve tokens; no color hardcoding.
+- Sidebar count badge for today's appointments (optional, cheap query).
 
 ## Out of scope
-- No admin UI for viewing drafts.
-- No conflict-merge UI; last-write-wins per form.
-- No changes to the separate offline support-request drafts system (`offline_drafts` / IndexedDB) — that flow is unrelated.
+
+- External calendar imports (only Google Meet link generation, already present).
+- Group/multi-student appointments.
+- Public booking links for non-students.
