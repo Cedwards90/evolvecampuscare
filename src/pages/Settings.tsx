@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useTheme } from 'next-themes';
-import { Loader2, User, Bell, Globe, Palette, Shield, Trash2, AlertTriangle, Award, PlayCircle, BookOpen } from 'lucide-react';
+import { Loader2, User, Bell, Globe, Palette, Shield, Trash2, AlertTriangle, Award, PlayCircle, BookOpen, CalendarDays } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useProductTour } from '@/hooks/useProductTour';
 import { supabase } from '@/integrations/supabase/client';
