@@ -153,8 +153,9 @@ export async function sendLifeSkillsSurvey(payload: {
   organization_id?: string;
   student_ids?: string[];
   notes?: string;
+  skip_already_sent?: boolean;
 }) {
   const { data, error } = await supabase.functions.invoke('send-lifeskills-survey', { body: payload });
   if (error) throw error;
-  return data as { total: number; assigned: number; invited: number; emailed: number; failed: number; skipped: number };
+  return data as { total: number; assigned: number; invited: number; emailed: number; failed: number; skipped: number; already_sent_skipped?: number };
 }

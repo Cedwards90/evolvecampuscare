@@ -20,6 +20,7 @@ const BodySchema = z.object({
   organization_id: z.string().uuid().optional(),
   student_ids: z.array(z.string().uuid()).max(2000).optional(),
   notes: z.string().max(500).optional(),
+  skip_already_sent: z.boolean().optional().default(true),
 });
 
 function sanitizeError(e: unknown): string {
@@ -120,6 +121,39 @@ Deno.serve(async (req) => {
 
     if (recipientIds.length === 0) {
       return new Response(JSON.stringify({ message: "No recipients in scope", total: 0, sent: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // De-dupe: skip students who already have an open (uncompleted) invitation
+    // for this template. Prevents duplicate sends on repeated "Send" clicks.
+    let alreadySentSkipped = 0;
+    if (body.skip_already_sent !== false) {
+      const { data: openInvites } = await admin
+        .from("survey_invitations")
+        .select("student_id")
+        .eq("survey_type", `lifeskills:${tpl.slug}`)
+        .is("completed_at", null)
+        .in("student_id", recipientIds);
+      const openSet = new Set((openInvites || []).map((r: any) => r.student_id));
+      if (openSet.size > 0) {
+        const filtered = recipientIds.filter((id) => !openSet.has(id));
+        alreadySentSkipped = recipientIds.length - filtered.length;
+        recipientIds = filtered;
+      }
+      if (recipientIds.length === 0) {
+        return new Response(
+          JSON.stringify({
+            message: "All recipients already have an open invitation",
+            total: 0,
+            assigned: 0,
+            invited: 0,
+            emailed: 0,
+            failed: 0,
+            skipped: 0,
+            already_sent_skipped: alreadySentSkipped,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     // Get profiles for emailing
@@ -242,7 +276,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ message: "ok", total: recipientIds.length, assigned, invited, emailed, failed, skipped }),
+      JSON.stringify({ message: "ok", total: recipientIds.length, assigned, invited, emailed, failed, skipped, already_sent_skipped: alreadySentSkipped }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {

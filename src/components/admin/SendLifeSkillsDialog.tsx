@@ -13,6 +13,7 @@ import { useAllCohorts } from '@/hooks/useCohorts';
 import { useActiveOrganizations } from '@/hooks/useTrainingOrganizations';
 import { sendLifeSkillsSurvey } from '@/hooks/useLifeSkillsSurveys';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 import { StudentPicker } from './StudentPicker';
 
 interface Props {
@@ -34,8 +35,9 @@ export function SendLifeSkillsDialog({ open, onOpenChange, templateSlug, templat
   const [studentId, setStudentId] = useState<string>('');
   const [notes, setNotes] = useState('');
   const [sending, setSending] = useState(false);
+  const [skipAlreadySent, setSkipAlreadySent] = useState(true);
 
-  const reset = () => { setCohortId(''); setOrgId(''); setStudentId(''); setNotes(''); };
+  const reset = () => { setCohortId(''); setOrgId(''); setStudentId(''); setNotes(''); setSkipAlreadySent(true); };
 
   const onSend = async () => {
     if (mode === 'cohort' && !cohortId) { toast({ title: 'Pick a cohort', variant: 'destructive' }); return; }
@@ -49,10 +51,15 @@ export function SendLifeSkillsDialog({ open, onOpenChange, templateSlug, templat
         organization_id: mode === 'organization' ? orgId : undefined,
         student_ids: mode === 'student' ? [studentId] : undefined,
         notes: notes.trim() || undefined,
+        skip_already_sent: skipAlreadySent,
       });
+      const dupSkipped = res.already_sent_skipped ?? 0;
+      const parts = [`${res.assigned} assigned`, `${res.emailed} emailed`];
+      if (res.failed) parts.push(`${res.failed} failed`);
+      if (dupSkipped) parts.push(`${dupSkipped} skipped (already invited)`);
       toast({
-        title: 'Survey sent',
-        description: `${res.assigned} assigned · ${res.emailed} emailed${res.failed ? ` · ${res.failed} failed` : ''}`,
+        title: res.emailed || res.assigned ? 'Survey sent' : 'Nothing to send',
+        description: parts.join(' · '),
       });
       reset();
       onOpenChange(false);
@@ -135,6 +142,21 @@ export function SendLifeSkillsDialog({ open, onOpenChange, templateSlug, templat
               placeholder="e.g. Please complete this before our session on Friday."
               rows={3}
             />
+          </div>
+
+          <div className="flex items-start gap-2 rounded-md border p-3">
+            <Checkbox
+              id="skip-already-sent"
+              checked={skipAlreadySent}
+              onCheckedChange={(v) => setSkipAlreadySent(v === true)}
+              className="mt-0.5"
+            />
+            <Label htmlFor="skip-already-sent" className="text-sm font-normal leading-snug">
+              Only send to students who haven't received this survey yet
+              <span className="block text-xs text-muted-foreground">
+                Skips anyone with an open (uncompleted) invitation for this survey.
+              </span>
+            </Label>
           </div>
         </div>
 
