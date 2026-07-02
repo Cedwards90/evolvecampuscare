@@ -8,6 +8,18 @@ export function useSendSurvey() {
 
   return useMutation({
     mutationFn: async ({ studentId, surveyType, notes }: { studentId: string; surveyType: string; notes?: string }) => {
+      // Skip if this student already has an open (uncompleted) invitation of this type
+      const { data: existing } = await supabase
+        .from('survey_invitations')
+        .select('id')
+        .eq('student_id', studentId)
+        .eq('survey_type', surveyType)
+        .is('completed_at', null)
+        .limit(1);
+      if (existing && existing.length > 0) {
+        return { skipped: true as const };
+      }
+
       const { error } = await supabase.from('survey_invitations').insert({
         student_id: studentId,
         survey_type: surveyType,

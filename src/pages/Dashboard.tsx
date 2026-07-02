@@ -64,7 +64,19 @@ export default function Dashboard() {
   const { data: myAssignment, isLoading: assignmentLoading } = useMyAssignment();
   const { intakeCompleted } = useIntakeSurvey();
   const { data: latestCheckIn } = useLatestCheckIn();
-  const { data: pendingSurveys = [] } = usePendingSurveys();
+  const { data: pendingSurveysRaw = [] } = usePendingSurveys();
+  // Dedupe by survey_type — one card per pending survey, keep newest
+  const pendingSurveys = useMemo(() => {
+    const seen = new Set<string>();
+    const sorted = [...(pendingSurveysRaw as any[])].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
+    return sorted.filter((s) => {
+      if (seen.has(s.survey_type)) return false;
+      seen.add(s.survey_type);
+      return true;
+    });
+  }, [pendingSurveysRaw]);
   const { data: lifeSkillsAssignments = [] } = useMyLifeSkillsAssignments();
   const pendingLifeSkills = (lifeSkillsAssignments as any[]).filter((a) => !a.last_completed_at);
   
