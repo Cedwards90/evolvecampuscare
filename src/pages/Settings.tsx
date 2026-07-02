@@ -227,7 +227,7 @@ export default function Settings() {
         />
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className={`grid w-full max-w-3xl ${(role === 'admin' || role === 'org_admin') ? 'grid-cols-6' : 'grid-cols-5'}`}>
+          <TabsList className="flex flex-wrap w-full max-w-3xl gap-1">
             <TabsTrigger value="profile" className="gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
@@ -248,6 +248,12 @@ export default function Settings() {
               <Palette className="h-4 w-4" />
               <span className="hidden sm:inline">Appearance</span>
             </TabsTrigger>
+            {isPrivilegedRole && (
+              <TabsTrigger value="availability" className="gap-2">
+                <CalendarDays className="h-4 w-4" />
+                <span className="hidden sm:inline">Availability</span>
+              </TabsTrigger>
+            )}
             {(role === 'admin' || role === 'org_admin') && (
               <TabsTrigger value="catalog" className="gap-2">
                 <Award className="h-4 w-4" />
@@ -255,6 +261,7 @@ export default function Settings() {
               </TabsTrigger>
             )}
           </TabsList>
+
 
           <TabsContent value="profile" className="space-y-6">
             <Card className="border border-border/50">
