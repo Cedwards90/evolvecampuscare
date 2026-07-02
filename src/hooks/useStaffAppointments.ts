@@ -101,7 +101,7 @@ export function useRescheduleAppointment() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (p: { appointmentId: string; scheduledAt: Date; durationMinutes: number; title?: string; description?: string }) => {
-      const patch: Record<string, unknown> = {
+      const patch: { scheduled_at: string; duration_minutes: number; title?: string; description?: string } = {
         scheduled_at: p.scheduledAt.toISOString(),
         duration_minutes: p.durationMinutes,
       };
@@ -110,6 +110,7 @@ export function useRescheduleAppointment() {
 
       const { error } = await supabase.from('appointments').update(patch).eq('id', p.appointmentId);
       if (error) throw error;
+
 
       supabase.functions
         .invoke('create-calendar-event', {
