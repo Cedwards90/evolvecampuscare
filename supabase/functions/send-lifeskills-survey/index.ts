@@ -276,7 +276,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ message: "ok", total: recipientIds.length, assigned, invited, emailed, failed, skipped }),
+      JSON.stringify({ message: "ok", total: recipientIds.length, assigned, invited, emailed, failed, skipped, already_sent_skipped: alreadySentSkipped }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
