@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Users, FileText, Calendar, Clock, ArrowRight, UserPlus } from 'lucide-react';
+import { Users, FileText, Calendar, Clock, ArrowRight, UserPlus, CalendarDays } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,8 +7,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/EmptyState';
 import { InviteStudentDialog } from '@/components/casemanager/InviteStudentDialog';
+import { AppointmentDialog } from '@/components/scheduling/AppointmentDialog';
 import type { MyStudent } from '@/hooks/useMyStudents';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+
 
 interface MyStudentsSectionProps {
   students: MyStudent[];
