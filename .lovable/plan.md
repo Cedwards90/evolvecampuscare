@@ -1,42 +1,30 @@
-## Root cause
+## Problem
 
-A recent security migration restricted `impact_survey_templates` SELECT to staff only (admin / case_manager / org_admin). Students can no longer read template rows.
+Confirmed in the database: students have up to **4 open invitations** for the same Life Skills survey (e.g. `lifeskills:lifeskills-m02-pre`). Root causes:
 
-The student-facing survey code all depends on reading templates:
+1. `survey_invitations` has no uniqueness constraint, so every "Send" click (before the `skip_already_sent` flag existed) inserted a new open row.
+2. The student **Dashboard** renders `pendingSurveys.map(...)` directly, so one template with 4 rows shows as 4 cards.
+3. `useSendSurvey` (individual sends for check-in / intake / etc.) has no duplicate guard at all.
 
-- `useMyLifeSkillsAssignments` — joins `impact_survey_templates!inner(...)`. With RLS blocking the join, PostgREST returns **0 rows**, so `/surveys` shows "No pending surveys" even when assignments exist.
-- `useMyLifeSkillsResponses` — same inner-join pattern, so the "Completed" section also disappears.
-- `useLifeSkillsTemplate(slug)` — direct `.select(...).eq('slug', ...)` returns `null`, so opening `/surveys/<slug>` can't render the questions.
-- `useLifeSkillsTemplates` — dropdowns/pickers that reference templates return empty.
-
-DB confirms invitations and assignments exist for the class, so data is fine — students just can't see the joined template.
+The Surveys page itself is fine — it lists assignments (already unique per template) — but the dashboard reminder banner is the visible duplication.
 
 ## Fix
 
-Add a narrow, safe SELECT policy to `impact_survey_templates`:
+### 1. Database migration
+- Clean up existing duplicates: for each `(student_id, survey_type)` with `completed_at IS NULL`, keep the newest row, mark older rows as `completed_at = now()` with a note (preserves audit history without breaking foreign keys).
+- Add a **partial unique index** `survey_invitations (student_id, survey_type) WHERE completed_at IS NULL` so only one open invitation per (student, survey type) can exist going forward.
 
-- Allow any authenticated user to SELECT rows where `is_active = true`.
-- Keep the existing "Admins manage templates" (ALL) and "Staff view templates" (SELECT) policies unchanged so staff can still see inactive/archived templates and manage them.
+### 2. Edge function `send-lifeskills-survey`
+- Change the `survey_invitations` insert to an upsert with `onConflict: student_id,survey_type` and `ignoreDuplicates: true` so a race or a re-send never errors, it just skips.
+- Keep the existing `skip_already_sent` pre-filter (already defaults to true).
 
-Templates contain only the survey title/description/questions schema — no PII, no responses — so authenticated read of active templates is the correct scope. This restores the `!inner` joins for students without loosening anything sensitive.
+### 3. `useSendSurvey` hook (individual sends)
+- Before inserting, check for an existing open invitation of the same `survey_type` for that student; if one exists, skip the insert and the duplicate notification, and return a "already pending" result the caller can toast.
 
-## Verification
+### 4. Dashboard rendering
+- Dedupe `pendingSurveys` client-side by `survey_type`, keeping the most recent, so even if legacy data slips through the student sees one card per survey.
 
-1. Confirm `/surveys` on a student account now lists Pending assignments with the template title.
-2. Confirm `/surveys/lifeskills-m02-pre` renders the questions.
-3. Confirm staff-only pages (SurveysIndex, Impact reports) still work.
-4. Re-run security linter — no new findings on `impact_survey_templates`.
-
-## Technical
-
-Migration:
-
-```sql
-CREATE POLICY "Authenticated view active templates"
-  ON public.impact_survey_templates
-  FOR SELECT
-  TO authenticated
-  USING (is_active = true);
-```
-
-No other RLS changes needed. `impact_survey_assignments` and `impact_survey_responses` already have student-scoped SELECT policies.
+## Technical notes
+- Partial unique index is the correct shape because completed invitations are historical and should remain multiple.
+- Assignments (`impact_survey_assignments`) already have `onConflict: student_id,template_id`, no change needed.
+- No schema change to `notifications` — those aren't rendered as survey cards.
