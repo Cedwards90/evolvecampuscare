@@ -210,13 +210,20 @@ Deno.serve(async (req) => {
         }, { onConflict: "student_id,template_id" });
       if (!aErr) assigned++;
 
-      // Invitation row → shows in student "pending surveys" banner
-      const { error: iErr } = await admin.from("survey_invitations").insert({
-        student_id: id,
-        survey_type: `lifeskills:${tpl.slug}`,
-        sent_by: actor,
-        notes: body.notes ?? tpl.title,
-      });
+      // Invitation row → shows in student "pending surveys" banner.
+      // Upsert on the partial unique index (student_id, survey_type WHERE completed_at IS NULL)
+      // so a repeated send never creates a duplicate open invitation.
+      const { error: iErr } = await admin
+        .from("survey_invitations")
+        .upsert(
+          {
+            student_id: id,
+            survey_type: `lifeskills:${tpl.slug}`,
+            sent_by: actor,
+            notes: body.notes ?? tpl.title,
+          },
+          { onConflict: "student_id,survey_type", ignoreDuplicates: true },
+        );
       if (!iErr) invited++;
 
       // Notification
