@@ -36,14 +36,16 @@ function sanitizeError(error: unknown, context: string): string {
 }
 
 interface CalendarEventRequest {
+  mode?: 'create' | 'update' | 'cancel';
   appointmentId: string;
-  studentId: string;
-  caseManagerId: string;
-  title: string;
+  studentId?: string;
+  caseManagerId?: string;
+  title?: string;
   description?: string;
-  startTime: string;
-  durationMinutes: number;
+  startTime?: string;
+  durationMinutes?: number;
 }
+
 
 // Privileged roles that require MFA verification
 const PRIVILEGED_ROLES = ['admin', 'case_manager'];
