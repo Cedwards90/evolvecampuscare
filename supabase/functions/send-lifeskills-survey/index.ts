@@ -20,6 +20,7 @@ const BodySchema = z.object({
   organization_id: z.string().uuid().optional(),
   student_ids: z.array(z.string().uuid()).max(2000).optional(),
   notes: z.string().max(500).optional(),
+  skip_already_sent: z.boolean().optional().default(true),
 });
 
 function sanitizeError(e: unknown): string {
