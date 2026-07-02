@@ -143,12 +143,22 @@ export function MyStudentsSection({ students: rawStudents, isLoading }: MyStuden
                     <FileText className="h-4 w-4" />
                   </Link>
                 </Button>
+                <AppointmentDialog
+                  studentId={student.student_id}
+                  studentName={student.student?.full_name || student.student?.email || 'Student'}
+                  trigger={
+                    <Button variant="ghost" size="sm" title="Schedule appointment">
+                      <CalendarDays className="h-4 w-4" />
+                    </Button>
+                  }
+                />
                 <Button asChild variant="ghost" size="sm">
                   <Link to={`/messages/${student.student_id}`}>
                     <Calendar className="h-4 w-4" />
                   </Link>
                 </Button>
               </div>
+
             </CardContent>
           </Card>
         ))}
