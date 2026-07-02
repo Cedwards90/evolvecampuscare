@@ -36,14 +36,16 @@ function sanitizeError(error: unknown, context: string): string {
 }
 
 interface CalendarEventRequest {
+  mode?: 'create' | 'update' | 'cancel';
   appointmentId: string;
-  studentId: string;
-  caseManagerId: string;
-  title: string;
+  studentId?: string;
+  caseManagerId?: string;
+  title?: string;
   description?: string;
-  startTime: string;
-  durationMinutes: number;
+  startTime?: string;
+  durationMinutes?: number;
 }
+
 
 // Privileged roles that require MFA verification
 const PRIVILEGED_ROLES = ['admin', 'case_manager'];
@@ -133,15 +135,37 @@ const handler = async (req: Request): Promise<Response> => {
     // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    const {
-      appointmentId,
-      studentId,
-      caseManagerId,
-      title,
-      description,
-      startTime,
-      durationMinutes,
-    }: CalendarEventRequest = await req.json();
+    const body: CalendarEventRequest = await req.json();
+    const mode = body.mode || 'create';
+
+    // For update/cancel we may not have all fields — hydrate from DB
+    let appointmentId = body.appointmentId;
+    let studentId = body.studentId;
+    let caseManagerId = body.caseManagerId;
+    let title = body.title;
+    let description = body.description;
+    let startTime = body.startTime;
+    let durationMinutes = body.durationMinutes;
+
+    if (mode === 'update' || mode === 'cancel' || !studentId || !caseManagerId) {
+      const { data: apt, error: aptErr } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('id', appointmentId)
+        .single();
+      if (aptErr || !apt) {
+        return new Response(JSON.stringify({ error: 'Appointment not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+      studentId = studentId || apt.student_id;
+      caseManagerId = caseManagerId || apt.case_manager_id;
+      title = title || apt.title;
+      description = description ?? apt.description;
+      startTime = startTime || apt.scheduled_at;
+      durationMinutes = durationMinutes || apt.duration_minutes;
+    }
 
     // Verify user is either the case manager creating the meeting or an admin
     const { data: roleData } = await supabase
@@ -150,7 +174,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("user_id", userId)
       .single();
 
-    const isAdmin = roleData?.role === "admin";
+    const isAdmin = roleData?.role === "admin" || roleData?.role === "org_admin";
     const isCaseManager = userId === caseManagerId;
     const isStudent = userId === studentId;
 
@@ -161,6 +185,7 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
 
     // ========== MFA ENFORCEMENT FOR PRIVILEGED ROLES ==========
     // Admin and case_manager roles must have completed MFA verification (AAL2)

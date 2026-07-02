@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useTheme } from 'next-themes';
-import { Loader2, User, Bell, Globe, Palette, Shield, Trash2, AlertTriangle, Award, PlayCircle, BookOpen } from 'lucide-react';
+import { Loader2, User, Bell, Globe, Palette, Shield, Trash2, AlertTriangle, Award, PlayCircle, BookOpen, CalendarDays } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useProductTour } from '@/hooks/useProductTour';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,6 +42,8 @@ import { useMFA } from '@/hooks/useMFA';
 import { MFAEnrollment } from '@/components/auth/MFAEnrollment';
 import { StudentQRShortcut } from '@/components/qr/StudentQRShortcut';
 import { CertificationCatalogManager } from '@/components/admin/CertificationCatalogManager';
+import { AvailabilityEditor } from '@/components/scheduling/AvailabilityEditor';
+
 
 const profileSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -225,7 +227,7 @@ export default function Settings() {
         />
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className={`grid w-full max-w-3xl ${(role === 'admin' || role === 'org_admin') ? 'grid-cols-6' : 'grid-cols-5'}`}>
+          <TabsList className="flex flex-wrap w-full max-w-3xl gap-1">
             <TabsTrigger value="profile" className="gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
@@ -246,6 +248,12 @@ export default function Settings() {
               <Palette className="h-4 w-4" />
               <span className="hidden sm:inline">Appearance</span>
             </TabsTrigger>
+            {isPrivilegedRole && (
+              <TabsTrigger value="availability" className="gap-2">
+                <CalendarDays className="h-4 w-4" />
+                <span className="hidden sm:inline">Availability</span>
+              </TabsTrigger>
+            )}
             {(role === 'admin' || role === 'org_admin') && (
               <TabsTrigger value="catalog" className="gap-2">
                 <Award className="h-4 w-4" />
@@ -253,6 +261,7 @@ export default function Settings() {
               </TabsTrigger>
             )}
           </TabsList>
+
 
           <TabsContent value="profile" className="space-y-6">
             <Card className="border border-border/50">
@@ -567,11 +576,18 @@ export default function Settings() {
             </Card>
           </TabsContent>
 
+          {isPrivilegedRole && (
+            <TabsContent value="availability" className="space-y-6">
+              <AvailabilityEditor />
+            </TabsContent>
+          )}
+
           {(role === 'admin' || role === 'org_admin') && (
             <TabsContent value="catalog" className="space-y-6">
               <CertificationCatalogManager />
             </TabsContent>
           )}
+
         </Tabs>
       </div>
     </SidebarLayout>

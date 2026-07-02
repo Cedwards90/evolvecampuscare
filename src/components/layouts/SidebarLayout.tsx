@@ -28,7 +28,9 @@ import {
   Timer,
   Heart,
   NotebookPen,
+  CalendarDays,
 } from 'lucide-react';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOffline } from '@/contexts/OfflineContext';
@@ -84,8 +86,10 @@ const navGroups: NavGroup[] = [
       { label: 'My Submissions', href: '/my-submissions', icon: ClipboardCheck, roles: ['student'] },
       { label: 'Manage Requests', href: '/case-manager-managing-student-requests', icon: Users, roles: ['case_manager', 'org_admin'] },
       { label: 'Student Folders', href: '/student-folders', icon: FolderOpen, roles: ['case_manager', 'admin', 'org_admin'] },
+      { label: 'Appointments', href: '/appointments', icon: CalendarDays, roles: ['case_manager', 'admin', 'org_admin'] },
       { label: 'Community Resources', href: '/resources', icon: Heart, roles: ['student', 'case_manager', 'admin', 'org_admin'] },
     ],
+
   },
   {
     id: 'people',

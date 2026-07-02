@@ -71,6 +71,8 @@ import PersonalityQuizOnboarding from "./pages/onboarding/PersonalityQuizOnboard
 import Surveys from "./pages/Surveys";
 import LifeSkillsSurvey from "./pages/LifeSkillsSurvey";
 import LifeSkillsSurveysAdmin from "./pages/admin/LifeSkillsSurveys";
+import Appointments from "./pages/Appointments";
+
 
 // Create query client outside component to ensure stable reference.
 // Defaults tuned to avoid stale UI after mutations or returning to a tab,
@@ -195,7 +197,14 @@ function App() {
                     </ProtectedRoute>
                   } />
                   
+                  <Route path="/appointments" element={
+                    <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
+                      <Appointments />
+                    </ProtectedRoute>
+                  } />
+
                   {/* Admin routes */}
+
             <Route path="/admin-monitoring-reassigning-requests" element={
               <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <AdminDashboard />

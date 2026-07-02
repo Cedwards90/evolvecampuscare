@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Users, FileText, Calendar, Clock, ArrowRight, UserPlus } from 'lucide-react';
+import { Users, FileText, Calendar, Clock, ArrowRight, UserPlus, CalendarDays } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,8 +7,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/EmptyState';
 import { InviteStudentDialog } from '@/components/casemanager/InviteStudentDialog';
+import { AppointmentDialog } from '@/components/scheduling/AppointmentDialog';
 import type { MyStudent } from '@/hooks/useMyStudents';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+
 
 interface MyStudentsSectionProps {
   students: MyStudent[];
@@ -141,12 +143,22 @@ export function MyStudentsSection({ students: rawStudents, isLoading }: MyStuden
                     <FileText className="h-4 w-4" />
                   </Link>
                 </Button>
+                <AppointmentDialog
+                  studentId={student.student_id}
+                  studentName={student.student?.full_name || student.student?.email || 'Student'}
+                  trigger={
+                    <Button variant="ghost" size="sm" title="Schedule appointment">
+                      <CalendarDays className="h-4 w-4" />
+                    </Button>
+                  }
+                />
                 <Button asChild variant="ghost" size="sm">
                   <Link to={`/messages/${student.student_id}`}>
                     <Calendar className="h-4 w-4" />
                   </Link>
                 </Button>
               </div>
+
             </CardContent>
           </Card>
         ))}
