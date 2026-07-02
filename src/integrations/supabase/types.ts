@@ -79,6 +79,36 @@ export type Database = {
           },
         ]
       }
+      appointment_blackouts: {
+        Row: {
+          case_manager_id: string
+          created_at: string
+          end_at: string
+          id: string
+          reason: string | null
+          start_at: string
+          updated_at: string
+        }
+        Insert: {
+          case_manager_id: string
+          created_at?: string
+          end_at: string
+          id?: string
+          reason?: string | null
+          start_at: string
+          updated_at?: string
+        }
+        Update: {
+          case_manager_id?: string
+          created_at?: string
+          end_at?: string
+          id?: string
+          reason?: string | null
+          start_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           case_manager_id: string
@@ -299,6 +329,45 @@ export type Database = {
           student_status?: string | null
           updated_at?: string
           work_experience?: string | null
+        }
+        Relationships: []
+      }
+      case_manager_availability: {
+        Row: {
+          case_manager_id: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean
+          slot_minutes: number
+          start_time: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          case_manager_id: string
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean
+          slot_minutes?: number
+          start_time: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          case_manager_id?: string
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          slot_minutes?: number
+          start_time?: string
+          timezone?: string
+          updated_at?: string
         }
         Relationships: []
       }
