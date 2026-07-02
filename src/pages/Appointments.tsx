@@ -173,19 +173,20 @@ export default function Appointments() {
   return (
     <SidebarLayout>
       <div className="space-y-6">
-        <PageHeader
-          title="Appointments"
-          description="Schedule, reschedule, or cancel meetings with students."
-          actions={
-            <AppointmentDialog
-              trigger={
-                <Button className="rounded-full">
-                  <CalendarDays className="h-4 w-4 mr-2" /> New appointment
-                </Button>
-              }
-            />
-          }
-        />
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <PageHeader
+            title="Appointments"
+            description="Schedule, reschedule, or cancel meetings with students."
+          />
+          <AppointmentDialog
+            trigger={
+              <Button className="rounded-full">
+                <CalendarDays className="h-4 w-4 mr-2" /> New appointment
+              </Button>
+            }
+          />
+        </div>
+
 
         <div className="flex flex-col sm:flex-row gap-3">
           <Input
