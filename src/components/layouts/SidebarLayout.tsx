@@ -28,7 +28,9 @@ import {
   Timer,
   Heart,
   NotebookPen,
+  CalendarDays,
 } from 'lucide-react';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOffline } from '@/contexts/OfflineContext';
