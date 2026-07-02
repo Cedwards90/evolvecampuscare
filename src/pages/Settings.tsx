@@ -576,11 +576,18 @@ export default function Settings() {
             </Card>
           </TabsContent>
 
+          {isPrivilegedRole && (
+            <TabsContent value="availability" className="space-y-6">
+              <AvailabilityEditor />
+            </TabsContent>
+          )}
+
           {(role === 'admin' || role === 'org_admin') && (
             <TabsContent value="catalog" className="space-y-6">
               <CertificationCatalogManager />
             </TabsContent>
           )}
+
         </Tabs>
       </div>
     </SidebarLayout>
