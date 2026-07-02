@@ -155,7 +155,6 @@ export default function Appointments() {
     return rows.filter((a) => {
       if (gf.organizationId.length && a.student?.organization_id && !gf.organizationId.includes(a.student.organization_id))
         return false;
-      if (gf.caseManager.length && !gf.caseManager.includes(a.case_manager_id)) return false;
       if (!q) return true;
       return (
         a.title.toLowerCase().includes(q) ||
@@ -164,6 +163,7 @@ export default function Appointments() {
       );
     });
   }, [rows, search, gf]);
+
 
   const now = Date.now();
   const upcoming = filtered.filter((a) => a.status !== 'cancelled' && new Date(a.scheduled_at).getTime() >= startOfDay(new Date()).getTime());
