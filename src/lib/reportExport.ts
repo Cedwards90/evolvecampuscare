@@ -326,6 +326,10 @@ export function exportReportPdf(r: InteractionReport) {
     headStyles: { fillColor: [136, 169, 140] },
     theme: 'striped',
     styles: { fontSize: 9 },
+  });
+
+  autoTable(doc, {
+    head: [['Requests', 'Bucket', 'Count']],
     body: [
       ['Status', 'Opened', r.requests.opened],
       ['Status', 'In progress', r.requests.inProgress],
