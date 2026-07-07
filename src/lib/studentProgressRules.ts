@@ -173,21 +173,6 @@ export function evaluateRisks(inputs: RuleInputs): RiskIndicator[] {
   return risks;
 }
 
-/**
- * Map fired risks to concrete recommended action items.
- * Returns a sensible default when no risks are present (no AI, no fabrication).
- */
-export function deriveActionItems(risks: RiskIndicator[]): ActionItem[] {
-  if (risks.length === 0) {
-    return [
-      {
-        key: 'all_clear',
-        text: 'No immediate action items based on current data.',
-        severity: 'low',
-      },
-    ];
-  }
-
   // 8. Life-skills regression: any module where post < pre by >= 0.5
   const regressions = (inputs.lifeSkillsDeltas || []).filter(
     (m) => m.delta != null && m.delta <= -0.5,
@@ -255,6 +240,7 @@ export function deriveActionItems(risks: RiskIndicator[]): ActionItem[] {
 
   return risks;
 }
+
 
 /**
  * Map fired risks to concrete recommended action items.
