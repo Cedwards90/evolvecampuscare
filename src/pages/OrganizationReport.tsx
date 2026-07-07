@@ -154,10 +154,10 @@ export default function OrganizationReport() {
                 {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh'}
               </Button>
               <Button variant="outline" onClick={handleExportCsv} disabled={exportsDisabled}>
-                <FileText className="mr-2 h-4 w-4" /> CSV
+                {exporting === 'csv' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />} CSV
               </Button>
               <Button onClick={handleExportPdf} disabled={exportsDisabled}>
-                <Download className="mr-2 h-4 w-4" /> PDF
+                {exporting === 'pdf' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} PDF
               </Button>
             </div>
           </CardContent>
