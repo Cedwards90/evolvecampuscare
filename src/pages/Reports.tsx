@@ -23,6 +23,7 @@ import {
 import { ReportRangePicker } from '@/components/reports/ReportRangePicker';
 import { ReportPreview } from '@/components/reports/ReportPreview';
 import { exportReportCsv, exportReportPdf } from '@/lib/reportExport';
+import { buildCaseloadAiPayload, tryFetchAiSummary } from '@/lib/reportAiSummary';
 import { toast } from '@/hooks/use-toast';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
