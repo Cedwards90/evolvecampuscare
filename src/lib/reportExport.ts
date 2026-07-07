@@ -104,6 +104,48 @@ export function exportReportCsv(r: InteractionReport) {
     ),
   );
 
+  // Life Skills progress (module deltas)
+  sections.push(
+    toCsvSection(
+      'Life Skills Progress',
+      ['Module', 'Title', 'Pre avg', 'Post avg', 'Delta', 'Pre n', 'Post n'],
+      r.lifeSkills.modules.map((m) => [
+        `M${String(m.module.number).padStart(2, '0')}`,
+        m.module.title,
+        m.preAvg == null ? '' : m.preAvg.toFixed(2),
+        m.postAvg == null ? '' : m.postAvg.toFixed(2),
+        m.delta == null ? '' : m.delta.toFixed(2),
+        m.preN,
+        m.postN,
+      ]),
+    ),
+  );
+
+  // Expanded impact metrics
+  sections.push(
+    toCsvSection(
+      'Expanded Impact Metrics',
+      ['Metric', 'Value'],
+      [
+        ['Scope', r.impactMetrics.scopeLabel],
+        ['Surveys sent', r.impactMetrics.surveys.sent],
+        ['Surveys completed', r.impactMetrics.surveys.completed],
+        ['Certifications earned in range', r.impactMetrics.certifications.earnedInRange],
+        ['Certifications active', r.impactMetrics.certifications.active],
+        ['Certifications expiring ≤30d', r.impactMetrics.certifications.expiringSoon],
+        ['Referrals created', r.impactMetrics.referrals.createdInRange],
+        ['Referrals clicked', r.impactMetrics.referrals.clickedInRange],
+        ['Post-grad plans on file', r.impactMetrics.milestones.plansOnFile],
+        ['Graduations in range', r.impactMetrics.milestones.graduationsInRange],
+        ['Plans stalled ≥30d', r.impactMetrics.milestones.stalled],
+        ['Employed', r.impactMetrics.employmentReadiness.employed],
+        ['Seeking', r.impactMetrics.employmentReadiness.seeking],
+        ['Employment unknown', r.impactMetrics.employmentReadiness.unknown],
+        ['M05 workforce readiness (post)', r.impactMetrics.employmentReadiness.m05PostAvg == null ? '' : r.impactMetrics.employmentReadiness.m05PostAvg.toFixed(2)],
+      ],
+    ),
+  );
+
   sections.push(
     toCsvSection(
       'Requests Breakdown',
