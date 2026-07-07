@@ -408,6 +408,32 @@ export function exportReportPdf(r: InteractionReport, ai?: AISummaryResult | nul
     });
   }
 
+  if (ai) {
+    autoTable(doc, {
+      head: [['AI Summary & Recommendations', '']],
+      body: [
+        ['Headline', ai.headline],
+        ['Trends', ai.trends],
+        ['Improvements', ai.improvements],
+        ['Risk areas', ai.risk_areas],
+        ['Recommended next steps', ai.next_steps],
+      ],
+      headStyles: { fillColor: [5, 77, 59] },
+      theme: 'grid',
+      styles: { fontSize: 9, cellWidth: 'wrap', valign: 'top' },
+      columnStyles: { 0: { cellWidth: 130, fontStyle: 'bold' }, 1: { cellWidth: 'auto' } },
+    });
+    const afterY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 0;
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+    doc.text(
+      `AI-generated on ${format(new Date(ai.generated_at), 'PP p')}${ai.model ? ' · ' + ai.model : ''} — grounded in the report metrics above.`,
+      40,
+      afterY + 14,
+    );
+    doc.setTextColor(40, 40, 40);
+  }
+
   // Footer with page numbers
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
