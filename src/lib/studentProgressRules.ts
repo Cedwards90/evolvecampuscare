@@ -170,8 +170,7 @@ export function evaluateRisks(inputs: RuleInputs): RiskIndicator[] {
     });
   }
 
-  return risks;
-}
+
 
   // 8. Life-skills regression: any module where post < pre by >= 0.5
   const regressions = (inputs.lifeSkillsDeltas || []).filter(
