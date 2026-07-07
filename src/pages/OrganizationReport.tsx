@@ -295,7 +295,7 @@ export default function OrganizationReport() {
                     surveys_completed: data.summary.surveysCompleted,
                   },
                   lifeSkills: data.lifeSkills.modules.map((m) => ({
-                    module: m.module.label,
+                    module: m.module.title,
                     preAvg: m.preAvg,
                     postAvg: m.postAvg,
                     delta: m.delta,
