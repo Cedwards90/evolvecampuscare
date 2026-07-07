@@ -55,6 +55,8 @@ export interface InteractionReport {
     rows: Appointment[];
   };
   unresolved: SupportRequest[];
+  lifeSkills: LifeSkillsProgressResult;
+  impactMetrics: ImpactMetrics;
 }
 
 export function getPresetRange(preset: Exclude<ReportPreset, 'custom'>): { from: Date; to: Date } {
