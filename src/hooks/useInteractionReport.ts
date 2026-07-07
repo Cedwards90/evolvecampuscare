@@ -3,6 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Profile, SupportRequest, RequestUpdate, Appointment } from '@/types/database';
+import {
+  computeLifeSkillsProgress,
+  emptyLifeSkillsResult,
+  type LifeSkillsProgressResult,
+} from '@/hooks/useLifeSkillsProgress';
+import type { ImpactMetrics } from '@/components/reports/ImpactMetricsBlock';
 
 export type ReportPreset = 'daily' | 'weekly' | 'monthly' | 'custom';
 
