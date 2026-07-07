@@ -13,6 +13,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { InteractionReport } from '@/hooks/useInteractionReport';
+import { LifeSkillsProgressBlock } from '@/components/reports/LifeSkillsProgressBlock';
+import { ImpactMetricsBlock } from '@/components/reports/ImpactMetricsBlock';
 
 interface Props {
   data: InteractionReport | undefined;
