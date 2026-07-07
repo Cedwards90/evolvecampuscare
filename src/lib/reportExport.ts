@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import type { InteractionReport } from '@/hooks/useInteractionReport';
+import type { AISummaryResult } from '@/lib/reportAiSummary';
 
 const slug = (s: string | null | undefined) =>
   (s || 'case-manager').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
