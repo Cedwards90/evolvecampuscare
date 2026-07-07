@@ -44,7 +44,7 @@ function toCsvSection(title: string, headers: string[], rows: unknown[][]): stri
   return lines.join('\n');
 }
 
-export function exportReportCsv(r: InteractionReport) {
+export function exportReportCsv(r: InteractionReport, ai?: AISummaryResult | null) {
   const sections: string[] = [];
   sections.push(
     toCsvSection(
