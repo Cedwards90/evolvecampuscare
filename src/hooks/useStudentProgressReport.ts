@@ -91,6 +91,10 @@ export interface StudentProgressReport {
   actionItems: ActionItem[];
   // Hint for the AI panel: don't even call the AI when too sparse
   aiEligible: boolean;
+  // Life Skills progress (per-student aggregation) and expanded impact metrics.
+  // Both are computed from real records — nothing fabricated.
+  lifeSkills: LifeSkillsProgressResult;
+  impactMetrics: ImpactMetrics;
 }
 
 export function getStudentReportPresetRange(
