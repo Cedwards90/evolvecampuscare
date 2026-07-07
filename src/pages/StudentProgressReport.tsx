@@ -402,6 +402,19 @@ export default function StudentProgressReportPage() {
       unresolvedRequests: unresolvedEnriched,
       actionItems,
       aiEligible,
+      lifeSkills: (await import('@/hooks/useLifeSkillsProgress')).emptyLifeSkillsResult(),
+      impactMetrics: {
+        scopeLabel: 'This student',
+        noteBreakdown: [],
+        lastNoteAt: null,
+        surveys: { sent: surveysInRange.length, completed: surveysInRange.filter((s) => !!s.completed_at).length, responseRate: surveysInRange.length ? surveysInRange.filter((s) => !!s.completed_at).length / surveysInRange.length : null },
+        certifications: { earnedInRange: 0, active: 0, expiringSoon: 0 },
+        supportNeeds: { openTotal: unresolved.length, byCategory: [], byPriority: [] },
+        referrals: { createdInRange: 0, clickedInRange: 0 },
+        milestones: { plansOnFile: 0, graduationsInRange: 0, stalled: 0 },
+        engagement: { messagesSent: messagesSent.length, messagesReceived: messagesReceived.length, activeDays: 0 },
+        employmentReadiness: { employed: 0, seeking: 0, unknown: 0, m05PostAvg: null },
+      },
     } as StudentProgressReport;
   };
 
