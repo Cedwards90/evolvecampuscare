@@ -197,6 +197,11 @@ function App() {
                       <StudentProgressReportPage />
                     </ProtectedRoute>
                   } />
+                  <Route path="/reports/organization" element={
+                    <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                      <OrganizationReport />
+                    </ProtectedRoute>
+                  } />
                   
                   <Route path="/appointments" element={
                     <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
