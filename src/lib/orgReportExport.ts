@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import type { OrgReport } from '@/hooks/useOrganizationReport';
+import type { AISummaryResult } from '@/lib/reportAiSummary';
 
 const FOREST: [number, number, number] = [5, 77, 59];
 const SAGE: [number, number, number] = [136, 169, 140];
