@@ -16,7 +16,14 @@ import {
   type ActionItem,
   type CheckInLite,
   type SurveyInvitationLite,
+  type ExpiringCertLite,
+  type StalledPlanLite,
 } from '@/lib/studentProgressRules';
+import {
+  computeLifeSkillsProgress,
+  type LifeSkillsProgressResult,
+} from '@/hooks/useLifeSkillsProgress';
+import type { ImpactMetrics } from '@/components/reports/ImpactMetricsBlock';
 
 export type StudentReportPreset = 'daily' | 'weekly' | 'monthly' | 'custom';
 
