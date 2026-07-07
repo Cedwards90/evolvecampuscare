@@ -219,7 +219,7 @@ export function exportReportCsv(r: InteractionReport, ai?: AISummaryResult | nul
   downloadBlob('\ufeff' + sections.join('\n'), 'text/csv;charset=utf-8', reportFilename(r, 'csv'));
 }
 
-export function exportReportPdf(r: InteractionReport) {
+export function exportReportPdf(r: InteractionReport, ai?: AISummaryResult | null) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const orgName = r.organization?.name?.trim();
