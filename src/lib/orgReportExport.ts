@@ -127,6 +127,23 @@ export function exportOrgReportCsv(r: OrgReport, ai?: AISummaryResult | null) {
       r.topUnresolved.map((u) => [u.title, u.student_name || '', u.priority, u.status, u.ageDays, u.is_emergency ? 'yes' : 'no']),
     ),
   );
+  if (ai) {
+    parts.push(
+      csvSection(
+        'AI Summary (Recommendations)',
+        ['Section', 'Content'],
+        [
+          ['Headline', ai.headline],
+          ['Trends', ai.trends],
+          ['Improvements', ai.improvements],
+          ['Risk areas', ai.risk_areas],
+          ['Recommended next steps', ai.next_steps],
+          ['Generated at', ai.generated_at],
+          ['Model', ai.model || ''],
+        ],
+      ),
+    );
+  }
   download('\ufeff' + parts.join('\n'), 'text/csv;charset=utf-8', orgReportFilename(r, 'csv'));
 }
 
