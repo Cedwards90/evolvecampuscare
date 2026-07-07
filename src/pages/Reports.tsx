@@ -89,25 +89,41 @@ export default function Reports() {
     };
   }, [data, filters]);
 
-  const handleExportPdf = () => {
+  const [exporting, setExporting] = useState<null | 'pdf' | 'csv'>(null);
+
+  const handleExportPdf = async () => {
     if (!data) return;
+    setExporting('pdf');
     try {
-      exportReportPdf(data);
+      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data));
+      if (!ai) {
+        toast({ title: 'AI summary unavailable', description: 'Exporting PDF without the AI summary.' });
+      }
+      exportReportPdf(data, ai);
     } catch (e) {
       toast({ title: 'PDF export failed', description: (e as Error).message, variant: 'destructive' });
+    } finally {
+      setExporting(null);
     }
   };
 
-  const handleExportCsv = () => {
+  const handleExportCsv = async () => {
     if (!data) return;
+    setExporting('csv');
     try {
-      exportReportCsv(data);
+      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data));
+      if (!ai) {
+        toast({ title: 'AI summary unavailable', description: 'Exporting CSV without the AI summary.' });
+      }
+      exportReportCsv(data, ai);
     } catch (e) {
       toast({ title: 'CSV export failed', description: (e as Error).message, variant: 'destructive' });
+    } finally {
+      setExporting(null);
     }
   };
 
-  const exportsDisabled = !data || isLoading;
+  const exportsDisabled = !data || isLoading || exporting !== null;
 
   return (
     <SidebarLayout>
