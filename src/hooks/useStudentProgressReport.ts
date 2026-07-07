@@ -164,6 +164,12 @@ export function useStudentProgressReport({
         appointmentsRes,
         checkInsLatestRes,
         checkInsInRangeRes,
+        certsRes,
+        referralsRes,
+        planRes,
+        outcomeRes,
+        lifeSkillsRes,
+        notesAllRes,
       ] = await Promise.all([
         supabase.from('profiles').select('*').eq('user_id', studentId).maybeSingle(),
         supabase
@@ -178,7 +184,7 @@ export function useStudentProgressReport({
           .from('request_updates')
           .select('*')
           .order('created_at', { ascending: false })
-          .limit(200), // we'll filter below by request_id of this student
+          .limit(200),
         supabase
           .from('request_updates')
           .select('*')
@@ -231,6 +237,38 @@ export function useStudentProgressReport({
           .gte('created_at', fromIso)
           .lte('created_at', toIso)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('student_certifications')
+          .select('id, custom_name, status, completion_date, expiration_date, catalog_id, certification_catalog(name)')
+          .eq('student_id', studentId),
+        supabase
+          .from('resource_recommendations')
+          .select('id, created_at, clicked_at')
+          .eq('student_id', studentId)
+          .gte('created_at', fromIso)
+          .lte('created_at', toIso),
+        supabase
+          .from('post_graduation_plans')
+          .select('id, updated_at, graduation_date')
+          .eq('student_id', studentId)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('participant_outcomes')
+          .select('employment_status, program_completed, program_completion_date')
+          .eq('student_id', studentId)
+          .maybeSingle(),
+        supabase
+          .from('impact_survey_responses')
+          .select('score_summary, submitted_at, impact_survey_templates!inner(slug)')
+          .eq('student_id', studentId),
+        supabase
+          .from('file_notes')
+          .select('note_type, created_at')
+          .eq('student_id', studentId)
+          .order('created_at', { ascending: false })
+          .limit(200),
       ]);
 
       const errors = [
@@ -246,6 +284,12 @@ export function useStudentProgressReport({
         appointmentsRes.error,
         checkInsLatestRes.error,
         checkInsInRangeRes.error,
+        certsRes.error,
+        referralsRes.error,
+        planRes.error,
+        outcomeRes.error,
+        lifeSkillsRes.error,
+        notesAllRes.error,
       ].filter(Boolean);
       if (errors.length) throw errors[0];
 
