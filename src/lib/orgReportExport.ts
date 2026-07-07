@@ -147,7 +147,7 @@ export function exportOrgReportCsv(r: OrgReport, ai?: AISummaryResult | null) {
   download('\ufeff' + parts.join('\n'), 'text/csv;charset=utf-8', orgReportFilename(r, 'csv'));
 }
 
-export function exportOrgReportPdf(r: OrgReport) {
+export function exportOrgReportPdf(r: OrgReport, ai?: AISummaryResult | null) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const pageWidth = doc.internal.pageSize.getWidth();
 
