@@ -45,7 +45,7 @@ export function orgReportFilename(r: OrgReport, ext: 'pdf' | 'csv') {
   return `evolve-org-report_${from}_${to}.${ext}`;
 }
 
-export function exportOrgReportCsv(r: OrgReport) {
+export function exportOrgReportCsv(r: OrgReport, ai?: AISummaryResult | null) {
   const parts: string[] = [];
   parts.push(
     csvSection(
