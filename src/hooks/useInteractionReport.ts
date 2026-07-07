@@ -3,6 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Profile, SupportRequest, RequestUpdate, Appointment } from '@/types/database';
+import {
+  computeLifeSkillsProgress,
+  emptyLifeSkillsResult,
+  type LifeSkillsProgressResult,
+} from '@/hooks/useLifeSkillsProgress';
+import type { ImpactMetrics } from '@/components/reports/ImpactMetricsBlock';
 
 export type ReportPreset = 'daily' | 'weekly' | 'monthly' | 'custom';
 
@@ -49,6 +55,8 @@ export interface InteractionReport {
     rows: Appointment[];
   };
   unresolved: SupportRequest[];
+  lifeSkills: LifeSkillsProgressResult;
+  impactMetrics: ImpactMetrics;
 }
 
 export function getPresetRange(preset: Exclude<ReportPreset, 'custom'>): { from: Date; to: Date } {
@@ -253,6 +261,110 @@ export function useInteractionReport({ caseManagerId, from, to }: InteractionRep
         if (orgRow) organization = { id: orgRow.id, name: orgRow.name };
       }
 
+      // --- Life Skills & impact metrics aggregation over caseload ---
+      const studentIdsAll = (assignmentsRes.data || []).map((a) => a.student_id).filter(Boolean) as string[];
+      let lifeSkills: LifeSkillsProgressResult = emptyLifeSkillsResult();
+      let certsEarnedInRange = 0;
+      let certsActive = 0;
+      let certsExpiringSoon = 0;
+      let referralsCreatedInRange = 0;
+      let referralsClickedInRange = 0;
+      let plansOnFile = 0;
+      let graduationsInRange = 0;
+      let plansStalled = 0;
+      let employedCount = 0;
+      let seekingCount = 0;
+      let unknownEmpCount = 0;
+      if (studentIdsAll.length > 0) {
+        const [lsRes, certsRes, refsRes, plansRes, outcomesRes] = await Promise.all([
+          supabase
+            .from('impact_survey_responses')
+            .select('score_summary, impact_survey_templates!inner(slug)')
+            .in('student_id', studentIdsAll),
+          supabase
+            .from('student_certifications')
+            .select('status, completion_date, expiration_date')
+            .in('student_id', studentIdsAll),
+          supabase
+            .from('resource_recommendations')
+            .select('id, created_at, clicked_at')
+            .in('student_id', studentIdsAll)
+            .gte('created_at', fromIso)
+            .lte('created_at', toIso),
+          supabase
+            .from('post_graduation_plans')
+            .select('id, updated_at, graduation_date')
+            .in('student_id', studentIdsAll),
+          supabase
+            .from('participant_outcomes')
+            .select('employment_status, program_completion_date')
+            .in('student_id', studentIdsAll),
+        ]);
+        const lsRows = ((lsRes.data as unknown as Array<{
+          score_summary: Record<string, unknown> | null;
+          impact_survey_templates: { slug: string };
+        }>) || []).map((r) => ({ slug: r.impact_survey_templates?.slug, score: r.score_summary }));
+        lifeSkills = computeLifeSkillsProgress(lsRows);
+
+        const nowMs = Date.now();
+        const in30 = nowMs + 30 * 24 * 60 * 60 * 1000;
+        ((certsRes.data || []) as Array<{ status: string; completion_date: string | null; expiration_date: string | null }>).forEach((c) => {
+          if (c.status === 'active' || c.status === 'earned' || c.status === 'completed') certsActive += 1;
+          if (c.completion_date && c.completion_date >= fromIso.slice(0, 10) && c.completion_date <= toIso.slice(0, 10)) certsEarnedInRange += 1;
+          if (c.expiration_date) {
+            const t = new Date(c.expiration_date).getTime();
+            if (t >= nowMs && t <= in30) certsExpiringSoon += 1;
+          }
+        });
+        const refs = (refsRes.data || []) as Array<{ clicked_at: string | null }>;
+        referralsCreatedInRange = refs.length;
+        referralsClickedInRange = refs.filter((r) => !!r.clicked_at).length;
+
+        const plans = (plansRes.data || []) as Array<{ id: string; updated_at: string | null; graduation_date: string | null }>;
+        plansOnFile = plans.length;
+        plans.forEach((p) => {
+          if (p.graduation_date && p.graduation_date >= fromIso.slice(0, 10) && p.graduation_date <= toIso.slice(0, 10)) graduationsInRange += 1;
+          if (p.updated_at) {
+            const days = Math.floor((nowMs - new Date(p.updated_at).getTime()) / (1000 * 60 * 60 * 24));
+            if (days > 30) plansStalled += 1;
+          }
+        });
+
+        ((outcomesRes.data || []) as Array<{ employment_status: string | null }>).forEach((o) => {
+          const s = (o.employment_status || '').toLowerCase();
+          if (s.includes('employed') && !s.includes('un')) employedCount += 1;
+          else if (s.includes('seeking') || s.includes('unemployed')) seekingCount += 1;
+          else unknownEmpCount += 1;
+        });
+      }
+      const m05 = lifeSkills.modules.find((m) => m.module.id === 'm05');
+
+      const impactMetrics: ImpactMetrics = {
+        scopeLabel: `${studentIdsAll.length} student${studentIdsAll.length === 1 ? '' : 's'} in caseload`,
+        noteBreakdown: Object.entries(notesByType).map(([type, count]) => ({ type, count: count as number })),
+        lastNoteAt: null,
+        surveys: {
+          sent: surveys.length,
+          completed: surveys.filter((s) => !!s.completed_at).length,
+          responseRate: surveys.length > 0 ? surveys.filter((s) => !!s.completed_at).length / surveys.length : null,
+        },
+        certifications: { earnedInRange: certsEarnedInRange, active: certsActive, expiringSoon: certsExpiringSoon },
+        supportNeeds: {
+          openTotal: unresolved.length,
+          byCategory: Object.entries(byCategory).map(([key, count]) => ({ key, count: count as number })),
+          byPriority: Object.entries(byPriority).map(([key, count]) => ({ key, count: count as number })),
+        },
+        referrals: { createdInRange: referralsCreatedInRange, clickedInRange: referralsClickedInRange },
+        milestones: { plansOnFile, graduationsInRange, stalled: plansStalled },
+        engagement: { messagesSent: sent.length, messagesReceived: received.length, activeDays: 0 },
+        employmentReadiness: {
+          employed: employedCount,
+          seeking: seekingCount,
+          unknown: unknownEmpCount,
+          m05PostAvg: m05?.postAvg ?? null,
+        },
+      };
+
       return {
         caseManager: (profileRes.data || null) as Profile | null,
         organization,
@@ -288,6 +400,8 @@ export function useInteractionReport({ caseManagerId, from, to }: InteractionRep
         statusChanges: (statusChangesRes.data || []) as RequestUpdate[],
         followUps,
         unresolved: unresolved.map(hydrate),
+        lifeSkills,
+        impactMetrics,
       };
     },
     staleTime: 60 * 1000,

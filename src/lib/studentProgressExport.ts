@@ -195,6 +195,46 @@ function buildCsv(r: StudentProgressReport, ai?: AISummarySections | null): stri
     ),
   );
 
+  // Life Skills progress per module
+  sections.push(
+    toCsvSection(
+      'Life Skills Progress',
+      ['Module', 'Title', 'Pre', 'Post', 'Delta', 'Pre n', 'Post n'],
+      r.lifeSkills.modules.map((m) => [
+        `M${String(m.module.number).padStart(2, '0')}`,
+        m.module.title,
+        m.preAvg == null ? '' : m.preAvg.toFixed(2),
+        m.postAvg == null ? '' : m.postAvg.toFixed(2),
+        m.delta == null ? '' : m.delta.toFixed(2),
+        m.preN,
+        m.postN,
+      ]),
+    ),
+  );
+
+  // Expanded impact metrics
+  sections.push(
+    toCsvSection(
+      'Expanded Impact Metrics',
+      ['Metric', 'Value'],
+      [
+        ['Certifications earned in range', r.impactMetrics.certifications.earnedInRange],
+        ['Certifications active', r.impactMetrics.certifications.active],
+        ['Certifications expiring ≤30d', r.impactMetrics.certifications.expiringSoon],
+        ['Referrals created', r.impactMetrics.referrals.createdInRange],
+        ['Referrals clicked', r.impactMetrics.referrals.clickedInRange],
+        ['Post-grad plans on file', r.impactMetrics.milestones.plansOnFile],
+        ['Graduations in range', r.impactMetrics.milestones.graduationsInRange],
+        ['Plans stalled ≥30d', r.impactMetrics.milestones.stalled],
+        ['Distinct active days', r.impactMetrics.engagement.activeDays],
+        ['Employment: employed', r.impactMetrics.employmentReadiness.employed],
+        ['Employment: seeking', r.impactMetrics.employmentReadiness.seeking],
+        ['Employment: unknown', r.impactMetrics.employmentReadiness.unknown],
+        ['M05 workforce readiness (post)', r.impactMetrics.employmentReadiness.m05PostAvg == null ? '' : r.impactMetrics.employmentReadiness.m05PostAvg.toFixed(2)],
+      ],
+    ),
+  );
+
   if (ai) {
     sections.push(
       toCsvSection(
@@ -453,6 +493,41 @@ function appendStudentSections(
       styles: { fontSize: 9 },
     });
   }
+
+  // Life Skills progress
+  autoTable(doc, {
+    head: [['Life Skills — Module', 'Pre', 'Post', 'Delta', 'Pre n', 'Post n']],
+    body: r.lifeSkills.modules.map((m) => [
+      `M${String(m.module.number).padStart(2, '0')} · ${m.module.title}`,
+      m.preAvg == null ? '—' : m.preAvg.toFixed(2),
+      m.postAvg == null ? '—' : m.postAvg.toFixed(2),
+      m.delta == null ? '—' : m.delta.toFixed(2),
+      m.preN,
+      m.postN,
+    ]),
+    headStyles: { fillColor: FOREST },
+    theme: 'striped',
+    styles: { fontSize: 9 },
+  });
+
+  // Expanded impact metrics
+  autoTable(doc, {
+    head: [['Impact Metric', 'Value']],
+    body: [
+      ['Certifications earned in range', String(r.impactMetrics.certifications.earnedInRange)],
+      ['Certifications active', String(r.impactMetrics.certifications.active)],
+      ['Certifications expiring ≤30d', String(r.impactMetrics.certifications.expiringSoon)],
+      ['Referrals created / clicked', `${r.impactMetrics.referrals.createdInRange} / ${r.impactMetrics.referrals.clickedInRange}`],
+      ['Plans on file / stalled ≥30d', `${r.impactMetrics.milestones.plansOnFile} / ${r.impactMetrics.milestones.stalled}`],
+      ['Graduations in range', String(r.impactMetrics.milestones.graduationsInRange)],
+      ['Distinct active days', String(r.impactMetrics.engagement.activeDays)],
+      ['Employment (E/S/U)', `${r.impactMetrics.employmentReadiness.employed} / ${r.impactMetrics.employmentReadiness.seeking} / ${r.impactMetrics.employmentReadiness.unknown}`],
+      ['M05 workforce readiness (post)', r.impactMetrics.employmentReadiness.m05PostAvg == null ? '—' : r.impactMetrics.employmentReadiness.m05PostAvg.toFixed(2)],
+    ],
+    headStyles: { fillColor: SAGE },
+    theme: 'striped',
+    styles: { fontSize: 9 },
+  });
 
   // AI narrative
   if (ai) {

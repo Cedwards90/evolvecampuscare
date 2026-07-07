@@ -50,6 +50,7 @@ import StudentCheckIn from "./pages/StudentCheckIn";
 import PostGraduationPlan from "./pages/PostGraduationPlan";
 import MySubmissions from "./pages/MySubmissions";
 import Reports from "./pages/Reports";
+import OrganizationReport from "./pages/OrganizationReport";
 import StudentProgressReportPage from "./pages/StudentProgressReport";
 import NotFound from "./pages/NotFound";
 import AcceptNda from "./pages/AcceptNda";
@@ -194,6 +195,11 @@ function App() {
                   <Route path="/reports/student/:studentId" element={
                     <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
                       <StudentProgressReportPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/reports/organization" element={
+                    <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                      <OrganizationReport />
                     </ProtectedRoute>
                   } />
                   

@@ -13,6 +13,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { InteractionReport } from '@/hooks/useInteractionReport';
+import { LifeSkillsProgressBlock } from '@/components/reports/LifeSkillsProgressBlock';
+import { ImpactMetricsBlock } from '@/components/reports/ImpactMetricsBlock';
 
 interface Props {
   data: InteractionReport | undefined;
@@ -128,6 +130,10 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
           </CardContent>
         </Card>
       </div>
+
+      <LifeSkillsProgressBlock data={data.lifeSkills} title="Life Skills — caseload average" description="Pre vs post confidence across your assigned caseload." />
+
+      <ImpactMetricsBlock metrics={data.impactMetrics} />
 
       <Card>
         <CardHeader><CardTitle className="text-base">Status changes</CardTitle></CardHeader>

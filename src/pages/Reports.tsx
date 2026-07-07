@@ -131,6 +131,15 @@ export default function Reports() {
                 <ArrowRight className="h-3 w-3 opacity-60" />
               </Link>
             </TabsTrigger>
+            {(role === 'admin' || role === 'org_admin') && (
+              <TabsTrigger value="organization" className="gap-2" asChild>
+                <Link to="/reports/organization">
+                  <Users className="h-4 w-4" />
+                  Organization
+                  <ArrowRight className="h-3 w-3 opacity-60" />
+                </Link>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="caseload" className="space-y-6">

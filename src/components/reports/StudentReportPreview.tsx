@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/table';
 import type { StudentProgressReport } from '@/hooks/useStudentProgressReport';
 import type { RiskSeverity } from '@/lib/studentProgressRules';
+import { LifeSkillsProgressBlock } from '@/components/reports/LifeSkillsProgressBlock';
+import { ImpactMetricsBlock } from '@/components/reports/ImpactMetricsBlock';
 
 interface Props {
   data: StudentProgressReport | undefined;
@@ -159,6 +161,10 @@ export function StudentReportPreview({
           </CardContent>
         </Card>
       )}
+
+      <LifeSkillsProgressBlock data={data.lifeSkills} />
+
+      <ImpactMetricsBlock metrics={data.impactMetrics} />
 
       <Card>
         <CardHeader>
