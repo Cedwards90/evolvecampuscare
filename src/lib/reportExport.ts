@@ -293,8 +293,39 @@ export function exportReportPdf(r: InteractionReport) {
     styles: { fontSize: 10 },
   });
 
+  // Life Skills progress
   autoTable(doc, {
-    head: [['Requests', 'Bucket', 'Count']],
+    head: [['Life Skills — Module', 'Pre', 'Post', 'Delta', 'Pre n', 'Post n']],
+    body: r.lifeSkills.modules.map((m) => [
+      `M${String(m.module.number).padStart(2, '0')} · ${m.module.title}`,
+      m.preAvg == null ? '—' : m.preAvg.toFixed(2),
+      m.postAvg == null ? '—' : m.postAvg.toFixed(2),
+      m.delta == null ? '—' : m.delta.toFixed(2),
+      m.preN,
+      m.postN,
+    ]),
+    headStyles: { fillColor: [5, 77, 59] },
+    theme: 'striped',
+    styles: { fontSize: 9 },
+  });
+
+  // Expanded impact metrics
+  autoTable(doc, {
+    head: [['Impact Metric', 'Value']],
+    body: [
+      ['Scope', r.impactMetrics.scopeLabel],
+      ['Certifications earned in range', String(r.impactMetrics.certifications.earnedInRange)],
+      ['Certifications active', String(r.impactMetrics.certifications.active)],
+      ['Certifications expiring ≤30d', String(r.impactMetrics.certifications.expiringSoon)],
+      ['Referrals created / clicked', `${r.impactMetrics.referrals.createdInRange} / ${r.impactMetrics.referrals.clickedInRange}`],
+      ['Plans on file / stalled ≥30d', `${r.impactMetrics.milestones.plansOnFile} / ${r.impactMetrics.milestones.stalled}`],
+      ['Graduations in range', String(r.impactMetrics.milestones.graduationsInRange)],
+      ['Employed / Seeking / Unknown', `${r.impactMetrics.employmentReadiness.employed} / ${r.impactMetrics.employmentReadiness.seeking} / ${r.impactMetrics.employmentReadiness.unknown}`],
+      ['M05 workforce readiness (post)', r.impactMetrics.employmentReadiness.m05PostAvg == null ? '—' : r.impactMetrics.employmentReadiness.m05PostAvg.toFixed(2)],
+    ],
+    headStyles: { fillColor: [136, 169, 140] },
+    theme: 'striped',
+    styles: { fontSize: 9 },
     body: [
       ['Status', 'Opened', r.requests.opened],
       ['Status', 'In progress', r.requests.inProgress],
