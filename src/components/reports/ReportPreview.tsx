@@ -131,6 +131,10 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
         </Card>
       </div>
 
+      <LifeSkillsProgressBlock data={data.lifeSkills} title="Life Skills — caseload average" description="Pre vs post confidence across your assigned caseload." />
+
+      <ImpactMetricsBlock metrics={data.impactMetrics} />
+
       <Card>
         <CardHeader><CardTitle className="text-base">Status changes</CardTitle></CardHeader>
         <CardContent>
