@@ -13,6 +13,7 @@ import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { ReportRangePicker } from '@/components/reports/ReportRangePicker';
 import { LifeSkillsProgressBlock } from '@/components/reports/LifeSkillsProgressBlock';
 import { ImpactMetricsBlock } from '@/components/reports/ImpactMetricsBlock';
+import { ReportAISummary, type ReportAISummaryPayload } from '@/components/reports/ReportAISummary';
 import { useReportStudentFilters } from '@/hooks/useReportStudentFilters';
 import { useOrganizationReport } from '@/hooks/useOrganizationReport';
 import { getPresetRange, type ReportPreset } from '@/hooks/useInteractionReport';
