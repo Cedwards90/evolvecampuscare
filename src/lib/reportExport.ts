@@ -198,6 +198,24 @@ export function exportReportCsv(r: InteractionReport, ai?: AISummaryResult | nul
     ),
   );
 
+  if (ai) {
+    sections.push(
+      toCsvSection(
+        'AI Summary (Recommendations)',
+        ['Section', 'Content'],
+        [
+          ['Headline', ai.headline],
+          ['Trends', ai.trends],
+          ['Improvements', ai.improvements],
+          ['Risk areas', ai.risk_areas],
+          ['Recommended next steps', ai.next_steps],
+          ['Generated at', ai.generated_at],
+          ['Model', ai.model || ''],
+        ],
+      ),
+    );
+  }
+
   downloadBlob('\ufeff' + sections.join('\n'), 'text/csv;charset=utf-8', reportFilename(r, 'csv'));
 }
 
