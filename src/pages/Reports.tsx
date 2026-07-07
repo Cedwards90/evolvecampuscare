@@ -23,6 +23,7 @@ import {
 import { ReportRangePicker } from '@/components/reports/ReportRangePicker';
 import { ReportPreview } from '@/components/reports/ReportPreview';
 import { exportReportCsv, exportReportPdf } from '@/lib/reportExport';
+import { buildCaseloadAiPayload, tryFetchAiSummary } from '@/lib/reportAiSummary';
 import { toast } from '@/hooks/use-toast';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
@@ -88,25 +89,41 @@ export default function Reports() {
     };
   }, [data, filters]);
 
-  const handleExportPdf = () => {
+  const [exporting, setExporting] = useState<null | 'pdf' | 'csv'>(null);
+
+  const handleExportPdf = async () => {
     if (!data) return;
+    setExporting('pdf');
     try {
-      exportReportPdf(data);
+      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data));
+      if (!ai) {
+        toast({ title: 'AI summary unavailable', description: 'Exporting PDF without the AI summary.' });
+      }
+      exportReportPdf(data, ai);
     } catch (e) {
       toast({ title: 'PDF export failed', description: (e as Error).message, variant: 'destructive' });
+    } finally {
+      setExporting(null);
     }
   };
 
-  const handleExportCsv = () => {
+  const handleExportCsv = async () => {
     if (!data) return;
+    setExporting('csv');
     try {
-      exportReportCsv(data);
+      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data));
+      if (!ai) {
+        toast({ title: 'AI summary unavailable', description: 'Exporting CSV without the AI summary.' });
+      }
+      exportReportCsv(data, ai);
     } catch (e) {
       toast({ title: 'CSV export failed', description: (e as Error).message, variant: 'destructive' });
+    } finally {
+      setExporting(null);
     }
   };
 
-  const exportsDisabled = !data || isLoading;
+  const exportsDisabled = !data || isLoading || exporting !== null;
 
   return (
     <SidebarLayout>
@@ -182,11 +199,11 @@ export default function Reports() {
                       {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh'}
                     </Button>
                     <Button variant="outline" onClick={handleExportCsv} disabled={exportsDisabled}>
-                      <FileText className="mr-2 h-4 w-4" />
+                      {exporting === 'csv' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
                       CSV
                     </Button>
                     <Button onClick={handleExportPdf} disabled={exportsDisabled}>
-                      <Download className="mr-2 h-4 w-4" />
+                      {exporting === 'pdf' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                       PDF
                     </Button>
                   </div>

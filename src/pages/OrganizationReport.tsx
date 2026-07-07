@@ -18,6 +18,7 @@ import { useReportStudentFilters } from '@/hooks/useReportStudentFilters';
 import { useOrganizationReport } from '@/hooks/useOrganizationReport';
 import { getPresetRange, type ReportPreset } from '@/hooks/useInteractionReport';
 import { exportOrgReportCsv, exportOrgReportPdf } from '@/lib/orgReportExport';
+import { buildOrgAiPayload, tryFetchAiSummary } from '@/lib/reportAiSummary';
 import { toast } from '@/hooks/use-toast';
 import type { RiskSeverity } from '@/lib/studentProgressRules';
 
@@ -59,24 +60,40 @@ export default function OrganizationReport() {
     enabled: !filterLoading,
   });
 
-  const handleExportPdf = () => {
+  const [exporting, setExporting] = useState<null | 'pdf' | 'csv'>(null);
+
+  const handleExportPdf = async () => {
     if (!data) return;
+    setExporting('pdf');
     try {
-      exportOrgReportPdf(data);
+      const ai = await tryFetchAiSummary(buildOrgAiPayload(data));
+      if (!ai) {
+        toast({ title: 'AI summary unavailable', description: 'Exporting PDF without the AI summary.' });
+      }
+      exportOrgReportPdf(data, ai);
     } catch (e) {
       toast({ title: 'PDF export failed', description: (e as Error).message, variant: 'destructive' });
+    } finally {
+      setExporting(null);
     }
   };
-  const handleExportCsv = () => {
+  const handleExportCsv = async () => {
     if (!data) return;
+    setExporting('csv');
     try {
-      exportOrgReportCsv(data);
+      const ai = await tryFetchAiSummary(buildOrgAiPayload(data));
+      if (!ai) {
+        toast({ title: 'AI summary unavailable', description: 'Exporting CSV without the AI summary.' });
+      }
+      exportOrgReportCsv(data, ai);
     } catch (e) {
       toast({ title: 'CSV export failed', description: (e as Error).message, variant: 'destructive' });
+    } finally {
+      setExporting(null);
     }
   };
 
-  const exportsDisabled = !data || isLoading;
+  const exportsDisabled = !data || isLoading || exporting !== null;
 
   return (
     <SidebarLayout>
@@ -137,10 +154,10 @@ export default function OrganizationReport() {
                 {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh'}
               </Button>
               <Button variant="outline" onClick={handleExportCsv} disabled={exportsDisabled}>
-                <FileText className="mr-2 h-4 w-4" /> CSV
+                {exporting === 'csv' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />} CSV
               </Button>
               <Button onClick={handleExportPdf} disabled={exportsDisabled}>
-                <Download className="mr-2 h-4 w-4" /> PDF
+                {exporting === 'pdf' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} PDF
               </Button>
             </div>
           </CardContent>
