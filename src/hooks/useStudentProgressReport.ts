@@ -408,6 +408,70 @@ export function useStudentProgressReport({
           return a.created_at < b.created_at ? -1 : 1;
         });
 
+      // --- Life Skills (per-student) ---
+      const lifeSkillsRows = ((lifeSkillsRes.data as unknown as Array<{
+        score_summary: Record<string, unknown> | null;
+        impact_survey_templates: { slug: string };
+      }>) || []).map((r) => ({
+        slug: r.impact_survey_templates?.slug,
+        score: r.score_summary,
+      }));
+      const lifeSkills = computeLifeSkillsProgress(lifeSkillsRows);
+
+      // --- Certifications ---
+      const certRows = (certsRes.data || []) as Array<{
+        id: string;
+        custom_name: string | null;
+        status: string;
+        completion_date: string | null;
+        expiration_date: string | null;
+        certification_catalog?: { name: string } | null;
+      }>;
+      const nowMs = now.getTime();
+      const in30 = nowMs + 30 * 24 * 60 * 60 * 1000;
+      const earnedInRange = certRows.filter(
+        (c) => c.completion_date && c.completion_date >= fromIso.slice(0, 10) && c.completion_date <= toIso.slice(0, 10),
+      ).length;
+      const activeCerts = certRows.filter((c) => c.status === 'active' || c.status === 'earned' || c.status === 'completed');
+      const expiringCerts: ExpiringCertLite[] = certRows
+        .filter((c) => c.expiration_date && new Date(c.expiration_date).getTime() <= in30 && new Date(c.expiration_date).getTime() >= nowMs)
+        .map((c) => ({
+          id: c.id,
+          name: c.custom_name || c.certification_catalog?.name || 'Certification',
+          daysUntilExpiration: Math.max(
+            0,
+            Math.round((new Date(c.expiration_date!).getTime() - nowMs) / (1000 * 60 * 60 * 24)),
+          ),
+        }));
+
+      // --- Referrals (resource recommendations) ---
+      const referralRows = (referralsRes.data || []) as Array<{ id: string; clicked_at: string | null }>;
+
+      // --- Plan / stalled ---
+      const plan = planRes.data as { id: string; updated_at: string | null; graduation_date: string | null } | null;
+      const stalledPlans: StalledPlanLite[] = [];
+      if (plan?.id && plan?.updated_at) {
+        const daysSince = Math.floor((nowMs - new Date(plan.updated_at).getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSince > 30) stalledPlans.push({ id: plan.id, updatedAt: plan.updated_at });
+      }
+
+      // --- Attendance rate (kept vs scheduled in range) ---
+      const scheduledForAttendance = appointments.filter((a) => a.status !== 'cancelled');
+      const keptAppointments = scheduledForAttendance.filter(
+        (a) => new Date(a.scheduled_at) < now && a.status !== 'no_show' && a.status !== 'cancelled',
+      );
+      const attendanceRate =
+        scheduledForAttendance.length > 0 ? keptAppointments.length / scheduledForAttendance.length : null;
+
+      // --- Last check-in (any time) ---
+      const lastCheckInAt = checkInsLatest[0]?.created_at ?? null;
+
+      // --- Life-skills deltas for rules ---
+      const lifeSkillsDeltas = lifeSkills.modules.map((m) => ({
+        moduleTitle: m.module.title,
+        delta: m.delta,
+      }));
+
       const risks = evaluateRisks({
         rangeFrom: from,
         rangeTo: to,
@@ -418,6 +482,11 @@ export function useStudentProgressReport({
         appointmentsInRange: appointments,
         checkInsLatest,
         surveys,
+        lifeSkillsDeltas,
+        attendanceRate,
+        lastCheckInAt,
+        expiringCerts,
+        stalledPlans,
       });
 
       const actionItems = deriveActionItems(risks);
@@ -428,6 +497,88 @@ export function useStudentProgressReport({
         statusChangesInRangeCount: statusChangesInRange.length,
         appointmentsInRangeCount: appointments.length,
       });
+
+      // --- Impact metrics assembly ---
+      const notesAllRows = (notesAllRes.data || []) as Array<{ note_type: string; created_at: string }>;
+      const noteTypeCounts = new Map<string, number>();
+      notesAllRows.forEach((n) => noteTypeCounts.set(n.note_type, (noteTypeCounts.get(n.note_type) || 0) + 1));
+      const noteBreakdown = Array.from(noteTypeCounts.entries())
+        .map(([type, count]) => ({ type, count }))
+        .sort((a, b) => b.count - a.count);
+      const lastNoteAt = notesAllRows[0]?.created_at ?? null;
+
+      const openRequests = unresolved;
+      const openByCat = new Map<string, number>();
+      const openByPri = new Map<string, number>();
+      openRequests.forEach((r) => {
+        openByCat.set(r.category, (openByCat.get(r.category) || 0) + 1);
+        openByPri.set(r.priority, (openByPri.get(r.priority) || 0) + 1);
+      });
+
+      const outcome = outcomeRes.data as {
+        employment_status: string | null;
+        program_completed: boolean | null;
+        program_completion_date: string | null;
+      } | null;
+      const empStatus = (outcome?.employment_status || '').toLowerCase();
+      const employed = empStatus.includes('employed') && !empStatus.includes('un') ? 1 : 0;
+      const seeking = empStatus.includes('seeking') || empStatus.includes('unemployed') ? 1 : 0;
+      const unknownEmp = employed === 0 && seeking === 0 ? 1 : 0;
+      const m05 = lifeSkills.modules.find((m) => m.module.id === 'm05');
+
+      const activeDays = new Set<string>();
+      notes.forEach((n) => activeDays.add(n.created_at.slice(0, 10)));
+      messagesInRange.forEach((m) => activeDays.add(m.created_at.slice(0, 10)));
+      appointments.forEach((a) => activeDays.add(a.scheduled_at.slice(0, 10)));
+      checkInsInRange.forEach((c) => activeDays.add(c.created_at.slice(0, 10)));
+
+      const surveysSent = surveysInRange.length;
+      const surveysCompleted = surveysInRange.filter((s) => !!s.completed_at).length;
+      const impactMetrics: ImpactMetrics = {
+        scopeLabel: 'This student',
+        noteBreakdown,
+        lastNoteAt,
+        surveys: {
+          sent: surveysSent,
+          completed: surveysCompleted,
+          responseRate: surveysSent > 0 ? surveysCompleted / surveysSent : null,
+        },
+        certifications: {
+          earnedInRange,
+          active: activeCerts.length,
+          expiringSoon: expiringCerts.length,
+        },
+        supportNeeds: {
+          openTotal: openRequests.length,
+          byCategory: Array.from(openByCat.entries()).map(([key, count]) => ({ key, count })),
+          byPriority: Array.from(openByPri.entries()).map(([key, count]) => ({ key, count })),
+        },
+        referrals: {
+          createdInRange: referralRows.length,
+          clickedInRange: referralRows.filter((r) => !!r.clicked_at).length,
+        },
+        milestones: {
+          plansOnFile: plan?.id ? 1 : 0,
+          graduationsInRange:
+            outcome?.program_completion_date &&
+            outcome.program_completion_date >= fromIso.slice(0, 10) &&
+            outcome.program_completion_date <= toIso.slice(0, 10)
+              ? 1
+              : 0,
+          stalled: stalledPlans.length,
+        },
+        engagement: {
+          messagesSent: messagesSent.length,
+          messagesReceived: messagesReceived.length,
+          activeDays: activeDays.size,
+        },
+        employmentReadiness: {
+          employed,
+          seeking,
+          unknown: unknownEmp,
+          m05PostAvg: m05?.postAvg ?? null,
+        },
+      };
 
       return {
         student: (studentRes.data || null) as Profile | null,
@@ -464,6 +615,8 @@ export function useStudentProgressReport({
         unresolvedRequests: unresolvedEnriched,
         actionItems,
         aiEligible,
+        lifeSkills,
+        impactMetrics,
       };
     },
     staleTime: 60 * 1000,
