@@ -162,6 +162,10 @@ export function StudentReportPreview({
         </Card>
       )}
 
+      <LifeSkillsProgressBlock data={data.lifeSkills} />
+
+      <ImpactMetricsBlock metrics={data.impactMetrics} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
