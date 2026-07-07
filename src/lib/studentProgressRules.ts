@@ -39,6 +39,17 @@ export interface SurveyInvitationLite {
   completed_at: string | null;
 }
 
+export interface ExpiringCertLite {
+  id: string;
+  name: string;
+  daysUntilExpiration: number;
+}
+
+export interface StalledPlanLite {
+  id: string;
+  updatedAt: string;
+}
+
 export interface RuleInputs {
   rangeFrom: Date;
   rangeTo: Date;
@@ -49,6 +60,16 @@ export interface RuleInputs {
   appointmentsInRange: Appointment[];
   checkInsLatest: CheckInLite[]; // latest first, up to 3
   surveys: SurveyInvitationLite[]; // surveys sent to this student (any time)
+  /** Optional: per-module post - pre confidence delta. If any module posts < pre by >= 0.5, flag. */
+  lifeSkillsDeltas?: Array<{ moduleTitle: string; delta: number | null }>;
+  /** Optional: attendance = kept / scheduled non-cancelled appointments in range (0-1). */
+  attendanceRate?: number | null;
+  /** Optional: date of the student's most recent check-in (any time). */
+  lastCheckInAt?: string | null;
+  /** Optional: certifications expiring within 30 days. */
+  expiringCerts?: ExpiringCertLite[];
+  /** Optional: post-grad plans whose updated_at is older than 30 days. */
+  stalledPlans?: StalledPlanLite[];
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
