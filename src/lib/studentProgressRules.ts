@@ -188,6 +188,89 @@ export function deriveActionItems(risks: RiskIndicator[]): ActionItem[] {
     ];
   }
 
+  // 8. Life-skills regression: any module where post < pre by >= 0.5
+  const regressions = (inputs.lifeSkillsDeltas || []).filter(
+    (m) => m.delta != null && m.delta <= -0.5,
+  );
+  if (regressions.length > 0) {
+    risks.push({
+      key: 'lifeskills_regression',
+      label: 'Life Skills confidence regression',
+      severity: 'medium',
+      detail: `Post confidence dropped below pre by ≥0.5 in: ${regressions
+        .map((r) => `${r.moduleTitle} (${r.delta!.toFixed(2)})`)
+        .join(', ')}.`,
+    });
+  }
+
+  // 9. Low attendance rate in range
+  if (
+    inputs.attendanceRate != null &&
+    inputs.appointmentsInRange.length >= 2 &&
+    inputs.attendanceRate < 0.6
+  ) {
+    risks.push({
+      key: 'low_attendance',
+      label: 'Low attendance',
+      severity: 'medium',
+      detail: `${Math.round(inputs.attendanceRate * 100)}% of scheduled meetings were kept in the selected range.`,
+    });
+  }
+
+  // 10. No check-in in the last 21 days
+  if (inputs.lastCheckInAt) {
+    const days = ageInDays(inputs.lastCheckInAt, now);
+    if (days > 21) {
+      risks.push({
+        key: 'no_recent_checkin',
+        label: 'No recent check-in',
+        severity: 'low',
+        detail: `Last check-in was ${days} days ago (expected cadence is 3 weeks).`,
+      });
+    }
+  }
+
+  // 11. Certification expiring within 30 days
+  if (inputs.expiringCerts && inputs.expiringCerts.length > 0) {
+    risks.push({
+      key: 'cert_expiring',
+      label: 'Certification expiring soon',
+      severity: 'low',
+      detail: inputs.expiringCerts
+        .slice(0, 3)
+        .map((c) => `${c.name} (${c.daysUntilExpiration}d)`)
+        .join(', '),
+    });
+  }
+
+  // 12. Post-grad milestone stalled
+  if (inputs.stalledPlans && inputs.stalledPlans.length > 0) {
+    risks.push({
+      key: 'plan_stalled',
+      label: 'Post-graduation plan stalled',
+      severity: 'medium',
+      detail: `${inputs.stalledPlans.length} plan${inputs.stalledPlans.length > 1 ? 's' : ''} not updated in 30+ days.`,
+    });
+  }
+
+  return risks;
+}
+
+/**
+ * Map fired risks to concrete recommended action items.
+ * Returns a sensible default when no risks are present (no AI, no fabrication).
+ */
+export function deriveActionItems(risks: RiskIndicator[]): ActionItem[] {
+  if (risks.length === 0) {
+    return [
+      {
+        key: 'all_clear',
+        text: 'No immediate action items based on current data.',
+        severity: 'low',
+      },
+    ];
+  }
+
   const map: Record<string, string> = {
     open_emergency: 'Contact this student today and document the outcome in case notes.',
     stale_unresolved:
@@ -200,6 +283,16 @@ export function deriveActionItems(risks: RiskIndicator[]): ActionItem[] {
     reported_blockers:
       'Address the blockers raised in the latest check-in directly with the student.',
     missed_survey: 'Resend the survey invitation or follow up by message.',
+    lifeskills_regression:
+      'Re-teach or offer 1:1 coaching on the regressed module topic before the next assessment.',
+    low_attendance:
+      'Check in about scheduling barriers and consider changing the meeting cadence or time.',
+    no_recent_checkin:
+      'Send the 3-week check-in prompt and follow up if not completed within 48 hours.',
+    cert_expiring:
+      'Notify the student about upcoming certification expiry and plan renewal steps.',
+    plan_stalled:
+      'Review the post-graduation plan with the student and update milestones this week.',
   };
 
   return risks.map((r) => ({
