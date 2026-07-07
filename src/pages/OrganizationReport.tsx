@@ -18,6 +18,7 @@ import { useReportStudentFilters } from '@/hooks/useReportStudentFilters';
 import { useOrganizationReport } from '@/hooks/useOrganizationReport';
 import { getPresetRange, type ReportPreset } from '@/hooks/useInteractionReport';
 import { exportOrgReportCsv, exportOrgReportPdf } from '@/lib/orgReportExport';
+import { buildOrgAiPayload, tryFetchAiSummary } from '@/lib/reportAiSummary';
 import { toast } from '@/hooks/use-toast';
 import type { RiskSeverity } from '@/lib/studentProgressRules';
 
