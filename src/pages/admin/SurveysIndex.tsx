@@ -223,25 +223,20 @@ export default function SurveysIndex() {
   for (const m of LIFESKILLS_MODULES) {
     const pre = buildPreTemplate(m);
     const post = buildPostTemplate(m);
-    const preLabel = `Module ${String(m.number).padStart(2, '0')}: ${m.title} — Pre`;
-    const postLabel = `Module ${String(m.number).padStart(2, '0')}: ${m.title} — Post`;
+    const preStat = statText(pre.slug);
+    const postStat = statText(post.slug);
     lifeskills.push({
-      title: preLabel,
-      description: pre.description,
+      title: `Module ${String(m.number).padStart(2, '0')}: ${m.title}`,
+      description: `${m.topicPhrase} · Pre + Post surveys combined into one before/after report.`,
       preview: `impact:${pre.slug}` as PreviewSurveyType,
+      impactSource: `impact:lifeskills-module:${m.id}`,
       reviewHref: '/admin/lifeskills',
       reviewLabel: 'Manage & send',
-      count: statText(pre.slug),
+      count: `Pre: ${preStat} · Post: ${postStat}`,
       lifeskillsSlug: pre.slug,
-    });
-    lifeskills.push({
-      title: postLabel,
-      description: post.description,
-      preview: `impact:${post.slug}` as PreviewSurveyType,
-      reviewHref: '/admin/lifeskills',
-      reviewLabel: 'Manage & send',
-      count: statText(post.slug),
-      lifeskillsSlug: post.slug,
+      lifeskillsLabel: 'Send Pre-Survey',
+      lifeskillsSlugSecondary: post.slug,
+      lifeskillsLabelSecondary: 'Send Post-Survey',
     });
   }
   lifeskills.push({
