@@ -413,7 +413,7 @@ function computeSourceMetrics(source: CompletionSource, rows: SurveyImpactRow[])
     }
 
     // Top open-text items
-    const goals = preRows.map((r) => (r.data?.answers?.goal || '').toString().trim()).filter(Boolean);
+    const goals = preRows.map((r) => (r.data?.responses?.goal || '').toString().trim()).filter(Boolean);
     if (goals.length) {
       const counts = new Map<string, number>();
       for (const g of goals) counts.set(g, (counts.get(g) || 0) + 1);
@@ -422,7 +422,7 @@ function computeSourceMetrics(source: CompletionSource, rows: SurveyImpactRow[])
         items: [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([text, count]) => ({ text, count })),
       });
     }
-    const commits = postRows.map((r) => (r.data?.answers?.action_commitment || '').toString().trim()).filter(Boolean);
+    const commits = postRows.map((r) => (r.data?.responses?.action_commitment || '').toString().trim()).filter(Boolean);
     if (commits.length) {
       const counts = new Map<string, number>();
       for (const c of commits) counts.set(c, (counts.get(c) || 0) + 1);
