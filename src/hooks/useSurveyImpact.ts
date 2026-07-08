@@ -356,6 +356,81 @@ function computeSourceMetrics(source: CompletionSource, rows: SurveyImpactRow[])
     metrics['Avg gain (Post − Pre)'] = preW != null && postW != null ? +(postW - preW).toFixed(2) : null;
     const totalPaired = moduleRows.reduce((s: number, r: any) => s + r.pairedN, 0);
     metrics['Paired pre/post responses'] = totalPaired;
+  } else if (source.startsWith('impact:lifeskills-module:')) {
+    const preRows = rows.filter((r) => r.data?._kind === 'pre');
+    const postRows = rows.filter((r) => r.data?._kind === 'post');
+    const preConf = preRows.map((r) => Number(r.data?.score_summary?.confidence)).filter((n) => Number.isFinite(n));
+    const postConf = postRows.map((r) => Number(r.data?.score_summary?.confidence)).filter((n) => Number.isFinite(n));
+    const preAvg = preConf.length ? preConf.reduce((a, b) => a + b, 0) / preConf.length : null;
+    const postAvg = postConf.length ? postConf.reduce((a, b) => a + b, 0) / postConf.length : null;
+
+    // Paired: latest pre & post per student
+    const preByStu = new Map<string, number>();
+    const postByStu = new Map<string, number>();
+    for (const r of preRows) {
+      const v = Number(r.data?.score_summary?.confidence);
+      if (Number.isFinite(v)) preByStu.set(r.student_id, v);
+    }
+    for (const r of postRows) {
+      const v = Number(r.data?.score_summary?.confidence);
+      if (Number.isFinite(v)) postByStu.set(r.student_id, v);
+    }
+    const pairedDeltas: number[] = [];
+    for (const [sid, pre] of preByStu) {
+      const post = postByStu.get(sid);
+      if (post != null) pairedDeltas.push(post - pre);
+    }
+    const pairedAvg = pairedDeltas.length ? pairedDeltas.reduce((a, b) => a + b, 0) / pairedDeltas.length : null;
+
+    metrics['Pre avg (1–5)'] = preAvg != null ? +preAvg.toFixed(2) : null;
+    metrics['Post avg (1–5)'] = postAvg != null ? +postAvg.toFixed(2) : null;
+    metrics['Gain (Post − Pre)'] = preAvg != null && postAvg != null ? +(postAvg - preAvg).toFixed(2) : null;
+    metrics['Pre responses'] = preRows.length;
+    metrics['Post responses'] = postRows.length;
+    metrics['Paired students (both)'] = pairedDeltas.length;
+    metrics['Avg paired Δ'] = pairedAvg != null ? +pairedAvg.toFixed(2) : null;
+
+    if (preConf.length || postConf.length) {
+      distributions.push({
+        title: 'Confidence distribution — Pre vs Post',
+        series: [{ key: 'pre', label: 'Pre' }, { key: 'post', label: 'Post' }],
+        data: [1, 2, 3, 4, 5].map((n) => ({
+          name: `${n}`,
+          pre: preConf.filter((c) => Math.round(c) === n).length,
+          post: postConf.filter((c) => Math.round(c) === n).length,
+        })),
+      });
+    }
+    if (pairedDeltas.length) {
+      const buckets = [-4, -3, -2, -1, 0, 1, 2, 3, 4];
+      distributions.push({
+        title: 'Paired gain per student (Post − Pre)',
+        data: buckets.map((b) => ({
+          name: b > 0 ? `+${b}` : `${b}`,
+          value: pairedDeltas.filter((d) => Math.round(d) === b).length,
+        })),
+      });
+    }
+
+    // Top open-text items
+    const goals = preRows.map((r) => (r.data?.answers?.goal || '').toString().trim()).filter(Boolean);
+    if (goals.length) {
+      const counts = new Map<string, number>();
+      for (const g of goals) counts.set(g, (counts.get(g) || 0) + 1);
+      textHighlights.push({
+        title: 'Goals set (pre)',
+        items: [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([text, count]) => ({ text, count })),
+      });
+    }
+    const commits = postRows.map((r) => (r.data?.answers?.action_commitment || '').toString().trim()).filter(Boolean);
+    if (commits.length) {
+      const counts = new Map<string, number>();
+      for (const c of commits) counts.set(c, (counts.get(c) || 0) + 1);
+      textHighlights.push({
+        title: 'Action commitments (post)',
+        items: [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([text, count]) => ({ text, count })),
+      });
+    }
   } else if (source.startsWith('impact:')) {
     const summaries = rows.map((r) => r.data.score_summary || {});
     const confidences = summaries.map((s: any) => Number(s.confidence)).filter((n) => Number.isFinite(n));
