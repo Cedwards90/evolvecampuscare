@@ -52,6 +52,24 @@ async function loadRaw(source: CompletionSource): Promise<RawRow[]> {
     if (error) throw error;
     return (data || []).map((r: any) => ({ student_id: r.student_id, ts: r.updated_at || r.created_at }));
   }
+  if (source.startsWith('impact:lifeskills-module:')) {
+    const modId = source.slice('impact:lifeskills-module:'.length);
+    const preS = `lifeskills-${modId}-pre`;
+    const postS = `lifeskills-${modId}-post`;
+    const { data: tpls, error: tplErr } = await supabase
+      .from('impact_survey_templates')
+      .select('id, slug')
+      .in('slug', [preS, postS]);
+    if (tplErr) throw tplErr;
+    const ids = (tpls || []).map((t: any) => t.id);
+    if (!ids.length) return [];
+    const { data, error } = await supabase
+      .from('impact_survey_responses')
+      .select('student_id, submitted_at')
+      .in('template_id', ids);
+    if (error) throw error;
+    return (data || []).map((r: any) => ({ student_id: r.student_id, ts: r.submitted_at }));
+  }
   if (source.startsWith('impact:')) {
     const slug = source.slice('impact:'.length);
     // Get template id from slug first
