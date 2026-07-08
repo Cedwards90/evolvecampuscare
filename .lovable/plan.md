@@ -1,89 +1,51 @@
 ## Goal
+In the Impact Reports UI, each Life Skills module currently shows up as two separate entries (`M01 — Pre`, `M01 — Post`, etc.). Replace those with **one report per module** that compares before vs after in a single view. Sending pre/post surveys stays a two-step flow (they happen at different times), and the underlying pre/post templates and stored responses are unchanged — this is a reporting-layer consolidation only.
 
-Enrich reports with real Life Skills progress and expanded impact metrics without fabricating data. Everything is computed from existing tables (`impact_survey_responses`, `impact_survey_templates`, `survey_invitations`, `student_checkins`, `appointments`, `file_notes`, `support_requests`, `post_graduation_plans`, `student_certifications`, `resource_recommendations`, `participant_outcomes`). If a signal has no data in scope, the section renders "No data on file" instead of a fabricated number.
+## Changes (scoped, no unrelated edits)
 
-## What's added
+### 1. `src/hooks/useSurveyCompletions.ts`
+Add handling for a new virtual source `impact:lifeskills-module:<mXX>`:
+- Look up both `preSlug(mXX)` and `postSlug(mXX)` templates.
+- Return the union of responses from both (used only for completion counts / respondent lists on the report page).
 
-### 1. Life Skills progress block (per-student and per-org)
-For each of the 7 existing modules (`lifeskillsTemplates.ts`):
-- Pre confidence avg, Post confidence avg, delta, n for each
-- Sparkline of the delta across modules
-- Final wrap-up NPS if present
+### 2. `src/hooks/useSurveyImpact.ts`
+- In `fetchSource`, add a branch for `impact:lifeskills-module:<mXX>` that fetches responses for both pre and post templates of that module and tags each row with `_slug` and `_kind` ('pre' | 'post').
+- In `computeSourceMetrics`, add a branch for the same source that produces a **single-module before/after report**:
+  - Top metrics: `Pre avg (1–5)`, `Post avg (1–5)`, `Gain (Post − Pre)`, `Pre n`, `Post n`, `Paired students (both pre + post)`, `Avg paired Δ`.
+  - Distributions:
+    - Grouped bar "Confidence distribution — Pre vs Post" (buckets 1..5, series pre/post).
+    - Single bar "Paired gain per student" bucketed by Δ (−4..−1, 0, +1..+4) when paired data exists.
+  - Text highlights:
+    - "Top goals set (pre)" from the pre `goal` open field (top 10 by frequency, verbatim).
+    - "Action commitments (post)" from the post `action_commitment` open field (top 10).
+  - All values are deterministic; when a side has zero responses the metric shows `—` and no fabricated values are produced.
 
-Skills from the user's list that map directly to existing modules are labelled with the module name (Communication → M02, Financial Literacy → M04, Digital Literacy → M06, Career Readiness → M05 Workforce Readiness). The other requested skills (attendance, accountability, problem-solving, teamwork, confidence, goal completion) are shown as **derived indicators** with a small "derived" tag and the source called out:
+### 3. `src/pages/admin/SurveyImpactReports.tsx`
+Replace `lifeskillsOptions()` so each module contributes **one** option instead of two:
+- Keep `impact:lifeskills-all` ("All modules — Pre vs Post summary").
+- For each `LIFESKILLS_MODULES` entry, emit a single option: label `M0X · <Title> — Before vs After`, value `impact:lifeskills-module:<mXX>`.
+- Keep the final wrap-up option (`impact:lifeskills-final`) as-is.
+- Remove the individual `— Pre` and `— Post` entries.
 
-| Requested skill | Derived from |
-|---|---|
-| Attendance | `appointments` completed vs scheduled in range |
-| Accountability | `student_checkins` cadence vs expected (3-week) |
-| Confidence | Average of latest post-module `confidence` responses |
-| Goal completion | `post_graduation_plans` milestones marked complete |
-| Problem-solving / Teamwork | Omitted with a "not tracked" note — no data source |
+### 4. `src/pages/admin/SurveysIndex.tsx`
+On the Surveys index, collapse the two per-module rows into one row per module:
+- Row title: `Module 0X · <Title>`, description mentions pre + post.
+- Two "Send" buttons on that row (Send Pre-Survey / Send Post-Survey) — sending remains a two-step flow.
+- "Review responses" link goes to `/admin/surveys/reports?survey=impact:lifeskills-module:<mXX>` (the new combined report).
+- The Final Wrap-Up row is unchanged.
 
-### 2. Expanded impact metrics block
-- Case-note summary: count by `note_type` + last note date (already partly present, extended with type breakdown)
-- Survey results: sent/completed/response rate, pre→post deltas
-- Certifications earned in range (`student_certifications` filtered by `earned_at`) + expiring-soon count
-- Support needs: open requests by category & priority
-- Referrals: `resource_recommendations` created in range
-- Milestones: `post_graduation_plans` progress deltas
-- Engagement: messages sent/received, distinct-day activity
-- Employment-readiness: `participant_outcomes.employment_status` + M05 post confidence
+### 5. Backward compatibility
+The old `impact:lifeskills-mXX-pre` / `-post` sources remain functional in both hooks (still used by `LIFESKILLS_MODULES` iteration paths and any deep links). We only remove them from the dropdown menus; anyone with a bookmarked deep link still gets a valid single-side report.
 
-### 3. Trends, risk areas, next steps
-Extend `src/lib/studentProgressRules.ts` with new rules:
-- Life-skills post < pre by ≥0.5 → risk
-- Attendance rate < 60% in range → risk
-- No check-in in ≥21 days → risk
-- Certification expiring in ≤30 days → next step
-- Post-grad milestone stalled ≥30 days → next step
+## Out of scope (untouched)
+- `src/lib/lifeskillsTemplates.ts` (templates, slugs, questions).
+- `impact_survey_templates` / `impact_survey_responses` tables and stored data.
+- `send-lifeskills-survey` edge function and the send dialog.
+- `LifeSkillsProgressBlock` and the org/student progress reports (they already show one row per module).
+- Report AI summary, exports, and any other unrelated feature.
 
-All rules deterministic; `deriveActionItems` extended to produce next steps.
-
-### 4. Optional AI narrative
-Reuse the existing `AISummaryPanel` + `aiEligible` gate. Add a second gated panel on the org report that summarizes trends/improvements/risk areas from the deterministic payload only (no raw student PII beyond IDs in the prompt). Clearly labelled "AI-generated summary — verify against data above". Skipped when evidence is insufficient.
-
-### 5. New Organization Report
-New route `/reports/organization` (admin + org_admin only):
-- Filters: date range (daily/weekly/monthly/custom) + existing `GlobalFilterBar` (org, cohort, program, CM, student status)
-- Sections: caseload roll-up, Life Skills progress block (org-wide averages), expanded impact metrics block, trends & risks, top unresolved requests, top action items
-- Exports: PDF + CSV via a new `orgReportExport.ts` mirroring `reportExport.ts` structure
-- Data assembled by a new `useOrganizationReport` hook that runs the same aggregations as per-student across the filtered student set
-
-### 6. Per-CM and per-student report additions
-- New "Life Skills & Impact" tabbed section in `ReportPreview` and `StudentReportPreview`
-- CSV/PDF exports extended in `reportExport.ts` and `studentProgressExport.ts` with new sections in the same style
-
-## Guarantees
-
-- **No fabricated data**: every metric is computed from an existing query. Empty sections render "No data on file" and are omitted from CSV/PDF when empty.
-- **No unrelated changes**: only files listed below are touched; no schema changes, no changes to other pages, no business logic changed for existing metrics.
-- **RLS-safe**: all new queries go through existing hooks/patterns; org report reuses `useReportStudentFilters` scoping so org_admin only sees their orgs.
-- **Perf**: aggregations run client-side over the already-scoped student set, same pattern as `LifeSkillsImpactCard`.
-
-## Files
-
-New:
-- `src/hooks/useOrganizationReport.ts`
-- `src/hooks/useLifeSkillsProgress.ts` (shared per-student + org aggregation)
-- `src/pages/OrganizationReport.tsx`
-- `src/components/reports/LifeSkillsProgressBlock.tsx`
-- `src/components/reports/ImpactMetricsBlock.tsx`
-- `src/lib/orgReportExport.ts`
-
-Edited:
-- `src/lib/studentProgressRules.ts` — new rules + action items
-- `src/hooks/useStudentProgressReport.ts` — pull certifications, referrals, milestones, participant_outcomes for the student
-- `src/hooks/useInteractionReport.ts` — pull certifications + referrals aggregate for the CM's caseload
-- `src/components/reports/ReportPreview.tsx` — insert new blocks
-- `src/components/reports/StudentReportPreview.tsx` — insert new blocks
-- `src/lib/reportExport.ts` + `src/lib/studentProgressExport.ts` — new CSV/PDF sections
-- `src/App.tsx` — route for `/reports/organization`
-- `src/pages/Reports.tsx` — tab link to Organization report (admin/org_admin only)
-
-## Out of scope (explicit)
-
-- No new survey questions or template changes
-- No new database tables/migrations
-- No changes to how notifications, invitations, or dashboards render
-- No edits to unrelated pages
+## Files touched
+- `src/hooks/useSurveyCompletions.ts` (add branch)
+- `src/hooks/useSurveyImpact.ts` (add fetch + metrics branch)
+- `src/pages/admin/SurveyImpactReports.tsx` (dropdown options)
+- `src/pages/admin/SurveysIndex.tsx` (collapse rows)
