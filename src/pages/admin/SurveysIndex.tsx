@@ -86,25 +86,23 @@ function SurveyCard({
 }) {
   return (
     <Card>
-      <CardContent className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <p className="font-medium text-sm">{row.title}</p>
-            {row.badge && <Badge variant="secondary" className="text-xs">{row.badge}</Badge>}
-            {row.description && (
-              <>
-                <span className="text-muted-foreground/60" aria-hidden>·</span>
-                <p className="text-xs text-muted-foreground">{row.description}</p>
-              </>
-            )}
-            {row.count && (
-              <>
-                <span className="text-muted-foreground/60" aria-hidden>·</span>
-                <p className="text-xs text-muted-foreground">{row.count}</p>
-              </>
-            )}
+      <CardContent className="flex flex-col gap-3 p-4">
+        {row.description && (
+          <p className="text-xs text-muted-foreground">{row.description}</p>
+        )}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <p className="font-medium text-sm">{row.title}</p>
+              {row.badge && <Badge variant="secondary" className="text-xs">{row.badge}</Badge>}
+              {row.count && (
+                <>
+                  <span className="text-muted-foreground/60" aria-hidden>·</span>
+                  <p className="text-xs text-muted-foreground">{row.count}</p>
+                </>
+              )}
+            </div>
           </div>
-        </div>
         <div className="flex flex-wrap gap-2 shrink-0">
           <Button size="sm" variant="outline" onClick={() => onPreview(row.preview)}>
             <Eye className="mr-1.5 h-3.5 w-3.5" /> Preview
@@ -144,6 +142,7 @@ function SurveyCard({
               </Link>
             </Button>
           )}
+        </div>
         </div>
       </CardContent>
     </Card>
