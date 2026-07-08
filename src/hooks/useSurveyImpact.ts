@@ -153,6 +153,30 @@ async function fetchSource(source: CompletionSource, from: Date, to: Date): Prom
         data: { ...r, _slug: r.impact_survey_templates?.slug as string },
       }));
   }
+  if (source.startsWith('impact:lifeskills-module:')) {
+    const modId = source.slice('impact:lifeskills-module:'.length);
+    const preS = `lifeskills-${modId}-pre`;
+    const postS = `lifeskills-${modId}-post`;
+    const { data, error } = await supabase
+      .from('impact_survey_responses')
+      .select('*, impact_survey_templates!inner(slug)')
+      .in('impact_survey_templates.slug', [preS, postS])
+      .gte('submitted_at', fromIso)
+      .lte('submitted_at', toIso);
+    if (error) throw error;
+    return (data || [])
+      .filter((r: any) => r.impact_survey_templates?.slug === preS || r.impact_survey_templates?.slug === postS)
+      .map((r: any) => ({
+        id: r.id,
+        student_id: r.student_id,
+        ts: r.submitted_at,
+        data: {
+          ...r,
+          _slug: r.impact_survey_templates?.slug as string,
+          _kind: r.impact_survey_templates?.slug === preS ? 'pre' : 'post',
+        },
+      }));
+  }
   if (source.startsWith('impact:')) {
     const slug = source.slice('impact:'.length);
     const { data: tpl } = await supabase
