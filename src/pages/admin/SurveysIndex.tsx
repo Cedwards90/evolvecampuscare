@@ -38,6 +38,13 @@ interface SurveyRow {
   invitationType?: string;
   /** Life Skills template slug for bulk send dialog. */
   lifeskillsSlug?: string;
+  /** Label for the primary Life Skills send button (defaults to 'Send'). */
+  lifeskillsLabel?: string;
+  /** Optional second Life Skills template slug (post-module send). */
+  lifeskillsSlugSecondary?: string;
+  lifeskillsLabelSecondary?: string;
+  /** Overrides the impact-report URL derived from `preview`. */
+  impactSource?: string;
 }
 
 function useIntakeCount() {
