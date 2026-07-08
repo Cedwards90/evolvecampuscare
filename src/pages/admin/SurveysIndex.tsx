@@ -38,6 +38,13 @@ interface SurveyRow {
   invitationType?: string;
   /** Life Skills template slug for bulk send dialog. */
   lifeskillsSlug?: string;
+  /** Label for the primary Life Skills send button (defaults to 'Send'). */
+  lifeskillsLabel?: string;
+  /** Optional second Life Skills template slug (post-module send). */
+  lifeskillsSlugSecondary?: string;
+  lifeskillsLabelSecondary?: string;
+  /** Overrides the impact-report URL derived from `preview`. */
+  impactSource?: string;
 }
 
 function useIntakeCount() {
@@ -96,7 +103,7 @@ function SurveyCard({
             <Users className="mr-1.5 h-3.5 w-3.5" /> Completions
           </Button>
           <Button size="sm" variant="outline" asChild>
-            <Link to={`/admin/surveys/reports?survey=${encodeURIComponent(row.preview as string)}`}>
+            <Link to={`/admin/surveys/reports?survey=${encodeURIComponent(row.impactSource || (row.preview as string))}`}>
               <BarChart3 className="mr-1.5 h-3.5 w-3.5" /> Impact report
             </Link>
           </Button>
@@ -107,7 +114,12 @@ function SurveyCard({
           )}
           {row.lifeskillsSlug && (
             <Button size="sm" variant="outline" onClick={() => onSendLifeSkills(row.lifeskillsSlug!, row.title)}>
-              <Send className="mr-1.5 h-3.5 w-3.5" /> Send
+              <Send className="mr-1.5 h-3.5 w-3.5" /> {row.lifeskillsLabel || 'Send'}
+            </Button>
+          )}
+          {row.lifeskillsSlugSecondary && (
+            <Button size="sm" variant="outline" onClick={() => onSendLifeSkills(row.lifeskillsSlugSecondary!, row.title)}>
+              <Send className="mr-1.5 h-3.5 w-3.5" /> {row.lifeskillsLabelSecondary || 'Send'}
             </Button>
           )}
           {row.sendHref && (
@@ -211,25 +223,20 @@ export default function SurveysIndex() {
   for (const m of LIFESKILLS_MODULES) {
     const pre = buildPreTemplate(m);
     const post = buildPostTemplate(m);
-    const preLabel = `Module ${String(m.number).padStart(2, '0')}: ${m.title} — Pre`;
-    const postLabel = `Module ${String(m.number).padStart(2, '0')}: ${m.title} — Post`;
+    const preStat = statText(pre.slug);
+    const postStat = statText(post.slug);
     lifeskills.push({
-      title: preLabel,
-      description: pre.description,
+      title: `Module ${String(m.number).padStart(2, '0')}: ${m.title}`,
+      description: `${m.topicPhrase} · Pre + Post surveys combined into one before/after report.`,
       preview: `impact:${pre.slug}` as PreviewSurveyType,
+      impactSource: `impact:lifeskills-module:${m.id}`,
       reviewHref: '/admin/lifeskills',
       reviewLabel: 'Manage & send',
-      count: statText(pre.slug),
+      count: `Pre: ${preStat} · Post: ${postStat}`,
       lifeskillsSlug: pre.slug,
-    });
-    lifeskills.push({
-      title: postLabel,
-      description: post.description,
-      preview: `impact:${post.slug}` as PreviewSurveyType,
-      reviewHref: '/admin/lifeskills',
-      reviewLabel: 'Manage & send',
-      count: statText(post.slug),
-      lifeskillsSlug: post.slug,
+      lifeskillsLabel: 'Send Pre-Survey',
+      lifeskillsSlugSecondary: post.slug,
+      lifeskillsLabelSecondary: 'Send Post-Survey',
     });
   }
   lifeskills.push({
