@@ -103,7 +103,7 @@ function SurveyCard({
             <Users className="mr-1.5 h-3.5 w-3.5" /> Completions
           </Button>
           <Button size="sm" variant="outline" asChild>
-            <Link to={`/admin/surveys/reports?survey=${encodeURIComponent(row.preview as string)}`}>
+            <Link to={`/admin/surveys/reports?survey=${encodeURIComponent(row.impactSource || (row.preview as string))}`}>
               <BarChart3 className="mr-1.5 h-3.5 w-3.5" /> Impact report
             </Link>
           </Button>
@@ -114,7 +114,12 @@ function SurveyCard({
           )}
           {row.lifeskillsSlug && (
             <Button size="sm" variant="outline" onClick={() => onSendLifeSkills(row.lifeskillsSlug!, row.title)}>
-              <Send className="mr-1.5 h-3.5 w-3.5" /> Send
+              <Send className="mr-1.5 h-3.5 w-3.5" /> {row.lifeskillsLabel || 'Send'}
+            </Button>
+          )}
+          {row.lifeskillsSlugSecondary && (
+            <Button size="sm" variant="outline" onClick={() => onSendLifeSkills(row.lifeskillsSlugSecondary!, row.title)}>
+              <Send className="mr-1.5 h-3.5 w-3.5" /> {row.lifeskillsLabelSecondary || 'Send'}
             </Button>
           )}
           {row.sendHref && (
