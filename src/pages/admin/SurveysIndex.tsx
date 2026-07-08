@@ -143,6 +143,7 @@ function SurveyCard({
             </Button>
           )}
         </div>
+        </div>
       </CardContent>
     </Card>
   );
