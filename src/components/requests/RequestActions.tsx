@@ -53,6 +53,8 @@ interface RequestActionsProps {
   userId: string;
   currentStatus: RequestStatus;
   requestedAmount?: number | null;
+  fundingPurpose?: string | null;
+  approvalStatus?: string | null;
   requestTitle?: string;
   requestDescription?: string;
   requestCategory?: RequestCategory;
@@ -69,6 +71,8 @@ export function RequestActions({
   userId, 
   currentStatus,
   requestedAmount,
+  fundingPurpose,
+  approvalStatus,
   requestTitle,
   requestDescription,
   requestCategory,
@@ -87,6 +91,7 @@ export function RequestActions({
   const [editCategory, setEditCategory] = useState<RequestCategory>('other');
   const [editPriority, setEditPriority] = useState<RequestPriority>('medium');
   const [editAmount, setEditAmount] = useState('');
+  const [editFundingPurpose, setEditFundingPurpose] = useState('');
   
   const { toast } = useToast();
 
@@ -232,6 +237,7 @@ export function RequestActions({
     setEditCategory(requestCategory || 'other');
     setEditPriority(requestPriority || 'medium');
     setEditAmount(requestedAmount != null ? String(requestedAmount) : '');
+    setEditFundingPurpose(fundingPurpose || '');
     setDialogType('edit');
   };
 
@@ -243,6 +249,11 @@ export function RequestActions({
         return;
       }
 
+      const financialLocked =
+        approvalStatus !== undefined &&
+        approvalStatus !== null &&
+        approvalStatus !== 'pending';
+
       await editRequest.mutateAsync({
         requestId,
         userId,
@@ -251,7 +262,10 @@ export function RequestActions({
           description: editDescription,
           category: editCategory,
           priority: editPriority,
-          requested_amount: parsedAmount,
+          ...(financialLocked ? {} : {
+            requested_amount: parsedAmount,
+            funding_purpose: editFundingPurpose.trim() || null,
+          }),
         },
         original: {
           title: requestTitle || '',
@@ -259,6 +273,7 @@ export function RequestActions({
           category: requestCategory || 'other',
           priority: requestPriority || 'medium',
           requested_amount: requestedAmount ?? null,
+          funding_purpose: fundingPurpose ?? null,
           student_id: studentId || '',
         },
       });
@@ -576,22 +591,43 @@ export function RequestActions({
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-amount">Requested Amount ($)</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="edit-amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={editAmount}
-                  onChange={(e) => setEditAmount(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
+            {editCategory === 'financial' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-amount">Requested Amount ($)</Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="edit-amount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={editAmount}
+                      onChange={(e) => setEditAmount(e.target.value)}
+                      className="pl-9"
+                      disabled={!!approvalStatus && approvalStatus !== 'pending'}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-funding-purpose">Purpose of funds</Label>
+                  <Textarea
+                    id="edit-funding-purpose"
+                    rows={2}
+                    maxLength={500}
+                    value={editFundingPurpose}
+                    onChange={(e) => setEditFundingPurpose(e.target.value)}
+                    disabled={!!approvalStatus && approvalStatus !== 'pending'}
+                  />
+                </div>
+                {approvalStatus && approvalStatus !== 'pending' && (
+                  <p className="text-xs text-muted-foreground">
+                    Amount and purpose are locked after an approval decision has been recorded.
+                  </p>
+                )}
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog} disabled={isLoading}>Cancel</Button>

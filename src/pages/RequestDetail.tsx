@@ -262,6 +262,8 @@ export default function RequestDetail() {
                         userId={user!.id}
                         currentStatus={request.status}
                         requestedAmount={request.requested_amount}
+                        fundingPurpose={(request as any).funding_purpose}
+                        approvalStatus={(request as any).approval_status}
                         requestTitle={request.title}
                         requestDescription={request.description}
                         requestCategory={request.category}
