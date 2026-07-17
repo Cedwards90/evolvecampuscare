@@ -62,7 +62,14 @@ const requestSchema = z.object({
   description: z.string().min(20, 'Please provide more details (at least 20 characters)').max(2000, 'Description must be less than 2000 characters'),
   priority: z.enum(['low', 'medium', 'high', 'emergency']),
   isEmergency: z.boolean(),
-  requestedAmount: z.number().min(0).optional(),
+  requestedAmount: z.number().min(0).max(1_000_000, 'Amount is too large').optional(),
+  fundingPurpose: z.string().max(500, 'Keep this under 500 characters').optional(),
+}).superRefine((val, ctx) => {
+  if (val.category === 'financial') {
+    if (val.requestedAmount === undefined || val.requestedAmount === null || Number.isNaN(val.requestedAmount) || val.requestedAmount <= 0) {
+      ctx.addIssue({ code: 'custom', path: ['requestedAmount'], message: 'Enter the amount you are requesting' });
+    }
+  }
 });
 
 type RequestFormData = z.infer<typeof requestSchema>;
@@ -76,6 +83,7 @@ const requestDefaultValues: RequestFormData = {
   priority: 'medium',
   isEmergency: false,
   requestedAmount: undefined,
+  fundingPurpose: '',
 };
 
 interface SubmitRequestProps {
