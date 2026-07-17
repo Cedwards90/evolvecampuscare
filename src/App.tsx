@@ -37,6 +37,7 @@ import QRLanding from "./pages/QRLanding";
 import QRStandaloneRequest from "./pages/QRStandaloneRequest";
 import QRRequestSuccess from "./pages/QRRequestSuccess";
 import PublicSharedRequest from "./pages/PublicSharedRequest";
+import OAuthConsent from "./pages/OAuthConsent";
 import RequestDetail from "./pages/RequestDetail";
 import RequestsList from "./pages/RequestsList";
 import CaseManagerDetail from "./pages/CaseManagerDetail";
@@ -122,6 +123,7 @@ function App() {
                   <Route path="/qr/:code/request" element={<QRStandaloneRequest />} />
                   <Route path="/qr/:code/request/success" element={<QRRequestSuccess />} />
                   <Route path="/shared/request/:token" element={<PublicSharedRequest />} />
+                  <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
                   {/* NDA acceptance gate (requires login but bypasses NDA gate itself) */}
                   <Route path="/accept-nda" element={<AcceptNda />} />

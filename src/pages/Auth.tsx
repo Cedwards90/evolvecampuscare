@@ -211,7 +211,14 @@ export default function Auth() {
   const onGoogleAuth = async () => {
     setIsSubmitting(true);
     try {
-      const redirectPath = inviteToken ? `/auth?invite=${encodeURIComponent(inviteToken)}` : '/auth';
+      // Preserve `?redirect=` (e.g. for the OAuth consent route) across the
+      // Google round-trip so users return to their intended destination.
+      const rawRedirect = searchParams.get('redirect');
+      const isSafeRedirect = rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//');
+      const redirectQuery = isSafeRedirect ? `redirect=${encodeURIComponent(rawRedirect!)}` : '';
+      const inviteQuery = inviteToken ? `invite=${encodeURIComponent(inviteToken)}` : '';
+      const query = [inviteQuery, redirectQuery].filter(Boolean).join('&');
+      const redirectPath = query ? `/auth?${query}` : '/auth';
       const result = await lovable.auth.signInWithOAuth('google', {
         redirect_uri: window.location.origin + redirectPath,
       });
