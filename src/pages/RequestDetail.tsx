@@ -198,7 +198,7 @@ export default function RequestDetail() {
                     {(request as any).funding_purpose && (
                       <div className="text-sm">
                         <div className="text-muted-foreground mb-1">Purpose of funds</div>
-                        <p className="whitespace-pre-wrap">{(request as any).funding_purpose}</p>
+                        <SafeRichText text={(request as any).funding_purpose} clampLines={6} />
                       </div>
                     )}
                     {(isStaff || (request.approved_amount !== null && request.approved_amount !== undefined)) && request.approved_amount !== null && request.approved_amount !== undefined && (
