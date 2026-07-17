@@ -213,7 +213,7 @@ export default function StudentDetail() {
                 </AvatarFallback>
               </Avatar>
 
-              <div className="flex-1 space-y-4">
+              <div className="flex-1 min-w-0 space-y-4">
                 <div>
                   <h1 className="font-display text-h2 font-bold">
                     {student.profile?.full_name || 'Unknown Student'}
