@@ -28,6 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { SafeRichText } from '@/components/ui/SafeRichText';
 import type { RequestUpdate, Profile, RequestStatus } from '@/types/database';
 
 interface RequestTimelineProps {
@@ -105,7 +106,7 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
         const StatusIcon = update.new_status ? statusIcons[update.new_status] : MessageSquare;
 
         return (
-          <div key={update.id} className="flex gap-4">
+          <div key={update.id} className="flex gap-4 min-w-0">
             {/* Timeline line */}
             <div className="flex flex-col items-center">
               <div className={cn(
@@ -132,7 +133,7 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
 
             {/* Content */}
             <div className={cn(
-              "flex-1 pb-4 rounded-lg p-4",
+              "flex-1 min-w-0 pb-4 rounded-lg p-4",
               update.is_internal 
                 ? "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800" 
                 : "bg-muted/50"
@@ -182,7 +183,12 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
               )}
 
               {update.note && (
-                <p className="text-sm text-foreground">{update.note}</p>
+                <SafeRichText
+                  text={update.note}
+                  clampLines={6}
+                  showCopy
+                  className="text-sm text-foreground"
+                />
               )}
             </div>
           </div>

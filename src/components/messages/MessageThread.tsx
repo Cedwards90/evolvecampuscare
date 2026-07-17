@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConversation, useSendMessage, useMarkAsRead } from '@/hooks/useMessages';
 import { cn } from '@/lib/utils';
+import { SafeRichText } from '@/components/ui/SafeRichText';
 import type { StaffMessage } from '@/types/messages';
 
 interface MessageThreadProps {
@@ -111,7 +112,7 @@ export function MessageThread({ otherUserId }: MessageThreadProps) {
               >
                 <div
                   className={cn(
-                    'max-w-[80%] rounded-lg px-4 py-2',
+                    'max-w-[85%] sm:max-w-[70%] min-w-0 rounded-lg px-4 py-2 break-words',
                     isOwn
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted'
@@ -119,13 +120,17 @@ export function MessageThread({ otherUserId }: MessageThreadProps) {
                 >
                   {message.subject && (
                     <p className={cn(
-                      'text-xs font-semibold mb-1',
+                      'text-xs font-semibold mb-1 break-words',
                       isOwn ? 'text-primary-foreground/80' : 'text-muted-foreground'
                     )}>
                       Re: {message.subject}
                     </p>
                   )}
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  <SafeRichText
+                    text={message.content}
+                    clampLines={8}
+                    tone={isOwn ? 'inverse' : 'default'}
+                  />
                   <p className={cn(
                     'text-xs mt-1',
                     isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'

@@ -55,7 +55,7 @@ export default function Messages() {
           </Card>
 
           {/* Message Thread */}
-          <Card className={`lg:col-span-2 border border-border/50 min-h-[500px] lg:min-h-[600px] ${!userId ? 'hidden lg:block' : ''}`}>
+          <Card className={`lg:col-span-2 min-w-0 border border-border/50 min-h-[500px] lg:min-h-[600px] ${!userId ? 'hidden lg:block' : ''}`}>
             {userId ? (
               <MessageThread otherUserId={userId} />
             ) : (

@@ -37,6 +37,7 @@ import { useRequest } from '@/hooks/useRequest';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrgBadgeInline } from '@/components/OrgBadgeInline';
 import { PageNav } from '@/components/navigation/PageNav';
+import { SafeRichText } from '@/components/ui/SafeRichText';
 
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
@@ -176,7 +177,12 @@ export default function RequestDetail() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-foreground whitespace-pre-wrap">{request.description}</p>
+                <SafeRichText
+                  text={request.description}
+                  clampLines={10}
+                  showCopy
+                  className="text-foreground"
+                />
                 
                 {/* Monetary amounts + funding purpose + approval status for financial requests */}
                 {request.category === 'financial' && (
@@ -192,7 +198,7 @@ export default function RequestDetail() {
                     {(request as any).funding_purpose && (
                       <div className="text-sm">
                         <div className="text-muted-foreground mb-1">Purpose of funds</div>
-                        <p className="whitespace-pre-wrap">{(request as any).funding_purpose}</p>
+                        <SafeRichText text={(request as any).funding_purpose} clampLines={6} />
                       </div>
                     )}
                     {(isStaff || (request.approved_amount !== null && request.approved_amount !== undefined)) && request.approved_amount !== null && request.approved_amount !== undefined && (
