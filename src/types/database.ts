@@ -65,7 +65,7 @@ export interface SupportRequest {
   requested_amount: number | null;
   approved_amount: number | null;
   funding_purpose?: string | null;
-  approval_status?: ApprovalStatus;
+  approval_status?: ApprovalStatus | string;
   approval_decided_at?: string | null;
   approval_decided_by?: string | null;
   created_at: string;
