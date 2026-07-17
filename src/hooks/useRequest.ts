@@ -125,36 +125,43 @@ export function useApproveRequest() {
       // Fetch request details first
       const { data: requestData } = await supabase
         .from('support_requests')
-        .select('student_id, title, requested_amount, status')
+        .select('student_id, title, requested_amount, status, category')
         .eq('id', requestId)
         .single();
 
       const previousStatus = requestData?.status || 'submitted';
       const isAlreadyInProgress = previousStatus === 'in_progress';
+      const isFinancial = requestData?.category === 'financial';
 
-      // Only update status if not already in_progress, otherwise just update approved_amount if provided
-      if (!isAlreadyInProgress) {
-        const updateData: { status: RequestStatus; approved_amount?: number } = { 
-          status: 'in_progress' as RequestStatus 
-        };
-        
-        if (approvedAmount !== undefined) {
-          updateData.approved_amount = approvedAmount;
-        }
+      // Compute approval_status when we have a monetary decision
+      let approvalStatus: 'approved' | 'partially_approved' | null = null;
+      if (isFinancial && approvedAmount !== undefined && requestData?.requested_amount) {
+        approvalStatus = approvedAmount >= requestData.requested_amount ? 'approved' : 'partially_approved';
+      } else if (isFinancial && approvedAmount !== undefined) {
+        approvalStatus = 'approved';
+      }
 
+      const baseUpdate: {
+        status?: RequestStatus;
+        approved_amount?: number;
+        approval_status?: string;
+        approval_decided_at?: string;
+        approval_decided_by?: string;
+      } = {};
+
+      if (!isAlreadyInProgress) baseUpdate.status = 'in_progress' as RequestStatus;
+      if (approvedAmount !== undefined) baseUpdate.approved_amount = approvedAmount;
+      if (approvalStatus) {
+        baseUpdate.approval_status = approvalStatus;
+        baseUpdate.approval_decided_at = new Date().toISOString();
+        baseUpdate.approval_decided_by = userId;
+      }
+
+      if (Object.keys(baseUpdate).length > 0) {
         const { error: updateError } = await supabase
           .from('support_requests')
-          .update(updateData)
+          .update(baseUpdate)
           .eq('id', requestId);
-
-        if (updateError) throw updateError;
-      } else if (approvedAmount !== undefined) {
-        // Just update the approved amount for already in_progress requests
-        const { error: updateError } = await supabase
-          .from('support_requests')
-          .update({ approved_amount: approvedAmount })
-          .eq('id', requestId);
-
         if (updateError) throw updateError;
       }
 
@@ -166,10 +173,10 @@ export function useApproveRequest() {
       if (approvedAmount !== undefined && requestData?.requested_amount) {
         const formattedRequested = requestData.requested_amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
         const formattedApproved = approvedAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-        if (approvedAmount === requestData.requested_amount) {
+        if (approvedAmount >= requestData.requested_amount) {
           note = `Request ${isAlreadyInProgress ? 'confirmed' : 'approved'} for the full amount of ${formattedApproved}.`;
         } else {
-          note = `Request ${isAlreadyInProgress ? 'confirmed' : 'approved'} for ${formattedApproved} (requested: ${formattedRequested}).`;
+          note = `Request ${isAlreadyInProgress ? 'confirmed' : 'partially approved'} for ${formattedApproved} (requested: ${formattedRequested}).`;
         }
       } else if (approvedAmount !== undefined) {
         const formattedApproved = approvedAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -233,16 +240,28 @@ export function useDenyRequest() {
       // Fetch request details first
       const { data: requestData } = await supabase
         .from('support_requests')
-        .select('student_id, title, status')
+        .select('student_id, title, status, category')
         .eq('id', requestId)
         .single();
 
       const previousStatus = requestData?.status || 'submitted';
+      const isFinancial = requestData?.category === 'financial';
 
-      // Update status to cancelled
+      // Update status to cancelled; mark financial approval as denied
+      const update: {
+        status: RequestStatus;
+        approval_status?: string;
+        approval_decided_at?: string;
+        approval_decided_by?: string;
+      } = { status: 'cancelled' as RequestStatus };
+      if (isFinancial) {
+        update.approval_status = 'denied';
+        update.approval_decided_at = new Date().toISOString();
+        update.approval_decided_by = userId;
+      }
       const { error: updateError } = await supabase
         .from('support_requests')
-        .update({ status: 'cancelled' as RequestStatus })
+        .update(update)
         .eq('id', requestId);
 
       if (updateError) throw updateError;
@@ -442,6 +461,7 @@ export function useEditRequest() {
         category?: string;
         priority?: string;
         requested_amount?: number | null;
+        funding_purpose?: string | null;
       };
       original: {
         title: string;
@@ -449,6 +469,7 @@ export function useEditRequest() {
         category: string;
         priority: string;
         requested_amount?: number | null;
+        funding_purpose?: string | null;
         student_id: string;
       };
     }) => {
@@ -459,6 +480,7 @@ export function useEditRequest() {
         category?: 'academic' | 'financial' | 'housing' | 'mental_health' | 'other';
         priority?: 'low' | 'medium' | 'high' | 'emergency';
         requested_amount?: number | null;
+        funding_purpose?: string | null;
       } = {};
       const changeNotes: string[] = [];
 
@@ -487,6 +509,10 @@ export function useEditRequest() {
           ? `$${changes.requested_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
           : 'none';
         changeNotes.push(`amount changed from ${oldAmt} to ${newAmt}`);
+      }
+      if (changes.funding_purpose !== undefined && changes.funding_purpose !== original.funding_purpose) {
+        updatePayload.funding_purpose = changes.funding_purpose;
+        changeNotes.push('funding purpose updated');
       }
 
       if (Object.keys(updatePayload).length === 0) {

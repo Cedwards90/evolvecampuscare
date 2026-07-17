@@ -62,7 +62,14 @@ const requestSchema = z.object({
   description: z.string().min(20, 'Please provide more details (at least 20 characters)').max(2000, 'Description must be less than 2000 characters'),
   priority: z.enum(['low', 'medium', 'high', 'emergency']),
   isEmergency: z.boolean(),
-  requestedAmount: z.number().min(0).optional(),
+  requestedAmount: z.number().min(0).max(1_000_000, 'Amount is too large').optional(),
+  fundingPurpose: z.string().max(500, 'Keep this under 500 characters').optional(),
+}).superRefine((val, ctx) => {
+  if (val.category === 'financial') {
+    if (val.requestedAmount === undefined || val.requestedAmount === null || Number.isNaN(val.requestedAmount) || val.requestedAmount <= 0) {
+      ctx.addIssue({ code: 'custom', path: ['requestedAmount'], message: 'Enter the amount you are requesting' });
+    }
+  }
 });
 
 type RequestFormData = z.infer<typeof requestSchema>;
@@ -76,6 +83,7 @@ const requestDefaultValues: RequestFormData = {
   priority: 'medium',
   isEmergency: false,
   requestedAmount: undefined,
+  fundingPurpose: '',
 };
 
 interface SubmitRequestProps {
@@ -160,6 +168,8 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
   const watchDescription = form.watch('description');
   const watchRequestedAmount = form.watch('requestedAmount');
 
+  const watchFundingPurpose = form.watch('fundingPurpose');
+
   const draftValues = useMemo<RequestDraft>(
     () => ({
       category: watchCategory,
@@ -168,9 +178,10 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
       priority: watchPriority || 'medium',
       isEmergency: !!watchIsEmergency,
       requestedAmount: watchRequestedAmount,
+      fundingPurpose: watchFundingPurpose || '',
       step,
     }),
-    [watchCategory, watchTitle, watchDescription, watchPriority, watchIsEmergency, watchRequestedAmount, step],
+    [watchCategory, watchTitle, watchDescription, watchPriority, watchIsEmergency, watchRequestedAmount, watchFundingPurpose, step],
   );
   const { clear: clearDraft, savedAt, hasDraft } = useFormPersistence<RequestDraft>(
     standalone ? `support-request:${qrCodeParam || 'standalone'}` : 'support-request',
@@ -207,7 +218,9 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
       return;
     }
     if (step === 2) {
-      const valid = await form.trigger(['title', 'description']);
+      const fields: (keyof RequestFormData)[] = ['title', 'description'];
+      if (watchCategory === 'financial') fields.push('requestedAmount');
+      const valid = await form.trigger(fields as any);
       if (!valid) return;
     }
     setStep(step + 1);
@@ -235,6 +248,7 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
         userId: user.id,
         studentName: profile?.full_name || 'Unknown Student',
         requestedAmount: data.category === 'financial' ? data.requestedAmount : undefined,
+        fundingPurpose: data.category === 'financial' ? (data.fundingPurpose?.trim() || undefined) : undefined,
       });
 
       const newId = (result as any)?.id;
@@ -436,25 +450,50 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
                   </RadioGroup>
                 </div>
 
-                {/* Requested Amount - Only for Financial category */}
+                {/* Requested Amount + Funding Purpose - Only for Financial category */}
                 {watchCategory === 'financial' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="requestedAmount">Requested Amount (USD)</Label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="requestedAmount"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        className="pl-9"
-                        {...form.register('requestedAmount', { valueAsNumber: true })}
-                      />
+                  <div className="space-y-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="requestedAmount">
+                        Amount Requested (USD) <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="requestedAmount"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          className="pl-9"
+                          {...form.register('requestedAmount', {
+                            setValueAs: (v) => (v === '' || v === null ? undefined : Number(v)),
+                          })}
+                          aria-invalid={!!form.formState.errors.requestedAmount}
+                        />
+                      </div>
+                      {form.formState.errors.requestedAmount && (
+                        <p className="text-sm text-destructive">
+                          {form.formState.errors.requestedAmount.message}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Enter the dollar amount you are requesting for financial assistance.
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Enter the dollar amount you are requesting for financial assistance
-                    </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="fundingPurpose">Purpose of funds (optional)</Label>
+                      <Textarea
+                        id="fundingPurpose"
+                        rows={3}
+                        maxLength={500}
+                        placeholder="e.g., Textbooks for spring semester, past-due utility bill, transportation to interview…"
+                        {...form.register('fundingPurpose')}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Briefly explain what the funds will be used for. Helps reviewers approve faster.
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -593,6 +632,12 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
                       <span className="font-semibold text-primary">
                         ${form.watch('requestedAmount')?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
+                    </div>
+                  )}
+                  {watchCategory === 'financial' && form.watch('fundingPurpose')?.trim() && (
+                    <div className="py-2 border-b">
+                      <span className="text-muted-foreground">Purpose of funds</span>
+                      <p className="mt-1 text-sm whitespace-pre-wrap">{form.watch('fundingPurpose')}</p>
                     </div>
                   )}
                   <div className="py-2 border-b">

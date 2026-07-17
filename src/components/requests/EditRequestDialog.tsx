@@ -41,7 +41,8 @@ const schema = z.object({
   description: z.string().min(20, 'Please provide more details (at least 20 characters)').max(2000),
   priority: z.enum(['low', 'medium', 'high', 'emergency']),
   isEmergency: z.boolean(),
-  requestedAmount: z.number().min(0).optional().nullable(),
+  requestedAmount: z.number().min(0).max(1_000_000).optional().nullable(),
+  fundingPurpose: z.string().max(500).optional().nullable(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -65,6 +66,11 @@ export function EditRequestDialog({ request, open, onOpenChange }: EditRequestDi
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
 
+  const financialLocked =
+    request.approval_status !== undefined &&
+    request.approval_status !== null &&
+    request.approval_status !== 'pending';
+
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -74,6 +80,7 @@ export function EditRequestDialog({ request, open, onOpenChange }: EditRequestDi
       priority: request.priority,
       isEmergency: request.is_emergency,
       requestedAmount: request.requested_amount ?? undefined,
+      fundingPurpose: (request as any).funding_purpose ?? '',
     },
   });
 
@@ -86,6 +93,7 @@ export function EditRequestDialog({ request, open, onOpenChange }: EditRequestDi
         priority: request.priority,
         isEmergency: request.is_emergency,
         requestedAmount: request.requested_amount ?? undefined,
+        fundingPurpose: (request as any).funding_purpose ?? '',
       });
     }
   }, [open, request, form]);
@@ -98,17 +106,30 @@ export function EditRequestDialog({ request, open, onOpenChange }: EditRequestDi
     if (!user) return;
     setSaving(true);
     try {
+      const patch: {
+        category: typeof data.category;
+        title: string;
+        description: string;
+        priority: typeof data.priority;
+        is_emergency: boolean;
+        requested_amount?: number | null;
+        funding_purpose?: string | null;
+      } = {
+        category: data.category,
+        title: data.title,
+        description: data.description,
+        priority: data.priority,
+        is_emergency: data.isEmergency,
+      };
+      if (!financialLocked) {
+        patch.requested_amount =
+          data.category === 'financial' ? data.requestedAmount ?? null : null;
+        patch.funding_purpose =
+          data.category === 'financial' ? (data.fundingPurpose?.trim() || null) : null;
+      }
       const { error } = await supabase
         .from('support_requests')
-        .update({
-          category: data.category,
-          title: data.title,
-          description: data.description,
-          priority: data.priority,
-          is_emergency: data.isEmergency,
-          requested_amount:
-            data.category === 'financial' ? data.requestedAmount ?? null : null,
-        })
+        .update(patch)
         .eq('id', request.id);
 
       if (error) throw error;
@@ -210,21 +231,39 @@ export function EditRequestDialog({ request, open, onOpenChange }: EditRequestDi
           </div>
 
           {watchCategory === 'financial' && (
-            <div className="space-y-2">
-              <Label htmlFor="requestedAmount">Requested Amount (USD)</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="requestedAmount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="pl-9"
-                  {...form.register('requestedAmount', {
-                    setValueAs: (v) => (v === '' || v === null ? undefined : Number(v)),
-                  })}
+            <div className="space-y-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
+              <div className="space-y-2">
+                <Label htmlFor="requestedAmount">Requested Amount (USD)</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="requestedAmount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="pl-9"
+                    disabled={financialLocked}
+                    {...form.register('requestedAmount', {
+                      setValueAs: (v) => (v === '' || v === null ? undefined : Number(v)),
+                    })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fundingPurpose">Purpose of funds</Label>
+                <Textarea
+                  id="fundingPurpose"
+                  rows={3}
+                  maxLength={500}
+                  disabled={financialLocked}
+                  {...form.register('fundingPurpose')}
                 />
               </div>
+              {financialLocked && (
+                <p className="text-xs text-muted-foreground">
+                  Funding amount and purpose are locked after a review decision has been recorded.
+                </p>
+              )}
             </div>
           )}
 

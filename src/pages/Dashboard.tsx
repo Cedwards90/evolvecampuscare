@@ -51,6 +51,7 @@ import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 import { applyToRequests } from '@/lib/applyGlobalFilters';
 import { useProductTour } from '@/hooks/useProductTour';
+import { ProfileReviewBanner } from '@/components/profile/ProfileReviewBanner';
 
 export default function Dashboard() {
   const { role, user, profile } = useAuth();
@@ -187,6 +188,7 @@ export default function Dashboard() {
   return (
     <SidebarLayout>
       <div className="space-y-6">
+        {role === 'student' && <ProfileReviewBanner />}
         {role !== 'student' && <GlobalFilterBar />}
 
         {/* Onboarding tip for first 3 logins */}

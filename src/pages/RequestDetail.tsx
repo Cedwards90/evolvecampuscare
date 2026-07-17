@@ -174,23 +174,45 @@ export default function RequestDetail() {
               <CardContent>
                 <p className="text-foreground whitespace-pre-wrap">{request.description}</p>
                 
-                {/* Monetary amounts for financial requests */}
-                {request.category === 'financial' && (request.requested_amount || request.approved_amount) && (
-                  <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
-                    {request.requested_amount && (
+                {/* Monetary amounts + funding purpose + approval status for financial requests */}
+                {request.category === 'financial' && (
+                  <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
+                    {request.requested_amount != null && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Requested Amount</span>
+                        <span className="text-muted-foreground">Amount Requested</span>
                         <span className="font-semibold">
-                          ${request.requested_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ${Number(request.requested_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     )}
-                    {request.approved_amount !== null && request.approved_amount !== undefined && (
+                    {(request as any).funding_purpose && (
+                      <div className="text-sm">
+                        <div className="text-muted-foreground mb-1">Purpose of funds</div>
+                        <p className="whitespace-pre-wrap">{(request as any).funding_purpose}</p>
+                      </div>
+                    )}
+                    {(isStaff || (request.approved_amount !== null && request.approved_amount !== undefined)) && request.approved_amount !== null && request.approved_amount !== undefined && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Approved Amount</span>
+                        <span className="text-muted-foreground">Amount Approved</span>
                         <span className="font-semibold text-green-600 dark:text-green-400">
-                          ${request.approved_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ${Number(request.approved_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
+                      </div>
+                    )}
+                    {(request as any).approval_status && (request as any).approval_status !== 'pending' && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Approval Status</span>
+                        <Badge
+                          variant={
+                            (request as any).approval_status === 'approved'
+                              ? 'default'
+                              : (request as any).approval_status === 'denied'
+                              ? 'destructive'
+                              : 'secondary'
+                          }
+                        >
+                          {String((request as any).approval_status).replace('_', ' ')}
+                        </Badge>
                       </div>
                     )}
                   </div>
@@ -240,6 +262,8 @@ export default function RequestDetail() {
                         userId={user!.id}
                         currentStatus={request.status}
                         requestedAmount={request.requested_amount}
+                        fundingPurpose={(request as any).funding_purpose}
+                        approvalStatus={(request as any).approval_status}
                         requestTitle={request.title}
                         requestDescription={request.description}
                         requestCategory={request.category}

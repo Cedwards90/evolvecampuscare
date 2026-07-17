@@ -78,6 +78,10 @@ import { CMF_NEEDS, CMF_CONTACT_TYPES, needLabel } from '@/lib/cmfNeeds';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useFormPersistence } from '@/hooks/useFormPersistence';
 import { DraftIndicator } from '@/components/forms/DraftIndicator';
+import { EditProfileDialog } from '@/components/profile/EditProfileDialog';
+import { ProfileAuditDialog } from '@/components/profile/ProfileAuditDialog';
+import { calculateAge } from '@/lib/age';
+import { History, UserCog } from 'lucide-react';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -97,6 +101,10 @@ export default function StudentDetail() {
   const [activeTab, setActiveTab] = useState('requests');
 
   const isStaff = role === 'admin' || role === 'case_manager';
+  const canEditProfile = role === 'admin' || role === 'case_manager' || role === 'org_admin';
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
+
 
   const studentOrgId = (student?.profile as any)?.organization_id as string | null | undefined;
   const studentCohortId = (student?.profile as any)?.cohort_id as string | null | undefined;
@@ -232,7 +240,19 @@ export default function StudentDetail() {
                       <span>{student.profile.phone}</span>
                     </div>
                   )}
+                  {(student.profile as any)?.date_of_birth && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <CalendarDays className="h-4 w-4" />
+                      <span>
+                        DOB: {format(new Date((student.profile as any).date_of_birth), 'MMM d, yyyy')}
+                        {calculateAge((student.profile as any).date_of_birth) !== null && (
+                          <> · Age {calculateAge((student.profile as any).date_of_birth)}</>
+                        )}
+                      </span>
+                    </div>
+                  )}
                 </div>
+
 
                 {/* Milestone Dates */}
                 <div className="flex flex-wrap gap-4 text-sm">
@@ -329,8 +349,21 @@ export default function StudentDetail() {
                       </Link>
                     </Button>
                   ) : null}
+                  {canEditProfile && (
+                    <>
+                      <Button variant="outline" size="sm" onClick={() => setEditProfileOpen(true)}>
+                        <UserCog className="mr-2 h-4 w-4" />
+                        Edit Profile
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setAuditOpen(true)}>
+                        <History className="mr-2 h-4 w-4" />
+                        Profile History
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
+
 
               {/* Stats Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -645,6 +678,37 @@ export default function StudentDetail() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {canEditProfile && id && student.profile && (
+          <>
+            <EditProfileDialog
+              open={editProfileOpen}
+              onOpenChange={setEditProfileOpen}
+              userId={id}
+              targetLabel={student.profile.full_name || undefined}
+              initial={{
+                full_name: student.profile.full_name,
+                legal_first_name: (student.profile as any).legal_first_name ?? null,
+                legal_last_name: (student.profile as any).legal_last_name ?? null,
+                preferred_name: (student.profile as any).preferred_name ?? null,
+                email: student.profile.email,
+                phone: student.profile.phone,
+                date_of_birth: (student.profile as any).date_of_birth ?? null,
+                address_line1: (student.profile as any).address_line1 ?? null,
+                address_line2: (student.profile as any).address_line2 ?? null,
+                city: (student.profile as any).city ?? null,
+                state_region: (student.profile as any).state_region ?? null,
+                postal_code: (student.profile as any).postal_code ?? null,
+                country: (student.profile as any).country ?? null,
+              }}
+            />
+            <ProfileAuditDialog
+              open={auditOpen}
+              onOpenChange={setAuditOpen}
+              userId={id}
+              targetLabel={student.profile.full_name || undefined}
+            />
+          </>
+        )}
       </div>
     </SidebarLayout>
   );

@@ -43,6 +43,7 @@ import { MFAEnrollment } from '@/components/auth/MFAEnrollment';
 import { StudentQRShortcut } from '@/components/qr/StudentQRShortcut';
 import { CertificationCatalogManager } from '@/components/admin/CertificationCatalogManager';
 import { AvailabilityEditor } from '@/components/scheduling/AvailabilityEditor';
+import { EditProfileDialog } from '@/components/profile/EditProfileDialog';
 
 
 const profileSchema = z.object({
@@ -163,7 +164,7 @@ function AccountDeletionCard() {
 }
 
 export default function Settings() {
-  const { profile, user, role } = useAuth();
+  const { profile, user, role, refreshProfile } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
@@ -188,15 +189,35 @@ export default function Settings() {
     },
   });
 
+  const [extendedOpen, setExtendedOpen] = useState(false);
+
   const onSubmit = async (data: ProfileFormData) => {
+    if (!user) return;
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({
-      title: 'Profile updated',
-      description: 'Your profile has been successfully updated.',
-    });
-    setIsLoading(false);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: data.fullName,
+          phone: data.phone || null,
+          profile_last_reviewed_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id);
+      if (error) throw error;
+      await refreshProfile();
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile has been successfully updated.',
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Update failed',
+        description: err?.message || 'Please try again.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDisableMFA = async () => {
@@ -316,13 +337,43 @@ export default function Settings() {
                     )}
                   </div>
 
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Changes
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Save Changes
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setExtendedOpen(true)}>
+                      Update legal name, address & date of birth
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>
+
+            {user && profile && (
+              <EditProfileDialog
+                open={extendedOpen}
+                onOpenChange={setExtendedOpen}
+                userId={user.id}
+                isSelfEdit
+                initial={{
+                  full_name: profile.full_name,
+                  legal_first_name: (profile as any).legal_first_name ?? null,
+                  legal_last_name: (profile as any).legal_last_name ?? null,
+                  preferred_name: (profile as any).preferred_name ?? null,
+                  email: profile.email,
+                  phone: profile.phone,
+                  date_of_birth: (profile as any).date_of_birth ?? null,
+                  address_line1: (profile as any).address_line1 ?? null,
+                  address_line2: (profile as any).address_line2 ?? null,
+                  city: (profile as any).city ?? null,
+                  state_region: (profile as any).state_region ?? null,
+                  postal_code: (profile as any).postal_code ?? null,
+                  country: (profile as any).country ?? null,
+                }}
+              />
+            )}
+
 
             {role === 'student' && <StudentQRShortcut />}
 

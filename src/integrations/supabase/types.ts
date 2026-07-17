@@ -1446,13 +1446,48 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_edit_audit: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          field: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          profile_user_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          field: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          profile_user_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          field?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          profile_user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          address_line1: string | null
+          address_line2: string | null
           avatar_url: string | null
+          city: string | null
           cmf_preferred_contact_type: string | null
           cohort_id: string | null
           cohort_start_date: string | null
+          country: string | null
           created_at: string
+          date_of_birth: string | null
           deactivated_at: string | null
           deactivated_by: string | null
           deactivation_reason: string | null
@@ -1461,6 +1496,8 @@ export type Database = {
           full_name: string | null
           graduation_date: string | null
           id: string
+          legal_first_name: string | null
+          legal_last_name: string | null
           mfa_exempt: boolean
           mfa_exempt_at: string | null
           mfa_exempt_by: string | null
@@ -1469,21 +1506,30 @@ export type Database = {
           organization_id: string | null
           phone: string | null
           placement_date: string | null
+          postal_code: string | null
           preferred_contact: string | null
           preferred_language: string | null
+          preferred_name: string | null
+          profile_last_reviewed_at: string | null
           reactivated_at: string | null
           reactivated_by: string | null
+          state_region: string | null
           student_id: string | null
           updated_at: string
           user_id: string
           year_of_study: string | null
         }
         Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
           avatar_url?: string | null
+          city?: string | null
           cmf_preferred_contact_type?: string | null
           cohort_id?: string | null
           cohort_start_date?: string | null
+          country?: string | null
           created_at?: string
+          date_of_birth?: string | null
           deactivated_at?: string | null
           deactivated_by?: string | null
           deactivation_reason?: string | null
@@ -1492,6 +1538,8 @@ export type Database = {
           full_name?: string | null
           graduation_date?: string | null
           id?: string
+          legal_first_name?: string | null
+          legal_last_name?: string | null
           mfa_exempt?: boolean
           mfa_exempt_at?: string | null
           mfa_exempt_by?: string | null
@@ -1500,21 +1548,30 @@ export type Database = {
           organization_id?: string | null
           phone?: string | null
           placement_date?: string | null
+          postal_code?: string | null
           preferred_contact?: string | null
           preferred_language?: string | null
+          preferred_name?: string | null
+          profile_last_reviewed_at?: string | null
           reactivated_at?: string | null
           reactivated_by?: string | null
+          state_region?: string | null
           student_id?: string | null
           updated_at?: string
           user_id: string
           year_of_study?: string | null
         }
         Update: {
+          address_line1?: string | null
+          address_line2?: string | null
           avatar_url?: string | null
+          city?: string | null
           cmf_preferred_contact_type?: string | null
           cohort_id?: string | null
           cohort_start_date?: string | null
+          country?: string | null
           created_at?: string
+          date_of_birth?: string | null
           deactivated_at?: string | null
           deactivated_by?: string | null
           deactivation_reason?: string | null
@@ -1523,6 +1580,8 @@ export type Database = {
           full_name?: string | null
           graduation_date?: string | null
           id?: string
+          legal_first_name?: string | null
+          legal_last_name?: string | null
           mfa_exempt?: boolean
           mfa_exempt_at?: string | null
           mfa_exempt_by?: string | null
@@ -1531,10 +1590,14 @@ export type Database = {
           organization_id?: string | null
           phone?: string | null
           placement_date?: string | null
+          postal_code?: string | null
           preferred_contact?: string | null
           preferred_language?: string | null
+          preferred_name?: string | null
+          profile_last_reviewed_at?: string | null
           reactivated_at?: string | null
           reactivated_by?: string | null
+          state_region?: string | null
           student_id?: string | null
           updated_at?: string
           user_id?: string
@@ -2288,12 +2351,16 @@ export type Database = {
       }
       support_requests: {
         Row: {
+          approval_decided_at: string | null
+          approval_decided_by: string | null
+          approval_status: string
           approved_amount: number | null
           assigned_case_manager_id: string | null
           category: Database["public"]["Enums"]["request_category"]
           created_at: string
           description: string
           escalated_at: string | null
+          funding_purpose: string | null
           id: string
           is_emergency: boolean | null
           priority: Database["public"]["Enums"]["request_priority"]
@@ -2306,12 +2373,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_decided_at?: string | null
+          approval_decided_by?: string | null
+          approval_status?: string
           approved_amount?: number | null
           assigned_case_manager_id?: string | null
           category: Database["public"]["Enums"]["request_category"]
           created_at?: string
           description: string
           escalated_at?: string | null
+          funding_purpose?: string | null
           id?: string
           is_emergency?: boolean | null
           priority?: Database["public"]["Enums"]["request_priority"]
@@ -2324,12 +2395,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_decided_at?: string | null
+          approval_decided_by?: string | null
+          approval_status?: string
           approved_amount?: number | null
           assigned_case_manager_id?: string | null
           category?: Database["public"]["Enums"]["request_category"]
           created_at?: string
           description?: string
           escalated_at?: string | null
+          funding_purpose?: string | null
           id?: string
           is_emergency?: boolean | null
           priority?: Database["public"]["Enums"]["request_priority"]
