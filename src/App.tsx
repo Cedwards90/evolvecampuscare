@@ -37,6 +37,7 @@ import QRLanding from "./pages/QRLanding";
 import QRStandaloneRequest from "./pages/QRStandaloneRequest";
 import QRRequestSuccess from "./pages/QRRequestSuccess";
 import PublicSharedRequest from "./pages/PublicSharedRequest";
+import OAuthConsent from "./pages/OAuthConsent";
 import RequestDetail from "./pages/RequestDetail";
 import RequestsList from "./pages/RequestsList";
 import CaseManagerDetail from "./pages/CaseManagerDetail";
