@@ -37,6 +37,7 @@ import { useRequest } from '@/hooks/useRequest';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrgBadgeInline } from '@/components/OrgBadgeInline';
 import { PageNav } from '@/components/navigation/PageNav';
+import { SafeRichText } from '@/components/ui/SafeRichText';
 
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
