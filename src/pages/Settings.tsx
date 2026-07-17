@@ -188,15 +188,35 @@ export default function Settings() {
     },
   });
 
+  const [extendedOpen, setExtendedOpen] = useState(false);
+
   const onSubmit = async (data: ProfileFormData) => {
+    if (!user) return;
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({
-      title: 'Profile updated',
-      description: 'Your profile has been successfully updated.',
-    });
-    setIsLoading(false);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: data.fullName,
+          phone: data.phone || null,
+          profile_last_reviewed_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id);
+      if (error) throw error;
+      await refreshProfile();
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile has been successfully updated.',
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Update failed',
+        description: err?.message || 'Please try again.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDisableMFA = async () => {
