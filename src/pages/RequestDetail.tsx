@@ -494,7 +494,6 @@ export default function RequestDetail() {
           requestTitle={request.title}
         />
       )}
-      )}
       {canDelete && (
         <DeleteRequestDialog
           open={deleteOpen}
