@@ -586,3 +586,42 @@ export function useAddReply() {
     },
   });
 }
+
+export function useDeleteRequest() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ requestId }: { requestId: string }) => {
+      // Best-effort: remove attachment files from storage
+      const { data: attachments } = await supabase
+        .from('request_attachments')
+        .select('file_path')
+        .eq('request_id', requestId);
+
+      const paths = (attachments || [])
+        .map((a) => a.file_path)
+        .filter((p): p is string => !!p);
+
+      if (paths.length > 0) {
+        try {
+          await supabase.storage.from('request-attachments').remove(paths);
+        } catch (err) {
+          console.error('Failed to remove attachment files:', err);
+        }
+      }
+
+      const { error } = await supabase
+        .from('support_requests')
+        .delete()
+        .eq('id', requestId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { requestId }) => {
+      queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['student-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}

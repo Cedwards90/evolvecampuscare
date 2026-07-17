@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle, XCircle, Eye, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -21,6 +21,7 @@ import {
 import { useApproveRequest, useDenyRequest } from '@/hooks/useRequest';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { DeleteRequestDialog } from './DeleteRequestDialog';
 import type { SupportRequest } from '@/types/database';
 
 interface RequestQuickActionsProps {
@@ -36,14 +37,16 @@ export function RequestQuickActions({
 }: RequestQuickActionsProps) {
   const [denyDialogOpen, setDenyDialogOpen] = useState(false);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [denyReason, setDenyReason] = useState('');
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { toast } = useToast();
 
   const approveRequest = useApproveRequest();
   const denyRequest = useDenyRequest();
 
   const canTakeAction = request.status === 'submitted';
+  const canDelete = role === 'admin' || role === 'case_manager' || role === 'org_admin';
   const isLoading = approveRequest.isPending || denyRequest.isPending;
 
   const handleApprove = async () => {
@@ -150,6 +153,31 @@ export function RequestQuickActions({
           <TooltipContent>View Details</TooltipContent>
         </Tooltip>
       )}
+
+      {canDelete && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Delete</TooltipContent>
+        </Tooltip>
+      )}
+
+      <DeleteRequestDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        requestId={request.id}
+        requestTitle={request.title}
+        studentName={request.student?.full_name || undefined}
+        onDeleted={onActionComplete}
+      />
 
       {/* Approve Dialog */}
       <AlertDialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>

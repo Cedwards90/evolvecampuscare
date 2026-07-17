@@ -11,10 +11,12 @@ import {
   Clock,
   FileText,
   Pencil,
-  Share2
+  Share2,
+  Trash2
 } from 'lucide-react';
 import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
 import { SharePdfDialog } from '@/components/requests/SharePdfDialog';
+import { DeleteRequestDialog } from '@/components/requests/DeleteRequestDialog';
 import { formatDistanceToNow, format } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { Button } from '@/components/ui/button';
@@ -43,9 +45,11 @@ export default function RequestDetail() {
   const { data: request, isLoading, error } = useRequest(id);
   const [editOpen, setEditOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const isStaff = role === 'case_manager' || role === 'admin';
   const canShare = role === 'case_manager' || role === 'admin' || role === 'org_admin';
+  const canDelete = role === 'admin' || role === 'case_manager' || role === 'org_admin';
   const canTakeActions = isStaff && (
     role === 'admin' || 
     request?.assigned_case_manager_id === user?.id
@@ -288,6 +292,30 @@ export default function RequestDetail() {
               </>
             )}
 
+            {/* Danger Zone - staff delete */}
+            {canDelete && (
+              <Card className="border-destructive/40">
+                <CardHeader>
+                  <CardTitle className="text-destructive flex items-center gap-2">
+                    <Trash2 className="h-5 w-5" />
+                    Danger Zone
+                  </CardTitle>
+                  <CardDescription>
+                    Permanently delete this request and all related history. This cannot be undone.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setDeleteOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete request
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Attachments */}
             <RequestAttachments requestId={request.id} />
 
@@ -464,6 +492,16 @@ export default function RequestDetail() {
           onOpenChange={setShareOpen}
           requestId={request.id}
           requestTitle={request.title}
+        />
+      )}
+      {canDelete && (
+        <DeleteRequestDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          requestId={request.id}
+          requestTitle={request.title}
+          studentName={request.student?.full_name || undefined}
+          onDeleted={() => navigate('/requests')}
         />
       )}
     </SidebarLayout>
