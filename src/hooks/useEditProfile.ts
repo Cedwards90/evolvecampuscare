@@ -35,8 +35,10 @@ export function useEditProfile() {
       changes: EditableProfileFields;
       markReviewed?: boolean;
     }) => {
-      const payload: Record<string, unknown> = { ...changes };
-      if (markReviewed) payload.profile_last_reviewed_at = new Date().toISOString();
+      const payload = {
+        ...changes,
+        ...(markReviewed ? { profile_last_reviewed_at: new Date().toISOString() } : {}),
+      };
       const { data, error } = await supabase
         .from('profiles')
         .update(payload)
