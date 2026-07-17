@@ -295,7 +295,7 @@ export default function StudentDetail() {
                       onValueChange={handleCohortChange}
                       disabled={assignCohort.isPending}
                     >
-                      <SelectTrigger className="h-8 w-[240px] rounded-full">
+                      <SelectTrigger className="h-8 w-full sm:w-[240px] max-w-full rounded-full">
                         <SelectValue placeholder="Assign cohort" />
                       </SelectTrigger>
                       <SelectContent>
