@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConversation, useSendMessage, useMarkAsRead } from '@/hooks/useMessages';
 import { cn } from '@/lib/utils';
+import { SafeRichText } from '@/components/ui/SafeRichText';
 import type { StaffMessage } from '@/types/messages';
 
 interface MessageThreadProps {
