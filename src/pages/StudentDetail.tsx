@@ -82,6 +82,7 @@ import { EditProfileDialog } from '@/components/profile/EditProfileDialog';
 import { ProfileAuditDialog } from '@/components/profile/ProfileAuditDialog';
 import { calculateAge } from '@/lib/age';
 import { History, UserCog } from 'lucide-react';
+import { SafeRichText } from '@/components/ui/SafeRichText';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
