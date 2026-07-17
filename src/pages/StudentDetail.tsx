@@ -213,7 +213,7 @@ export default function StudentDetail() {
                 </AvatarFallback>
               </Avatar>
 
-              <div className="flex-1 space-y-4">
+              <div className="flex-1 min-w-0 space-y-4">
                 <div>
                   <h1 className="font-display text-h2 font-bold">
                     {student.profile?.full_name || 'Unknown Student'}
@@ -295,7 +295,7 @@ export default function StudentDetail() {
                       onValueChange={handleCohortChange}
                       disabled={assignCohort.isPending}
                     >
-                      <SelectTrigger className="h-8 w-[240px] rounded-full">
+                      <SelectTrigger className="h-8 w-full sm:w-[240px] max-w-full rounded-full">
                         <SelectValue placeholder="Assign cohort" />
                       </SelectTrigger>
                       <SelectContent>
@@ -314,7 +314,7 @@ export default function StudentDetail() {
                 </div>
 
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
                   <Button asChild size="sm">
                     <Link to={`/messages/${id}`}>
                       <MessageSquare className="mr-2 h-4 w-4" />
