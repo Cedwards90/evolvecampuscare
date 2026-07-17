@@ -292,6 +292,30 @@ export default function RequestDetail() {
               </>
             )}
 
+            {/* Danger Zone - staff delete */}
+            {canDelete && (
+              <Card className="border-destructive/40">
+                <CardHeader>
+                  <CardTitle className="text-destructive flex items-center gap-2">
+                    <Trash2 className="h-5 w-5" />
+                    Danger Zone
+                  </CardTitle>
+                  <CardDescription>
+                    Permanently delete this request and all related history. This cannot be undone.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setDeleteOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete request
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Attachments */}
             <RequestAttachments requestId={request.id} />
 
