@@ -177,7 +177,12 @@ export default function RequestDetail() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-foreground whitespace-pre-wrap">{request.description}</p>
+                <SafeRichText
+                  text={request.description}
+                  clampLines={10}
+                  showCopy
+                  className="text-foreground"
+                />
                 
                 {/* Monetary amounts + funding purpose + approval status for financial requests */}
                 {request.category === 'financial' && (
