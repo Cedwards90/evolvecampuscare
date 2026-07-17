@@ -336,13 +336,43 @@ export default function Settings() {
                     )}
                   </div>
 
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Changes
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Save Changes
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setExtendedOpen(true)}>
+                      Update legal name, address & date of birth
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>
+
+            {user && profile && (
+              <EditProfileDialog
+                open={extendedOpen}
+                onOpenChange={setExtendedOpen}
+                userId={user.id}
+                isSelfEdit
+                initial={{
+                  full_name: profile.full_name,
+                  legal_first_name: (profile as any).legal_first_name ?? null,
+                  legal_last_name: (profile as any).legal_last_name ?? null,
+                  preferred_name: (profile as any).preferred_name ?? null,
+                  email: profile.email,
+                  phone: profile.phone,
+                  date_of_birth: (profile as any).date_of_birth ?? null,
+                  address_line1: (profile as any).address_line1 ?? null,
+                  address_line2: (profile as any).address_line2 ?? null,
+                  city: (profile as any).city ?? null,
+                  state_region: (profile as any).state_region ?? null,
+                  postal_code: (profile as any).postal_code ?? null,
+                  country: (profile as any).country ?? null,
+                }}
+              />
+            )}
+
 
             {role === 'student' && <StudentQRShortcut />}
 
