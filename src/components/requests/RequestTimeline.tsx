@@ -183,7 +183,12 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
               )}
 
               {update.note && (
-                <p className="text-sm text-foreground">{update.note}</p>
+                <SafeRichText
+                  text={update.note}
+                  clampLines={6}
+                  showCopy
+                  className="text-sm text-foreground"
+                />
               )}
             </div>
           </div>
