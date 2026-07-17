@@ -28,7 +28,20 @@ export interface Profile {
   deactivation_reason?: string | null;
   reactivated_at?: string | null;
   reactivated_by?: string | null;
+  legal_first_name?: string | null;
+  legal_last_name?: string | null;
+  preferred_name?: string | null;
+  date_of_birth?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state_region?: string | null;
+  postal_code?: string | null;
+  country?: string | null;
+  profile_last_reviewed_at?: string | null;
 }
+
+export type ApprovalStatus = 'pending' | 'approved' | 'partially_approved' | 'denied';
 
 export interface UserRole {
   id: string;
@@ -51,6 +64,10 @@ export interface SupportRequest {
   resolved_at: string | null;
   requested_amount: number | null;
   approved_amount: number | null;
+  funding_purpose?: string | null;
+  approval_status?: ApprovalStatus;
+  approval_decided_at?: string | null;
+  approval_decided_by?: string | null;
   created_at: string;
   updated_at: string;
   // Joined data
