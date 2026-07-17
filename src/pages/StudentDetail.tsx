@@ -1090,11 +1090,11 @@ function StudentCaseNotesTab({ studentId }: { studentId: string }) {
                       </div>
                     )}
                   </div>
-                  <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                  <SafeRichText text={note.content} clampLines={5} showCopy className="text-sm" />
                   {note.next_steps && (
                     <div className="text-xs">
-                      <span className="font-medium">Next steps: </span>
-                      <span className="whitespace-pre-wrap">{note.next_steps}</span>
+                      <div className="font-medium mb-0.5">Next steps</div>
+                      <SafeRichText text={note.next_steps} clampLines={4} className="text-xs" />
                     </div>
                   )}
                   {(note.identified_needs?.length > 0 || note.referral_agency) && (
