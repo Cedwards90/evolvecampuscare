@@ -133,7 +133,7 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
 
             {/* Content */}
             <div className={cn(
-              "flex-1 pb-4 rounded-lg p-4",
+              "flex-1 min-w-0 pb-4 rounded-lg p-4",
               update.is_internal 
                 ? "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800" 
                 : "bg-muted/50"
