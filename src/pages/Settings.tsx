@@ -43,6 +43,7 @@ import { MFAEnrollment } from '@/components/auth/MFAEnrollment';
 import { StudentQRShortcut } from '@/components/qr/StudentQRShortcut';
 import { CertificationCatalogManager } from '@/components/admin/CertificationCatalogManager';
 import { AvailabilityEditor } from '@/components/scheduling/AvailabilityEditor';
+import { EditProfileDialog } from '@/components/profile/EditProfileDialog';
 
 
 const profileSchema = z.object({
