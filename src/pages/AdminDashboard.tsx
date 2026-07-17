@@ -107,11 +107,11 @@ export default function AdminDashboard() {
     emergencyRequests: requests.filter(r => r.is_emergency).length,
   }), [requests]);
   
-  // Filter escalated or unassigned requests
-  const criticalRequests = useMemo(() => 
-    requests.filter(r => r.status === 'escalated' || !r.assigned_case_manager_id),
-    [requests]
-  );
+  // Filter escalated or unassigned requests (exclude resolved/cancelled)
+  const criticalRequests = useMemo(() => {
+    const activeStatuses = new Set(['submitted', 'in_progress', 'escalated']);
+    return requests.filter(r => activeStatuses.has(r.status) && (r.status === 'escalated' || !r.assigned_case_manager_id));
+  }, [requests]);
 
   const filteredRequests = useMemo(() => 
     requests.filter((request) => {
