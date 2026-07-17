@@ -154,6 +154,31 @@ export function RequestQuickActions({
         </Tooltip>
       )}
 
+      {canDelete && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Delete</TooltipContent>
+        </Tooltip>
+      )}
+
+      <DeleteRequestDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        requestId={request.id}
+        requestTitle={request.title}
+        studentName={request.student?.full_name || undefined}
+        onDeleted={onActionComplete}
+      />
+
       {/* Approve Dialog */}
       <AlertDialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
         <AlertDialogContent>
