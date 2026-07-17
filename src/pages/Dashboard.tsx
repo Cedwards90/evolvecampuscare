@@ -709,15 +709,23 @@ export default function Dashboard() {
                 </Button>
               </div>
               <div className="grid gap-4">
-                {allRequests.filter(r => r.status === 'escalated' || !r.assigned_case_manager_id).slice(0, 3).map((request) => (
-                  <RequestCard key={request.id} request={request} showStudent />
-                ))}
-                {allRequests.filter(r => r.status === 'escalated' || !r.assigned_case_manager_id).length === 0 && (
-                  <Card className="border border-border/50 p-8 text-center">
-                    <CheckCircle className="h-12 w-12 mx-auto text-green-500/50 mb-4" />
-                    <p className="text-muted-foreground">All requests are assigned and on track.</p>
-                  </Card>
-                )}
+                {(() => {
+                  const activeStatuses = new Set(['submitted', 'in_progress', 'escalated']);
+                  const items = allRequests.filter(r => activeStatuses.has(r.status) && (r.status === 'escalated' || !r.assigned_case_manager_id));
+                  return (
+                    <>
+                      {items.slice(0, 3).map((request) => (
+                        <RequestCard key={request.id} request={request} showStudent />
+                      ))}
+                      {items.length === 0 && (
+                        <Card className="border border-border/50 p-8 text-center">
+                          <CheckCircle className="h-12 w-12 mx-auto text-green-500/50 mb-4" />
+                          <p className="text-muted-foreground">All requests are assigned and on track.</p>
+                        </Card>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </section>
           </>
