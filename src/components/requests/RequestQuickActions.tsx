@@ -37,14 +37,16 @@ export function RequestQuickActions({
 }: RequestQuickActionsProps) {
   const [denyDialogOpen, setDenyDialogOpen] = useState(false);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [denyReason, setDenyReason] = useState('');
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { toast } = useToast();
 
   const approveRequest = useApproveRequest();
   const denyRequest = useDenyRequest();
 
   const canTakeAction = request.status === 'submitted';
+  const canDelete = role === 'admin' || role === 'case_manager' || role === 'org_admin';
   const isLoading = approveRequest.isPending || denyRequest.isPending;
 
   const handleApprove = async () => {
