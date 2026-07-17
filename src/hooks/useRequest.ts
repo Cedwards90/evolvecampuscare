@@ -240,16 +240,28 @@ export function useDenyRequest() {
       // Fetch request details first
       const { data: requestData } = await supabase
         .from('support_requests')
-        .select('student_id, title, status')
+        .select('student_id, title, status, category')
         .eq('id', requestId)
         .single();
 
       const previousStatus = requestData?.status || 'submitted';
+      const isFinancial = requestData?.category === 'financial';
 
-      // Update status to cancelled
+      // Update status to cancelled; mark financial approval as denied
+      const update: {
+        status: RequestStatus;
+        approval_status?: string;
+        approval_decided_at?: string;
+        approval_decided_by?: string;
+      } = { status: 'cancelled' as RequestStatus };
+      if (isFinancial) {
+        update.approval_status = 'denied';
+        update.approval_decided_at = new Date().toISOString();
+        update.approval_decided_by = userId;
+      }
       const { error: updateError } = await supabase
         .from('support_requests')
-        .update({ status: 'cancelled' as RequestStatus })
+        .update(update)
         .eq('id', requestId);
 
       if (updateError) throw updateError;
@@ -449,6 +461,7 @@ export function useEditRequest() {
         category?: string;
         priority?: string;
         requested_amount?: number | null;
+        funding_purpose?: string | null;
       };
       original: {
         title: string;
@@ -456,6 +469,7 @@ export function useEditRequest() {
         category: string;
         priority: string;
         requested_amount?: number | null;
+        funding_purpose?: string | null;
         student_id: string;
       };
     }) => {
@@ -466,6 +480,7 @@ export function useEditRequest() {
         category?: 'academic' | 'financial' | 'housing' | 'mental_health' | 'other';
         priority?: 'low' | 'medium' | 'high' | 'emergency';
         requested_amount?: number | null;
+        funding_purpose?: string | null;
       } = {};
       const changeNotes: string[] = [];
 
@@ -494,6 +509,10 @@ export function useEditRequest() {
           ? `$${changes.requested_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
           : 'none';
         changeNotes.push(`amount changed from ${oldAmt} to ${newAmt}`);
+      }
+      if (changes.funding_purpose !== undefined && changes.funding_purpose !== original.funding_purpose) {
+        updatePayload.funding_purpose = changes.funding_purpose;
+        changeNotes.push('funding purpose updated');
       }
 
       if (Object.keys(updatePayload).length === 0) {
