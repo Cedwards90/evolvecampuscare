@@ -115,6 +115,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin', 'org_admin'] },
       { label: 'Reports', href: '/reports', icon: FileBarChart, roles: ['case_manager', 'admin', 'org_admin'] },
+      { label: 'Request Analytics', href: '/admin/request-analytics', icon: BarChart3, roles: ['admin', 'org_admin'] },
       { label: 'Impact Analytics', href: '/admin/impact', icon: Sparkles, roles: ['admin', 'org_admin'] },
     ],
   },
