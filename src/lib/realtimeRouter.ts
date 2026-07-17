@@ -28,6 +28,7 @@ export function invalidateForChange(
   switch (table) {
     case 'support_requests': {
       inv(['requests']);
+      inv(['request-analytics']);
       inv(['my-requests']);
       inv(['request', row.id]);
       inv(['my-students']);

@@ -26,6 +26,7 @@ import ManageRequests from "./pages/ManageRequests";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
+import RequestAnalytics from "./pages/admin/RequestAnalytics";
 import CaseManagersPage from "./pages/admin/CaseManagersPage";
 import TrainingOrganizations from "./pages/admin/TrainingOrganizations";
 import OrganizationDetail from "./pages/admin/OrganizationDetail";
@@ -221,6 +222,11 @@ function App() {
             <Route path="/admin/analytics" element={
               <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <AnalyticsDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/request-analytics" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                <RequestAnalytics />
               </ProtectedRoute>
             } />
             <Route path="/admin/users" element={
