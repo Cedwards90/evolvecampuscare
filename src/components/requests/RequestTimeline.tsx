@@ -106,7 +106,7 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
         const StatusIcon = update.new_status ? statusIcons[update.new_status] : MessageSquare;
 
         return (
-          <div key={update.id} className="flex gap-4">
+          <div key={update.id} className="flex gap-4 min-w-0">
             {/* Timeline line */}
             <div className="flex flex-col items-center">
               <div className={cn(
