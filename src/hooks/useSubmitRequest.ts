@@ -13,6 +13,7 @@ interface SubmitRequestParams {
   userId: string;
   studentName: string;
   requestedAmount?: number;
+  fundingPurpose?: string;
 }
 
 export function useSubmitRequest() {
@@ -28,6 +29,7 @@ export function useSubmitRequest() {
       userId,
       studentName,
       requestedAmount,
+      fundingPurpose,
     }: SubmitRequestParams) => {
       // Check if student has an assigned case manager
       const { data: assignment } = await supabase
@@ -52,6 +54,8 @@ export function useSubmitRequest() {
           status: hasAssignedCM ? 'in_progress' : 'submitted',
           assigned_case_manager_id: hasAssignedCM || null,
           requested_amount: requestedAmount || null,
+          funding_purpose: fundingPurpose || null,
+          approval_status: category === 'financial' ? 'pending' : null,
           qr_session_id: qrSessionId || null,
         })
         .select()
