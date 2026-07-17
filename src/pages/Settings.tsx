@@ -163,7 +163,7 @@ function AccountDeletionCard() {
 }
 
 export default function Settings() {
-  const { profile, user, role } = useAuth();
+  const { profile, user, role, refreshProfile } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
