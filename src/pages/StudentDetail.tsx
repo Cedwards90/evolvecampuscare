@@ -678,6 +678,37 @@ export default function StudentDetail() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {canEditProfile && id && student.profile && (
+          <>
+            <EditProfileDialog
+              open={editProfileOpen}
+              onOpenChange={setEditProfileOpen}
+              userId={id}
+              targetLabel={student.profile.full_name || undefined}
+              initial={{
+                full_name: student.profile.full_name,
+                legal_first_name: (student.profile as any).legal_first_name ?? null,
+                legal_last_name: (student.profile as any).legal_last_name ?? null,
+                preferred_name: (student.profile as any).preferred_name ?? null,
+                email: student.profile.email,
+                phone: student.profile.phone,
+                date_of_birth: (student.profile as any).date_of_birth ?? null,
+                address_line1: (student.profile as any).address_line1 ?? null,
+                address_line2: (student.profile as any).address_line2 ?? null,
+                city: (student.profile as any).city ?? null,
+                state_region: (student.profile as any).state_region ?? null,
+                postal_code: (student.profile as any).postal_code ?? null,
+                country: (student.profile as any).country ?? null,
+              }}
+            />
+            <ProfileAuditDialog
+              open={auditOpen}
+              onOpenChange={setAuditOpen}
+              userId={id}
+              targetLabel={student.profile.full_name || undefined}
+            />
+          </>
+        )}
       </div>
     </SidebarLayout>
   );
