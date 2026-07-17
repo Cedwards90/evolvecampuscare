@@ -28,6 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { SafeRichText } from '@/components/ui/SafeRichText';
 import type { RequestUpdate, Profile, RequestStatus } from '@/types/database';
 
 interface RequestTimelineProps {
