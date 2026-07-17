@@ -106,7 +106,15 @@ export function EditRequestDialog({ request, open, onOpenChange }: EditRequestDi
     if (!user) return;
     setSaving(true);
     try {
-      const patch: Record<string, unknown> = {
+      const patch: {
+        category: typeof data.category;
+        title: string;
+        description: string;
+        priority: typeof data.priority;
+        is_emergency: boolean;
+        requested_amount?: number | null;
+        funding_purpose?: string | null;
+      } = {
         category: data.category,
         title: data.title,
         description: data.description,
