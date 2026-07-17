@@ -314,7 +314,7 @@ export default function StudentDetail() {
                 </div>
 
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
                   <Button asChild size="sm">
                     <Link to={`/messages/${id}`}>
                       <MessageSquare className="mr-2 h-4 w-4" />
