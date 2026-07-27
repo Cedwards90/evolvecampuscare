@@ -152,6 +152,7 @@ export function buildCaseloadAiPayload(r: InteractionReport): ReportAISummaryPay
       seeking: r.impactMetrics.employmentReadiness.seeking,
       m05_post_avg: r.impactMetrics.employmentReadiness.m05PostAvg,
     },
+    financials: r.financials,
   };
 }
 
