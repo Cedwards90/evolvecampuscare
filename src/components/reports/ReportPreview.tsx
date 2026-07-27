@@ -132,9 +132,31 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
         </Card>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Financial assistance</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatTile label="Total requested" value={formatCurrency(data.financials.requested)} />
+            <StatTile label="Total approved (disbursed)" value={formatCurrency(data.financials.approved)} />
+            <StatTile label="Pending" value={formatCurrency(data.financials.pending)} />
+            <StatTile label="Financial requests" value={data.financials.count} />
+          </div>
+          {data.financials.count === 0 ? (
+            <p className="text-xs text-muted-foreground">No financial requests in this period.</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Approved: {data.financials.approvedCount} · Partially approved: {data.financials.partiallyApprovedCount} · Pending: {data.financials.pendingCount} · Denied: {data.financials.deniedCount}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <LifeSkillsProgressBlock data={data.lifeSkills} title="Life Skills — caseload average" description="Pre vs post confidence across your assigned caseload." />
 
       <ImpactMetricsBlock metrics={data.impactMetrics} />
+
 
       <Card>
         <CardHeader><CardTitle className="text-base">Status changes</CardTitle></CardHeader>
