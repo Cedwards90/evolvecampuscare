@@ -112,6 +112,16 @@ export function useOrganizationReport({
           surveysSent: 0,
           surveysCompleted: 0,
         },
+        financials: {
+          count: 0,
+          requested: 0,
+          approved: 0,
+          pending: 0,
+          approvedCount: 0,
+          partiallyApprovedCount: 0,
+          deniedCount: 0,
+          pendingCount: 0,
+        },
         lifeSkills: emptyLifeSkillsResult(),
         impactMetrics: {
           scopeLabel: scopeLabel || '0 students',
