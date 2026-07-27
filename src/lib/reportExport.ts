@@ -106,6 +106,23 @@ export function exportReportCsv(r: InteractionReport, ai?: AISummaryResult | nul
     ),
   );
 
+  sections.push(
+    toCsvSection(
+      'Financial Assistance',
+      ['Metric', 'Value'],
+      [
+        ['Financial requests', r.financials.count],
+        ['Total requested', formatCurrency(r.financials.requested)],
+        ['Total approved (disbursed)', formatCurrency(r.financials.approved)],
+        ['Pending', formatCurrency(r.financials.pending)],
+        ['Approved count', r.financials.approvedCount],
+        ['Partially approved count', r.financials.partiallyApprovedCount],
+        ['Pending count', r.financials.pendingCount],
+        ['Denied count', r.financials.deniedCount],
+      ],
+    ),
+  );
+
   // Life Skills progress (module deltas)
   sections.push(
     toCsvSection(
