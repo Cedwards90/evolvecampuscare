@@ -240,12 +240,32 @@ export function useOrganizationReport({
         is_emergency: boolean;
         created_at: string;
         resolved_at: string | null;
+        requested_amount: number | null;
+        approved_amount: number | null;
+        approval_status: string | null;
       }>;
       const opened = allReqs.filter((r) => r.created_at >= fromIso && r.created_at <= toIso);
       const resolvedInRange = allReqs.filter(
         (r) => r.resolved_at && r.resolved_at >= fromIso && r.resolved_at <= toIso,
       );
       const unresolved = allReqs.filter((r) => r.status !== 'resolved' && r.status !== 'cancelled');
+
+      // Financial assistance totals scoped to requests opened in the report window.
+      const financialRows = opened.filter(
+        (r) => r.category === 'financial' || (r.requested_amount != null && r.requested_amount > 0),
+      );
+      const financials = {
+        count: financialRows.length,
+        requested: financialRows.reduce((s, r) => s + (r.requested_amount || 0), 0),
+        approved: financialRows.reduce((s, r) => s + (r.approved_amount || 0), 0),
+        pending: financialRows
+          .filter((r) => (r.approval_status ?? 'pending') === 'pending')
+          .reduce((s, r) => s + (r.requested_amount || 0), 0),
+        approvedCount: financialRows.filter((r) => r.approval_status === 'approved').length,
+        partiallyApprovedCount: financialRows.filter((r) => r.approval_status === 'partially_approved').length,
+        deniedCount: financialRows.filter((r) => r.approval_status === 'denied').length,
+        pendingCount: financialRows.filter((r) => (r.approval_status ?? 'pending') === 'pending').length,
+      };
       const durations = resolvedInRange
         .map((r) => new Date(r.resolved_at!).getTime() - new Date(r.created_at).getTime())
         .filter((n) => n > 0);
