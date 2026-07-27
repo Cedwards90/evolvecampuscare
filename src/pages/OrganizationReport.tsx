@@ -20,6 +20,7 @@ import { getPresetRange, type ReportPreset } from '@/hooks/useInteractionReport'
 import { exportOrgReportCsv, exportOrgReportPdf } from '@/lib/orgReportExport';
 import { buildOrgAiPayload, tryFetchAiSummary } from '@/lib/reportAiSummary';
 import { toast } from '@/hooks/use-toast';
+import { formatCurrency } from '@/lib/utils';
 import type { RiskSeverity } from '@/lib/studentProgressRules';
 
 function severityVariant(s: RiskSeverity): 'destructive' | 'default' | 'secondary' {
