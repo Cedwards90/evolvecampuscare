@@ -47,6 +47,16 @@ export interface InteractionReport {
     byPriority: Record<string, number>;
     rows: SupportRequest[];
   };
+  financials: {
+    count: number;
+    requested: number;
+    approved: number;
+    pending: number;
+    approvedCount: number;
+    partiallyApprovedCount: number;
+    deniedCount: number;
+    pendingCount: number;
+  };
   statusChanges: RequestUpdate[];
   followUps: {
     total: number;
@@ -221,6 +231,25 @@ export function useInteractionReport({ caseManagerId, from, to }: InteractionRep
         byCategory[r.category] = (byCategory[r.category] || 0) + 1;
         byPriority[r.priority] = (byPriority[r.priority] || 0) + 1;
       });
+
+      // Financial assistance totals (scoped to requests opened in range).
+      // A request counts as financial if its category is 'financial' or a requested_amount was recorded.
+      const financialRows = opened.filter(
+        (r) => r.category === 'financial' || (r.requested_amount != null && r.requested_amount > 0),
+      );
+      const financials = {
+        count: financialRows.length,
+        requested: financialRows.reduce((s, r) => s + (r.requested_amount || 0), 0),
+        approved: financialRows.reduce((s, r) => s + (r.approved_amount || 0), 0),
+        pending: financialRows
+          .filter((r) => (r.approval_status ?? 'pending') === 'pending')
+          .reduce((s, r) => s + (r.requested_amount || 0), 0),
+        approvedCount: financialRows.filter((r) => r.approval_status === 'approved').length,
+        partiallyApprovedCount: financialRows.filter((r) => r.approval_status === 'partially_approved').length,
+        deniedCount: financialRows.filter((r) => r.approval_status === 'denied').length,
+        pendingCount: financialRows.filter((r) => (r.approval_status ?? 'pending') === 'pending').length,
+      };
+
 
       // Notes by type
       const notes = (notesRes.data || []) as Array<{ note_type: string }>;
@@ -397,6 +426,7 @@ export function useInteractionReport({ caseManagerId, from, to }: InteractionRep
           byPriority,
           rows: opened.map(hydrate),
         },
+        financials,
         statusChanges: (statusChangesRes.data || []) as RequestUpdate[],
         followUps,
         unresolved: unresolved.map(hydrate),

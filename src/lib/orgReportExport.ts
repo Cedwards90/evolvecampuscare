@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import type { OrgReport } from '@/hooks/useOrganizationReport';
 import type { AISummaryResult } from '@/lib/reportAiSummary';
+import { formatCurrency } from '@/lib/utils';
 
 const FOREST: [number, number, number] = [5, 77, 59];
 const SAGE: [number, number, number] = [136, 169, 140];
@@ -72,6 +73,22 @@ export function exportOrgReportCsv(r: OrgReport, ai?: AISummaryResult | null) {
         ['Check-ins in range', r.summary.checkInsInRange],
         ['Surveys sent', r.summary.surveysSent],
         ['Surveys completed', r.summary.surveysCompleted],
+      ],
+    ),
+  );
+  parts.push(
+    csvSection(
+      'Financial Assistance',
+      ['Metric', 'Value'],
+      [
+        ['Financial requests', r.financials.count],
+        ['Total requested', formatCurrency(r.financials.requested)],
+        ['Total approved (disbursed)', formatCurrency(r.financials.approved)],
+        ['Pending', formatCurrency(r.financials.pending)],
+        ['Approved count', r.financials.approvedCount],
+        ['Partially approved count', r.financials.partiallyApprovedCount],
+        ['Pending count', r.financials.pendingCount],
+        ['Denied count', r.financials.deniedCount],
       ],
     ),
   );
@@ -184,6 +201,21 @@ export function exportOrgReportPdf(r: OrgReport, ai?: AISummaryResult | null) {
       ['Attendance rate', r.summary.attendanceRate == null ? '—' : `${Math.round(r.summary.attendanceRate * 100)}%`],
       ['Check-ins in range', String(r.summary.checkInsInRange)],
       ['Surveys (sent / completed)', `${r.summary.surveysSent} / ${r.summary.surveysCompleted}`],
+    ],
+    headStyles: { fillColor: FOREST },
+    theme: 'striped',
+    styles: { fontSize: 10 },
+  });
+
+  autoTable(doc, {
+    head: [['Financial Assistance', 'Value']],
+    body: [
+      ['Financial requests', String(r.financials.count)],
+      ['Total requested', formatCurrency(r.financials.requested)],
+      ['Total approved (disbursed)', formatCurrency(r.financials.approved)],
+      ['Pending', formatCurrency(r.financials.pending)],
+      ['Approved / Partial / Pending / Denied',
+        `${r.financials.approvedCount} / ${r.financials.partiallyApprovedCount} / ${r.financials.pendingCount} / ${r.financials.deniedCount}`],
     ],
     headStyles: { fillColor: FOREST },
     theme: 'striped',

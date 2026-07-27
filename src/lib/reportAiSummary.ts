@@ -25,6 +25,16 @@ export interface ReportAISummaryPayload {
     n: number;
   }>;
   impactHighlights?: Record<string, number | string | null>;
+  financials?: {
+    count: number;
+    requested: number;
+    approved: number;
+    pending: number;
+    approvedCount: number;
+    partiallyApprovedCount: number;
+    deniedCount: number;
+    pendingCount: number;
+  };
   risks?: Array<{ key: string; label: string; severity: string; detail: string }>;
   actionItems?: Array<{ key: string; severity: string; text: string }>;
 }
@@ -85,6 +95,7 @@ export function buildOrgAiPayload(data: OrgReport): ReportAISummaryPayload {
       active_days: data.impactMetrics.engagement.activeDays,
       open_support_needs: data.impactMetrics.supportNeeds.openTotal,
     },
+    financials: data.financials,
     risks: data.risks.map((r) => ({
       key: r.key,
       label: r.label,
@@ -141,6 +152,7 @@ export function buildCaseloadAiPayload(r: InteractionReport): ReportAISummaryPay
       seeking: r.impactMetrics.employmentReadiness.seeking,
       m05_post_avg: r.impactMetrics.employmentReadiness.m05PostAvg,
     },
+    financials: r.financials,
   };
 }
 

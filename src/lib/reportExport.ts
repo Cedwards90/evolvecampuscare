@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import type { InteractionReport } from '@/hooks/useInteractionReport';
 import type { AISummaryResult } from '@/lib/reportAiSummary';
+import { formatCurrency } from '@/lib/utils';
 
 const slug = (s: string | null | undefined) =>
   (s || 'case-manager').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -102,6 +103,23 @@ export function exportReportCsv(r: InteractionReport, ai?: AISummaryResult | nul
       'Surveys',
       ['Sent', 'Completed'],
       [[r.surveys.sent, r.surveys.completed]],
+    ),
+  );
+
+  sections.push(
+    toCsvSection(
+      'Financial Assistance',
+      ['Metric', 'Value'],
+      [
+        ['Financial requests', r.financials.count],
+        ['Total requested', formatCurrency(r.financials.requested)],
+        ['Total approved (disbursed)', formatCurrency(r.financials.approved)],
+        ['Pending', formatCurrency(r.financials.pending)],
+        ['Approved count', r.financials.approvedCount],
+        ['Partially approved count', r.financials.partiallyApprovedCount],
+        ['Pending count', r.financials.pendingCount],
+        ['Denied count', r.financials.deniedCount],
+      ],
     ),
   );
 
@@ -306,6 +324,21 @@ export function exportReportPdf(r: InteractionReport, ai?: AISummaryResult | nul
     body: [
       ['Sent', r.surveys.sent],
       ['Completed', r.surveys.completed],
+    ],
+    headStyles: { fillColor: [136, 169, 140] },
+    theme: 'striped',
+    styles: { fontSize: 10 },
+  });
+
+  autoTable(doc, {
+    head: [['Financial Assistance', 'Value']],
+    body: [
+      ['Financial requests', String(r.financials.count)],
+      ['Total requested', formatCurrency(r.financials.requested)],
+      ['Total approved (disbursed)', formatCurrency(r.financials.approved)],
+      ['Pending', formatCurrency(r.financials.pending)],
+      ['Approved / Partial / Pending / Denied',
+        `${r.financials.approvedCount} / ${r.financials.partiallyApprovedCount} / ${r.financials.pendingCount} / ${r.financials.deniedCount}`],
     ],
     headStyles: { fillColor: [136, 169, 140] },
     theme: 'striped',
