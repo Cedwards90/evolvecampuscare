@@ -47,6 +47,16 @@ export interface InteractionReport {
     byPriority: Record<string, number>;
     rows: SupportRequest[];
   };
+  financials: {
+    count: number;
+    requested: number;
+    approved: number;
+    pending: number;
+    approvedCount: number;
+    partiallyApprovedCount: number;
+    deniedCount: number;
+    pendingCount: number;
+  };
   statusChanges: RequestUpdate[];
   followUps: {
     total: number;
