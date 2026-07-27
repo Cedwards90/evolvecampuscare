@@ -15,6 +15,7 @@ import {
 import type { InteractionReport } from '@/hooks/useInteractionReport';
 import { LifeSkillsProgressBlock } from '@/components/reports/LifeSkillsProgressBlock';
 import { ImpactMetricsBlock } from '@/components/reports/ImpactMetricsBlock';
+import { formatCurrency } from '@/lib/utils';
 
 interface Props {
   data: InteractionReport | undefined;
