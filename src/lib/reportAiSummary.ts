@@ -95,7 +95,6 @@ export function buildOrgAiPayload(data: OrgReport): ReportAISummaryPayload {
       active_days: data.impactMetrics.engagement.activeDays,
       open_support_needs: data.impactMetrics.supportNeeds.openTotal,
     },
-    },
     financials: data.financials,
     risks: data.risks.map((r) => ({
       key: r.key,
