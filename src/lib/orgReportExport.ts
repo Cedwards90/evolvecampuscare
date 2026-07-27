@@ -78,6 +78,22 @@ export function exportOrgReportCsv(r: OrgReport, ai?: AISummaryResult | null) {
   );
   parts.push(
     csvSection(
+      'Financial Assistance',
+      ['Metric', 'Value'],
+      [
+        ['Financial requests', r.financials.count],
+        ['Total requested', formatCurrency(r.financials.requested)],
+        ['Total approved (disbursed)', formatCurrency(r.financials.approved)],
+        ['Pending', formatCurrency(r.financials.pending)],
+        ['Approved count', r.financials.approvedCount],
+        ['Partially approved count', r.financials.partiallyApprovedCount],
+        ['Pending count', r.financials.pendingCount],
+        ['Denied count', r.financials.deniedCount],
+      ],
+    ),
+  );
+  parts.push(
+    csvSection(
       'Life Skills Progress',
       ['Module', 'Title', 'Pre', 'Post', 'Delta', 'Pre n', 'Post n'],
       r.lifeSkills.modules.map((m) => [
