@@ -200,6 +200,28 @@ export default function OrganizationReport() {
               </CardContent>
             </Card>
 
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Financial assistance</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <Stat label="Total requested" value={formatCurrency(data.financials.requested)} />
+                  <Stat label="Total approved (disbursed)" value={formatCurrency(data.financials.approved)} />
+                  <Stat label="Pending" value={formatCurrency(data.financials.pending)} />
+                  <Stat label="Financial requests" value={data.financials.count} />
+                </div>
+                {data.financials.count === 0 ? (
+                  <p className="text-xs text-muted-foreground">No financial requests in this period.</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Approved: {data.financials.approvedCount} · Partially approved: {data.financials.partiallyApprovedCount} · Pending: {data.financials.pendingCount} · Denied: {data.financials.deniedCount}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+
             <LifeSkillsProgressBlock
               data={data.lifeSkills}
               title="Life Skills — organization average"
