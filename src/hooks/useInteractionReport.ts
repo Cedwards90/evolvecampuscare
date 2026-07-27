@@ -232,6 +232,25 @@ export function useInteractionReport({ caseManagerId, from, to }: InteractionRep
         byPriority[r.priority] = (byPriority[r.priority] || 0) + 1;
       });
 
+      // Financial assistance totals (scoped to requests opened in range).
+      // A request counts as financial if its category is 'financial' or a requested_amount was recorded.
+      const financialRows = opened.filter(
+        (r) => r.category === 'financial' || (r.requested_amount != null && r.requested_amount > 0),
+      );
+      const financials = {
+        count: financialRows.length,
+        requested: financialRows.reduce((s, r) => s + (r.requested_amount || 0), 0),
+        approved: financialRows.reduce((s, r) => s + (r.approved_amount || 0), 0),
+        pending: financialRows
+          .filter((r) => (r.approval_status ?? 'pending') === 'pending')
+          .reduce((s, r) => s + (r.requested_amount || 0), 0),
+        approvedCount: financialRows.filter((r) => r.approval_status === 'approved').length,
+        partiallyApprovedCount: financialRows.filter((r) => r.approval_status === 'partially_approved').length,
+        deniedCount: financialRows.filter((r) => r.approval_status === 'denied').length,
+        pendingCount: financialRows.filter((r) => (r.approval_status ?? 'pending') === 'pending').length,
+      };
+
+
       // Notes by type
       const notes = (notesRes.data || []) as Array<{ note_type: string }>;
       const notesByType: Record<string, number> = {};
