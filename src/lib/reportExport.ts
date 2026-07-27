@@ -330,6 +330,21 @@ export function exportReportPdf(r: InteractionReport, ai?: AISummaryResult | nul
     styles: { fontSize: 10 },
   });
 
+  autoTable(doc, {
+    head: [['Financial Assistance', 'Value']],
+    body: [
+      ['Financial requests', String(r.financials.count)],
+      ['Total requested', formatCurrency(r.financials.requested)],
+      ['Total approved (disbursed)', formatCurrency(r.financials.approved)],
+      ['Pending', formatCurrency(r.financials.pending)],
+      ['Approved / Partial / Pending / Denied',
+        `${r.financials.approvedCount} / ${r.financials.partiallyApprovedCount} / ${r.financials.pendingCount} / ${r.financials.deniedCount}`],
+    ],
+    headStyles: { fillColor: [136, 169, 140] },
+    theme: 'striped',
+    styles: { fontSize: 10 },
+  });
+
   // Life Skills progress
   autoTable(doc, {
     head: [['Life Skills — Module', 'Pre', 'Post', 'Delta', 'Pre n', 'Post n']],
