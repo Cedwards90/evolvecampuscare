@@ -25,6 +25,16 @@ export interface ReportAISummaryPayload {
     n: number;
   }>;
   impactHighlights?: Record<string, number | string | null>;
+  financials?: {
+    count: number;
+    requested: number;
+    approved: number;
+    pending: number;
+    approvedCount: number;
+    partiallyApprovedCount: number;
+    deniedCount: number;
+    pendingCount: number;
+  };
   risks?: Array<{ key: string; label: string; severity: string; detail: string }>;
   actionItems?: Array<{ key: string; severity: string; text: string }>;
 }
