@@ -426,6 +426,7 @@ export function useInteractionReport({ caseManagerId, from, to }: InteractionRep
           byPriority,
           rows: opened.map(hydrate),
         },
+        financials,
         statusChanges: (statusChangesRes.data || []) as RequestUpdate[],
         followUps,
         unresolved: unresolved.map(hydrate),
