@@ -508,6 +508,7 @@ export function useOrganizationReport({
           surveysSent: surveys.length,
           surveysCompleted: surveys.filter((s) => !!s.completed_at).length,
         },
+        financials,
         lifeSkills,
         impactMetrics,
         risks,
