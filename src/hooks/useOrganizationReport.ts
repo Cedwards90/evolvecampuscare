@@ -42,6 +42,16 @@ export interface OrgReport {
   generatedAt: string;
   scopeLabel: string;
   summary: OrgReportSummary;
+  financials: {
+    count: number;
+    requested: number;
+    approved: number;
+    pending: number;
+    approvedCount: number;
+    partiallyApprovedCount: number;
+    deniedCount: number;
+    pendingCount: number;
+  };
   lifeSkills: LifeSkillsProgressResult;
   impactMetrics: ImpactMetrics;
   risks: RiskIndicator[];
