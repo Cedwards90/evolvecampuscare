@@ -142,15 +142,17 @@ function hasEvidence(p: Payload): boolean {
   return (
     numericTotal > 0 ||
     (p.lifeSkills?.some((l) => (l.n ?? 0) > 0) ?? false) ||
-    (p.risks?.length ?? 0) > 0
+    (p.risks?.length ?? 0) > 0 ||
+    (p.caseNotes?.total ?? 0) > 0
   );
 }
 
 const SYSTEM_PROMPT = `You write structured, executive-style narrative summaries of a campus support report.
 
 STRICT RULES:
-- Use ONLY the numbers, labels, and risk items in the user message. Do NOT invent students, names, diagnoses, causes, or facts not present in the payload.
-- Every claim must be traceable to a specific field of the payload. Reference fields inline where helpful (e.g. "attendance rate 72%", "3 high-severity risks").
+- Use ONLY the numbers, labels, risk items, and case notes in the user message. Do NOT invent students, names, diagnoses, causes, or facts not present in the payload.
+- Every claim must be traceable to a specific field of the payload. Reference fields inline where helpful (e.g. "attendance rate 72%", "3 high-severity risks", "24 case notes / 180 contact minutes").
+- When case_notes are present, ground themes in the category mix, contact-type mix, top students/authors, and short snippets. Do not name students or authors that are not in the payload.
 - If a section has no supporting evidence in the payload, set that section to exactly: "Insufficient data for this period."
 - Be concise (2-5 short sentences per section). Neutral, professional tone. No emojis. No diagnoses. No advice requiring clinical judgement.
 - Do not speculate about causes beyond what the payload states.
