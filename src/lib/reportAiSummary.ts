@@ -222,6 +222,7 @@ export function buildCaseloadAiPayload(
       m05_post_avg: r.impactMetrics.employmentReadiness.m05PostAvg,
     },
     financials: r.financials,
+    caseNotes: buildCaseNotesForAi(caseNotes),
   };
 }
 
