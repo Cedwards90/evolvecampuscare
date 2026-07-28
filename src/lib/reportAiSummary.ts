@@ -111,7 +111,10 @@ export function buildCaseNotesForAi(
 }
 
 
-export function buildOrgAiPayload(data: OrgReport): ReportAISummaryPayload {
+export function buildOrgAiPayload(
+  data: OrgReport,
+  caseNotes?: CaseNotesSummary | null,
+): ReportAISummaryPayload {
   return {
     reportType: 'organization',
     scopeLabel: data.scopeLabel,
