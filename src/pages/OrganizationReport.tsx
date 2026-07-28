@@ -298,22 +298,27 @@ export default function OrganizationReport() {
                 ) : (
                   <ul className="space-y-2 text-sm">
                     {data.topUnresolved.map((u) => (
-                      <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 p-3">
-                        <div className="min-w-0">
-                          <div className="font-medium">
-                            {u.is_emergency && (
-                              <Badge variant="destructive" className="mr-2 rounded-full">Emergency</Badge>
-                            )}
-                            {u.title}
+                      <li key={u.id}>
+                        <Link
+                          to={`/requests/${u.id}`}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 p-3 transition hover:border-primary/60 hover:bg-accent/40"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-medium">
+                              {u.is_emergency && (
+                                <Badge variant="destructive" className="mr-2 rounded-full">Emergency</Badge>
+                              )}
+                              {u.title}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {u.student_name || 'Unknown student'} · {u.ageDays}d old
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {u.student_name || 'Unknown student'} · {u.ageDays}d old
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{u.priority}</Badge>
+                            <Badge>{u.status}</Badge>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{u.priority}</Badge>
-                          <Badge>{u.status}</Badge>
-                        </div>
+                        </Link>
                       </li>
                     ))}
                   </ul>
