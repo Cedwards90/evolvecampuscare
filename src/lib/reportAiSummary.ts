@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { OrgReport } from '@/hooks/useOrganizationReport';
 import type { InteractionReport } from '@/hooks/useInteractionReport';
+import type { CaseNotesSummary } from '@/hooks/useCaseNotesSummary';
 
 export interface AISummaryResult {
   headline: string;
@@ -10,6 +11,25 @@ export interface AISummaryResult {
   next_steps: string;
   generated_at: string;
   model: string | null;
+}
+
+export interface AICaseNotesBlock {
+  total: number;
+  totalMinutes: number;
+  byCategory: Array<{ label: string; count: number; totalMinutes: number }>;
+  byContactType: Array<{ label: string; count: number }>;
+  topStudents: Array<{ label: string; count: number }>;
+  byAuthor: Array<{ label: string; count: number }>;
+  recentSamples: Array<{
+    date: string | null;
+    student: string | null;
+    author: string | null;
+    category: string | null;
+    contact_type: string | null;
+    duration_minutes: number | null;
+    title: string | null;
+    snippet: string | null;
+  }>;
 }
 
 export interface ReportAISummaryPayload {
@@ -37,6 +57,7 @@ export interface ReportAISummaryPayload {
   };
   risks?: Array<{ key: string; label: string; severity: string; detail: string }>;
   actionItems?: Array<{ key: string; severity: string; text: string }>;
+  caseNotes?: AICaseNotesBlock;
 }
 
 export async function fetchReportAiSummary(
@@ -48,6 +69,47 @@ export async function fetchReportAiSummary(
   if (error) throw error;
   return data as AISummaryResult;
 }
+
+/** Convert a client CaseNotesSummary into a bounded AI-friendly block. */
+export function buildCaseNotesForAi(
+  s: CaseNotesSummary | null | undefined,
+): AICaseNotesBlock | undefined {
+  if (!s || s.total === 0) return undefined;
+  const trim = (v: string | null | undefined, n = 240) =>
+    v ? (v.length > n ? v.slice(0, n) + '…' : v) : null;
+  return {
+    total: s.total,
+    totalMinutes: s.totalMinutes,
+    byCategory: s.byCategory.slice(0, 10).map((g) => ({
+      label: g.label,
+      count: g.count,
+      totalMinutes: g.totalMinutes,
+    })),
+    byContactType: s.byContactType.slice(0, 10).map((g) => ({
+      label: g.label,
+      count: g.count,
+    })),
+    topStudents: s.byStudent.slice(0, 10).map((g) => ({
+      label: g.label,
+      count: g.count,
+    })),
+    byAuthor: s.byAuthor.slice(0, 10).map((g) => ({
+      label: g.label,
+      count: g.count,
+    })),
+    recentSamples: s.rows.slice(0, 15).map((r) => ({
+      date: r.contact_date || (r.created_at ? r.created_at.slice(0, 10) : null),
+      student: r.student_name ?? null,
+      author: r.author_name ?? null,
+      category: r.note_type ?? null,
+      contact_type: r.contact_type ?? null,
+      duration_minutes: r.duration_minutes ?? null,
+      title: r.title ?? null,
+      snippet: trim(r.content),
+    })),
+  };
+}
+
 
 export function buildOrgAiPayload(data: OrgReport): ReportAISummaryPayload {
   return {
