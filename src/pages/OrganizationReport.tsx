@@ -95,7 +95,7 @@ export default function OrganizationReport() {
     if (!data) return;
     setExporting('csv');
     try {
-      const ai = await tryFetchAiSummary(buildOrgAiPayload(data));
+      const ai = await tryFetchAiSummary(buildOrgAiPayload(data, caseNotes));
       if (!ai) {
         toast({ title: 'AI summary unavailable', description: 'Exporting CSV without the AI summary.' });
       }
