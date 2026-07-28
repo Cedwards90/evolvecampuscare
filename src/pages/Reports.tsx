@@ -216,7 +216,11 @@ export default function Reports() {
               isLoading={isLoading && !!selectedCmId}
               isFetching={isFetching}
               error={error}
+              caseManagerId={selectedCmId}
+              from={from}
+              to={to}
             />
+
           </TabsContent>
         </Tabs>
       </div>

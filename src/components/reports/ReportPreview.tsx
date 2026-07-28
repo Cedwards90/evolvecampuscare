@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { AlertCircle, FileText, Inbox } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +16,8 @@ import {
 import type { InteractionReport } from '@/hooks/useInteractionReport';
 import { LifeSkillsProgressBlock } from '@/components/reports/LifeSkillsProgressBlock';
 import { ImpactMetricsBlock } from '@/components/reports/ImpactMetricsBlock';
+import { CaseNotesSummaryBlock } from '@/components/reports/CaseNotesSummaryBlock';
+import { DrillDownDialog, type DrillDownPayload } from '@/components/reports/DrillDownDialog';
 import { formatCurrency } from '@/lib/utils';
 
 interface Props {
@@ -22,18 +25,49 @@ interface Props {
   isLoading: boolean;
   isFetching: boolean;
   error: unknown;
+  caseManagerId?: string;
+  from: Date;
+  to: Date;
 }
 
-function StatTile({ label, value }: { label: string; value: number | string }) {
+function StatTile({
+  label,
+  value,
+  onClick,
+}: {
+  label: string;
+  value: number | string;
+  onClick?: () => void;
+}) {
+  const clickable = !!onClick;
   return (
-    <div className="rounded-2xl border border-border/60 bg-card p-4">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!clickable}
+      className={`w-full min-w-0 rounded-2xl border border-border/60 bg-card p-4 text-left transition ${
+        clickable
+          ? 'hover:border-primary/60 hover:shadow-sm cursor-pointer'
+          : 'cursor-default'
+      }`}
+    >
       <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="mt-1 text-2xl font-display font-semibold">{value}</div>
-    </div>
+    </button>
   );
 }
 
-export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
+export function ReportPreview({
+  data,
+  isLoading,
+  error,
+  isFetching,
+  caseManagerId,
+  from,
+  to,
+}: Props) {
+  const [drill, setDrill] = useState<DrillDownPayload | null>(null);
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -53,9 +87,7 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Could not load report</AlertTitle>
-        <AlertDescription>
-          {(error as Error)?.message || 'Please try again.'}
-        </AlertDescription>
+        <AlertDescription>{(error as Error)?.message || 'Please try again.'}</AlertDescription>
       </Alert>
     );
   }
@@ -79,6 +111,10 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
     data.followUps.total === 0 &&
     data.statusChanges.length === 0;
 
+  const opened = data.requests.rows;
+  const resolved = opened.filter((r) => r.status === 'resolved');
+  const emergency = opened.filter((r) => r.is_emergency);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -90,18 +126,40 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
             {format(new Date(data.range.from), 'PP')} – {format(new Date(data.range.to), 'PP')}
           </p>
         </div>
-        {isFetching && (
-          <Badge variant="secondary" className="rounded-full">Updating…</Badge>
-        )}
+        {isFetching && <Badge variant="secondary" className="rounded-full">Updating…</Badge>}
       </div>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <StatTile label="Active students" value={data.summary.activeStudents} />
-        <StatTile label="Requests opened" value={data.summary.requestsOpened} />
-        <StatTile label="Requests resolved" value={data.summary.requestsResolved} />
+        <StatTile
+          label="Requests opened"
+          value={data.summary.requestsOpened}
+          onClick={() =>
+            setDrill({ kind: 'requests', title: 'Requests opened', rows: opened })
+          }
+        />
+        <StatTile
+          label="Requests resolved"
+          value={data.summary.requestsResolved}
+          onClick={() =>
+            setDrill({ kind: 'requests', title: 'Requests resolved', rows: resolved })
+          }
+        />
         <StatTile label="Avg resolution (hrs)" value={data.summary.avgResolutionHours} />
-        <StatTile label="Unresolved" value={data.summary.unresolvedCount} />
-        <StatTile label="Emergency" value={data.summary.emergencyCount} />
+        <StatTile
+          label="Unresolved"
+          value={data.summary.unresolvedCount}
+          onClick={() =>
+            setDrill({ kind: 'requests', title: 'Unresolved requests', rows: data.unresolved })
+          }
+        />
+        <StatTile
+          label="Emergency"
+          value={data.summary.emergencyCount}
+          onClick={() =>
+            setDrill({ kind: 'requests', title: 'Emergency requests', rows: emergency })
+          }
+        />
       </section>
 
       {empty && (
@@ -132,6 +190,13 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
         </Card>
       </div>
 
+      <CaseNotesSummaryBlock
+        authorId={caseManagerId}
+        from={from}
+        to={to}
+        enabled={!!caseManagerId}
+      />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Financial assistance</CardTitle>
@@ -141,7 +206,17 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
             <StatTile label="Total requested" value={formatCurrency(data.financials.requested)} />
             <StatTile label="Total approved (disbursed)" value={formatCurrency(data.financials.approved)} />
             <StatTile label="Pending" value={formatCurrency(data.financials.pending)} />
-            <StatTile label="Financial requests" value={data.financials.count} />
+            <StatTile
+              label="Financial requests"
+              value={data.financials.count}
+              onClick={() =>
+                setDrill({
+                  kind: 'requests',
+                  title: 'Financial requests',
+                  rows: opened.filter((r) => r.category === 'financial'),
+                })
+              }
+            />
           </div>
           {data.financials.count === 0 ? (
             <p className="text-xs text-muted-foreground">No financial requests in this period.</p>
@@ -156,7 +231,6 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
       <LifeSkillsProgressBlock data={data.lifeSkills} title="Life Skills — caseload average" description="Pre vs post confidence across your assigned caseload." />
 
       <ImpactMetricsBlock metrics={data.impactMetrics} />
-
 
       <Card>
         <CardHeader><CardTitle className="text-base">Status changes</CardTitle></CardHeader>
@@ -186,9 +260,15 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
                 </TableBody>
               </Table>
               {data.statusChanges.length > 25 && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Showing 25 of {data.statusChanges.length}. Full list included in export.
-                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDrill({ kind: 'status-changes', title: 'All status changes', rows: data.statusChanges })
+                  }
+                  className="mt-2 text-xs text-primary hover:underline"
+                >
+                  View all {data.statusChanges.length} status changes →
+                </button>
               )}
             </div>
           )}
@@ -212,7 +292,13 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
                 </TableHeader>
                 <TableBody>
                   {data.followUps.rows.map((a) => (
-                    <TableRow key={a.id}>
+                    <TableRow
+                      key={a.id}
+                      className="cursor-pointer"
+                      onClick={() =>
+                        setDrill({ kind: 'appointments', title: 'Appointments', rows: data.followUps.rows })
+                      }
+                    >
                       <TableCell className="whitespace-nowrap text-xs">{format(new Date(a.scheduled_at), 'PP p')}</TableCell>
                       <TableCell>{a.title}</TableCell>
                       <TableCell><Badge variant="secondary">{a.status}</Badge></TableCell>
@@ -226,7 +312,20 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Unresolved items</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <CardTitle className="text-base">Unresolved items</CardTitle>
+          {data.unresolved.length > 0 && (
+            <button
+              type="button"
+              onClick={() =>
+                setDrill({ kind: 'requests', title: 'Unresolved requests', rows: data.unresolved })
+              }
+              className="text-xs text-primary hover:underline"
+            >
+              View all →
+            </button>
+          )}
+        </CardHeader>
         <CardContent>
           {data.unresolved.length === 0 ? (
             <p className="text-sm text-muted-foreground">No unresolved items. 🎉</p>
@@ -245,7 +344,13 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
                 </TableHeader>
                 <TableBody>
                   {data.unresolved.slice(0, 25).map((req) => (
-                    <TableRow key={req.id}>
+                    <TableRow
+                      key={req.id}
+                      className="cursor-pointer"
+                      onClick={() =>
+                        setDrill({ kind: 'requests', title: 'Unresolved requests', rows: data.unresolved })
+                      }
+                    >
                       <TableCell className="whitespace-nowrap text-xs">{format(new Date(req.created_at), 'PP')}</TableCell>
                       <TableCell className="max-w-[280px] truncate">{req.title}</TableCell>
                       <TableCell>{req.student?.full_name || '—'}</TableCell>
@@ -256,15 +361,16 @@ export function ReportPreview({ data, isLoading, error, isFetching }: Props) {
                   ))}
                 </TableBody>
               </Table>
-              {data.unresolved.length > 25 && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Showing 25 of {data.unresolved.length}. Full list included in export.
-                </p>
-              )}
             </div>
           )}
         </CardContent>
       </Card>
+
+      <DrillDownDialog
+        open={!!drill}
+        onOpenChange={(o) => !o && setDrill(null)}
+        payload={drill}
+      />
     </div>
   );
 }
