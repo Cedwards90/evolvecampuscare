@@ -13,6 +13,8 @@ import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { ReportRangePicker } from '@/components/reports/ReportRangePicker';
 import { LifeSkillsProgressBlock } from '@/components/reports/LifeSkillsProgressBlock';
 import { ImpactMetricsBlock } from '@/components/reports/ImpactMetricsBlock';
+import { CaseNotesSummaryBlock } from '@/components/reports/CaseNotesSummaryBlock';
+import { DrillDownDialog, type DrillDownPayload } from '@/components/reports/DrillDownDialog';
 import { ReportAISummary, type ReportAISummaryPayload } from '@/components/reports/ReportAISummary';
 import { useReportStudentFilters } from '@/hooks/useReportStudentFilters';
 import { useOrganizationReport } from '@/hooks/useOrganizationReport';
@@ -28,6 +30,7 @@ function severityVariant(s: RiskSeverity): 'destructive' | 'default' | 'secondar
   if (s === 'medium') return 'default';
   return 'secondary';
 }
+
 
 export default function OrganizationReport() {
   const [preset, setPreset] = useState<ReportPreset>('weekly');
