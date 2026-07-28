@@ -65,7 +65,7 @@ export default function OrganizationReport() {
   });
 
   const [exporting, setExporting] = useState<null | 'pdf' | 'csv'>(null);
-  const [drill, setDrill] = useState<DrillDownPayload | null>(null);
+
 
 
   const handleExportPdf = async () => {
