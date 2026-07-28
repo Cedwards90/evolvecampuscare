@@ -227,6 +227,13 @@ export default function OrganizationReport() {
               </CardContent>
             </Card>
 
+            <CaseNotesSummaryBlock
+              studentIds={studentIds}
+              from={from}
+              to={to}
+              showByAuthor
+              enabled={!filterLoading}
+            />
 
             <LifeSkillsProgressBlock
               data={data.lifeSkills}
@@ -235,6 +242,7 @@ export default function OrganizationReport() {
             />
 
             <ImpactMetricsBlock metrics={data.impactMetrics} />
+
 
             <Card>
               <CardHeader>
