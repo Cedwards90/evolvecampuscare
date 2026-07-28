@@ -290,6 +290,7 @@ serve(async (req) => {
         impact_highlights: body.impactHighlights ?? {},
         risks: body.risks ?? [],
         recommended_action_items: body.actionItems ?? [],
+        case_notes: body.caseNotes ?? null,
       },
       null,
       2,
