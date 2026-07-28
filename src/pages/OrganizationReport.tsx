@@ -15,9 +15,10 @@ import { LifeSkillsProgressBlock } from '@/components/reports/LifeSkillsProgress
 import { ImpactMetricsBlock } from '@/components/reports/ImpactMetricsBlock';
 import { CaseNotesSummaryBlock } from '@/components/reports/CaseNotesSummaryBlock';
 
-import { ReportAISummary, type ReportAISummaryPayload } from '@/components/reports/ReportAISummary';
+import { ReportAISummary } from '@/components/reports/ReportAISummary';
 import { useReportStudentFilters } from '@/hooks/useReportStudentFilters';
 import { useOrganizationReport } from '@/hooks/useOrganizationReport';
+import { useCaseNotesSummary } from '@/hooks/useCaseNotesSummary';
 import { getPresetRange, type ReportPreset } from '@/hooks/useInteractionReport';
 import { exportOrgReportCsv, exportOrgReportPdf } from '@/lib/orgReportExport';
 import { buildOrgAiPayload, tryFetchAiSummary } from '@/lib/reportAiSummary';
