@@ -21,6 +21,8 @@ export interface ReportAISummaryPayload {
   impactHighlights?: Record<string, number | string | null>;
   risks?: Array<{ key: string; label: string; severity: string; detail: string }>;
   actionItems?: Array<{ key: string; severity: string; text: string }>;
+  caseNotes?: unknown;
+  financials?: unknown;
 }
 
 interface AISummaryResult {
