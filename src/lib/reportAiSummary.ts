@@ -172,10 +172,14 @@ export function buildOrgAiPayload(
       severity: a.severity,
       text: a.text,
     })),
+    caseNotes: buildCaseNotesForAi(caseNotes),
   };
 }
 
-export function buildCaseloadAiPayload(r: InteractionReport): ReportAISummaryPayload {
+export function buildCaseloadAiPayload(
+  r: InteractionReport,
+  caseNotes?: CaseNotesSummary | null,
+): ReportAISummaryPayload {
   const scopeLabel = `${r.caseManager?.full_name || r.caseManager?.email || 'Case manager'} — ${r.summary.activeStudents} active students`;
   return {
     reportType: 'caseload',
