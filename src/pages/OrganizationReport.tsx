@@ -65,6 +65,13 @@ export default function OrganizationReport() {
     enabled: !filterLoading,
   });
 
+  const { data: caseNotes } = useCaseNotesSummary({
+    studentIds,
+    from,
+    to,
+    enabled: !filterLoading,
+  });
+
   const [exporting, setExporting] = useState<null | 'pdf' | 'csv'>(null);
 
 
