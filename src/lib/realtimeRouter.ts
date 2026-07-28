@@ -104,6 +104,7 @@ export function invalidateForChange(
       studentIds.forEach((id) => inv(['student-detail', id]));
       studentIds.forEach((id) => inv(['student-progress-report', id]));
       inv(['interaction-report']);
+      inv(['case-notes-summary']);
       break;
     }
     case 'student_checkins': {
