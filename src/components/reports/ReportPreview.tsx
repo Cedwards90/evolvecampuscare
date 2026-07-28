@@ -70,6 +70,12 @@ export function ReportPreview({
   to,
 }: Props) {
   const [drill, setDrill] = useState<DrillDownPayload | null>(null);
+  const { data: caseNotes } = useCaseNotesSummary({
+    authorId: caseManagerId,
+    from,
+    to,
+    enabled: !!caseManagerId,
+  });
 
   if (isLoading) {
     return (
