@@ -206,6 +206,12 @@ export function ReportPreview({
         enabled={!!caseManagerId}
       />
 
+      <ReportAISummary
+        buildPayload={() => (data ? buildCaseloadAiPayload(data, caseNotes) : null)}
+        disabled={!data}
+      />
+
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Financial assistance</CardTitle>
