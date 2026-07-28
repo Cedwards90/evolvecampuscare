@@ -48,6 +48,27 @@ function sanitize(error: unknown, context: string): string {
   return `An error occurred. Reference: ${requestId}`;
 }
 
+interface CaseNoteSample {
+  date?: string | null;
+  student?: string | null;
+  author?: string | null;
+  category?: string | null;
+  contact_type?: string | null;
+  duration_minutes?: number | null;
+  title?: string | null;
+  snippet?: string | null;
+}
+
+interface CaseNotesBlock {
+  total: number;
+  totalMinutes: number;
+  byCategory?: Array<{ label: string; count: number; totalMinutes?: number }>;
+  byContactType?: Array<{ label: string; count: number }>;
+  topStudents?: Array<{ label: string; count: number }>;
+  byAuthor?: Array<{ label: string; count: number }>;
+  recentSamples?: CaseNoteSample[];
+}
+
 interface Payload {
   reportType: "organization" | "caseload" | "student";
   scopeLabel: string;
@@ -63,6 +84,7 @@ interface Payload {
   impactHighlights?: Record<string, number | string | null>;
   risks?: Array<{ key: string; label: string; severity: string; detail: string }>;
   actionItems?: Array<{ key: string; severity: string; text: string }>;
+  caseNotes?: CaseNotesBlock;
 }
 
 function validate(raw: unknown): { ok: true; body: Payload } | { ok: false; reason: string } {
@@ -78,6 +100,24 @@ function validate(raw: unknown): { ok: true; body: Payload } | { ok: false; reas
     return { ok: false, reason: "Missing summary" };
   const cap = <T,>(arr: T[] | undefined, n: number): T[] =>
     Array.isArray(arr) ? arr.slice(0, n) : [];
+
+  let caseNotes: CaseNotesBlock | undefined;
+  const cn = b.caseNotes as Record<string, unknown> | undefined;
+  if (cn && typeof cn === "object") {
+    caseNotes = {
+      total: Number(cn.total) || 0,
+      totalMinutes: Number(cn.totalMinutes) || 0,
+      byCategory: cap(cn.byCategory as CaseNotesBlock["byCategory"], 10),
+      byContactType: cap(cn.byContactType as CaseNotesBlock["byContactType"], 10),
+      topStudents: cap(cn.topStudents as CaseNotesBlock["topStudents"], 10),
+      byAuthor: cap(cn.byAuthor as CaseNotesBlock["byAuthor"], 10),
+      recentSamples: cap(cn.recentSamples as CaseNoteSample[], 15).map((s) => ({
+        ...s,
+        snippet: typeof s.snippet === "string" ? s.snippet.slice(0, 300) : null,
+      })),
+    };
+  }
+
   return {
     ok: true,
     body: {
@@ -89,6 +129,7 @@ function validate(raw: unknown): { ok: true; body: Payload } | { ok: false; reas
       impactHighlights: (b.impactHighlights as Payload["impactHighlights"]) ?? {},
       risks: cap(b.risks as Payload["risks"], 20),
       actionItems: cap(b.actionItems as Payload["actionItems"], 20),
+      caseNotes,
     },
   };
 }
