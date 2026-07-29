@@ -27,6 +27,7 @@ import { buildCaseloadAiPayload, tryFetchAiSummary } from '@/lib/reportAiSummary
 import { toast } from '@/hooks/use-toast';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { useCaseNotesSummary } from '@/hooks/useCaseNotesSummary';
 
 export default function Reports() {
   const { user, role } = useAuth();
