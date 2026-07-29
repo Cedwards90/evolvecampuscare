@@ -48,6 +48,27 @@ function sanitize(error: unknown, context: string): string {
   return `An error occurred. Reference: ${requestId}`;
 }
 
+interface CaseNoteSample {
+  date?: string | null;
+  student?: string | null;
+  author?: string | null;
+  category?: string | null;
+  contact_type?: string | null;
+  duration_minutes?: number | null;
+  title?: string | null;
+  snippet?: string | null;
+}
+
+interface CaseNotesBlock {
+  total: number;
+  totalMinutes: number;
+  byCategory?: Array<{ label: string; count: number; totalMinutes?: number }>;
+  byContactType?: Array<{ label: string; count: number }>;
+  topStudents?: Array<{ label: string; count: number }>;
+  byAuthor?: Array<{ label: string; count: number }>;
+  recentSamples?: CaseNoteSample[];
+}
+
 interface Payload {
   reportType: "organization" | "caseload" | "student";
   scopeLabel: string;
@@ -63,6 +84,7 @@ interface Payload {
   impactHighlights?: Record<string, number | string | null>;
   risks?: Array<{ key: string; label: string; severity: string; detail: string }>;
   actionItems?: Array<{ key: string; severity: string; text: string }>;
+  caseNotes?: CaseNotesBlock;
 }
 
 function validate(raw: unknown): { ok: true; body: Payload } | { ok: false; reason: string } {
@@ -78,6 +100,24 @@ function validate(raw: unknown): { ok: true; body: Payload } | { ok: false; reas
     return { ok: false, reason: "Missing summary" };
   const cap = <T,>(arr: T[] | undefined, n: number): T[] =>
     Array.isArray(arr) ? arr.slice(0, n) : [];
+
+  let caseNotes: CaseNotesBlock | undefined;
+  const cn = b.caseNotes as Record<string, unknown> | undefined;
+  if (cn && typeof cn === "object") {
+    caseNotes = {
+      total: Number(cn.total) || 0,
+      totalMinutes: Number(cn.totalMinutes) || 0,
+      byCategory: cap(cn.byCategory as CaseNotesBlock["byCategory"], 10),
+      byContactType: cap(cn.byContactType as CaseNotesBlock["byContactType"], 10),
+      topStudents: cap(cn.topStudents as CaseNotesBlock["topStudents"], 10),
+      byAuthor: cap(cn.byAuthor as CaseNotesBlock["byAuthor"], 10),
+      recentSamples: cap(cn.recentSamples as CaseNoteSample[], 15).map((s) => ({
+        ...s,
+        snippet: typeof s.snippet === "string" ? s.snippet.slice(0, 300) : null,
+      })),
+    };
+  }
+
   return {
     ok: true,
     body: {
@@ -89,6 +129,7 @@ function validate(raw: unknown): { ok: true; body: Payload } | { ok: false; reas
       impactHighlights: (b.impactHighlights as Payload["impactHighlights"]) ?? {},
       risks: cap(b.risks as Payload["risks"], 20),
       actionItems: cap(b.actionItems as Payload["actionItems"], 20),
+      caseNotes,
     },
   };
 }
@@ -101,15 +142,17 @@ function hasEvidence(p: Payload): boolean {
   return (
     numericTotal > 0 ||
     (p.lifeSkills?.some((l) => (l.n ?? 0) > 0) ?? false) ||
-    (p.risks?.length ?? 0) > 0
+    (p.risks?.length ?? 0) > 0 ||
+    (p.caseNotes?.total ?? 0) > 0
   );
 }
 
 const SYSTEM_PROMPT = `You write structured, executive-style narrative summaries of a campus support report.
 
 STRICT RULES:
-- Use ONLY the numbers, labels, and risk items in the user message. Do NOT invent students, names, diagnoses, causes, or facts not present in the payload.
-- Every claim must be traceable to a specific field of the payload. Reference fields inline where helpful (e.g. "attendance rate 72%", "3 high-severity risks").
+- Use ONLY the numbers, labels, risk items, and case notes in the user message. Do NOT invent students, names, diagnoses, causes, or facts not present in the payload.
+- Every claim must be traceable to a specific field of the payload. Reference fields inline where helpful (e.g. "attendance rate 72%", "3 high-severity risks", "24 case notes / 180 contact minutes").
+- When case_notes are present, ground themes in the category mix, contact-type mix, top students/authors, and short snippets. Do not name students or authors that are not in the payload.
 - If a section has no supporting evidence in the payload, set that section to exactly: "Insufficient data for this period."
 - Be concise (2-5 short sentences per section). Neutral, professional tone. No emojis. No diagnoses. No advice requiring clinical judgement.
 - Do not speculate about causes beyond what the payload states.
@@ -247,6 +290,7 @@ serve(async (req) => {
         impact_highlights: body.impactHighlights ?? {},
         risks: body.risks ?? [],
         recommended_action_items: body.actionItems ?? [],
+        case_notes: body.caseNotes ?? null,
       },
       null,
       2,

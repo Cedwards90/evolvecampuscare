@@ -27,6 +27,7 @@ import { buildCaseloadAiPayload, tryFetchAiSummary } from '@/lib/reportAiSummary
 import { toast } from '@/hooks/use-toast';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { useCaseNotesSummary } from '@/hooks/useCaseNotesSummary';
 
 export default function Reports() {
   const { user, role } = useAuth();
@@ -70,6 +71,14 @@ export default function Reports() {
     to,
   });
 
+  const { data: caseNotesForExport } = useCaseNotesSummary({
+    authorId: selectedCmId,
+    from,
+    to,
+    enabled: !!selectedCmId,
+  });
+
+
   const { filters } = useGlobalFilters();
   const filteredData = useMemo(() => {
     if (!data) return data;
@@ -95,7 +104,7 @@ export default function Reports() {
     if (!data) return;
     setExporting('pdf');
     try {
-      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data));
+      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data, caseNotesForExport));
       if (!ai) {
         toast({ title: 'AI summary unavailable', description: 'Exporting PDF without the AI summary.' });
       }
@@ -111,7 +120,7 @@ export default function Reports() {
     if (!data) return;
     setExporting('csv');
     try {
-      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data));
+      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data, caseNotesForExport));
       if (!ai) {
         toast({ title: 'AI summary unavailable', description: 'Exporting CSV without the AI summary.' });
       }

@@ -204,7 +204,7 @@ export function DrillDownDialog({ open, onOpenChange, payload }: Props) {
                     <TableCell className="text-xs">{r.duration_minutes ?? '—'}</TableCell>
                     <TableCell>
                       <Link
-                        to={`/admin/students/${r.student_id}`}
+                        to={`/students/${r.student_id}`}
                         onClick={() => onOpenChange(false)}
                       >
                         <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-foreground" />

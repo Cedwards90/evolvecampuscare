@@ -15,9 +15,10 @@ import { LifeSkillsProgressBlock } from '@/components/reports/LifeSkillsProgress
 import { ImpactMetricsBlock } from '@/components/reports/ImpactMetricsBlock';
 import { CaseNotesSummaryBlock } from '@/components/reports/CaseNotesSummaryBlock';
 
-import { ReportAISummary, type ReportAISummaryPayload } from '@/components/reports/ReportAISummary';
+import { ReportAISummary } from '@/components/reports/ReportAISummary';
 import { useReportStudentFilters } from '@/hooks/useReportStudentFilters';
 import { useOrganizationReport } from '@/hooks/useOrganizationReport';
+import { useCaseNotesSummary } from '@/hooks/useCaseNotesSummary';
 import { getPresetRange, type ReportPreset } from '@/hooks/useInteractionReport';
 import { exportOrgReportCsv, exportOrgReportPdf } from '@/lib/orgReportExport';
 import { buildOrgAiPayload, tryFetchAiSummary } from '@/lib/reportAiSummary';
@@ -64,6 +65,13 @@ export default function OrganizationReport() {
     enabled: !filterLoading,
   });
 
+  const { data: caseNotes } = useCaseNotesSummary({
+    studentIds,
+    from,
+    to,
+    enabled: !filterLoading,
+  });
+
   const [exporting, setExporting] = useState<null | 'pdf' | 'csv'>(null);
 
 
@@ -72,7 +80,7 @@ export default function OrganizationReport() {
     if (!data) return;
     setExporting('pdf');
     try {
-      const ai = await tryFetchAiSummary(buildOrgAiPayload(data));
+      const ai = await tryFetchAiSummary(buildOrgAiPayload(data, caseNotes));
       if (!ai) {
         toast({ title: 'AI summary unavailable', description: 'Exporting PDF without the AI summary.' });
       }
@@ -87,7 +95,7 @@ export default function OrganizationReport() {
     if (!data) return;
     setExporting('csv');
     try {
-      const ai = await tryFetchAiSummary(buildOrgAiPayload(data));
+      const ai = await tryFetchAiSummary(buildOrgAiPayload(data, caseNotes));
       if (!ai) {
         toast({ title: 'AI summary unavailable', description: 'Exporting CSV without the AI summary.' });
       }
@@ -328,70 +336,9 @@ export default function OrganizationReport() {
 
             <ReportAISummary
               disabled={isFetching}
-              buildPayload={(): ReportAISummaryPayload | null => {
-                if (!data) return null;
-                return {
-                  reportType: 'organization',
-                  scopeLabel: data.scopeLabel,
-                  range: data.range,
-                  summary: {
-                    students_in_scope: data.summary.studentCount,
-                    requests_opened: data.summary.requestsOpened,
-                    requests_resolved: data.summary.requestsResolved,
-                    unresolved: data.summary.unresolvedCount,
-                    open_emergencies: data.summary.emergencyOpen,
-                    avg_resolution_hours: data.summary.avgResolutionHours,
-                    notes_in_range: data.summary.notesInRange,
-                    appointments_in_range: data.summary.appointmentsInRange,
-                    appointments_kept: data.summary.appointmentsKept,
-                    attendance_rate:
-                      data.summary.attendanceRate == null
-                        ? null
-                        : Math.round(data.summary.attendanceRate * 100) / 100,
-                    check_ins_in_range: data.summary.checkInsInRange,
-                    surveys_sent: data.summary.surveysSent,
-                    surveys_completed: data.summary.surveysCompleted,
-                  },
-                  lifeSkills: data.lifeSkills.modules.map((m) => ({
-                    module: m.module.title,
-                    preAvg: m.preAvg,
-                    postAvg: m.postAvg,
-                    delta: m.delta,
-                    n: Math.max(m.preN, m.postN),
-                  })),
-                  impactHighlights: {
-                    certifications_earned: data.impactMetrics.certifications.earnedInRange,
-                    certifications_active: data.impactMetrics.certifications.active,
-                    certifications_expiring_soon:
-                      data.impactMetrics.certifications.expiringSoon,
-                    referrals_created: data.impactMetrics.referrals.createdInRange,
-                    referrals_clicked: data.impactMetrics.referrals.clickedInRange,
-                    plans_on_file: data.impactMetrics.milestones.plansOnFile,
-                    plans_stalled: data.impactMetrics.milestones.stalled,
-                    graduations: data.impactMetrics.milestones.graduationsInRange,
-                    employed: data.impactMetrics.employmentReadiness.employed,
-                    seeking: data.impactMetrics.employmentReadiness.seeking,
-                    m05_post_avg:
-                      data.impactMetrics.employmentReadiness.m05PostAvg,
-                    survey_response_rate:
-                      data.impactMetrics.surveys.responseRate,
-                    active_days: data.impactMetrics.engagement.activeDays,
-                    open_support_needs: data.impactMetrics.supportNeeds.openTotal,
-                  },
-                  risks: data.risks.map((r) => ({
-                    key: r.key,
-                    label: r.label,
-                    severity: r.severity,
-                    detail: r.detail,
-                  })),
-                  actionItems: data.actionItems.map((a) => ({
-                    key: a.key,
-                    severity: a.severity,
-                    text: a.text,
-                  })),
-                };
-              }}
+              buildPayload={() => (data ? buildOrgAiPayload(data, caseNotes) : null)}
             />
+
 
             <p className="text-[11px] text-muted-foreground">
               Deterministic report. The AI summary above uses only the numbers shown on this page.

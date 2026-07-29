@@ -18,6 +18,9 @@ import { LifeSkillsProgressBlock } from '@/components/reports/LifeSkillsProgress
 import { ImpactMetricsBlock } from '@/components/reports/ImpactMetricsBlock';
 import { CaseNotesSummaryBlock } from '@/components/reports/CaseNotesSummaryBlock';
 import { DrillDownDialog, type DrillDownPayload } from '@/components/reports/DrillDownDialog';
+import { ReportAISummary } from '@/components/reports/ReportAISummary';
+import { useCaseNotesSummary } from '@/hooks/useCaseNotesSummary';
+import { buildCaseloadAiPayload } from '@/lib/reportAiSummary';
 import { formatCurrency } from '@/lib/utils';
 
 interface Props {
@@ -67,6 +70,12 @@ export function ReportPreview({
   to,
 }: Props) {
   const [drill, setDrill] = useState<DrillDownPayload | null>(null);
+  const { data: caseNotes } = useCaseNotesSummary({
+    authorId: caseManagerId,
+    from,
+    to,
+    enabled: !!caseManagerId,
+  });
 
   if (isLoading) {
     return (
@@ -196,6 +205,12 @@ export function ReportPreview({
         to={to}
         enabled={!!caseManagerId}
       />
+
+      <ReportAISummary
+        buildPayload={() => (data ? buildCaseloadAiPayload(data, caseNotes) : null)}
+        disabled={!data}
+      />
+
 
       <Card>
         <CardHeader>
