@@ -104,7 +104,7 @@ export default function Reports() {
     if (!data) return;
     setExporting('pdf');
     try {
-      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data));
+      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data, caseNotesForExport));
       if (!ai) {
         toast({ title: 'AI summary unavailable', description: 'Exporting PDF without the AI summary.' });
       }
@@ -120,7 +120,7 @@ export default function Reports() {
     if (!data) return;
     setExporting('csv');
     try {
-      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data));
+      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data, caseNotesForExport));
       if (!ai) {
         toast({ title: 'AI summary unavailable', description: 'Exporting CSV without the AI summary.' });
       }
