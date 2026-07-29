@@ -71,6 +71,14 @@ export default function Reports() {
     to,
   });
 
+  const { data: caseNotesForExport } = useCaseNotesSummary({
+    authorId: selectedCmId,
+    from,
+    to,
+    enabled: !!selectedCmId,
+  });
+
+
   const { filters } = useGlobalFilters();
   const filteredData = useMemo(() => {
     if (!data) return data;
