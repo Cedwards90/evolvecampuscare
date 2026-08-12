@@ -42,6 +42,8 @@ export function useSubmitRequest() {
       const { sessionId: qrSessionId } = getQRSession();
 
       // Insert request into database with auto-assignment if student has a case manager
+      // NOTE: approval_status is NOT NULL in the database (defaults to 'pending'),
+      // so only send it for financial requests and let the default apply otherwise.
       const { data, error } = await supabase
         .from('support_requests')
         .insert({
@@ -55,7 +57,7 @@ export function useSubmitRequest() {
           assigned_case_manager_id: hasAssignedCM || null,
           requested_amount: requestedAmount || null,
           funding_purpose: fundingPurpose || null,
-          approval_status: category === 'financial' ? 'pending' : null,
+          ...(category === 'financial' ? { approval_status: 'pending' } : {}),
           qr_session_id: qrSessionId || null,
         })
         .select()
