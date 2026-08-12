@@ -294,10 +294,14 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
       else navigate('/student-tracking-request-status-scheduling-meeting');
     } catch (error) {
       console.error('Error submitting request:', error);
+      const message =
+        (error as { message?: string })?.message ||
+        (typeof error === 'string' ? error : '') ||
+        'Please try again later.';
       toast({
         variant: 'destructive',
         title: 'Submission failed',
-        description: 'Please try again later.',
+        description: message,
       });
     }
   };
