@@ -349,6 +349,17 @@ export default function AnalyticsDashboard() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+              <ChartDataTable
+                caption="Average hours to resolve, by request category"
+                rows={data.resolutionByCategory}
+                rowKey={(r) => r.category}
+                columns={[
+                  { key: 'category', label: 'Category', value: (r) => r.category },
+                  { key: 'hours', label: 'Avg hours to resolve', value: (r) => `${r.avgHours}h` },
+                  { key: 'count', label: 'Resolved requests', value: (r) => r.count },
+                ]}
+              />
+
             </CardContent>
           </Card>
         </div>
