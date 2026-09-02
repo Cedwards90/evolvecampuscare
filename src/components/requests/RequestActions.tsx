@@ -176,7 +176,7 @@ export function RequestActions({
         title: 'Request Approved',
         description: approvedAmount 
           ? `Request approved for $${approvedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}.`
-          : 'The student has been notified that their request is being handled.',
+          : 'The request has been approved and is now in progress.',
       });
       setDialogType(null);
       setApprovalType('full');
