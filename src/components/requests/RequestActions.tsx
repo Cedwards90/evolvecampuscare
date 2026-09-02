@@ -341,6 +341,15 @@ export function RequestActions({
 
   return (
     <>
+      {policyEvaluation && (canApprove || canDeny) && (
+        <div className="mb-4">
+          <FinancialPolicyRecommendation
+            evaluation={policyEvaluation}
+            isLoading={historyQuery.isLoading}
+          />
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {canEdit && (
           <Button
