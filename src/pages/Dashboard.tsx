@@ -435,14 +435,14 @@ export default function Dashboard() {
 
         {/* Stats Grid - Fraction Style */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <FractionStatsCard
-            title="Total Requests"
-            current={stats.totalRequests}
-            total={Math.max(stats.totalRequests + 10, 50)}
+          <KpiCard
+            label="Total Requests"
+            value={stats.totalRequests}
             icon={DollarSign}
-            color="blue"
-            href="/requests"
+            helper="All requests in your current view"
+            action={{ label: 'View requests', href: '/requests' }}
           />
+
           <FractionStatsCard
             title="In Progress"
             current={stats.pendingRequests}
