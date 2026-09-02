@@ -41,6 +41,12 @@ import {
 } from '@/components/ui/select';
 import { useAnalyticsData } from '@/hooks/useAnalyticsData';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { ReportMetadata } from '@/components/reports/ReportMetadata';
+import { MetricValue, MetricDefinitionPopover } from '@/components/reports/MetricValue';
+import { ChartDataTable } from '@/components/reports/ChartDataTable';
+import { getMetricDefinition } from '@/lib/metricDefinitions';
+import { formatCurrency } from '@/lib/utils';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -49,7 +55,9 @@ function getInitials(name: string | null): string {
 
 export default function AnalyticsDashboard() {
   const [dateRange, setDateRange] = useState<number>(30);
-  const { data, isLoading, error } = useAnalyticsData(dateRange);
+  const { filters } = useGlobalFilters();
+  const { data, isLoading, error } = useAnalyticsData(dateRange, filters);
+
 
   if (isLoading) {
     return (
