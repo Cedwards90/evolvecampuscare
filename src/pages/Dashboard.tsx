@@ -9,6 +9,9 @@ import { PercentageStatsCard } from '@/components/dashboard/PercentageStatsCard'
 import { AreaChartCard } from '@/components/dashboard/AreaChartCard';
 import { SparklineCard } from '@/components/dashboard/SparklineCard';
 import { SummaryCard } from '@/components/dashboard/SummaryCard';
+import { TodayPanel } from '@/components/dashboard/TodayPanel';
+import { ActionNeededList, type ActionItem } from '@/components/dashboard/ActionNeededList';
+
 import { StatsSummaryBar } from '@/components/dashboard/StatsSummaryBar';
 import { RequestCard } from '@/components/RequestCard';
 import { AIBadge } from '@/components/AIBadge';
