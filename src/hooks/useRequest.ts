@@ -186,6 +186,10 @@ export function useApproveRequest() {
         note = `Request ${isAlreadyInProgress ? 'confirmed' : 'approved'} for ${formattedApproved}.`;
       }
 
+      if (policyRationale && policyRationale.trim()) {
+        note = `${note} Approval rationale: ${policyRationale.trim()}`;
+      }
+
       // Add approval note
       const { error: noteError } = await supabase
         .from('request_updates')
