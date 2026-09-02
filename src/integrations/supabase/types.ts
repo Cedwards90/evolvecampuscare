@@ -255,10 +255,12 @@ export type Database = {
         Row: {
           accomplishment_goal: string | null
           assistance_areas: string[]
+          attempt_number: number
           availability: Json
           career_influences: string | null
           completed_at: string | null
           considered_majors: string | null
+          correction_reason: string | null
           created_at: string
           created_by: string | null
           current_major: string | null
@@ -268,6 +270,7 @@ export type Database = {
           has_computer_access: boolean | null
           id: string
           internet_skill_level: string | null
+          is_current: boolean
           least_favorite_subjects: string | null
           obstacles: string[]
           prior_assessments: string | null
@@ -275,16 +278,19 @@ export type Database = {
           strengths_skills: string | null
           student_id: string
           student_status: string | null
+          superseded_at: string | null
           updated_at: string
           work_experience: string | null
         }
         Insert: {
           accomplishment_goal?: string | null
           assistance_areas?: string[]
+          attempt_number?: number
           availability?: Json
           career_influences?: string | null
           completed_at?: string | null
           considered_majors?: string | null
+          correction_reason?: string | null
           created_at?: string
           created_by?: string | null
           current_major?: string | null
@@ -294,6 +300,7 @@ export type Database = {
           has_computer_access?: boolean | null
           id?: string
           internet_skill_level?: string | null
+          is_current?: boolean
           least_favorite_subjects?: string | null
           obstacles?: string[]
           prior_assessments?: string | null
@@ -301,16 +308,19 @@ export type Database = {
           strengths_skills?: string | null
           student_id: string
           student_status?: string | null
+          superseded_at?: string | null
           updated_at?: string
           work_experience?: string | null
         }
         Update: {
           accomplishment_goal?: string | null
           assistance_areas?: string[]
+          attempt_number?: number
           availability?: Json
           career_influences?: string | null
           completed_at?: string | null
           considered_majors?: string | null
+          correction_reason?: string | null
           created_at?: string
           created_by?: string | null
           current_major?: string | null
@@ -320,6 +330,7 @@ export type Database = {
           has_computer_access?: boolean | null
           id?: string
           internet_skill_level?: string | null
+          is_current?: boolean
           least_favorite_subjects?: string | null
           obstacles?: string[]
           prior_assessments?: string | null
@@ -327,6 +338,7 @@ export type Database = {
           strengths_skills?: string | null
           student_id?: string
           student_status?: string | null
+          superseded_at?: string | null
           updated_at?: string
           work_experience?: string | null
         }
@@ -531,6 +543,57 @@ export type Database = {
           tags?: string[]
           updated_at?: string
           website?: string | null
+        }
+        Relationships: []
+      }
+      data_quality_flags: {
+        Row: {
+          created_at: string
+          details: Json
+          flag_type: string
+          id: string
+          organization_id: string | null
+          question_id: string | null
+          raw_value: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          source_row_id: string | null
+          source_table: string
+          student_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          flag_type: string
+          id?: string
+          organization_id?: string | null
+          question_id?: string | null
+          raw_value?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_row_id?: string | null
+          source_table: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          flag_type?: string
+          id?: string
+          organization_id?: string | null
+          question_id?: string | null
+          raw_value?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_row_id?: string | null
+          source_table?: string
+          student_id?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -744,6 +807,7 @@ export type Database = {
       form_drafts: {
         Row: {
           created_at: string
+          expires_at: string
           form_key: string
           saved_at: string
           updated_at: string
@@ -752,6 +816,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          expires_at?: string
           form_key: string
           saved_at?: string
           updated_at?: string
@@ -760,6 +825,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          expires_at?: string
           form_key?: string
           saved_at?: string
           updated_at?: string
@@ -887,27 +953,45 @@ export type Database = {
       }
       impact_survey_responses: {
         Row: {
+          attempt_number: number
+          correction_reason: string | null
           id: string
+          is_current: boolean
           responses: Json
+          responses_coded: Json | null
           score_summary: Json
           student_id: string
           submitted_at: string
+          superseded_at: string | null
+          survey_version: number
           template_id: string
         }
         Insert: {
+          attempt_number?: number
+          correction_reason?: string | null
           id?: string
+          is_current?: boolean
           responses?: Json
+          responses_coded?: Json | null
           score_summary?: Json
           student_id: string
           submitted_at?: string
+          superseded_at?: string | null
+          survey_version?: number
           template_id: string
         }
         Update: {
+          attempt_number?: number
+          correction_reason?: string | null
           id?: string
+          is_current?: boolean
           responses?: Json
+          responses_coded?: Json | null
           score_summary?: Json
           student_id?: string
           submitted_at?: string
+          superseded_at?: string | null
+          survey_version?: number
           template_id?: string
         }
         Relationships: [
@@ -964,27 +1048,45 @@ export type Database = {
       }
       intake_responses: {
         Row: {
+          attempt_number: number
+          correction_reason: string | null
           created_at: string
           id: string
+          intake_version: number
+          is_current: boolean
           responses: Json
+          responses_coded: Json | null
           section: string
           student_id: string
+          superseded_at: string | null
           updated_at: string
         }
         Insert: {
+          attempt_number?: number
+          correction_reason?: string | null
           created_at?: string
           id?: string
+          intake_version?: number
+          is_current?: boolean
           responses?: Json
+          responses_coded?: Json | null
           section: string
           student_id: string
+          superseded_at?: string | null
           updated_at?: string
         }
         Update: {
+          attempt_number?: number
+          correction_reason?: string | null
           created_at?: string
           id?: string
+          intake_version?: number
+          is_current?: boolean
           responses?: Json
+          responses_coded?: Json | null
           section?: string
           student_id?: string
+          superseded_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1393,6 +1495,7 @@ export type Database = {
         Row: {
           additional_notes: string | null
           career_goals: string
+          correction_reason: string | null
           created_at: string
           education_goals: string
           financial_plan: string
@@ -1400,17 +1503,21 @@ export type Database = {
           health_wellness: string
           housing_plan: string
           id: string
+          is_current: boolean
           month_1_3_actions: string
           month_10_12_actions: string
           month_4_6_actions: string
           month_7_9_actions: string
+          plan_version: number
           student_id: string
+          superseded_at: string | null
           support_needed: string
           updated_at: string
         }
         Insert: {
           additional_notes?: string | null
           career_goals?: string
+          correction_reason?: string | null
           created_at?: string
           education_goals?: string
           financial_plan?: string
@@ -1418,17 +1525,21 @@ export type Database = {
           health_wellness?: string
           housing_plan?: string
           id?: string
+          is_current?: boolean
           month_1_3_actions?: string
           month_10_12_actions?: string
           month_4_6_actions?: string
           month_7_9_actions?: string
+          plan_version?: number
           student_id: string
+          superseded_at?: string | null
           support_needed?: string
           updated_at?: string
         }
         Update: {
           additional_notes?: string | null
           career_goals?: string
+          correction_reason?: string | null
           created_at?: string
           education_goals?: string
           financial_plan?: string
@@ -1436,11 +1547,14 @@ export type Database = {
           health_wellness?: string
           housing_plan?: string
           id?: string
+          is_current?: boolean
           month_1_3_actions?: string
           month_10_12_actions?: string
           month_4_6_actions?: string
           month_7_9_actions?: string
+          plan_version?: number
           student_id?: string
+          superseded_at?: string | null
           support_needed?: string
           updated_at?: string
         }
@@ -2455,6 +2569,54 @@ export type Database = {
           id?: string
           metadata?: Json | null
           reason?: string
+        }
+        Relationships: []
+      }
+      survey_answer_codes: {
+        Row: {
+          answer_code: string
+          answer_label: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          numeric_value: number | null
+          question_id: string
+          question_label: string | null
+          sort_order: number
+          survey_slug: string
+          survey_version: number
+          updated_at: string
+        }
+        Insert: {
+          answer_code: string
+          answer_label: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          numeric_value?: number | null
+          question_id: string
+          question_label?: string | null
+          sort_order?: number
+          survey_slug: string
+          survey_version?: number
+          updated_at?: string
+        }
+        Update: {
+          answer_code?: string
+          answer_label?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          numeric_value?: number | null
+          question_id?: string
+          question_label?: string | null
+          sort_order?: number
+          survey_slug?: string
+          survey_version?: number
+          updated_at?: string
         }
         Relationships: []
       }
