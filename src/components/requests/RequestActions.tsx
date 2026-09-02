@@ -88,6 +88,8 @@ export function RequestActions({
   const [reason, setReason] = useState('');
   const [approvalType, setApprovalType] = useState<ApprovalType>('full');
   const [customAmount, setCustomAmount] = useState('');
+  const [policyRationale, setPolicyRationale] = useState('');
+  
   
   // Edit form state
   const [editTitle, setEditTitle] = useState('');
