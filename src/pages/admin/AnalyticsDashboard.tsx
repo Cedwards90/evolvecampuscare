@@ -294,6 +294,17 @@ export default function AnalyticsDashboard() {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
+              <ChartDataTable
+                caption="Daily request submissions and resolutions"
+                rows={data.workloadTrends}
+                rowKey={(r) => r.date}
+                columns={[
+                  { key: 'date', label: 'Date', value: (r) => r.date },
+                  { key: 'requests', label: 'Requests created', value: (r) => r.requestCount },
+                  { key: 'resolved', label: 'Requests resolved', value: (r) => r.resolvedCount },
+                ]}
+              />
+
             </CardContent>
           </Card>
 
