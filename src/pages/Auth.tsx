@@ -578,7 +578,27 @@ export default function Auth({ mode = 'student' }: AuthProps) {
               </form>
             </TabsContent>
           </Tabs>
+
+          {/* Progressive disclosure: the other audience's flow stays one click away */}
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            {isStaffMode ? (
+              <>
+                Staff accounts are created by invitation.{' '}
+                <Link to="/auth" className="text-primary hover:underline">
+                  Student sign in
+                </Link>
+              </>
+            ) : (
+              <>
+                Staff member?{' '}
+                <Link to="/auth/staff" className="text-primary hover:underline">
+                  Sign in here
+                </Link>
+              </>
+            )}
+          </p>
         </CardContent>
+
       </Card>
     </AuthLayout>
   );
