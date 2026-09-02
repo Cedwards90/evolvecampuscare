@@ -101,19 +101,35 @@ export default function AnalyticsDashboard() {
 
         <GlobalFilterBar visible={['cohort', 'yearOfStudy', 'organizationId', 'assignedCaseManagerId']} />
 
-        {/* Summary Stats */}
+        <ReportMetadata
+          rangeLabel={data.meta.rangeLabel}
+          generatedAt={data.meta.generatedAt}
+          rowCount={data.meta.rowCount}
+          truncated={data.meta.truncated}
+          accessScope="Limited to records your role and organization permit"
+          activeFilters={data.meta.appliedFilterLabels}
+        />
+
+        {/* Summary Stats — each figure carries its own definition */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                Total Students
+                Students in Scope
               </CardDescription>
-              <CardTitle className="text-3xl">{data.summary.totalStudents}</CardTitle>
+              <CardTitle className="text-3xl">
+                <MetricValue
+                  metricKey="total_students"
+                  value={data.summary.totalStudents}
+                  rangeLabel={data.meta.rangeLabel}
+                  asOf={new Date(data.meta.generatedAt).toLocaleString()}
+                />
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Students with case manager assignments
+                Distinct students with a case manager assignment
               </p>
             </CardContent>
           </Card>
@@ -122,9 +138,16 @@ export default function AnalyticsDashboard() {
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
-                Total Requests
+                Requests Created
               </CardDescription>
-              <CardTitle className="text-3xl">{data.summary.totalRequests}</CardTitle>
+              <CardTitle className="text-3xl">
+                <MetricValue
+                  metricKey="total_requests"
+                  value={data.summary.totalRequests}
+                  rangeLabel={data.meta.rangeLabel}
+                  asOf={new Date(data.meta.generatedAt).toLocaleString()}
+                />
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
@@ -137,13 +160,20 @@ export default function AnalyticsDashboard() {
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Avg Resolution Time
+                Avg Time to Resolve
               </CardDescription>
-              <CardTitle className="text-3xl">{data.summary.avgResolutionTime}h</CardTitle>
+              <CardTitle className="text-3xl">
+                <MetricValue
+                  metricKey="avg_resolution_hours"
+                  value={data.summary.avgResolutionTime}
+                  rangeLabel={data.meta.rangeLabel}
+                  asOf={new Date(data.meta.generatedAt).toLocaleString()}
+                />
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Average hours to resolve
+                Resolved requests only — open requests are excluded
               </p>
             </CardContent>
           </Card>
@@ -154,13 +184,49 @@ export default function AnalyticsDashboard() {
                 <TrendingUp className="h-4 w-4" />
                 Resolution Rate
               </CardDescription>
-              <CardTitle className="text-3xl">{data.summary.resolutionRate}%</CardTitle>
+              <CardTitle className="text-3xl">
+                <MetricValue
+                  metricKey="resolution_rate"
+                  value={data.summary.resolutionRate}
+                  rangeLabel={data.meta.rangeLabel}
+                  asOf={new Date(data.meta.generatedAt).toLocaleString()}
+                />
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <Progress value={data.summary.resolutionRate} className="h-2" />
+              {data.summary.resolutionRate == null ? (
+                <p className="text-sm text-muted-foreground">
+                  No eligible requests in this range
+                </p>
+              ) : (
+                <Progress value={data.summary.resolutionRate} className="h-2" />
+              )}
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription className="flex items-center gap-2">
+              Funds Dispersed
+            </CardDescription>
+            <CardTitle className="text-3xl">
+              <MetricValue
+                metricKey="financial_dispersed"
+                value={data.summary.fundsDispersed}
+                rangeLabel={data.meta.rangeLabel}
+                asOf={new Date(data.meta.generatedAt).toLocaleString()}
+              />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Approved amounts on financial requests created in this range. Requested-but-unapproved
+              amounts are not counted.
+            </p>
+          </CardContent>
+        </Card>
+
 
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
