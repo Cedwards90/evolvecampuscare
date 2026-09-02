@@ -462,8 +462,7 @@ export default function Dashboard() {
           <PercentageStatsCard
             title="Resolution Rate"
             percentage={stats.totalRequests > 0 ? (stats.resolvedRequests / stats.totalRequests) * 100 : 0}
-            subtitle="Resolution Rate"
-            trend={{ value: 46, isPositive: true }}
+            subtitle={`${stats.resolvedRequests} of ${stats.totalRequests} requests resolved`}
             icon={TrendingUp}
             progressColor="gradient"
           />
@@ -476,6 +475,10 @@ export default function Dashboard() {
           <div className="lg:col-span-2 space-y-6">
             <AreaChartCard
               title="Request Activity"
+              description="Requests created over time"
+              summary={`${stats.totalRequests} requests in this view, ${stats.pendingRequests} still open.`}
+              href="/requests"
+              linkLabel="View requests"
               data={chartData}
               className="border border-border/50 shadow-sm"
             />
@@ -496,11 +499,12 @@ export default function Dashboard() {
             title="Request Summary"
             totalValue={stats.resolvedRequests}
             totalLabel="Total Resolved"
-            trendValue={12}
             items={summaryItems}
             headerHref="/requests?status=resolved"
             footerHref="/requests"
+            footerLabel="View all requests"
           />
+
         </div>
 
         {/* Sparkline Cards */}
