@@ -176,7 +176,7 @@ export default function StudentDetail() {
       <SidebarLayout>
         <div className="space-y-6">
           <Button asChild variant="ghost" size="sm">
-            <Link to="/case-manager-managing-student-requests">
+            <Link to="/requests/queue">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Dashboard
             </Link>
@@ -194,9 +194,9 @@ export default function StudentDetail() {
   return (
     <SidebarLayout>
       <PageNav
-        fallback="/student-folders"
+        fallback="/students"
         crumbs={[
-          { label: 'Students', to: '/student-folders' },
+          { label: 'Students', to: '/students' },
           { label: student.profile?.full_name || 'Student' },
         ]}
       />

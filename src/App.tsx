@@ -2,7 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { LEGACY_REDIRECTS } from "@/lib/navigation";
+
 import { ThemeProvider } from "next-themes";
 
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -15,6 +17,8 @@ import { NavigationTracker } from "@/components/navigation/NavigationTracker";
 
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import StaffAuth from "./pages/auth/StaffAuth";
+
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
@@ -118,6 +122,8 @@ function App() {
                   {/* Public routes */}
                   <Route path="/" element={<Landing />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/auth/staff" element={<StaffAuth />} />
+
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/qr/:code" element={<QRLanding />} />
@@ -128,6 +134,13 @@ function App() {
 
                   {/* NDA acceptance gate (requires login but bypasses NDA gate itself) */}
                   <Route path="/accept-nda" element={<AcceptNda />} />
+
+                  {/* Legacy literal URLs -> canonical workflow URLs (keeps bookmarks/QR/emails working) */}
+                  {Object.entries(LEGACY_REDIRECTS).map(([from, to]) => (
+                    <Route key={from} path={from} element={<Navigate to={to} replace />} />
+                  ))}
+
+
                   
                   {/* Protected routes - All authenticated users */}
                   <Route path="/dashboard" element={
@@ -142,23 +155,18 @@ function App() {
                   } />
                   
                   {/* Student routes */}
-                  <Route path="/student-submitting-a-support-request" element={
+                  <Route path="/requests/new" element={
                     <ProtectedRoute allowedRoles={['student']}>
                       <SubmitRequest />
                     </ProtectedRoute>
                   } />
-                  {/* Canonical QR-friendly alias for the student support-request page */}
-                  <Route path="/student/support-request" element={
-                    <ProtectedRoute allowedRoles={['student']}>
-                      <SubmitRequest />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/student-tracking-request-status-scheduling-meeting" element={
+
+                  <Route path="/requests/mine" element={
                     <ProtectedRoute allowedRoles={['student']}>
                       <TrackRequests />
                     </ProtectedRoute>
                   } />
-                  <Route path="/student-creating-offline-draft-request" element={
+                  <Route path="/requests/drafts" element={
                     <ProtectedRoute allowedRoles={['student']}>
                       <OfflineDraft />
                     </ProtectedRoute>
@@ -180,7 +188,7 @@ function App() {
                   } />
                   
                   {/* Case Manager routes */}
-                  <Route path="/case-manager-managing-student-requests" element={
+                  <Route path="/requests/queue" element={
                     <ProtectedRoute allowedRoles={['case_manager', 'org_admin']}>
                       <ManageRequests />
                     </ProtectedRoute>
@@ -214,7 +222,7 @@ function App() {
 
                   {/* Admin routes */}
 
-            <Route path="/admin-monitoring-reassigning-requests" element={
+            <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <AdminDashboard />
               </ProtectedRoute>
@@ -345,7 +353,7 @@ function App() {
               } />
 
               {/* Student Folders */}
-              <Route path="/student-folders" element={
+              <Route path="/students" element={
                 <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
                   <StudentFolders />
                 </ProtectedRoute>

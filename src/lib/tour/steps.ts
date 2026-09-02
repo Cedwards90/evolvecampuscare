@@ -35,7 +35,7 @@ const studentSteps = (name: string): TourStep[] => [
     title: '📝 Submit a Support Request',
     description:
       'Need help with academics, finances, housing, or mental health? Fill out a request here and your assigned case manager will respond. Mark it Emergency for crisis situations.',
-    navigateTo: '/student/support-request',
+    navigateTo: '/requests/new',
   },
   {
     title: '⏱ Track Your Requests',
@@ -76,13 +76,13 @@ const caseManagerSteps = (name: string): TourStep[] => [
     title: '📂 Manage Requests',
     description:
       'Review, respond to, and resolve student support requests. Use filters to focus on priority, category, or status.',
-    navigateTo: '/case-manager-managing-student-requests',
+    navigateTo: '/requests/queue',
   },
   {
     title: '👥 Student Folders',
     description:
       'Each student has a full case file: profile, intake, check-ins, certifications, case notes, and submitted plans. You can also generate an AI-powered folder summary.',
-    navigateTo: '/student-folders',
+    navigateTo: '/students',
   },
   {
     title: '💬 Messages',

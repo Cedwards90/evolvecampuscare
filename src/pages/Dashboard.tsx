@@ -9,6 +9,9 @@ import { PercentageStatsCard } from '@/components/dashboard/PercentageStatsCard'
 import { AreaChartCard } from '@/components/dashboard/AreaChartCard';
 import { SparklineCard } from '@/components/dashboard/SparklineCard';
 import { SummaryCard } from '@/components/dashboard/SummaryCard';
+import { TodayPanel } from '@/components/dashboard/TodayPanel';
+import { ActionNeededList, type ActionItem } from '@/components/dashboard/ActionNeededList';
+
 import { StatsSummaryBar } from '@/components/dashboard/StatsSummaryBar';
 import { RequestCard } from '@/components/RequestCard';
 import { AIBadge } from '@/components/AIBadge';
@@ -175,11 +178,216 @@ export default function Dashboard() {
     },
   ], [requests]);
 
+  // Consolidated "needs your attention" items (replaces the old stacked banners)
+  const actionItems = useMemo<ActionItem[]>(() => {
+    const items: ActionItem[] = [];
+
+    if (role === 'student') {
+      if (checkInState !== 'none') {
+        items.push({
+          id: 'check-in',
+          title: checkInState === 'overdue' ? 'Your weekly check-in is overdue' : 'Time for your weekly check-in',
+          description:
+            checkInState === 'overdue'
+              ? "It's been over two weeks — a minute now helps your case manager support you."
+              : "Let us know how you're doing. It only takes a minute.",
+          href: '/check-in',
+          cta: 'Complete check-in',
+          severity: checkInState === 'overdue' ? 'urgent' : 'due',
+        });
+      }
+
+      pendingSurveys.forEach((survey: any) => {
+        const isLifeSkills = typeof survey.survey_type === 'string' && survey.survey_type.startsWith('lifeskills:');
+        const slug = isLifeSkills ? survey.survey_type.slice('lifeskills:'.length) : '';
+        const isCheckin = survey.survey_type === 'checkin';
+        items.push({
+          id: `survey-${survey.id}`,
+          title: isLifeSkills
+            ? 'Life Skills survey requested'
+            : isCheckin
+              ? 'Check-in requested'
+              : 'Post-graduation plan requested',
+          description:
+            survey.notes ||
+            (isLifeSkills
+              ? 'Your case manager invited you to complete a Life Skills survey.'
+              : isCheckin
+                ? 'Your case manager asked you to complete a check-in.'
+                : 'Your case manager asked you to complete your 12-month plan.'),
+          href: isLifeSkills ? `/surveys/${slug}` : isCheckin ? '/check-in' : '/post-graduation-plan',
+          cta: isLifeSkills ? 'Open survey' : isCheckin ? 'Complete check-in' : 'Start plan',
+          severity: 'due',
+        });
+      });
+
+      const hasLifeSkillsInvite = pendingSurveys.some(
+        (s: any) => typeof s.survey_type === 'string' && s.survey_type.startsWith('lifeskills:'),
+      );
+      if (pendingLifeSkills.length > 0 && !hasLifeSkillsInvite) {
+        items.push({
+          id: 'lifeskills-pending',
+          title: `${pendingLifeSkills.length} Life Skills survey${pendingLifeSkills.length === 1 ? '' : 's'} pending`,
+          description: 'Help us measure the impact of the curriculum — only a minute each.',
+          href: '/surveys',
+          cta: 'Open',
+          severity: 'due',
+        });
+      }
+
+      if (!intakeCompleted) {
+        items.push({
+          id: 'intake',
+          title: 'Complete your wellness check-in',
+          description: 'Help us understand how to best support you — it takes a few minutes.',
+          href: '/intake-survey',
+          cta: 'Get started',
+          severity: 'due',
+        });
+      }
+
+      items.push({
+        id: 'post-grad-plan',
+        title: '12-month post-graduation plan',
+        description: 'Plan your first year after graduation — career, housing, finances, and more.',
+        href: '/post-graduation-plan',
+        cta: 'Create plan',
+        severity: 'info',
+      });
+    }
+
+    if (role === 'case_manager') {
+      if (stats.emergencyRequests > 0) {
+        items.push({
+          id: 'emergency',
+          title: `${stats.emergencyRequests} emergency case${stats.emergencyRequests === 1 ? '' : 's'} open`,
+          description: 'These students flagged an emergency and need a response today.',
+          href: '/requests/queue?priority=emergency',
+          cta: 'Open queue',
+          severity: 'urgent',
+        });
+      }
+      if (stats.escalatedRequests > 0) {
+        items.push({
+          id: 'escalated',
+          title: `${stats.escalatedRequests} escalated request${stats.escalatedRequests === 1 ? '' : 's'}`,
+          description: 'Escalated requests are waiting on a next step from you.',
+          href: '/requests/queue?status=escalated',
+          cta: 'Review',
+          severity: 'urgent',
+        });
+      }
+      if (stats.pendingRequests > 0) {
+        items.push({
+          id: 'pending',
+          title: `${stats.pendingRequests} request${stats.pendingRequests === 1 ? '' : 's'} in progress`,
+          description: 'Keep momentum by updating statuses and adding case notes.',
+          href: '/requests/queue',
+          cta: 'Open queue',
+          severity: 'info',
+        });
+      }
+    }
+
+    if (role === 'admin' || role === 'org_admin') {
+      const activeStatuses = new Set(['submitted', 'in_progress', 'escalated']);
+      const unassigned = allRequests.filter((r) => activeStatuses.has(r.status) && !r.assigned_case_manager_id);
+      const escalated = allRequests.filter((r) => r.status === 'escalated');
+      if (unassigned.length > 0) {
+        items.push({
+          id: 'unassigned',
+          title: `${unassigned.length} request${unassigned.length === 1 ? '' : 's'} unassigned`,
+          description: 'Assign a case manager so students get a response.',
+          href: '/admin',
+          cta: 'Assign now',
+          severity: 'urgent',
+        });
+      }
+      if (escalated.length > 0) {
+        items.push({
+          id: 'escalated-admin',
+          title: `${escalated.length} escalated request${escalated.length === 1 ? '' : 's'}`,
+          description: 'Escalations may need reassignment or extra support.',
+          href: '/admin',
+          cta: 'Review',
+          severity: 'urgent',
+        });
+      }
+    }
+
+    if (showOnboardingTip) {
+      items.push({
+        id: 'tour',
+        title: 'New here? Take the 60-second tour',
+        description: 'A quick guided walkthrough of where everything lives.',
+        href: '/support',
+        cta: 'Help Center',
+        severity: 'info',
+      });
+    }
+
+    return items;
+  }, [
+    role,
+    checkInState,
+    pendingSurveys,
+    pendingLifeSkills.length,
+    intakeCompleted,
+    stats,
+    allRequests,
+    showOnboardingTip,
+  ]);
+
+  const today = useMemo(() => {
+    if (role === 'student') {
+      return {
+        subtitle: 'Here’s what you can do next.',
+        primaryAction: { label: 'Submit a request', href: '/requests/new', icon: Plus },
+        secondaryActions: [{ label: 'My requests', href: '/requests/mine', icon: Clock }],
+        stats: [
+          { label: 'Open requests', value: stats.pendingRequests, href: '/requests/mine' },
+          { label: 'Resolved', value: stats.resolvedRequests, href: '/requests/mine' },
+          { label: 'Total requests', value: stats.totalRequests, href: '/requests/mine' },
+        ],
+      };
+    }
+    if (role === 'case_manager') {
+      return {
+        subtitle: 'Your caseload for today.',
+        primaryAction: { label: 'Open request queue', href: '/requests/queue', icon: Users },
+        secondaryActions: [{ label: 'My students', href: '/students', icon: Users }],
+        stats: [
+          { label: 'Emergency', value: stats.emergencyRequests, href: '/requests/queue?priority=emergency', tone: 'urgent' as const },
+          { label: 'Escalated', value: stats.escalatedRequests, href: '/requests/queue?status=escalated' },
+          { label: 'In progress', value: stats.pendingRequests, href: '/requests/queue' },
+          { label: 'Resolved', value: stats.resolvedRequests, href: '/requests?status=resolved' },
+        ],
+      };
+    }
+    return {
+      subtitle: 'Where the platform needs attention today.',
+      primaryAction: { label: 'Admin overview', href: '/admin', icon: BarChart3 },
+      secondaryActions: [{ label: 'Reports', href: '/reports', icon: FileText }],
+      stats: [
+        { label: 'Emergency', value: stats.emergencyRequests, href: '/requests?is_emergency=true', tone: 'urgent' as const },
+        { label: 'Escalated', value: stats.escalatedRequests, href: '/requests?status=escalated' },
+        { label: 'In progress', value: stats.pendingRequests, href: '/requests?status=in_progress' },
+        { label: 'Resolved', value: stats.resolvedRequests, href: '/requests?status=resolved' },
+      ],
+    };
+  }, [role, stats]);
+
   if (requestsLoading) {
     return (
       <SidebarLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <LoadingSpinner size="lg" />
+        <div className="space-y-6">
+          <div className="h-32 animate-pulse rounded-xl bg-muted/60" />
+          <div className="h-40 animate-pulse rounded-xl bg-muted/50" />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-28 animate-pulse rounded-xl bg-muted/40" />
+            ))}
+          </div>
         </div>
       </SidebarLayout>
     );
@@ -189,153 +397,40 @@ export default function Dashboard() {
     <SidebarLayout>
       <div className="space-y-6">
         {role === 'student' && <ProfileReviewBanner />}
+
+        {/* 1. Action-first: who you are and what to do next */}
+        <TodayPanel
+          greeting={`Welcome back, ${profile?.full_name?.split(' ')[0] || 'there'}`}
+          subtitle={today.subtitle}
+          primaryAction={today.primaryAction}
+          secondaryActions={today.secondaryActions}
+          stats={today.stats}
+        />
+
+        {/* 2. Consolidated alerts */}
+        <ActionNeededList
+          items={actionItems}
+          emptyTitle="You're all caught up"
+          emptyDescription={
+            role === 'student'
+              ? 'No check-ins, surveys, or requests need your attention right now.'
+              : 'No urgent or unassigned work right now.'
+          }
+          onExtraAction={
+            showOnboardingTip ? (
+              <Button size="sm" variant="outline" onClick={startTour}>
+                Start tour
+              </Button>
+            ) : undefined
+          }
+        />
+
+        {/* 3. Overview and analytics */}
         {role !== 'student' && <GlobalFilterBar />}
 
-        {/* Onboarding tip for first 3 logins */}
-        {showOnboardingTip && (
-          <Card className="border-primary/40 bg-primary/5">
-            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-medium text-sm">👋 New here? Take the 60-second tour</p>
-                <p className="text-xs text-muted-foreground">A quick guided walkthrough of where everything lives on the platform.</p>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" asChild>
-                  <Link to="/support">Help Center</Link>
-                </Button>
-                <Button size="sm" onClick={startTour}>Start tour</Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Check-In Banner */}
-         {showCheckInBanner && (
-          <Card className={checkInState === 'overdue' ? 'border-destructive/60 bg-destructive/10' : 'border-accent/50 bg-accent/10'}>
-            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-medium text-sm">
-                  {checkInState === 'overdue'
-                    ? '⚠️ Your weekly check-in is overdue'
-                    : '📋 Time for your weekly check-in!'}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {checkInState === 'overdue'
-                    ? "It's been over two weeks. Please take a minute so your case manager can support you."
-                    : "Let us know how you're doing — it only takes a minute."}
-                </p>
-              </div>
-              <Button size="sm" variant={checkInState === 'overdue' ? 'destructive' : 'default'} asChild>
-                <Link to="/check-in">Complete Check-In</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Pending Survey Invitations Banner */}
-        {role === 'student' && pendingSurveys.length > 0 && (
-          <>
-            {pendingSurveys.map((survey) => {
-              const isLifeSkills = typeof survey.survey_type === 'string' && survey.survey_type.startsWith('lifeskills:');
-              const lifeSkillsSlug = isLifeSkills ? survey.survey_type.slice('lifeskills:'.length) : '';
-              const title = isLifeSkills
-                ? 'Life Skills Survey Requested'
-                : survey.survey_type === 'checkin'
-                  ? 'Check-In Requested'
-                  : 'Post-Graduation Plan Requested';
-              const desc = survey.notes || (
-                isLifeSkills
-                  ? 'Your case manager has invited you to complete a Life Skills survey.'
-                  : survey.survey_type === 'checkin'
-                    ? 'Your case manager has asked you to complete a check-in.'
-                    : 'Your case manager has asked you to complete your 12-month plan.'
-              );
-              const link = isLifeSkills
-                ? `/surveys/${lifeSkillsSlug}`
-                : survey.survey_type === 'checkin' ? '/check-in' : '/post-graduation-plan';
-              const cta = isLifeSkills ? 'Open Survey' : survey.survey_type === 'checkin' ? 'Complete Check-In' : 'Start Plan';
-              return (
-                <Card key={survey.id} className="border-primary/50 bg-primary/5">
-                  <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-medium text-sm">📝 {title}</p>
-                      <p className="text-xs text-muted-foreground">{desc}</p>
-                    </div>
-                    <Button size="sm" asChild>
-                      <Link to={link}>{cta}</Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </>
-        )}
-
-        {/* Life Skills assignments without invitation rows (older or imported) */}
-        {role === 'student' && pendingLifeSkills.length > 0 && pendingSurveys.filter((s: any) => typeof s.survey_type === 'string' && s.survey_type.startsWith('lifeskills:')).length === 0 && (
-          <Card className="border-primary/40 bg-primary/5">
-            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-medium text-sm">📋 {pendingLifeSkills.length} Life Skills survey{pendingLifeSkills.length === 1 ? '' : 's'} pending</p>
-                <p className="text-xs text-muted-foreground">Help us measure the impact of the curriculum — only takes a minute each.</p>
-              </div>
-              <Button size="sm" asChild><Link to="/surveys">Open</Link></Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {role === 'student' && (
-          <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-medium text-sm">🎓 12-Month Post-Graduation Plan</p>
-                <p className="text-xs text-muted-foreground">Plan your first year after graduation — career, housing, finances, and more.</p>
-              </div>
-              <Button size="sm" asChild>
-                <Link to="/post-graduation-plan">Create Plan</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Intake Survey Reminder */}
-        {role === 'student' && !intakeCompleted && (
-          <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-medium text-sm">Complete your wellness check-in</p>
-                <p className="text-xs text-muted-foreground">Help us understand how to best support you — it only takes a few minutes.</p>
-              </div>
-              <Button size="sm" asChild>
-                <Link to="/intake-survey">Get Started</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-        {/* Header with Breadcrumb */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="font-display text-xl sm:text-2xl font-bold truncate">
-              Welcome back, {profile?.full_name?.split(' ')[0] || 'User'}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {role === 'student' 
-                ? "Here's an overview of your support requests"
-                : role === 'case_manager'
-                ? "Here's your current caseload overview"
-                : "System overview and monitoring"
-              }
-            </p>
-          </div>
-          <div className="hidden sm:flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Calendar className="mr-2 h-4 w-4" />
-              {format(new Date(), 'yyyy')}
-            </Button>
-            <Button variant="outline" size="sm">
-              Filter
-            </Button>
-          </div>
+          <h2 className="font-display text-lg font-semibold">Overview</h2>
+          <p className="text-xs text-muted-foreground">{format(new Date(), 'yyyy')}</p>
         </div>
 
         {/* Stats Grid - Fraction Style */}
@@ -373,6 +468,7 @@ export default function Dashboard() {
             progressColor="gradient"
           />
         </div>
+
 
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
@@ -503,7 +599,7 @@ export default function Dashboard() {
               <h2 className="font-display text-lg font-semibold">Quick Actions</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer">
-                  <Link to="/student-submitting-a-support-request">
+                  <Link to="/requests/new">
                     <CardContent className="flex items-center gap-4 p-6">
                       <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                         <Plus className="h-6 w-6 text-primary" />
@@ -518,7 +614,7 @@ export default function Dashboard() {
                 </Card>
 
                 <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer">
-                  <Link to="/student-tracking-request-status-scheduling-meeting">
+                  <Link to="/requests/mine">
                     <CardContent className="flex items-center gap-4 p-6">
                       <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                         <Clock className="h-6 w-6 text-primary" />
@@ -533,7 +629,7 @@ export default function Dashboard() {
                 </Card>
 
                 <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer">
-                  <Link to="/student-creating-offline-draft-request">
+                  <Link to="/requests/drafts">
                     <CardContent className="flex items-center gap-4 p-6">
                       <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                         <FileText className="h-6 w-6 text-primary" />
@@ -554,7 +650,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <h2 className="font-display text-lg font-semibold">Recent Requests</h2>
                 <Button variant="outline" size="sm" asChild>
-                  <Link to="/student-tracking-request-status-scheduling-meeting">
+                  <Link to="/requests/mine">
                     View All
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -608,7 +704,7 @@ export default function Dashboard() {
                       variant="outline" 
                       size="sm" 
                       className="mt-4"
-                      onClick={() => navigate('/case-manager-managing-student-requests?priority=emergency')}
+                      onClick={() => navigate('/requests/queue?priority=emergency')}
                     >
                       View Emergency Cases
                     </Button>
@@ -635,7 +731,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <h2 className="font-display text-lg font-semibold">Priority Queue</h2>
                 <Button variant="outline" size="sm" asChild>
-                  <Link to="/case-manager-managing-student-requests">
+                  <Link to="/requests/queue">
                     View All
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -702,7 +798,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <h2 className="font-display text-lg font-semibold">Escalated & Unassigned</h2>
                 <Button variant="outline" size="sm" asChild>
-                  <Link to="/admin-monitoring-reassigning-requests">
+                  <Link to="/admin">
                     View All
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>

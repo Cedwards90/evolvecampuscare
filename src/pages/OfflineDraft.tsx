@@ -193,7 +193,7 @@ export default function OfflineDraft() {
           title: 'Request submitted!',
           description: 'Your request has been submitted successfully.',
         });
-        navigate('/student-tracking-request-status-scheduling-meeting');
+        navigate('/requests/mine');
       },
       onError: () => {
         toast({
