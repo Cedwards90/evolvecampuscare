@@ -147,12 +147,7 @@ function App() {
                       <SubmitRequest />
                     </ProtectedRoute>
                   } />
-                  {/* Canonical QR-friendly alias for the student support-request page */}
-                  <Route path="/requests/new" element={
-                    <ProtectedRoute allowedRoles={['student']}>
-                      <SubmitRequest />
-                    </ProtectedRoute>
-                  } />
+
                   <Route path="/requests/mine" element={
                     <ProtectedRoute allowedRoles={['student']}>
                       <TrackRequests />
