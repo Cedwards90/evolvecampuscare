@@ -364,17 +364,8 @@ export default function AnalyticsDashboard() {
           </Card>
         </div>
 
-        {/* Student Count Trend */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Student Assignment Growth
-            </CardTitle>
-            <CardDescription>
-              Total assigned students over time
-            </CardDescription>
         {/*
+
           Student assignment growth is intentionally NOT charted: assignment
           removals carry no timestamp, so a historical daily line would imply
           precision the data cannot support. We show the trustworthy current
