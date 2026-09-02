@@ -116,11 +116,14 @@ export function useApproveRequest() {
     mutationFn: async ({ 
       requestId, 
       userId,
-      approvedAmount 
+      approvedAmount,
+      policyRationale,
     }: { 
       requestId: string; 
       userId: string;
       approvedAmount?: number;
+      /** Reviewer rationale recorded when approving against policy guidance. */
+      policyRationale?: string;
     }) => {
       // Fetch request details first
       const { data: requestData } = await supabase
