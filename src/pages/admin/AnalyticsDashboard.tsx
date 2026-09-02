@@ -41,6 +41,12 @@ import {
 } from '@/components/ui/select';
 import { useAnalyticsData } from '@/hooks/useAnalyticsData';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
+import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
+import { ReportMetadata } from '@/components/reports/ReportMetadata';
+import { MetricValue, MetricDefinitionPopover } from '@/components/reports/MetricValue';
+import { ChartDataTable } from '@/components/reports/ChartDataTable';
+import { getMetricDefinition } from '@/lib/metricDefinitions';
+import { formatCurrency } from '@/lib/utils';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -49,7 +55,9 @@ function getInitials(name: string | null): string {
 
 export default function AnalyticsDashboard() {
   const [dateRange, setDateRange] = useState<number>(30);
-  const { data, isLoading, error } = useAnalyticsData(dateRange);
+  const { filters } = useGlobalFilters();
+  const { data, isLoading, error } = useAnalyticsData(dateRange, filters);
+
 
   if (isLoading) {
     return (
@@ -93,19 +101,35 @@ export default function AnalyticsDashboard() {
 
         <GlobalFilterBar visible={['cohort', 'yearOfStudy', 'organizationId', 'assignedCaseManagerId']} />
 
-        {/* Summary Stats */}
+        <ReportMetadata
+          rangeLabel={data.meta.rangeLabel}
+          generatedAt={data.meta.generatedAt}
+          rowCount={data.meta.rowCount}
+          truncated={data.meta.truncated}
+          accessScope="Limited to records your role and organization permit"
+          activeFilters={data.meta.appliedFilterLabels}
+        />
+
+        {/* Summary Stats — each figure carries its own definition */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                Total Students
+                Students in Scope
               </CardDescription>
-              <CardTitle className="text-3xl">{data.summary.totalStudents}</CardTitle>
+              <CardTitle className="text-3xl">
+                <MetricValue
+                  metricKey="total_students"
+                  value={data.summary.totalStudents}
+                  rangeLabel={data.meta.rangeLabel}
+                  asOf={new Date(data.meta.generatedAt).toLocaleString()}
+                />
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Students with case manager assignments
+                Distinct students with a case manager assignment
               </p>
             </CardContent>
           </Card>
@@ -114,9 +138,16 @@ export default function AnalyticsDashboard() {
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
-                Total Requests
+                Requests Created
               </CardDescription>
-              <CardTitle className="text-3xl">{data.summary.totalRequests}</CardTitle>
+              <CardTitle className="text-3xl">
+                <MetricValue
+                  metricKey="total_requests"
+                  value={data.summary.totalRequests}
+                  rangeLabel={data.meta.rangeLabel}
+                  asOf={new Date(data.meta.generatedAt).toLocaleString()}
+                />
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
@@ -129,13 +160,20 @@ export default function AnalyticsDashboard() {
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Avg Resolution Time
+                Avg Time to Resolve
               </CardDescription>
-              <CardTitle className="text-3xl">{data.summary.avgResolutionTime}h</CardTitle>
+              <CardTitle className="text-3xl">
+                <MetricValue
+                  metricKey="avg_resolution_hours"
+                  value={data.summary.avgResolutionTime}
+                  rangeLabel={data.meta.rangeLabel}
+                  asOf={new Date(data.meta.generatedAt).toLocaleString()}
+                />
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Average hours to resolve
+                Resolved requests only — open requests are excluded
               </p>
             </CardContent>
           </Card>
@@ -146,13 +184,49 @@ export default function AnalyticsDashboard() {
                 <TrendingUp className="h-4 w-4" />
                 Resolution Rate
               </CardDescription>
-              <CardTitle className="text-3xl">{data.summary.resolutionRate}%</CardTitle>
+              <CardTitle className="text-3xl">
+                <MetricValue
+                  metricKey="resolution_rate"
+                  value={data.summary.resolutionRate}
+                  rangeLabel={data.meta.rangeLabel}
+                  asOf={new Date(data.meta.generatedAt).toLocaleString()}
+                />
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <Progress value={data.summary.resolutionRate} className="h-2" />
+              {data.summary.resolutionRate == null ? (
+                <p className="text-sm text-muted-foreground">
+                  No eligible requests in this range
+                </p>
+              ) : (
+                <Progress value={data.summary.resolutionRate} className="h-2" />
+              )}
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription className="flex items-center gap-2">
+              Funds Dispersed
+            </CardDescription>
+            <CardTitle className="text-3xl">
+              <MetricValue
+                metricKey="financial_dispersed"
+                value={data.summary.fundsDispersed}
+                rangeLabel={data.meta.rangeLabel}
+                asOf={new Date(data.meta.generatedAt).toLocaleString()}
+              />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Approved amounts on financial requests created in this range. Requested-but-unapproved
+              amounts are not counted.
+            </p>
+          </CardContent>
+        </Card>
+
 
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -220,6 +294,17 @@ export default function AnalyticsDashboard() {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
+              <ChartDataTable
+                caption="Daily request submissions and resolutions"
+                rows={data.workloadTrends}
+                rowKey={(r) => r.date}
+                columns={[
+                  { key: 'date', label: 'Date', value: (r) => r.date },
+                  { key: 'requests', label: 'Requests created', value: (r) => r.requestCount },
+                  { key: 'resolved', label: 'Requests resolved', value: (r) => r.resolvedCount },
+                ]}
+              />
+
             </CardContent>
           </Card>
 
@@ -264,55 +349,59 @@ export default function AnalyticsDashboard() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+              <ChartDataTable
+                caption="Average hours to resolve, by request category"
+                rows={data.resolutionByCategory}
+                rowKey={(r) => r.category}
+                columns={[
+                  { key: 'category', label: 'Category', value: (r) => r.category },
+                  { key: 'hours', label: 'Avg hours to resolve', value: (r) => `${r.avgHours}h` },
+                  { key: 'count', label: 'Resolved requests', value: (r) => r.count },
+                ]}
+              />
+
             </CardContent>
           </Card>
         </div>
 
-        {/* Student Count Trend */}
+        {/*
+
+          Student assignment growth is intentionally NOT charted: assignment
+          removals carry no timestamp, so a historical daily line would imply
+          precision the data cannot support. We show the trustworthy current
+          total plus the reason instead of a plausible-looking trend.
+        */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               Student Assignment Growth
+              {(() => {
+                const def = getMetricDefinition('student_growth');
+                return def ? (
+                  <MetricDefinitionPopover
+                    def={def}
+                    rangeLabel={data.meta.rangeLabel}
+                    asOf={new Date(data.meta.generatedAt).toLocaleString()}
+                  />
+                ) : null;
+              })()}
             </CardTitle>
             <CardDescription>
-              Total assigned students over time
+              Historical trend unavailable — see how this is measured
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.workloadTrends}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="date" 
-                    fontSize={12} 
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis 
-                    fontSize={12} 
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="studentCount"
-                    name="Assigned Students"
-                    stroke="hsl(var(--chart-3))"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent className="space-y-3">
+            <p className="text-2xl font-semibold">
+              {data.summary.totalStudents.toLocaleString()}{' '}
+              <span className="text-sm font-normal text-muted-foreground">
+                students currently assigned
+              </span>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              A day-by-day growth line would require knowing when assignments ended, and that is not
+              recorded. Rather than show an inflated trend, only the current total is reported.
+            </p>
           </CardContent>
         </Card>
 
@@ -325,6 +414,7 @@ export default function AnalyticsDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+
             {data.caseManagerMetrics.length === 0 ? (
               <p className="text-center py-8 text-muted-foreground">
                 No case managers found
@@ -360,16 +450,26 @@ export default function AnalyticsDashboard() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="flex items-center gap-1 text-sm">
-                        {cm.avgResolutionHours <= 24 ? (
-                          <TrendingDown className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <TrendingUp className="h-4 w-4 text-amber-500" />
-                        )}
-                        <span className="font-medium">{cm.avgResolutionHours}h</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">avg resolution</p>
+                      {cm.avgResolutionHours == null ? (
+                        <>
+                          <p className="text-sm font-medium text-muted-foreground">No data</p>
+                          <p className="text-xs text-muted-foreground">nothing resolved yet</p>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-end gap-1 text-sm">
+                            {cm.avgResolutionHours <= 24 ? (
+                              <TrendingDown className="h-4 w-4 text-green-500" aria-hidden="true" />
+                            ) : (
+                              <TrendingUp className="h-4 w-4 text-amber-500" aria-hidden="true" />
+                            )}
+                            <span className="font-medium">{cm.avgResolutionHours}h</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">avg resolution</p>
+                        </>
+                      )}
                     </div>
+
                     <div className="text-right">
                       <p className="font-medium">{cm.resolvedThisMonth}</p>
                       <p className="text-xs text-muted-foreground">resolved this month</p>

@@ -6,11 +6,16 @@ import {
   beaconSaveDraft,
   clearDraft,
   clearDraftRemote,
+  flushDraftOutbox,
+  hasPendingSync,
   loadDraft,
   loadDraftRemote,
   saveDraft,
   saveDraftRemote,
 } from '@/lib/formDraftStorage';
+
+/** What the user is told about where their in-progress work currently lives. */
+export type DraftSyncState = 'idle' | 'saving' | 'local' | 'synced' | 'failed';
 
 interface UseFormPersistenceOptions<T> {
   debounceMs?: number;
@@ -20,6 +25,25 @@ interface UseFormPersistenceOptions<T> {
   label?: string;
   /** Delay between remote (Supabase) writes. Defaults to 2500ms. */
   remoteDebounceMs?: number;
+}
+
+export interface FormPersistenceResult<T> {
+  clear: () => void;
+  savedAt: string | null;
+  hasDraft: boolean;
+  /** Where the draft currently lives — drives the DraftStatus indicator. */
+  syncState: DraftSyncState;
+  /** Manually retry a failed/queued server sync. */
+  retrySync: () => Promise<void>;
+  /**
+   * Set when a newer draft exists on another device. Both versions are kept;
+   * the user chooses instead of the newest silently winning.
+   */
+  conflict: { savedAt: string; values: T } | null;
+  /** Apply the other device's draft. */
+  resolveConflictUseRemote: () => void;
+  /** Keep the draft on this device and overwrite the server copy. */
+  resolveConflictKeepLocal: () => void;
 }
 
 function safeStringify(value: unknown): string {
@@ -33,13 +57,16 @@ function safeStringify(value: unknown): string {
 /**
  * Persist a form's in-progress values to localStorage AND Supabase so users
  * don't lose their work across tab discards, reloads, or devices.
+ *
+ * Cross-device conflicts are surfaced rather than resolved by timestamp: both
+ * copies are retained and the caller renders a choice.
  */
 export function useFormPersistence<T>(
   formKey: string,
   values: T,
   setValues: (values: T) => void,
   options: UseFormPersistenceOptions<T> = {},
-): { clear: () => void; savedAt: string | null; hasDraft: boolean } {
+): FormPersistenceResult<T> {
   const { user } = useAuth();
   const {
     debounceMs = 500,
@@ -52,6 +79,8 @@ export function useFormPersistence<T>(
 
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [hasDraft, setHasDraft] = useState(false);
+  const [syncState, setSyncState] = useState<DraftSyncState>('idle');
+  const [conflict, setConflict] = useState<{ savedAt: string; values: T } | null>(null);
   const hydratedKeyRef = useRef<string | null>(null);
   const firstSaveEffectRef = useRef(true);
   const skipNextSaveRef = useRef(false);
@@ -78,6 +107,8 @@ export function useFormPersistence<T>(
     if (user?.id) void clearDraftRemote(formKey, user.id);
     setSavedAt(null);
     setHasDraft(false);
+    setSyncState('idle');
+    setConflict(null);
     clearTimers();
   }, [formKey, user?.id]);
 
@@ -90,15 +121,53 @@ export function useFormPersistence<T>(
     const at = new Date().toISOString();
     setSavedAt(at);
     setHasDraft(true);
+    setSyncState('local');
     return at;
   }, [enabled, formKey, user?.id]);
 
-  const persistRemote = useCallback((snapshot: T, at: string) => {
+  const persistRemote = useCallback(async (snapshot: T, at: string) => {
     if (!user?.id) return;
-    void saveDraftRemote(formKey, user.id, snapshot, at);
+    setSyncState('saving');
+    const outcome = await saveDraftRemote(formKey, user.id, snapshot, at);
+    setSyncState(outcome === 'synced' ? 'synced' : outcome === 'queued' ? 'local' : 'failed');
   }, [formKey, user?.id]);
 
-  // Hydrate: prefer whichever draft (local or remote) has the newer savedAt.
+  const retrySync = useCallback(async () => {
+    if (!user?.id) return;
+    setSyncState('saving');
+    const { failed } = await flushDraftOutbox(user.id);
+    if (failed > 0) {
+      setSyncState('failed');
+      return;
+    }
+    // Nothing queued (or everything drained) — push the current snapshot too.
+    const at = savedAt ?? new Date().toISOString();
+    const outcome = await saveDraftRemote(formKey, user.id, latestValuesRef.current, at);
+    setSyncState(outcome === 'synced' ? 'synced' : outcome === 'queued' ? 'local' : 'failed');
+  }, [formKey, user?.id, savedAt]);
+
+  const resolveConflictUseRemote = useCallback(() => {
+    if (!conflict) return;
+    skipNextSaveRef.current = true;
+    setValues(conflict.values);
+    setSavedAt(conflict.savedAt);
+    setHasDraft(true);
+    setSyncState('synced');
+    if (user?.id) saveDraft(formKey, user.id, conflict.values);
+    if (onRestore) onRestore(conflict.values);
+    setConflict(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conflict, formKey, user?.id, setValues]);
+
+  const resolveConflictKeepLocal = useCallback(() => {
+    setConflict(null);
+    const at = new Date().toISOString();
+    setSavedAt(at);
+    void persistRemote(latestValuesRef.current, at);
+  }, [persistRemote]);
+
+  // Hydrate. Local wins immediately; a newer remote draft becomes a conflict
+  // the user resolves, except when there is no local draft at all.
   useEffect(() => {
     const hydrateKey = `${formKey}:${user?.id || ''}`;
     if (hydratedKeyRef.current === hydrateKey) return;
@@ -106,8 +175,14 @@ export function useFormPersistence<T>(
     hydratedKeyRef.current = hydrateKey;
     firstSaveEffectRef.current = true;
 
+    // Drain anything that failed to reach the server last session.
+    void flushDraftOutbox(user.id).then(({ synced, failed }) => {
+      if (failed > 0) setSyncState('failed');
+      else if (synced > 0) setSyncState('synced');
+    });
+
     const local = loadDraft<T>(formKey, user.id);
-    let applied: { values: T; savedAt: string } | null = local
+    const applied: { values: T; savedAt: string } | null = local
       ? { values: local.values, savedAt: local.savedAt }
       : null;
 
@@ -115,6 +190,7 @@ export function useFormPersistence<T>(
       skipNextSaveRef.current = true;
       setHasDraft(true);
       setSavedAt(applied.savedAt);
+      setSyncState(hasPendingSync(formKey, user.id) ? 'failed' : 'local');
       setValues(applied.values);
       if (onRestore) onRestore(applied.values);
       toast.success(label ? `Draft restored for ${label}` : 'Draft restored', {
@@ -130,20 +206,23 @@ export function useFormPersistence<T>(
       });
     }
 
-    // Background: check remote and prefer it if newer.
+    // Background: compare with the server copy.
     (async () => {
       const remote = await loadDraftRemote<T>(formKey, user.id);
       if (!remote || remote.values == null) return;
       const remoteTs = new Date(remote.savedAt).getTime();
       const localTs = applied ? new Date(applied.savedAt).getTime() : 0;
       if (remoteTs <= localTs) return;
-      skipNextSaveRef.current = true;
-      setHasDraft(true);
-      setSavedAt(remote.savedAt);
-      setValues(remote.values);
-      saveDraft(formKey, user.id, remote.values);
-      if (onRestore) onRestore(remote.values);
+
       if (!applied) {
+        // No local copy — safe to adopt the server version outright.
+        skipNextSaveRef.current = true;
+        setHasDraft(true);
+        setSavedAt(remote.savedAt);
+        setSyncState('synced');
+        setValues(remote.values);
+        saveDraft(formKey, user.id, remote.values);
+        if (onRestore) onRestore(remote.values);
         toast.success(label ? `Draft restored for ${label}` : 'Draft restored', {
           description: `Synced from another device — saved ${new Date(remote.savedAt).toLocaleString()}`,
           duration: 10000,
@@ -155,7 +234,11 @@ export function useFormPersistence<T>(
             },
           },
         });
+        return;
       }
+
+      // Both exist and the server copy is newer: keep both, let the user pick.
+      setConflict({ savedAt: remote.savedAt, values: remote.values });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formKey, user?.id]);
@@ -182,7 +265,7 @@ export function useFormPersistence<T>(
       if (!at) return;
       if (remoteTimerRef.current) clearTimeout(remoteTimerRef.current);
       remoteTimerRef.current = setTimeout(() => {
-        persistRemote(latestValuesRef.current, new Date().toISOString());
+        void persistRemote(latestValuesRef.current, new Date().toISOString());
       }, Math.max(0, remoteDebounceMs - debounceMs));
     }, debounceMs);
 
@@ -190,6 +273,19 @@ export function useFormPersistence<T>(
       if (localTimerRef.current) clearTimeout(localTimerRef.current);
     };
   }, [values, enabled, formKey, user?.id, debounceMs, remoteDebounceMs, persistLocal, persistRemote]);
+
+  // Retry queued drafts as soon as connectivity returns.
+  useEffect(() => {
+    if (!enabled || !user?.id) return;
+    const onOnline = () => {
+      void flushDraftOutbox(user.id).then(({ synced, failed }) => {
+        if (failed > 0) setSyncState('failed');
+        else if (synced > 0) setSyncState('synced');
+      });
+    };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [enabled, user?.id]);
 
   // Flush immediately when the tab becomes hidden — Chrome tab discard scenario.
   useEffect(() => {
@@ -208,8 +304,9 @@ export function useFormPersistence<T>(
           data.session?.access_token ?? null,
         );
       }).catch(() => {
-        // If we can't get the session synchronously enough, fall back to normal upsert.
-        persistRemote(latestValuesRef.current, at);
+        // Session unavailable: the draft is already queued locally by
+        // saveDraftRemote and will be retried on the next load.
+        void persistRemote(latestValuesRef.current, at);
       });
     };
     const flushWhenHidden = () => {
@@ -225,5 +322,14 @@ export function useFormPersistence<T>(
     };
   }, [enabled, persistLocal, persistRemote, formKey, user?.id]);
 
-  return { clear, savedAt, hasDraft };
+  return {
+    clear,
+    savedAt,
+    hasDraft,
+    syncState,
+    retrySync,
+    conflict,
+    resolveConflictUseRemote,
+    resolveConflictKeepLocal,
+  };
 }
