@@ -349,23 +349,33 @@ export default function Auth({ mode = 'student' }: AuthProps) {
         
         <CardHeader className="text-center">
           <CardTitle className="font-display text-h2">
-            {invitation ? 'Complete Your Registration' : activeTab === 'login' ? 'Welcome Back' : 'Create Account'}
+            {invitation
+              ? 'Complete Your Registration'
+              : isStaffMode
+                ? 'Staff Sign In'
+                : activeTab === 'login'
+                  ? 'Welcome Back'
+                  : 'Create Account'}
           </CardTitle>
           <CardDescription>
             {invitation
               ? 'Create your account to accept the invitation'
-              : activeTab === 'login' 
-                ? 'Sign in to access your dashboard'
-                : 'Join Evolve to get the support you need'
-            }
+              : isStaffMode
+                ? 'For case managers, organization admins, and administrators'
+                : activeTab === 'login'
+                  ? 'Sign in to access your dashboard'
+                  : 'Join Evolve to get the support you need'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
+            {(!isStaffMode || invitation) && (
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="login">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
+            )}
+
 
             <TabsContent value="login">
               <GoogleButton label="Continue with Google" />
