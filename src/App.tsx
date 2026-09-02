@@ -17,6 +17,8 @@ import { NavigationTracker } from "@/components/navigation/NavigationTracker";
 
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import StaffAuth from "./pages/auth/StaffAuth";
+
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
