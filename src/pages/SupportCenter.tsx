@@ -49,17 +49,17 @@ const studentFaqData: Faq[] = [
   { category: 'Account & Profile', question: 'Who can see my personal information?', answer: 'Only your assigned case manager and platform administrators can view your profile details and requests. Other students cannot see your information. All data is encrypted and handled according to FERPA and GDPR standards.' },
 
   // Submitting Requests
-  { category: 'Submitting Requests', question: 'How do I submit a support request?', answer: 'Navigate to "Submit Request" from the sidebar. You\'ll walk through four steps: 1) Choose a category, 2) Describe your situation and set priority, 3) Attach any supporting documents, and 4) Review and submit. You\'ll receive a confirmation and can track your request anytime.', relatedLink: '/student-submitting-a-support-request' },
+  { category: 'Submitting Requests', question: 'How do I submit a support request?', answer: 'Navigate to "Submit Request" from the sidebar. You\'ll walk through four steps: 1) Choose a category, 2) Describe your situation and set priority, 3) Attach any supporting documents, and 4) Review and submit. You\'ll receive a confirmation and can track your request anytime.', relatedLink: '/requests/new' },
   { category: 'Submitting Requests', question: 'What do the categories mean?', answer: 'Academic -- course enrollment, grades, advising, academic probation.\nFinancial -- tuition, scholarships, emergency funds, payment plans.\nMental Health -- counseling referrals, stress, wellness support.\nHousing -- dorm issues, roommate conflicts, housing insecurity.\nOther -- anything that doesn\'t fit above; we\'ll route it to the right team.' },
   { category: 'Submitting Requests', question: 'What are the priority levels and how do they affect response time?', answer: 'Low -- general inquiry, no time pressure (reviewed within 3-5 business days).\nMedium -- needs attention within a few days (1-3 business days).\nHigh -- urgent, needs attention soon (within 24 hours).\nEmergency -- critical situation requiring immediate help (escalated automatically, typically addressed within hours).' },
   { category: 'Submitting Requests', question: 'What qualifies as an emergency request?', answer: 'Emergency requests are for situations requiring immediate attention, such as housing crises, immediate financial hardship affecting basic needs, or mental health emergencies. These are escalated automatically and receive priority handling. If you\'re in immediate danger, please call 911 or the 988 Suicide & Crisis Lifeline.' },
-  { category: 'Submitting Requests', question: 'Can I save a draft and submit later?', answer: 'Yes! If you lose connectivity or navigate away, the platform can save your request as an offline draft. You\'ll find your drafts on the Offline Drafts page and can submit them once you\'re back online.', relatedLink: '/student-creating-offline-draft-request' },
+  { category: 'Submitting Requests', question: 'Can I save a draft and submit later?', answer: 'Yes! If you lose connectivity or navigate away, the platform can save your request as an offline draft. You\'ll find your drafts on the Offline Drafts page and can submit them once you\'re back online.', relatedLink: '/requests/drafts' },
   { category: 'Submitting Requests', question: 'Can I attach files to my request?', answer: 'Yes. In Step 3 of the submission process you can upload supporting documents like PDFs, images, or Word files (up to 10 MB each). Attachments are stored securely and only visible to your case manager and administrators.' },
 
   // Tracking & Scheduling
-  { category: 'Tracking & Scheduling', question: 'How do I track my request status?', answer: 'Go to "Track Requests" in the sidebar. Each request shows a visual timeline with stages: Submitted → Assigned → In Progress → Resolved. You\'ll also receive notifications when the status changes.', relatedLink: '/student-tracking-request-status-scheduling-meeting' },
+  { category: 'Tracking & Scheduling', question: 'How do I track my request status?', answer: 'Go to "Track Requests" in the sidebar. Each request shows a visual timeline with stages: Submitted → Assigned → In Progress → Resolved. You\'ll also receive notifications when the status changes.', relatedLink: '/requests/mine' },
   { category: 'Tracking & Scheduling', question: 'What do the status stages mean?', answer: 'Submitted -- your request has been received and is awaiting review.\nIn Progress -- a case manager is actively working on your request.\nEscalated -- your request has been flagged for higher-level attention.\nResolved -- your request has been addressed and closed.\nCancelled -- the request was withdrawn.' },
-  { category: 'Tracking & Scheduling', question: 'How can I schedule a meeting with my case manager?', answer: 'Open one of your requests from the Track Requests page and click "Schedule Meeting." You\'ll see available time slots to choose from. Your case manager will be notified and the meeting will appear on both your calendars.', relatedLink: '/student-tracking-request-status-scheduling-meeting' },
+  { category: 'Tracking & Scheduling', question: 'How can I schedule a meeting with my case manager?', answer: 'Open one of your requests from the Track Requests page and click "Schedule Meeting." You\'ll see available time slots to choose from. Your case manager will be notified and the meeting will appear on both your calendars.', relatedLink: '/requests/mine' },
   { category: 'Tracking & Scheduling', question: 'Can I edit my request after submitting?', answer: 'You can add comments and messages to any active request. However, once a request is submitted, the original details (title, category, description) cannot be modified to preserve an accurate record.' },
   { category: 'Tracking & Scheduling', question: 'How long does it take to get a response?', answer: 'Most requests are reviewed within 24-48 business hours. Emergency requests are prioritized and typically addressed within a few hours. You\'ll receive a notification when your case manager responds or updates your request.' },
 
@@ -97,10 +97,10 @@ const faqCategories: FaqCategory[] = [
 ];
 
 const quickLinks = [
-  { title: 'Submit a Request', description: 'Create a new support request', icon: FileText, href: '/student-submitting-a-support-request', roles: ['student'] },
-  { title: 'Track Requests', description: 'View and manage your requests', icon: Clock, href: '/student-tracking-request-status-scheduling-meeting', roles: ['student'] },
-  { title: 'Manage Requests', description: 'Review and process student requests', icon: Users, href: '/case-manager-managing-student-requests', roles: ['case_manager'] },
-  { title: 'Admin Dashboard', description: 'Monitor system and manage users', icon: Shield, href: '/admin-monitoring-reassigning-requests', roles: ['admin'] },
+  { title: 'Submit a Request', description: 'Create a new support request', icon: FileText, href: '/requests/new', roles: ['student'] },
+  { title: 'Track Requests', description: 'View and manage your requests', icon: Clock, href: '/requests/mine', roles: ['student'] },
+  { title: 'Manage Requests', description: 'Review and process student requests', icon: Users, href: '/requests/queue', roles: ['case_manager'] },
+  { title: 'Admin Dashboard', description: 'Monitor system and manage users', icon: Shield, href: '/admin', roles: ['admin'] },
 ];
 
 // ── Component ───────────────────────────────────────────────
@@ -169,7 +169,7 @@ export default function SupportCenter() {
               </Button>
               {role === 'student' && (
                 <Button size="sm" className="gap-2" asChild>
-                  <Link to="/student-submitting-a-support-request?emergency=true">
+                  <Link to="/requests/new?emergency=true">
                     <AlertTriangle className="h-4 w-4" />
                     Emergency Request
                   </Link>
@@ -309,7 +309,7 @@ export default function SupportCenter() {
             <div className="flex gap-3">
               {role === 'student' && (
                 <Button asChild>
-                  <Link to="/student-submitting-a-support-request">Submit a Request</Link>
+                  <Link to="/requests/new">Submit a Request</Link>
                 </Button>
               )}
               <Button variant="outline" asChild>

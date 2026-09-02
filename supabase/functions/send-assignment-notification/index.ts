@@ -266,7 +266,7 @@ const handler = async (req: Request): Promise<Response> => {
             <p style="color: #4b5563;">Please log in to the support portal to review and respond to these requests.</p>
             
             <div style="margin-top: 24px; text-align: center;">
-              <a href="https://evolvecampuscare.lovable.app/case-manager-managing-student-requests" 
+              <a href="https://evolvecampuscare.lovable.app/requests/queue" 
                  style="background: #054D3B; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">
                 View My Requests
               </a>

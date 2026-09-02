@@ -142,23 +142,23 @@ function App() {
                   } />
                   
                   {/* Student routes */}
-                  <Route path="/student-submitting-a-support-request" element={
+                  <Route path="/requests/new" element={
                     <ProtectedRoute allowedRoles={['student']}>
                       <SubmitRequest />
                     </ProtectedRoute>
                   } />
                   {/* Canonical QR-friendly alias for the student support-request page */}
-                  <Route path="/student/support-request" element={
+                  <Route path="/requests/new" element={
                     <ProtectedRoute allowedRoles={['student']}>
                       <SubmitRequest />
                     </ProtectedRoute>
                   } />
-                  <Route path="/student-tracking-request-status-scheduling-meeting" element={
+                  <Route path="/requests/mine" element={
                     <ProtectedRoute allowedRoles={['student']}>
                       <TrackRequests />
                     </ProtectedRoute>
                   } />
-                  <Route path="/student-creating-offline-draft-request" element={
+                  <Route path="/requests/drafts" element={
                     <ProtectedRoute allowedRoles={['student']}>
                       <OfflineDraft />
                     </ProtectedRoute>
@@ -180,7 +180,7 @@ function App() {
                   } />
                   
                   {/* Case Manager routes */}
-                  <Route path="/case-manager-managing-student-requests" element={
+                  <Route path="/requests/queue" element={
                     <ProtectedRoute allowedRoles={['case_manager', 'org_admin']}>
                       <ManageRequests />
                     </ProtectedRoute>
@@ -214,7 +214,7 @@ function App() {
 
                   {/* Admin routes */}
 
-            <Route path="/admin-monitoring-reassigning-requests" element={
+            <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
                 <AdminDashboard />
               </ProtectedRoute>
@@ -345,7 +345,7 @@ function App() {
               } />
 
               {/* Student Folders */}
-              <Route path="/student-folders" element={
+              <Route path="/students" element={
                 <ProtectedRoute allowedRoles={['case_manager', 'admin', 'org_admin']}>
                   <StudentFolders />
                 </ProtectedRoute>

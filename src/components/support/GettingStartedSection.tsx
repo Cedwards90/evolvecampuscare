@@ -11,14 +11,14 @@ const checklistByRole: Record<string, ChecklistItem[]> = {
   student: [
     { label: 'Complete your profile and intake survey', href: '/intake-survey' },
     { label: 'Meet your assigned case manager', href: '/dashboard' },
-    { label: 'Submit your first support request', href: '/student-submitting-a-support-request' },
+    { label: 'Submit your first support request', href: '/requests/new' },
     { label: 'Send a message to your case manager', href: '/messages' },
     { label: 'Complete your first weekly check-in', href: '/check-in' },
   ],
   case_manager: [
     { label: 'Enable two-factor authentication (required)', href: '/settings' },
-    { label: 'Review your assigned students', href: '/student-folders' },
-    { label: 'Open the request queue', href: '/case-manager-managing-student-requests' },
+    { label: 'Review your assigned students', href: '/students' },
+    { label: 'Open the request queue', href: '/requests/queue' },
     { label: 'Send a Life Skills survey to a student', href: '/admin/lifeskills' },
     { label: 'Log your first time entry', href: '/time-tracking' },
   ],
@@ -32,7 +32,7 @@ const checklistByRole: Record<string, ChecklistItem[]> = {
   org_admin: [
     { label: 'Enable two-factor authentication (required)', href: '/settings' },
     { label: 'Review your organization\'s case managers', href: '/admin/case-managers' },
-    { label: 'Monitor unassigned requests', href: '/admin-monitoring-reassigning-requests' },
+    { label: 'Monitor unassigned requests', href: '/admin' },
     { label: 'Send a survey to your students', href: '/admin/surveys' },
     { label: 'View impact reports', href: '/admin/impact' },
   ],

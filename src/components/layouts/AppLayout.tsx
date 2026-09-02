@@ -47,11 +47,11 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['student', 'case_manager', 'admin'] },
-  { label: 'Submit Request', href: '/student-submitting-a-support-request', icon: FileText, roles: ['student'] },
-  { label: 'Track Requests', href: '/student-tracking-request-status-scheduling-meeting', icon: Clock, roles: ['student'] },
-  { label: 'Offline Drafts', href: '/student-creating-offline-draft-request', icon: WifiOff, roles: ['student'] },
-  { label: 'Manage Requests', href: '/case-manager-managing-student-requests', icon: Users, roles: ['case_manager'] },
-  { label: 'Admin Dashboard', href: '/admin-monitoring-reassigning-requests', icon: BarChart3, roles: ['admin'] },
+  { label: 'Submit Request', href: '/requests/new', icon: FileText, roles: ['student'] },
+  { label: 'Track Requests', href: '/requests/mine', icon: Clock, roles: ['student'] },
+  { label: 'Offline Drafts', href: '/requests/drafts', icon: WifiOff, roles: ['student'] },
+  { label: 'Manage Requests', href: '/requests/queue', icon: Users, roles: ['case_manager'] },
+  { label: 'Admin Dashboard', href: '/admin', icon: BarChart3, roles: ['admin'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['student', 'case_manager', 'admin'] },
 ];
 

@@ -291,7 +291,7 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
       if (standalone && qrCodeParam) {
         navigate(`/qr/${qrCodeParam}/request/success${newId ? `?id=${newId}` : ''}`, { replace: true });
       } else if (newId) navigate(`/requests/${newId}`);
-      else navigate('/student-tracking-request-status-scheduling-meeting');
+      else navigate('/requests/mine');
     } catch (error) {
       console.error('Error submitting request:', error);
       const message =

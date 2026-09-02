@@ -503,7 +503,7 @@ export default function Dashboard() {
               <h2 className="font-display text-lg font-semibold">Quick Actions</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer">
-                  <Link to="/student-submitting-a-support-request">
+                  <Link to="/requests/new">
                     <CardContent className="flex items-center gap-4 p-6">
                       <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                         <Plus className="h-6 w-6 text-primary" />
@@ -518,7 +518,7 @@ export default function Dashboard() {
                 </Card>
 
                 <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer">
-                  <Link to="/student-tracking-request-status-scheduling-meeting">
+                  <Link to="/requests/mine">
                     <CardContent className="flex items-center gap-4 p-6">
                       <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                         <Clock className="h-6 w-6 text-primary" />
@@ -533,7 +533,7 @@ export default function Dashboard() {
                 </Card>
 
                 <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer">
-                  <Link to="/student-creating-offline-draft-request">
+                  <Link to="/requests/drafts">
                     <CardContent className="flex items-center gap-4 p-6">
                       <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                         <FileText className="h-6 w-6 text-primary" />
@@ -554,7 +554,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <h2 className="font-display text-lg font-semibold">Recent Requests</h2>
                 <Button variant="outline" size="sm" asChild>
-                  <Link to="/student-tracking-request-status-scheduling-meeting">
+                  <Link to="/requests/mine">
                     View All
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -608,7 +608,7 @@ export default function Dashboard() {
                       variant="outline" 
                       size="sm" 
                       className="mt-4"
-                      onClick={() => navigate('/case-manager-managing-student-requests?priority=emergency')}
+                      onClick={() => navigate('/requests/queue?priority=emergency')}
                     >
                       View Emergency Cases
                     </Button>
@@ -635,7 +635,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <h2 className="font-display text-lg font-semibold">Priority Queue</h2>
                 <Button variant="outline" size="sm" asChild>
-                  <Link to="/case-manager-managing-student-requests">
+                  <Link to="/requests/queue">
                     View All
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -702,7 +702,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <h2 className="font-display text-lg font-semibold">Escalated & Unassigned</h2>
                 <Button variant="outline" size="sm" asChild>
-                  <Link to="/admin-monitoring-reassigning-requests">
+                  <Link to="/admin">
                     View All
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>

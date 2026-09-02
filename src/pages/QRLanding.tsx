@@ -74,7 +74,7 @@ export default function QRLanding() {
 
   const buildRequestPath = () => {
     const qp = new URLSearchParams({ source: 'qr', qr: qrCode!.code });
-    return `/student/support-request?${qp.toString()}`;
+    return `/requests/new?${qp.toString()}`;
   };
 
   // Auto-redirect external destinations

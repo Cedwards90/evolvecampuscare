@@ -142,7 +142,7 @@ export default function TrackRequests() {
             description="View the status of your support requests and schedule meetings"
           />
           <Button asChild>
-            <Link to="/student-submitting-a-support-request">
+            <Link to="/requests/new">
               <Plus className="mr-2 h-4 w-4" />
               New Request
             </Link>
@@ -246,7 +246,7 @@ export default function TrackRequests() {
               action={
                 !searchQuery && statusFilter === 'all' && categoryFilter === 'all' ? (
                   <Button asChild>
-                    <Link to="/student-submitting-a-support-request">
+                    <Link to="/requests/new">
                       <Plus className="mr-2 h-4 w-4" />
                       Submit Your First Request
                     </Link>
