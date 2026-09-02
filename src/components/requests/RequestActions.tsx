@@ -114,6 +114,26 @@ export function RequestActions({
     escalateRequest.isPending ||
     editRequest.isPending;
 
+  // --- Advisory financial policy evaluation (financial requests only) ---
+  const isFinancial = requestCategory === 'financial';
+  const { data: attachments } = useRequestAttachments(isFinancial ? requestId : undefined);
+  const historyQuery = useFinancialAssistanceHistory(isFinancial ? studentId : undefined, requestId);
+
+  const policyEvaluation = isFinancial
+    ? evaluateFinancialAssistance({
+        requestedAmount: requestedAmount,
+        fundingPurpose: fundingPurpose,
+        title: requestTitle,
+        description: requestDescription,
+        attachmentCount: attachments?.length ?? 0,
+        priorApprovedTotal: historyQuery.data?.approvedTotal ?? 0,
+        priorHistoryKnown: !historyQuery.isError,
+      })
+    : null;
+
+  const rationaleRequired = !!policyEvaluation?.requiresRationale;
+
+
   const handleApprove = async () => {
     try {
       let approvedAmount: number | undefined;
