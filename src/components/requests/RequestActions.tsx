@@ -135,6 +135,16 @@ export function RequestActions({
 
 
   const handleApprove = async () => {
+    if (rationaleRequired && policyRationale.trim().length < 10) {
+      toast({
+        title: 'Approval rationale required',
+        description:
+          'This request is not cleanly recommended under the Financial Control Protocol. Document why you are approving it.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       let approvedAmount: number | undefined;
       
@@ -156,16 +166,22 @@ export function RequestActions({
         // If 'none', approvedAmount remains undefined
       }
 
-      await approveRequest.mutateAsync({ requestId, userId, approvedAmount });
+      await approveRequest.mutateAsync({
+        requestId,
+        userId,
+        approvedAmount,
+        policyRationale: rationaleRequired ? policyRationale : undefined,
+      });
       toast({
         title: 'Request Approved',
         description: approvedAmount 
           ? `Request approved for $${approvedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}.`
-          : 'The request has been approved and is now in progress.',
+          : 'The student has been notified that their request is being handled.',
       });
       setDialogType(null);
       setApprovalType('full');
       setCustomAmount('');
+      setPolicyRationale('');
       onActionComplete?.();
     } catch (error) {
       toast({
