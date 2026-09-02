@@ -374,41 +374,43 @@ export default function AnalyticsDashboard() {
             <CardDescription>
               Total assigned students over time
             </CardDescription>
+        {/*
+          Student assignment growth is intentionally NOT charted: assignment
+          removals carry no timestamp, so a historical daily line would imply
+          precision the data cannot support. We show the trustworthy current
+          total plus the reason instead of a plausible-looking trend.
+        */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Student Assignment Growth
+              {(() => {
+                const def = getMetricDefinition('student_growth');
+                return def ? (
+                  <MetricDefinitionPopover
+                    def={def}
+                    rangeLabel={data.meta.rangeLabel}
+                    asOf={new Date(data.meta.generatedAt).toLocaleString()}
+                  />
+                ) : null;
+              })()}
+            </CardTitle>
+            <CardDescription>
+              Historical trend unavailable — see how this is measured
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.workloadTrends}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="date" 
-                    fontSize={12} 
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis 
-                    fontSize={12} 
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="studentCount"
-                    name="Assigned Students"
-                    stroke="hsl(var(--chart-3))"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent className="space-y-3">
+            <p className="text-2xl font-semibold">
+              {data.summary.totalStudents.toLocaleString()}{' '}
+              <span className="text-sm font-normal text-muted-foreground">
+                students currently assigned
+              </span>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              A day-by-day growth line would require knowing when assignments ended, and that is not
+              recorded. Rather than show an inflated trend, only the current total is reported.
+            </p>
           </CardContent>
         </Card>
 
@@ -421,6 +423,7 @@ export default function AnalyticsDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+
             {data.caseManagerMetrics.length === 0 ? (
               <p className="text-center py-8 text-muted-foreground">
                 No case managers found
