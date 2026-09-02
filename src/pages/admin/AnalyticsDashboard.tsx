@@ -450,16 +450,26 @@ export default function AnalyticsDashboard() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="flex items-center gap-1 text-sm">
-                        {cm.avgResolutionHours <= 24 ? (
-                          <TrendingDown className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <TrendingUp className="h-4 w-4 text-amber-500" />
-                        )}
-                        <span className="font-medium">{cm.avgResolutionHours}h</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">avg resolution</p>
+                      {cm.avgResolutionHours == null ? (
+                        <>
+                          <p className="text-sm font-medium text-muted-foreground">No data</p>
+                          <p className="text-xs text-muted-foreground">nothing resolved yet</p>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-end gap-1 text-sm">
+                            {cm.avgResolutionHours <= 24 ? (
+                              <TrendingDown className="h-4 w-4 text-green-500" aria-hidden="true" />
+                            ) : (
+                              <TrendingUp className="h-4 w-4 text-amber-500" aria-hidden="true" />
+                            )}
+                            <span className="font-medium">{cm.avgResolutionHours}h</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">avg resolution</p>
+                        </>
+                      )}
                     </div>
+
                     <div className="text-right">
                       <p className="font-medium">{cm.resolvedThisMonth}</p>
                       <p className="text-xs text-muted-foreground">resolved this month</p>
