@@ -269,7 +269,7 @@ export default function TrackRequests() {
                 <Sheet key={request.id}>
                   <SheetTrigger asChild>
                     <div className="cursor-pointer">
-                      <RequestCard request={request} />
+                      <RequestCard request={request} variant="student" />
                       <RequestTimeline request={request} />
                     </div>
                   </SheetTrigger>
