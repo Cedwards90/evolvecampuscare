@@ -120,6 +120,8 @@ function App() {
                   {/* Public routes */}
                   <Route path="/" element={<Landing />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/auth/staff" element={<StaffAuth />} />
+
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/qr/:code" element={<QRLanding />} />
