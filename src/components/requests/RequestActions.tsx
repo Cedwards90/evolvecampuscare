@@ -271,6 +271,7 @@ export function RequestActions({
     setReason('');
     setApprovalType('full');
     setCustomAmount('');
+    setPolicyRationale('');
   };
 
   const openEditDialog = () => {
