@@ -472,10 +472,40 @@ export function RequestActions({
               </div>
             </div>
           )}
+
+          {policyEvaluation && rationaleRequired && (
+            <div className="space-y-3 py-2 max-h-[40vh] overflow-y-auto">
+              <div className="rounded-lg border p-3">
+                <FinancialPolicyRecommendation
+                  evaluation={policyEvaluation}
+                  isLoading={historyQuery.isLoading}
+                  compact
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="policy-rationale">
+                  Approval rationale <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="policy-rationale"
+                  rows={3}
+                  placeholder="Explain why this approval is appropriate despite the policy findings above..."
+                  value={policyRationale}
+                  onChange={(e) => setPolicyRationale(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Recorded in the request timeline for audit.
+                </p>
+              </div>
+            </div>
+          )}
           
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleApprove} disabled={isLoading}>
+            <AlertDialogAction
+              onClick={handleApprove}
+              disabled={isLoading || (rationaleRequired && policyRationale.trim().length < 10)}
+            >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Approve
             </AlertDialogAction>
