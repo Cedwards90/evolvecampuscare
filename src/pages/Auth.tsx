@@ -44,10 +44,19 @@ const signupSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 type SignupFormData = z.infer<typeof signupSchema>;
 
-export default function Auth() {
+interface AuthProps {
+  /** 'student' = self-signup allowed. 'staff' = sign-in only (staff join by invitation). */
+  mode?: 'student' | 'staff';
+}
+
+export default function Auth({ mode = 'student' }: AuthProps) {
+  const isStaffMode = mode === 'staff';
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get('invite');
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'login');
+  const [activeTab, setActiveTab] = useState(
+    isStaffMode && !searchParams.get('invite') ? 'login' : searchParams.get('tab') || 'login',
+  );
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
