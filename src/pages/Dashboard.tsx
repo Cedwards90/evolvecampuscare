@@ -9,6 +9,7 @@ import { PercentageStatsCard } from '@/components/dashboard/PercentageStatsCard'
 import { AreaChartCard } from '@/components/dashboard/AreaChartCard';
 import { SparklineCard } from '@/components/dashboard/SparklineCard';
 import { SummaryCard } from '@/components/dashboard/SummaryCard';
+import { KpiCard } from '@/components/dashboard/KpiCard';
 import { TodayPanel } from '@/components/dashboard/TodayPanel';
 import { ActionNeededList, type ActionItem } from '@/components/dashboard/ActionNeededList';
 
@@ -435,14 +436,14 @@ export default function Dashboard() {
 
         {/* Stats Grid - Fraction Style */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <FractionStatsCard
-            title="Total Requests"
-            current={stats.totalRequests}
-            total={Math.max(stats.totalRequests + 10, 50)}
+          <KpiCard
+            label="Total Requests"
+            value={stats.totalRequests}
             icon={DollarSign}
-            color="blue"
-            href="/requests"
+            helper="All requests in your current view"
+            action={{ label: 'View requests', href: '/requests' }}
           />
+
           <FractionStatsCard
             title="In Progress"
             current={stats.pendingRequests}
@@ -462,8 +463,7 @@ export default function Dashboard() {
           <PercentageStatsCard
             title="Resolution Rate"
             percentage={stats.totalRequests > 0 ? (stats.resolvedRequests / stats.totalRequests) * 100 : 0}
-            subtitle="Resolution Rate"
-            trend={{ value: 46, isPositive: true }}
+            subtitle={`${stats.resolvedRequests} of ${stats.totalRequests} requests resolved`}
             icon={TrendingUp}
             progressColor="gradient"
           />
@@ -476,6 +476,10 @@ export default function Dashboard() {
           <div className="lg:col-span-2 space-y-6">
             <AreaChartCard
               title="Request Activity"
+              description="Requests created over time"
+              summary={`${stats.totalRequests} requests in this view, ${stats.pendingRequests} still open.`}
+              href="/requests"
+              linkLabel="View requests"
               data={chartData}
               className="border border-border/50 shadow-sm"
             />
@@ -496,11 +500,12 @@ export default function Dashboard() {
             title="Request Summary"
             totalValue={stats.resolvedRequests}
             totalLabel="Total Resolved"
-            trendValue={12}
             items={summaryItems}
             headerHref="/requests?status=resolved"
             footerHref="/requests"
+            footerLabel="View all requests"
           />
+
         </div>
 
         {/* Sparkline Cards */}
