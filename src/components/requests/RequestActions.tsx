@@ -46,6 +46,10 @@ import {
   useEscalateRequest,
   useEditRequest 
 } from '@/hooks/useRequest';
+import { useRequestAttachments } from '@/hooks/useRequestAttachments';
+import { useFinancialAssistanceHistory } from '@/hooks/useFinancialAssistanceHistory';
+import { evaluateFinancialAssistance } from '@/lib/financialAssistancePolicy';
+import { FinancialPolicyRecommendation } from '@/components/requests/FinancialPolicyRecommendation';
 import type { RequestStatus, RequestCategory, RequestPriority } from '@/types/database';
 
 interface RequestActionsProps {
