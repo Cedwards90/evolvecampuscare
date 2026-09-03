@@ -46,9 +46,7 @@ import {
   useEscalateRequest,
   useEditRequest 
 } from '@/hooks/useRequest';
-import { useRequestAttachments } from '@/hooks/useRequestAttachments';
-import { useFinancialAssistanceHistory } from '@/hooks/useFinancialAssistanceHistory';
-import { evaluateFinancialAssistance } from '@/lib/financialAssistancePolicy';
+import { useRequestPolicyEvaluation } from '@/hooks/useRequestPolicyEvaluation';
 import { FinancialPolicyRecommendation } from '@/components/requests/FinancialPolicyRecommendation';
 import type { RequestStatus, RequestCategory, RequestPriority } from '@/types/database';
 
@@ -341,15 +339,6 @@ export function RequestActions({
 
   return (
     <>
-      {policyEvaluation && (canApprove || canDeny) && (
-        <div className="mb-4">
-          <FinancialPolicyRecommendation
-            evaluation={policyEvaluation}
-            isLoading={historyQuery.isLoading}
-          />
-        </div>
-      )}
-
       <div className="flex flex-wrap gap-2">
         {canEdit && (
           <Button
@@ -487,7 +476,7 @@ export function RequestActions({
               <div className="rounded-lg border p-3">
                 <FinancialPolicyRecommendation
                   evaluation={policyEvaluation}
-                  isLoading={historyQuery.isLoading}
+                  isLoading={policyLoading}
                   compact
                 />
               </div>
