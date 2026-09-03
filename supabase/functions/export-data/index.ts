@@ -160,7 +160,8 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const action: string = body.action === "export" ? "export" : "manifest";
+    const ALLOWED_ACTIONS = new Set(["manifest", "export", "flat"]);
+    const action: string = ALLOWED_ACTIONS.has(body.action) ? body.action : "manifest";
 
     // Resolve org scope for org admins
     let scopedOrgIds: string[] | null = null;
