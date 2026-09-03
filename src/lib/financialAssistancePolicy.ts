@@ -32,6 +32,11 @@ export interface PolicyEvaluationInput {
   /** Sum of previously approved amounts for this participant's financial requests. */
   priorApprovedTotal?: number;
   priorHistoryKnown?: boolean;
+  /**
+   * True when `requestedAmount` was taken from an already-approved amount because the
+   * record has no requested amount (legacy request predating the structured fields).
+   */
+  amountFromApprovedRecord?: boolean;
 }
 
 export interface PolicyEvaluation {
