@@ -434,7 +434,7 @@ Deno.serve(async (req) => {
       format: typeof body.format === "string" ? body.format.slice(0, 20) : "csv",
     });
 
-    return new Response(JSON.stringify({ files, totalRows }), {
+    return new Response(JSON.stringify({ files, totalRows, truncated }), {
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (err) {
