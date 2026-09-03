@@ -99,7 +99,7 @@ export function UserManagement() {
       });
       toast({
         title: 'Role updated',
-        description: `${confirmDialog.user.full_name || confirmDialog.user.email} is now a ${roleConfig[confirmDialog.newRole].label}.`,
+        description: `${confirmDialog.user.full_name || confirmDialog.user.email} is now a ${roleConfig[confirmDialog.newRole]?.label ?? confirmDialog.newRole}.`,
       });
     } catch {
       toast({ title: 'Failed to update role', description: 'Please try again or check your permissions.', variant: 'destructive' });
