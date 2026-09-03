@@ -12,7 +12,17 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Database, Download, FileSpreadsheet, Loader2, ShieldAlert } from 'lucide-react';
+import { Archive, Database, Download, FileSpreadsheet, Loader2, ShieldAlert } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useExportManifest, useRunExport, type ExportFilters } from '@/hooks/useDataExport';
 import { useActiveOrganizations } from '@/hooks/useTrainingOrganizations';
 import { useAllCohorts } from '@/hooks/useCohorts';
