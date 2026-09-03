@@ -317,8 +317,8 @@ export function UserManagement() {
             <AlertDialogTitle className="font-display">Confirm Role Change</AlertDialogTitle>
             <AlertDialogDescription>
               Change <strong>{confirmDialog.user?.full_name || confirmDialog.user?.email}</strong>'s role from{' '}
-              <strong>{confirmDialog.user ? roleConfig[confirmDialog.user.role].label : ''}</strong> to{' '}
-              <strong>{confirmDialog.newRole ? roleConfig[confirmDialog.newRole].label : ''}</strong>?
+              <strong>{confirmDialog.user ? roleConfig[confirmDialog.user.role]?.label ?? confirmDialog.user.role : ''}</strong> to{' '}
+              <strong>{confirmDialog.newRole ? roleConfig[confirmDialog.newRole]?.label ?? confirmDialog.newRole : ''}</strong>?
               {confirmDialog.newRole === 'admin' && (
                 <span className="block mt-2 text-destructive">⚠️ Admins have full access to manage all users and requests.</span>
               )}
