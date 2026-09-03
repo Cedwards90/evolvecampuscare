@@ -13,11 +13,12 @@ export function useFinancialAssistanceHistory(
     queryKey: ['financial-assistance-history', studentId, excludeRequestId],
     enabled: !!studentId,
     queryFn: async () => {
+      // Counts approved amounts across every category so legacy/miscategorized
+      // disbursements still count against the lifetime allocation.
       let query = supabase
         .from('support_requests')
         .select('id, approved_amount, approval_status, created_at')
         .eq('student_id', studentId!)
-        .eq('category', 'financial')
         .not('approved_amount', 'is', null);
 
       if (excludeRequestId) {
