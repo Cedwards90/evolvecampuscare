@@ -105,6 +105,12 @@ export function CohortManager({ organizationId }: Props) {
                   <TableRow key={c.id}>
                     <TableCell>
                       <div className="font-medium">{c.name}</div>
+                      {c.graduated_at && (
+                        <Badge variant="outline" className="mt-1 gap-1">
+                          <GraduationCap className="h-3 w-3" />
+                          Graduated {format(new Date(c.graduated_at), 'MMM d, yyyy')}
+                        </Badge>
+                      )}
                       {c.description && (
                         <p className="text-xs text-muted-foreground line-clamp-1">{c.description}</p>
                       )}

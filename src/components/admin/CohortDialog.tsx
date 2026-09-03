@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCreateCohort, useUpdateCohort, type Cohort } from '@/hooks/useCohorts';
@@ -24,6 +25,8 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Pro
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [graduated, setGraduated] = useState(false);
+  const [graduatedAt, setGraduatedAt] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -31,6 +34,8 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Pro
       setDescription(cohort?.description ?? '');
       setStartDate(cohort?.start_date ?? '');
       setEndDate(cohort?.end_date ?? '');
+      setGraduated(!!cohort?.graduated_at);
+      setGraduatedAt(cohort?.graduated_at ?? '');
     }
   }, [open, cohort]);
 
@@ -43,6 +48,14 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Pro
       toast({ title: 'Name required', variant: 'destructive' });
       return;
     }
+    if (graduated && !graduatedAt) {
+      toast({
+        title: 'Graduation date required',
+        description: 'Set the date the cohort graduated so requests route to the correct fund.',
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
       if (isEdit) {
         await update.mutateAsync({
@@ -51,6 +64,7 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Pro
           description,
           start_date: startDate || null,
           end_date: endDate || null,
+          graduated_at: graduated ? graduatedAt : null,
         });
         toast({ title: 'Cohort updated' });
       } else {
@@ -60,6 +74,7 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Pro
           description,
           start_date: startDate || null,
           end_date: endDate || null,
+          graduated_at: graduated ? graduatedAt : null,
         });
         toast({ title: 'Cohort created' });
       }
@@ -101,6 +116,37 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Pro
               <Label htmlFor="cohort-end">End date</Label>
               <Input id="cohort-end" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
+          </div>
+          <div className="rounded-lg border p-3 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <Label htmlFor="cohort-graduated">Cohort has graduated</Label>
+                <p className="text-xs text-muted-foreground">
+                  Requests dated on or after the graduation date draw on the Alumni Support Fund;
+                  earlier requests draw on the Barrier Mitigation Fund.
+                </p>
+              </div>
+              <Switch
+                id="cohort-graduated"
+                checked={graduated}
+                onCheckedChange={(v) => {
+                  setGraduated(v);
+                  if (v && !graduatedAt) setGraduatedAt(endDate || new Date().toISOString().slice(0, 10));
+                  if (!v) setGraduatedAt('');
+                }}
+              />
+            </div>
+            {graduated && (
+              <div className="space-y-2">
+                <Label htmlFor="cohort-graduated-at">Graduation date</Label>
+                <Input
+                  id="cohort-graduated-at"
+                  type="date"
+                  value={graduatedAt}
+                  onChange={(e) => setGraduatedAt(e.target.value)}
+                />
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="cohort-desc">Description</Label>
