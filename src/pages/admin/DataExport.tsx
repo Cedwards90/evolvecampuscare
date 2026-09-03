@@ -325,6 +325,24 @@ export default function DataExport() {
             </Button>
           </div>
         </div>
+
+        <AlertDialog open={confirmAllTime} onOpenChange={setConfirmAllTime}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Export the entire platform history?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This downloads every table that has data, for all time, including sensitive fields such as dates of
+                birth, contact details and case-note content. The export is logged. Store the file securely.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+              <AlertDialogAction className="rounded-full" onClick={() => run('all-time', 'zip')}>
+                Export all time
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </SidebarLayout>
   );
