@@ -85,9 +85,11 @@ export default function DataExport() {
             return;
           }
           toast.success(`Exported ${res.totalRows.toLocaleString()} rows across ${res.downloaded} file(s).`, {
-            description: res.truncated?.length
-              ? `Skipped (too large): ${res.truncated.join(', ')}. Narrow the date range to include them.`
-              : undefined,
+            description: res.failed?.length
+              ? `Partial export. Failed: ${res.failed.map((item) => item.table).join(', ')}. See manifest.csv for details.`
+              : res.truncated?.length
+                ? `Skipped: ${res.truncated.join(', ')}.`
+                : undefined,
           });
         },
         onError: (e: unknown) =>
@@ -136,6 +138,17 @@ export default function DataExport() {
             </div>
           </CardHeader>
         </Card>
+
+        {busy && runExport.progress && (
+          <Alert>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <AlertTitle>Preparing export</AlertTitle>
+            <AlertDescription>
+              {runExport.progress.table} · {Math.min(runExport.progress.current + 1, runExport.progress.total)} of{' '}
+              {runExport.progress.total}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card>
           <CardHeader>
