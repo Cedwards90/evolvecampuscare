@@ -123,6 +123,28 @@ export function FinancialPolicyRecommendation({
         </span>
       </div>
 
+      <div className="rounded-lg border p-3 text-sm min-w-0">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Eligibility</p>
+        <p className="font-medium break-words">
+          {evaluation.eligibility === 'eligible'
+            ? 'Eligible expense for this fund'
+            : evaluation.eligibility === 'ineligible'
+            ? 'Ineligible expense'
+            : evaluation.eligibility === 'wrong_fund'
+            ? 'Listed under the other fund'
+            : 'Needs reviewer confirmation'}
+        </p>
+        <p className="text-sm text-muted-foreground break-words">{evaluation.eligibilityDetail}</p>
+        {evaluation.hasLineItems && (
+          <p className="mt-1 text-xs text-muted-foreground break-words">
+            Itemized: {formatUsd(evaluation.qualifyingAmount ?? 0)} qualifying
+            {evaluation.ineligibleLineTotal > 0 &&
+              ` · ${formatUsd(evaluation.ineligibleLineTotal)} excluded`}
+          </p>
+        )}
+      </div>
+
+
       <ul className="space-y-2">
         {evaluation.findings.length === 0 && (
           <li className="flex items-start gap-2 text-sm">
