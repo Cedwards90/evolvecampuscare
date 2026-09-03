@@ -57,6 +57,7 @@ interface RequestActionsProps {
   userId: string;
   currentStatus: RequestStatus;
   requestedAmount?: number | null;
+  approvedAmount?: number | null;
   fundingPurpose?: string | null;
   approvalStatus?: string | null;
   requestTitle?: string;
@@ -75,6 +76,7 @@ export function RequestActions({
   userId, 
   currentStatus,
   requestedAmount,
+  approvedAmount,
   fundingPurpose,
   approvalStatus,
   requestTitle,
@@ -114,20 +116,33 @@ export function RequestActions({
     escalateRequest.isPending ||
     editRequest.isPending;
 
-  // --- Advisory financial policy evaluation (financial requests only) ---
+  // --- Advisory financial policy evaluation (any request involving money) ---
   const isFinancial = requestCategory === 'financial';
-  const { data: attachments } = useRequestAttachments(isFinancial ? requestId : undefined);
-  const historyQuery = useFinancialAssistanceHistory(isFinancial ? studentId : undefined, requestId);
+  const numericRequested =
+    requestedAmount != null && Number(requestedAmount) > 0 ? Number(requestedAmount) : null;
+  const numericApproved =
+    approvedAmount != null && Number(approvedAmount) > 0 ? Number(approvedAmount) : null;
+  const hasMonetaryContext = isFinancial || numericRequested !== null || numericApproved !== null;
+  // Legacy records may only carry an approved amount (pre-dating the structured fields).
+  const amountFromApproved = numericRequested === null && numericApproved !== null;
+  const effectiveAmount = numericRequested ?? numericApproved;
 
-  const policyEvaluation = isFinancial
+  const { data: attachments } = useRequestAttachments(hasMonetaryContext ? requestId : undefined);
+  const historyQuery = useFinancialAssistanceHistory(
+    hasMonetaryContext ? studentId : undefined,
+    requestId
+  );
+
+  const policyEvaluation = hasMonetaryContext
     ? evaluateFinancialAssistance({
-        requestedAmount: requestedAmount,
+        requestedAmount: effectiveAmount,
         fundingPurpose: fundingPurpose,
         title: requestTitle,
         description: requestDescription,
         attachmentCount: attachments?.length ?? 0,
         priorApprovedTotal: historyQuery.data?.approvedTotal ?? 0,
         priorHistoryKnown: !historyQuery.isError,
+        amountFromApprovedRecord: amountFromApproved,
       })
     : null;
 

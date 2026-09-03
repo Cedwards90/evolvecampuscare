@@ -102,3 +102,38 @@ describe('evaluateFinancialAssistance', () => {
     expect(result.findings.some((f) => f.id === 'history-unknown')).toBe(true);
   });
 });
+
+describe('legacy money requests', () => {
+  const legacyBase = {
+    fundingPurpose:
+      'Barrier Mitigation Fund: work boots required before the participant starts their placement.',
+    title: 'Work boots',
+    description: 'Vendor invoice attached for steel-toe work boots.',
+    attachmentCount: 1,
+  };
+
+  it('notes when the amount came from the approved disbursement', () => {
+    const result = evaluateFinancialAssistance({
+      ...legacyBase,
+      requestedAmount: 200,
+      amountFromApprovedRecord: true,
+    });
+    expect(result.findings.some((f) => f.id === 'legacy-amount-source')).toBe(true);
+    expect(result.tier).toBe('director');
+    expect(result.projectedTotal).toBe(200);
+  });
+
+  it('does not add the legacy note for normal requests', () => {
+    const result = evaluateFinancialAssistance({ ...legacyBase, requestedAmount: 200 });
+    expect(result.findings.some((f) => f.id === 'legacy-amount-source')).toBe(false);
+  });
+
+  it('does not add the legacy note when no amount is known', () => {
+    const result = evaluateFinancialAssistance({
+      ...legacyBase,
+      requestedAmount: null,
+      amountFromApprovedRecord: true,
+    });
+    expect(result.findings.some((f) => f.id === 'legacy-amount-source')).toBe(false);
+  });
+});

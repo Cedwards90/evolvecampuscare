@@ -32,6 +32,11 @@ export interface PolicyEvaluationInput {
   /** Sum of previously approved amounts for this participant's financial requests. */
   priorApprovedTotal?: number;
   priorHistoryKnown?: boolean;
+  /**
+   * True when `requestedAmount` was taken from an already-approved amount because the
+   * record has no requested amount (legacy request predating the structured fields).
+   */
+  amountFromApprovedRecord?: boolean;
 }
 
 export interface PolicyEvaluation {
@@ -134,6 +139,7 @@ export function evaluateFinancialAssistance(input: PolicyEvaluationInput): Polic
     attachmentCount = 0,
     priorApprovedTotal = 0,
     priorHistoryKnown = true,
+    amountFromApprovedRecord = false,
   } = input;
 
   const amount = typeof requestedAmount === 'number' && requestedAmount > 0 ? requestedAmount : null;
@@ -196,6 +202,18 @@ export function evaluateFinancialAssistance(input: PolicyEvaluationInput): Polic
         'The lifetime balance shown could not be confirmed from the record. Verify the remaining fund balance manually before approving.',
     });
   }
+
+  if (amountFromApprovedRecord && amount !== null) {
+    findings.push({
+      id: 'legacy-amount-source',
+      severity: 'info',
+      title: 'Amount taken from the approved disbursement',
+      detail:
+        'This request has no requested amount on file, so the guidance uses the recorded approved amount. It predates the structured financial fields — verify the figures against the original documentation.',
+    });
+  }
+
+
 
   // --- Expense category guidance ---
   const ineligible = matchKeywords(haystack, INELIGIBLE_KEYWORDS);
