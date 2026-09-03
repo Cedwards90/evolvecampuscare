@@ -1929,6 +1929,50 @@ export type Database = {
           },
         ]
       }
+      request_line_items: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          is_eligible: boolean
+          label: string
+          note: string | null
+          request_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_eligible?: boolean
+          label: string
+          note?: string | null
+          request_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_eligible?: boolean
+          label?: string
+          note?: string | null
+          request_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_line_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "support_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       request_share_audit: {
         Row: {
           action: Database["public"]["Enums"]["share_action"]
