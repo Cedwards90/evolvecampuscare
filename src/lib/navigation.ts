@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   FileText,
   Clock,
+  Download,
   WifiOff,
   Users,
   BarChart3,
