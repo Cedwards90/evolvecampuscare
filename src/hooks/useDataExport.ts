@@ -60,6 +60,12 @@ function downloadBlob(blob: Blob, filename: string) {
 
 const stamp = () => format(new Date(), 'yyyy-MM-dd');
 
+interface ExportResponse {
+  files?: ExportFile[];
+  totalRows?: number;
+  truncated?: string[];
+}
+
 export function useRunExport() {
   return useMutation({
     mutationFn: async (opts: {
@@ -68,35 +74,57 @@ export function useRunExport() {
       filters: ExportFilters;
       bundle: 'zip' | 'files';
     }) => {
-      const res = await invokeExport<{ files: ExportFile[]; totalRows: number }>({
-        action: opts.action,
-        tables: opts.tables ?? [],
+      const base = {
         from: opts.filters.from ?? null,
         to: opts.filters.to ?? null,
         orgIds: opts.filters.orgIds ?? [],
         cohortIds: opts.filters.cohortIds ?? [],
         includeSensitive: opts.filters.includeSensitive,
         format: opts.bundle,
-      });
+      };
 
-      const files = res.files.filter((f) => f.csv.length > 0);
-      if (!files.length) return { ...res, downloaded: 0 };
+      // Request one table per call so a large selection never exceeds the
+      // edge function's response limit.
+      const batches: Record<string, unknown>[] =
+        opts.action === 'flat'
+          ? [{ action: 'flat', ...base }]
+          : (opts.tables ?? []).map((table) => ({ action: 'export', tables: [table], ...base }));
 
-      if (opts.bundle === 'zip' && files.length > 1) {
+      if (!batches.length) throw new Error('Select at least one table to export.');
+
+      const files: ExportFile[] = [];
+      const truncated: string[] = [];
+      let totalRows = 0;
+
+      for (const body of batches) {
+        const res = await invokeExport<ExportResponse>(body);
+        if (!Array.isArray(res?.files)) {
+          throw new Error('The export service returned an unexpected response. Please try again.');
+        }
+        files.push(...res.files);
+        truncated.push(...(res.truncated ?? []));
+        totalRows += res.totalRows ?? 0;
+      }
+
+      const ready = files.filter((f) => f.csv.length > 0);
+      if (!ready.length) return { files, totalRows, truncated, downloaded: 0 };
+
+      if (opts.bundle === 'zip' && ready.length > 1) {
         const zip = new JSZip();
-        files.forEach((f) => zip.file(f.name, f.csv));
+        ready.forEach((f) => zip.file(f.name, f.csv));
         zip.file(
           'manifest.csv',
-          'file,rows\n' + files.map((f) => `${f.name},${f.rows}`).join('\n') + '\n',
+          'file,rows\n' + ready.map((f) => `${f.name},${f.rows}`).join('\n') + '\n',
         );
         const blob = await zip.generateAsync({ type: 'blob' });
         downloadBlob(blob, `evolve-data-export_${stamp()}.zip`);
       } else {
-        files.forEach((f) =>
+        ready.forEach((f) =>
           downloadBlob(new Blob([f.csv], { type: 'text/csv;charset=utf-8' }), f.name),
         );
       }
-      return { ...res, downloaded: files.length };
+      return { files, totalRows, truncated, downloaded: ready.length };
     },
   });
 }
+
