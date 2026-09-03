@@ -63,6 +63,7 @@ interface RequestActionsProps {
   requestCategory?: RequestCategory;
   requestPriority?: RequestPriority;
   studentId?: string;
+  requestCreatedAt?: string | null;
   onActionComplete?: () => void;
 }
 
@@ -82,6 +83,7 @@ export function RequestActions({
   requestCategory,
   requestPriority,
   studentId,
+  requestCreatedAt,
   onActionComplete 
 }: RequestActionsProps) {
   const [dialogType, setDialogType] = useState<DialogType>(null);

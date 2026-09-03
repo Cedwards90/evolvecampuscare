@@ -269,6 +269,7 @@ export default function RequestDetail() {
                 fundingPurpose={(request as any).funding_purpose}
                 requestTitle={request.title}
                 requestDescription={request.description}
+                requestCreatedAt={request.created_at}
                 readOnly={
                   !(
                     canTakeActions &&
@@ -307,6 +308,7 @@ export default function RequestDetail() {
                         requestCategory={request.category}
                         requestPriority={request.priority}
                         studentId={request.student_id}
+                        requestCreatedAt={request.created_at}
                       />
                     </CardContent>
                   </Card>
