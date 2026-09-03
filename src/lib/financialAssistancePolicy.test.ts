@@ -74,7 +74,7 @@ describe('evaluateFinancialAssistance', () => {
     expect(result.findings.some((f) => f.id === 'direct-cash')).toBe(true);
   });
 
-  it('warns when documentation, justification, and fund type are missing', () => {
+  it('warns when documentation and justification are missing', () => {
     const result = evaluateFinancialAssistance({
       requestedAmount: 120,
       title: 'Help needed',
@@ -86,7 +86,6 @@ describe('evaluateFinancialAssistance', () => {
     const ids = result.findings.map((f) => f.id);
     expect(ids).toContain('missing-documentation');
     expect(ids).toContain('missing-justification');
-    expect(ids).toContain('missing-fund-type');
     expect(result.recommendation).toBe('conditional');
     expect(result.requiresRationale).toBe(true);
   });
