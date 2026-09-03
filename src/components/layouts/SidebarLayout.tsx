@@ -413,6 +413,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
       </div>
 
       <MobileTabBar role={role} unreadCount={unreadCount ?? 0} onMoreClick={() => setMobileMenuOpen(true)} />
+      <PlatformAssistant />
     </div>
   );
 }
