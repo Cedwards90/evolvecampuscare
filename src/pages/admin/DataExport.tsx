@@ -68,8 +68,15 @@ export default function DataExport() {
       { action, tables, filters, bundle },
       {
         onSuccess: (res) => {
-          if (!res.downloaded) toast.info('No rows matched the selected filters.');
-          else toast.success(`Exported ${res.totalRows.toLocaleString()} rows across ${res.downloaded} file(s).`);
+          if (!res.downloaded) {
+            toast.info('No rows matched the selected filters.');
+            return;
+          }
+          toast.success(`Exported ${res.totalRows.toLocaleString()} rows across ${res.downloaded} file(s).`, {
+            description: res.truncated?.length
+              ? `Skipped (too large): ${res.truncated.join(', ')}. Narrow the date range to include them.`
+              : undefined,
+          });
         },
         onError: (e: unknown) =>
           toast.error('Export failed', { description: e instanceof Error ? e.message : 'Please try again.' }),
