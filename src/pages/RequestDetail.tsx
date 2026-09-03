@@ -27,6 +27,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { RequestTimeline } from '@/components/requests/RequestTimeline';
 import { RequestActions } from '@/components/requests/RequestActions';
+import { RequestPolicyCard } from '@/components/requests/RequestPolicyCard';
+
 import { RequestMessages } from '@/components/requests/RequestMessages';
 import { RequestAttachments } from '@/components/requests/RequestAttachments';
 import { StatusProgressBar } from '@/components/requests/StatusProgressBar';
