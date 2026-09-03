@@ -31,6 +31,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
 import RequestAnalytics from "./pages/admin/RequestAnalytics";
+import DataExport from "./pages/admin/DataExport";
 import CaseManagersPage from "./pages/admin/CaseManagersPage";
 import TrainingOrganizations from "./pages/admin/TrainingOrganizations";
 import OrganizationDetail from "./pages/admin/OrganizationDetail";
