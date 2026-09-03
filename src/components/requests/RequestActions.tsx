@@ -483,6 +483,7 @@ export function RequestActions({
                   compact
                 />
               </div>
+              <RequestLineItemsEditor requestId={request.id} />
               <div className="space-y-2">
                 <Label htmlFor="policy-rationale">
                   Approval rationale <span className="text-destructive">*</span>
