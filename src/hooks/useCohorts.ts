@@ -79,6 +79,7 @@ export function useCreateCohort() {
           description: input.description?.trim() || null,
           start_date: input.start_date || null,
           end_date: input.end_date || null,
+          graduated_at: input.graduated_at || null,
         })
         .select()
         .single();
@@ -103,6 +104,7 @@ export function useUpdateCohort() {
           ...('description' in patch ? { description: patch.description?.toString().trim() || null } : {}),
           ...('start_date' in patch ? { start_date: patch.start_date || null } : {}),
           ...('end_date' in patch ? { end_date: patch.end_date || null } : {}),
+          ...('graduated_at' in patch ? { graduated_at: patch.graduated_at || null } : {}),
         })
         .eq('id', id)
         .select()
