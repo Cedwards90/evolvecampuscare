@@ -136,3 +136,95 @@ describe('legacy money requests', () => {
     expect(result.findings.some((f) => f.id === 'legacy-amount-source')).toBe(false);
   });
 });
+
+describe('balance math', () => {
+  it('reports before/after balances and clamps at zero', () => {
+    const result = evaluateFinancialAssistance({ ...clean, requestedAmount: 300, priorApprovedTotal: 600 });
+    expect(result.remainingLifetime).toBe(400);
+    expect(result.requestAmount).toBe(300);
+    expect(result.remainingAfter).toBe(100);
+    expect(result.overageAmount).toBe(0);
+
+    const over = evaluateFinancialAssistance({ ...clean, requestedAmount: 300, priorApprovedTotal: 900 });
+    expect(over.remainingAfter).toBe(0);
+    expect(over.overageAmount).toBe(200);
+  });
+
+  it('caps the policy-compliant amount at the single-transaction limit', () => {
+    expect(evaluateFinancialAssistance({ ...clean, priorApprovedTotal: 0 }).maxPolicyCompliantAmount).toBe(
+      SINGLE_DISBURSEMENT_CAP
+    );
+    expect(
+      evaluateFinancialAssistance({ ...clean, priorApprovedTotal: 850 }).maxPolicyCompliantAmount
+    ).toBe(150);
+  });
+
+  it('only flags the near-cap note when the request stays within the cap', () => {
+    const within = evaluateFinancialAssistance({ ...clean, requestedAmount: 400, priorApprovedTotal: 550 });
+    expect(within.findings.some((f) => f.id === 'lifetime-near-cap')).toBe(true);
+    const over = evaluateFinancialAssistance({ ...clean, requestedAmount: 400, priorApprovedTotal: 800 });
+    expect(over.findings.some((f) => f.id === 'lifetime-near-cap')).toBe(false);
+  });
+});
+
+describe('final recommended decision', () => {
+  it('approves a clean request', () => {
+    expect(evaluateFinancialAssistance(clean).decision).toBe('approve');
+  });
+
+  it('recommends a reduced amount when over the remaining balance', () => {
+    const result = evaluateFinancialAssistance({ ...clean, requestedAmount: 400, priorApprovedTotal: 800 });
+    expect(result.decision).toBe('approve_reduced');
+    expect(result.decisionAmount).toBe(200);
+  });
+
+  it('requires executive sign-off above the single-transaction limit', () => {
+    const result = evaluateFinancialAssistance({ ...clean, requestedAmount: 750 });
+    expect(result.decision).toBe('approve_with_executive');
+    expect(result.decisionAmount).toBe(SINGLE_DISBURSEMENT_CAP);
+  });
+
+  it('denies when the fund allocation is exhausted', () => {
+    const result = evaluateFinancialAssistance({
+      ...clean,
+      requestedAmount: 100,
+      priorApprovedTotal: LIFETIME_CAP,
+    });
+    expect(result.decision).toBe('deny');
+  });
+
+  it('denies ineligible expenses and direct cash', () => {
+    expect(
+      evaluateFinancialAssistance({ ...clean, description: 'Pay a traffic ticket' }).decision
+    ).toBe('deny');
+    expect(
+      evaluateFinancialAssistance({ ...clean, description: 'Send a direct cash payment via Zelle' })
+        .decision
+    ).toBe('deny');
+  });
+
+  it('asks to confirm the amount when none is recorded', () => {
+    expect(evaluateFinancialAssistance({ ...clean, requestedAmount: null }).decision).toBe(
+      'needs_amount'
+    );
+  });
+});
+
+describe('fund routing', () => {
+  it('labels the alumni fund and notes the barrier fund by default', () => {
+    const alumni = evaluateFinancialAssistance({ ...clean, fundType: 'alumni' });
+    expect(alumni.fundType).toBe('alumni');
+    expect(alumni.fundLabel).toContain('Alumni');
+    expect(alumni.findings.some((f) => f.id === 'fund-type')).toBe(true);
+
+    const barrier = evaluateFinancialAssistance(clean);
+    expect(barrier.fundType).toBe('barrier');
+    expect(barrier.fundLabel).toContain('Barrier');
+  });
+
+  it('warns when no graduation date is recorded', () => {
+    const result = evaluateFinancialAssistance({ ...clean, graduationDateKnown: false });
+    expect(result.findings.some((f) => f.id === 'graduation-unknown')).toBe(true);
+    expect(result.recommendation).toBe('conditional');
+  });
+});
