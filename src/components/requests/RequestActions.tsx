@@ -57,6 +57,7 @@ interface RequestActionsProps {
   userId: string;
   currentStatus: RequestStatus;
   requestedAmount?: number | null;
+  approvedAmount?: number | null;
   fundingPurpose?: string | null;
   approvalStatus?: string | null;
   requestTitle?: string;
