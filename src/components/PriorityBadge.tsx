@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
 interface PriorityBadgeProps {
-  priority: 'low' | 'medium' | 'high' | 'emergency';
+  priority: string;
   className?: string;
 }
 
@@ -25,7 +25,10 @@ const priorityConfig = {
 };
 
 export function PriorityBadge({ priority, className }: PriorityBadgeProps) {
-  const config = priorityConfig[priority];
+  const config = priorityConfig[priority as keyof typeof priorityConfig] ?? {
+    label: (priority || 'Unknown').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+    className: 'priority-low',
+  };
   
   return (
     <span

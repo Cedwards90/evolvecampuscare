@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import { GraduationCap, DollarSign, Heart, Home, HelpCircle } from 'lucide-react';
 
 interface CategoryBadgeProps {
-  category: 'academic' | 'financial' | 'mental_health' | 'housing' | 'other';
+  category: string;
   showIcon?: boolean;
   className?: string;
 }
@@ -36,7 +36,11 @@ const categoryConfig = {
 };
 
 export function CategoryBadge({ category, showIcon = false, className }: CategoryBadgeProps) {
-  const config = categoryConfig[category];
+  const config = categoryConfig[category as keyof typeof categoryConfig] ?? {
+    label: (category || 'Other').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+    icon: HelpCircle,
+    className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
+  };
   const Icon = config.icon;
   
   return (
