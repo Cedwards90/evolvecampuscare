@@ -69,26 +69,45 @@ interface ExportResponse {
 export function useRunExport() {
   return useMutation({
     mutationFn: async (opts: {
-      action: 'export' | 'flat';
+      action: 'export' | 'flat' | 'all-time';
       tables?: string[];
       filters: ExportFilters;
       bundle: 'zip' | 'files';
     }) => {
+      const allTime = opts.action === 'all-time';
+
       const base = {
-        from: opts.filters.from ?? null,
-        to: opts.filters.to ?? null,
-        orgIds: opts.filters.orgIds ?? [],
-        cohortIds: opts.filters.cohortIds ?? [],
-        includeSensitive: opts.filters.includeSensitive,
-        format: opts.bundle,
+        from: allTime ? null : opts.filters.from ?? null,
+        to: allTime ? null : opts.filters.to ?? null,
+        orgIds: allTime ? [] : opts.filters.orgIds ?? [],
+        cohortIds: allTime ? [] : opts.filters.cohortIds ?? [],
+        includeSensitive: allTime ? true : opts.filters.includeSensitive,
+        format: allTime ? 'zip' : opts.bundle,
       };
 
-      // Request one table per call so a large selection never exceeds the
-      // edge function's response limit.
-      const batches: Record<string, unknown>[] =
-        opts.action === 'flat'
-          ? [{ action: 'flat', ...base }]
-          : (opts.tables ?? []).map((table) => ({ action: 'export', tables: [table], ...base }));
+      let batches: Record<string, unknown>[];
+
+      if (allTime) {
+        // Discover every table that actually has rows, unfiltered.
+        const manifest = await invokeExport<{ tables: ExportManifestTable[] }>({
+          action: 'manifest',
+          from: null,
+          to: null,
+          orgIds: [],
+          cohortIds: [],
+        });
+        const tables = (manifest?.tables ?? []).filter((t) => (t.rows ?? 0) > 0).map((t) => t.table);
+        batches = [
+          { action: 'flat', ...base },
+          ...tables.map((table) => ({ action: 'export', tables: [table], ...base })),
+        ];
+      } else if (opts.action === 'flat') {
+        batches = [{ action: 'flat', ...base }];
+      } else {
+        // Request one table per call so a large selection never exceeds the
+        // edge function's response limit.
+        batches = (opts.tables ?? []).map((table) => ({ action: 'export', tables: [table], ...base }));
+      }
 
       if (!batches.length) throw new Error('Select at least one table to export.');
 
