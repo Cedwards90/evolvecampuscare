@@ -3,6 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, createErrorResponse } from "../_shared/security.ts";
 
 const PAGE = 1000;
+const EXPORT_CHUNK_ROWS = 250;
+const MAX_CHUNK_BYTES = 3_000_000;
 
 /** Table registry: which tables can be exported, how they are dated and scoped. */
 type Scope = "student" | "user" | "org" | "cm" | "none";
@@ -378,27 +380,24 @@ Deno.serve(async (req) => {
       });
     }
 
+    const offset = Number.isInteger(body.offset) && body.offset >= 0 ? Math.min(body.offset, 100000) : 0;
     const files: { name: string; csv: string; rows: number }[] = [];
     let totalRows = 0;
-    let payloadBytes = 0;
-    const MAX_PAYLOAD_BYTES = 4_000_000; // stay well under the edge response limit
     const truncated: string[] = [];
+    let nextOffset: number | null = null;
+    let complete = true;
 
     for (const name of tables) {
       const def = TABLES[name];
-      const rows: any[] = [];
-      for (let page = 0; ; page++) {
-        const { data, error } = await buildQuery(name, "*").range(page * PAGE, page * PAGE + PAGE - 1);
-        if (error) {
-          console.error(`export ${name}:`, error.message);
-          return new Response(
-            JSON.stringify({ error: `Could not read "${name}": ${error.message}` }),
-            { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
-          );
-        }
-        rows.push(...(data ?? []));
-        if (!data || data.length < PAGE || rows.length >= 100000) break;
+      const { data, error } = await buildQuery(name, "*").range(offset, offset + EXPORT_CHUNK_ROWS - 1);
+      if (error) {
+        console.error(`export ${name}:`, error.message);
+        return new Response(
+          JSON.stringify({ error: `Could not read "${name}": ${error.message}` }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+        );
       }
+      const rows: any[] = data ?? [];
       const cleaned = includeSensitive || !def.sensitiveColumns?.length
         ? rows
         : rows.map((r) => {
@@ -406,22 +405,22 @@ Deno.serve(async (req) => {
             def.sensitiveColumns!.forEach((k) => { if (k in c) c[k] = "[redacted]"; });
             return c;
           });
-      const csv = toCsv(cleaned);
-      if (payloadBytes + csv.length > MAX_PAYLOAD_BYTES) {
-        if (!files.length) {
-          return new Response(
-            JSON.stringify({
-              error: `"${name}" is too large to export in one request (${cleaned.length.toLocaleString()} rows). Narrow the date range and try again.`,
-            }),
-            { status: 413, headers: { "Content-Type": "application/json", ...corsHeaders } },
-          );
-        }
-        truncated.push(name);
-        continue;
+      let included = cleaned.length;
+      let csv = toCsv(cleaned);
+      while (included > 1 && new TextEncoder().encode(csv).length > MAX_CHUNK_BYTES) {
+        included = Math.max(1, Math.floor(included / 2));
+        csv = toCsv(cleaned.slice(0, included));
       }
-      payloadBytes += csv.length;
-      totalRows += cleaned.length;
-      files.push({ name: `${name}.csv`, csv, rows: cleaned.length });
+      if (included === 1 && new TextEncoder().encode(csv).length > MAX_CHUNK_BYTES) {
+        return new Response(
+          JSON.stringify({ error: `A row in "${name}" is too large to export safely.` }),
+          { status: 413, headers: { "Content-Type": "application/json", ...corsHeaders } },
+        );
+      }
+      totalRows += included;
+      files.push({ name: `${name}.csv`, csv, rows: included });
+      complete = rows.length < EXPORT_CHUNK_ROWS && included === rows.length;
+      nextOffset = complete ? null : offset + included;
     }
 
 
@@ -434,7 +433,7 @@ Deno.serve(async (req) => {
       format: typeof body.format === "string" ? body.format.slice(0, 20) : "csv",
     });
 
-    return new Response(JSON.stringify({ files, totalRows, truncated }), {
+    return new Response(JSON.stringify({ files, totalRows, truncated, nextOffset, complete }), {
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (err) {

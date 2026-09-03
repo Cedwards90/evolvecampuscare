@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import JSZip from 'jszip';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,10 +65,27 @@ interface ExportResponse {
   files?: ExportFile[];
   totalRows?: number;
   truncated?: string[];
+  nextOffset?: number | null;
+  complete?: boolean;
+}
+
+export interface ExportProgress {
+  current: number;
+  total: number;
+  table: string;
+}
+
+function appendCsv(existing: ExportFile | undefined, incoming: ExportFile): ExportFile {
+  if (!existing) return incoming;
+  const normalized = incoming.csv.replace(/^\uFEFF/, '');
+  const newline = normalized.indexOf('\n');
+  const rowsOnly = newline >= 0 ? normalized.slice(newline + 1) : '';
+  return { ...existing, csv: existing.csv + rowsOnly, rows: existing.rows + incoming.rows };
 }
 
 export function useRunExport() {
-  return useMutation({
+  const [progress, setProgress] = useState<ExportProgress | null>(null);
+  const mutation = useMutation({
     mutationFn: async (opts: {
       action: 'export' | 'flat' | 'all-time';
       tables?: string[];
@@ -85,7 +103,8 @@ export function useRunExport() {
         format: allTime ? 'zip' : opts.bundle,
       };
 
-      let batches: Record<string, unknown>[];
+      let flatBatch = false;
+      let tables: string[] = [];
 
       if (allTime) {
         // Discover every table that actually has rows, unfiltered.
@@ -96,44 +115,69 @@ export function useRunExport() {
           orgIds: [],
           cohortIds: [],
         });
-        const tables = (manifest?.tables ?? []).filter((t) => (t.rows ?? 0) > 0).map((t) => t.table);
-        batches = [
-          { action: 'flat', ...base },
-          ...tables.map((table) => ({ action: 'export', tables: [table], ...base })),
-        ];
+        tables = (manifest?.tables ?? []).filter((t) => (t.rows ?? 0) > 0).map((t) => t.table);
+        flatBatch = true;
       } else if (opts.action === 'flat') {
-        batches = [{ action: 'flat', ...base }];
+        flatBatch = true;
       } else {
-        // Request one table per call so a large selection never exceeds the
-        // edge function's response limit.
-        batches = (opts.tables ?? []).map((table) => ({ action: 'export', tables: [table], ...base }));
+        tables = opts.tables ?? [];
       }
 
-      if (!batches.length) throw new Error('Select at least one table to export.');
+      if (!flatBatch && !tables.length) throw new Error('Select at least one table to export.');
 
-      const files: ExportFile[] = [];
+      const fileMap = new Map<string, ExportFile>();
       const truncated: string[] = [];
+      const failed: { table: string; error: string }[] = [];
       let totalRows = 0;
 
-      for (const body of batches) {
-        const res = await invokeExport<ExportResponse>(body);
-        if (!Array.isArray(res?.files)) {
-          throw new Error('The export service returned an unexpected response. Please try again.');
+      if (flatBatch) {
+        setProgress({ current: 0, total: tables.length + 1, table: 'Ready-made reports' });
+        try {
+          const res = await invokeExport<ExportResponse>({ action: 'flat', ...base });
+          if (!Array.isArray(res?.files)) throw new Error('Unexpected response');
+          res.files.forEach((file) => fileMap.set(file.name, file));
+          totalRows += res.totalRows ?? 0;
+        } catch (error) {
+          failed.push({ table: 'ready-made reports', error: error instanceof Error ? error.message : 'Export failed' });
         }
-        files.push(...res.files);
-        truncated.push(...(res.truncated ?? []));
-        totalRows += res.totalRows ?? 0;
       }
 
+      for (let index = 0; index < tables.length; index++) {
+        const table = tables[index];
+        setProgress({ current: index + (flatBatch ? 1 : 0), total: tables.length + (flatBatch ? 1 : 0), table });
+        let offset = 0;
+        try {
+          for (;;) {
+            const res = await invokeExport<ExportResponse>({ action: 'export', tables: [table], offset, ...base });
+            if (!Array.isArray(res?.files)) throw new Error('Unexpected response');
+            res.files.forEach((file) => fileMap.set(file.name, appendCsv(fileMap.get(file.name), file)));
+            totalRows += res.totalRows ?? 0;
+            truncated.push(...(res.truncated ?? []));
+            if (res.complete !== false || res.nextOffset == null) break;
+            if (res.nextOffset <= offset) throw new Error('Export pagination did not advance');
+            offset = res.nextOffset;
+          }
+        } catch (error) {
+          failed.push({ table, error: error instanceof Error ? error.message : 'Export failed' });
+        }
+      }
+
+      setProgress(null);
+      const files = [...fileMap.values()];
+      if (!files.length && failed.length) throw new Error(`${failed[0].table}: ${failed[0].error}`);
+
       const ready = files.filter((f) => f.csv.length > 0);
-      if (!ready.length) return { files, totalRows, truncated, downloaded: 0 };
+      if (!ready.length) return { files, totalRows, truncated, failed, downloaded: 0 };
 
       if ((allTime || opts.bundle === 'zip') && ready.length > 1) {
         const zip = new JSZip();
         ready.forEach((f) => zip.file(f.name, f.csv));
         zip.file(
           'manifest.csv',
-          'file,rows\n' + ready.map((f) => `${f.name},${f.rows}`).join('\n') + '\n',
+          'file,rows,status,error\n' +
+            ready.map((f) => `${f.name},${f.rows},complete,`).join('\n') +
+            (failed.length ? `\n${failed.map((f) => `${f.table},0,failed,"${f.error.replaceAll('"', '""')}"`).join('\n')}` : '') +
+            '\n',
         );
         const blob = await zip.generateAsync({ type: 'blob' });
         downloadBlob(blob, `evolve-${allTime ? 'all-time' : 'data'}-export_${stamp()}.zip`);
@@ -142,8 +186,10 @@ export function useRunExport() {
           downloadBlob(new Blob([f.csv], { type: 'text/csv;charset=utf-8' }), f.name),
         );
       }
-      return { files, totalRows, truncated, downloaded: ready.length };
+      return { files, totalRows, truncated, failed, downloaded: ready.length };
     },
+    onSettled: () => setProgress(null),
   });
+  return { ...mutation, progress };
 }
 
