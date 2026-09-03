@@ -1,6 +1,7 @@
 import { useRequestAttachments } from '@/hooks/useRequestAttachments';
 import { useFinancialAssistanceHistory } from '@/hooks/useFinancialAssistanceHistory';
 import { useEffectiveGraduationDate } from '@/hooks/useEffectiveGraduationDate';
+import { useRequestLineItems } from '@/hooks/useRequestLineItems';
 import {
   evaluateFinancialAssistance,
   type PolicyEvaluation,
