@@ -203,6 +203,18 @@ export function evaluateFinancialAssistance(input: PolicyEvaluationInput): Polic
     });
   }
 
+  if (amountFromApprovedRecord && amount !== null) {
+    findings.push({
+      id: 'legacy-amount-source',
+      severity: 'info',
+      title: 'Amount taken from the approved disbursement',
+      detail:
+        'This request has no requested amount on file, so the guidance uses the recorded approved amount. It predates the structured financial fields — verify the figures against the original documentation.',
+    });
+  }
+
+
+
   // --- Expense category guidance ---
   const ineligible = matchKeywords(haystack, INELIGIBLE_KEYWORDS);
   if (ineligible.length > 0) {
