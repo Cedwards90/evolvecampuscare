@@ -46,9 +46,7 @@ import {
   useEscalateRequest,
   useEditRequest 
 } from '@/hooks/useRequest';
-import { useRequestAttachments } from '@/hooks/useRequestAttachments';
-import { useFinancialAssistanceHistory } from '@/hooks/useFinancialAssistanceHistory';
-import { evaluateFinancialAssistance } from '@/lib/financialAssistancePolicy';
+import { useRequestPolicyEvaluation } from '@/hooks/useRequestPolicyEvaluation';
 import { FinancialPolicyRecommendation } from '@/components/requests/FinancialPolicyRecommendation';
 import type { RequestStatus, RequestCategory, RequestPriority } from '@/types/database';
 
@@ -117,36 +115,21 @@ export function RequestActions({
     editRequest.isPending;
 
   // --- Advisory financial policy evaluation (any request involving money) ---
-  const isFinancial = requestCategory === 'financial';
-  const numericRequested =
-    requestedAmount != null && Number(requestedAmount) > 0 ? Number(requestedAmount) : null;
-  const numericApproved =
-    approvedAmount != null && Number(approvedAmount) > 0 ? Number(approvedAmount) : null;
-  const hasMonetaryContext = isFinancial || numericRequested !== null || numericApproved !== null;
-  // Legacy records may only carry an approved amount (pre-dating the structured fields).
-  const amountFromApproved = numericRequested === null && numericApproved !== null;
-  const effectiveAmount = numericRequested ?? numericApproved;
+  const {
+    evaluation: policyEvaluation,
+    isLoading: policyLoading,
+    requiresRationale: rationaleRequired,
+  } = useRequestPolicyEvaluation({
+    requestId,
+    studentId,
+    requestCategory,
+    requestedAmount,
+    approvedAmount,
+    fundingPurpose,
+    requestTitle,
+    requestDescription,
+  });
 
-  const { data: attachments } = useRequestAttachments(hasMonetaryContext ? requestId : undefined);
-  const historyQuery = useFinancialAssistanceHistory(
-    hasMonetaryContext ? studentId : undefined,
-    requestId
-  );
-
-  const policyEvaluation = hasMonetaryContext
-    ? evaluateFinancialAssistance({
-        requestedAmount: effectiveAmount,
-        fundingPurpose: fundingPurpose,
-        title: requestTitle,
-        description: requestDescription,
-        attachmentCount: attachments?.length ?? 0,
-        priorApprovedTotal: historyQuery.data?.approvedTotal ?? 0,
-        priorHistoryKnown: !historyQuery.isError,
-        amountFromApprovedRecord: amountFromApproved,
-      })
-    : null;
-
-  const rationaleRequired = !!policyEvaluation?.requiresRationale;
 
 
   const handleApprove = async () => {
@@ -356,15 +339,6 @@ export function RequestActions({
 
   return (
     <>
-      {policyEvaluation && (canApprove || canDeny) && (
-        <div className="mb-4">
-          <FinancialPolicyRecommendation
-            evaluation={policyEvaluation}
-            isLoading={historyQuery.isLoading}
-          />
-        </div>
-      )}
-
       <div className="flex flex-wrap gap-2">
         {canEdit && (
           <Button
@@ -502,7 +476,7 @@ export function RequestActions({
               <div className="rounded-lg border p-3">
                 <FinancialPolicyRecommendation
                   evaluation={policyEvaluation}
-                  isLoading={historyQuery.isLoading}
+                  isLoading={policyLoading}
                   compact
                 />
               </div>
