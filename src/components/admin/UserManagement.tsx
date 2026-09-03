@@ -99,7 +99,7 @@ export function UserManagement() {
       });
       toast({
         title: 'Role updated',
-        description: `${confirmDialog.user.full_name || confirmDialog.user.email} is now a ${roleConfig[confirmDialog.newRole].label}.`,
+        description: `${confirmDialog.user.full_name || confirmDialog.user.email} is now a ${roleConfig[confirmDialog.newRole]?.label ?? confirmDialog.newRole}.`,
       });
     } catch {
       toast({ title: 'Failed to update role', description: 'Please try again or check your permissions.', variant: 'destructive' });
@@ -221,7 +221,8 @@ export function UserManagement() {
               <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No users found matching your criteria.</TableCell></TableRow>
             ) : (
               filteredUsers.map((u) => {
-                const RoleIcon = roleConfig[u.role].icon;
+                const role = roleConfig[u.role] ?? { label: u.role || 'No role', icon: Shield, color: 'bg-muted text-muted-foreground border-border' };
+                const RoleIcon = role.icon;
                 const isCurrentUser = u.user_id === user?.id;
                 return (
                   <TableRow key={u.id} className={!u.is_active ? 'opacity-60' : ''}>
@@ -241,9 +242,9 @@ export function UserManagement() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{u.email}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={roleConfig[u.role].color}>
+                      <Badge variant="outline" className={role.color}>
                         <RoleIcon className="h-3 w-3 mr-1" />
-                        {roleConfig[u.role].label}
+                        {role.label}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -316,8 +317,8 @@ export function UserManagement() {
             <AlertDialogTitle className="font-display">Confirm Role Change</AlertDialogTitle>
             <AlertDialogDescription>
               Change <strong>{confirmDialog.user?.full_name || confirmDialog.user?.email}</strong>'s role from{' '}
-              <strong>{confirmDialog.user ? roleConfig[confirmDialog.user.role].label : ''}</strong> to{' '}
-              <strong>{confirmDialog.newRole ? roleConfig[confirmDialog.newRole].label : ''}</strong>?
+              <strong>{confirmDialog.user ? roleConfig[confirmDialog.user.role]?.label ?? confirmDialog.user.role : ''}</strong> to{' '}
+              <strong>{confirmDialog.newRole ? roleConfig[confirmDialog.newRole]?.label ?? confirmDialog.newRole : ''}</strong>?
               {confirmDialog.newRole === 'admin' && (
                 <span className="block mt-2 text-destructive">⚠️ Admins have full access to manage all users and requests.</span>
               )}
