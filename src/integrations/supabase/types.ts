@@ -549,6 +549,39 @@ export type Database = {
         }
         Relationships: []
       }
+      data_export_audit: {
+        Row: {
+          actor_id: string
+          created_at: string
+          filters: Json
+          format: string
+          id: string
+          include_sensitive: boolean
+          row_count: number
+          tables: string[]
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          filters?: Json
+          format?: string
+          id?: string
+          include_sensitive?: boolean
+          row_count?: number
+          tables?: string[]
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          filters?: Json
+          format?: string
+          id?: string
+          include_sensitive?: boolean
+          row_count?: number
+          tables?: string[]
+        }
+        Relationships: []
+      }
       data_quality_flags: {
         Row: {
           created_at: string
