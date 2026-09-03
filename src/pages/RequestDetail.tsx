@@ -256,7 +256,30 @@ export default function RequestDetail() {
               </CardContent>
             </Card>
 
+            {/* Advisory financial policy review - staff only, any monetary request */}
+            {(isStaff || role === 'org_admin') && (
+              <RequestPolicyCard
+                requestId={request.id}
+                studentId={request.student_id}
+                requestCategory={request.category}
+                requestedAmount={request.requested_amount}
+                approvedAmount={request.approved_amount}
+                fundingPurpose={(request as any).funding_purpose}
+                requestTitle={request.title}
+                requestDescription={request.description}
+                readOnly={
+                  !(
+                    canTakeActions &&
+                    (request.status === 'submitted' ||
+                      request.status === 'in_progress' ||
+                      request.status === 'escalated')
+                  )
+                }
+              />
+            )}
+
             {/* Actions Card - Only for staff */}
+
             {canTakeActions && (
               <>
                 {/* Show actions if request is actionable */}
