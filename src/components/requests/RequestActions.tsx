@@ -76,6 +76,7 @@ export function RequestActions({
   userId, 
   currentStatus,
   requestedAmount,
+  approvedAmount,
   fundingPurpose,
   approvalStatus,
   requestTitle,
