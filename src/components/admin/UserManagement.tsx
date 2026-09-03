@@ -221,7 +221,8 @@ export function UserManagement() {
               <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No users found matching your criteria.</TableCell></TableRow>
             ) : (
               filteredUsers.map((u) => {
-                const RoleIcon = roleConfig[u.role].icon;
+                const role = roleConfig[u.role] ?? { label: u.role || 'No role', icon: Shield, color: 'bg-muted text-muted-foreground border-border' };
+                const RoleIcon = role.icon;
                 const isCurrentUser = u.user_id === user?.id;
                 return (
                   <TableRow key={u.id} className={!u.is_active ? 'opacity-60' : ''}>
