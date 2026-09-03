@@ -159,12 +159,13 @@ describe('balance math', () => {
     ).toBe(150);
   });
 
-  it('only flags the near-cap note when the request stays within the cap', () => {
+  it('flags the lifetime cap only when the request exceeds it', () => {
     const within = evaluateFinancialAssistance({ ...clean, requestedAmount: 400, priorApprovedTotal: 550 });
-    expect(within.findings.some((f) => f.id === 'lifetime-near-cap')).toBe(true);
+    expect(within.findings.some((f) => f.id === 'lifetime-cap')).toBe(false);
     const over = evaluateFinancialAssistance({ ...clean, requestedAmount: 400, priorApprovedTotal: 800 });
-    expect(over.findings.some((f) => f.id === 'lifetime-near-cap')).toBe(false);
+    expect(over.findings.some((f) => f.id === 'lifetime-cap')).toBe(true);
   });
+
 });
 
 describe('final recommended decision', () => {
