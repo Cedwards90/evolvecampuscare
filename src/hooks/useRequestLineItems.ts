@@ -7,7 +7,7 @@ export interface RequestLineItem {
   label: string;
   amount: number;
   is_eligible: boolean;
-  notes: string | null;
+  note: string | null;
   created_at: string;
 }
 
@@ -19,7 +19,7 @@ export function useRequestLineItems(requestId?: string, enabled = true) {
     queryFn: async (): Promise<RequestLineItem[]> => {
       const { data, error } = await supabase
         .from('request_line_items')
-        .select('id, request_id, label, amount, is_eligible, notes, created_at')
+        .select('id, request_id, label, amount, is_eligible, note, created_at')
         .eq('request_id', requestId!)
         .order('created_at', { ascending: true });
       if (error) throw error;
@@ -31,14 +31,14 @@ export function useRequestLineItems(requestId?: string, enabled = true) {
 export function useAddRequestLineItem(requestId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { label: string; amount: number; is_eligible: boolean; notes?: string | null }) => {
+    mutationFn: async (input: { label: string; amount: number; is_eligible: boolean; note?: string | null }) => {
       const { data: auth } = await supabase.auth.getUser();
       const { error } = await supabase.from('request_line_items').insert({
         request_id: requestId,
         label: input.label,
         amount: input.amount,
         is_eligible: input.is_eligible,
-        notes: input.notes ?? null,
+        note: input.note ?? null,
         created_by: auth.user?.id ?? null,
       });
       if (error) throw error;
