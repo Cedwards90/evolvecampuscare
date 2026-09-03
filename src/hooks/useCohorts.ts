@@ -8,6 +8,8 @@ export interface Cohort {
   description: string | null;
   start_date: string | null;
   end_date: string | null;
+  /** Set when the cohort has graduated; requests dated on/after it draw on the Alumni Support fund. */
+  graduated_at: string | null;
   created_at: string;
   updated_at: string;
   student_count?: number;
@@ -19,6 +21,7 @@ export interface CohortInput {
   description?: string | null;
   start_date?: string | null;
   end_date?: string | null;
+  graduated_at?: string | null;
 }
 
 /** All cohorts visible to the current user (RLS-scoped). */
