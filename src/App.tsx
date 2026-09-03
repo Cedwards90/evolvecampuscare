@@ -237,6 +237,11 @@ function App() {
                 <RequestAnalytics />
               </ProtectedRoute>
             } />
+            <Route path="/admin/data-export" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                <DataExport />
+              </ProtectedRoute>
+            } />
             <Route path="/admin/users" element={
                     <ProtectedRoute allowedRoles={['admin']}>
                       <UserManagementPage />
