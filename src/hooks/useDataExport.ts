@@ -128,7 +128,7 @@ export function useRunExport() {
       const ready = files.filter((f) => f.csv.length > 0);
       if (!ready.length) return { files, totalRows, truncated, downloaded: 0 };
 
-      if (opts.bundle === 'zip' && ready.length > 1) {
+      if ((allTime || opts.bundle === 'zip') && ready.length > 1) {
         const zip = new JSZip();
         ready.forEach((f) => zip.file(f.name, f.csv));
         zip.file(
@@ -136,7 +136,7 @@ export function useRunExport() {
           'file,rows\n' + ready.map((f) => `${f.name},${f.rows}`).join('\n') + '\n',
         );
         const blob = await zip.generateAsync({ type: 'blob' });
-        downloadBlob(blob, `evolve-data-export_${stamp()}.zip`);
+        downloadBlob(blob, `evolve-${allTime ? 'all-time' : 'data'}-export_${stamp()}.zip`);
       } else {
         ready.forEach((f) =>
           downloadBlob(new Blob([f.csv], { type: 'text/csv;charset=utf-8' }), f.name),
