@@ -460,6 +460,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           end_date: string | null
+          graduated_at: string | null
           id: string
           name: string
           organization_id: string
@@ -471,6 +472,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           end_date?: string | null
+          graduated_at?: string | null
           id?: string
           name: string
           organization_id: string
@@ -482,6 +484,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           end_date?: string | null
+          graduated_at?: string | null
           id?: string
           name?: string
           organization_id?: string
