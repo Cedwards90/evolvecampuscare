@@ -142,9 +142,10 @@ export function useRunExport() {
         }
       }
 
-      for (let index = 0; index < tables.length; index++) {
-        const table = tables[index];
-        setProgress({ current: index + (flatBatch ? 1 : 0), total: tables.length + (flatBatch ? 1 : 0), table });
+      let completedTables = flatBatch ? 1 : 0;
+      const progressTotal = tables.length + (flatBatch ? 1 : 0);
+      const exportTable = async (table: string) => {
+        setProgress({ current: completedTables, total: progressTotal, table });
         let offset = 0;
         try {
           for (;;) {
@@ -159,8 +160,23 @@ export function useRunExport() {
           }
         } catch (error) {
           failed.push({ table, error: error instanceof Error ? error.message : 'Export failed' });
+        } finally {
+          completedTables += 1;
         }
-      }
+      };
+
+      // Keep a small number of table exports in flight. Sequential all-time
+      // exports can exceed browser/function timeouts, while unbounded
+      // concurrency would put unnecessary pressure on the backend.
+      const queue = [...tables];
+      const workers = Array.from({ length: Math.min(4, queue.length) }, async () => {
+        for (;;) {
+          const table = queue.shift();
+          if (!table) return;
+          await exportTable(table);
+        }
+      });
+      await Promise.all(workers);
 
       setProgress(null);
       const files = [...fileMap.values()];
