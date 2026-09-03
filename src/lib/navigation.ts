@@ -170,6 +170,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Manage resources', href: '/admin/resources', icon: Heart, roles: STAFF },
       { label: 'NDA', href: '/admin/nda', icon: FileText, roles: ['admin'] },
       { label: 'Login activity', href: '/admin/login-activity', icon: Clock, roles: ['admin', 'org_admin'] },
+      { label: 'Data export', href: '/admin/data-export', icon: Download, roles: ['admin', 'org_admin'] },
     ],
   },
 ];
