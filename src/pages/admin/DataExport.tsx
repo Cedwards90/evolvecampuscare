@@ -105,19 +105,62 @@ export default function DataExport() {
           </AlertDescription>
         </Alert>
 
+        <Card className="border-primary/40 bg-primary/5">
+          <CardHeader className="gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <CardTitle className="text-base">Everything, all time</CardTitle>
+                <CardDescription>
+                  One ZIP with every table that has data, plus the ready-made request and student reports. Ignores the
+                  date range, organization and cohort filters below.
+                </CardDescription>
+              </div>
+              <Button
+                onClick={() => setConfirmAllTime(true)}
+                disabled={busy}
+                className="rounded-full"
+              >
+                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2 h-4 w-4" />}
+                Export all time
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Filters</CardTitle>
-            <CardDescription>Applied to every table that has a matching date or scope column.</CardDescription>
+            <CardDescription>
+              Applied to every table that has a matching date or scope column. Leave dates empty (or keep “All time”
+              on) for the full history.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2 lg:col-span-4 flex flex-wrap items-center gap-3 rounded-lg border bg-background p-3">
+              <Switch id="all-time" checked={allTime} onCheckedChange={setAllTime} />
+              <Label htmlFor="all-time" className="cursor-pointer">
+                {allTime ? 'All time (no date limit)' : 'Use a date range'}
+              </Label>
+            </div>
             <div className="space-y-2 min-w-0">
               <Label htmlFor="export-from">From</Label>
-              <Input id="export-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+              <Input
+                id="export-from"
+                type="date"
+                value={from}
+                disabled={allTime}
+                onChange={(e) => setFrom(e.target.value)}
+              />
             </div>
             <div className="space-y-2 min-w-0">
               <Label htmlFor="export-to">To</Label>
-              <Input id="export-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+              <Input
+                id="export-to"
+                type="date"
+                value={to}
+                disabled={allTime}
+                onChange={(e) => setTo(e.target.value)}
+              />
             </div>
             <div className="space-y-2 min-w-0">
               <Label>Organization</Label>
