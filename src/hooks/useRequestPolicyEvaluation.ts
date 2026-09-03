@@ -1,6 +1,7 @@
 import { useRequestAttachments } from '@/hooks/useRequestAttachments';
 import { useFinancialAssistanceHistory } from '@/hooks/useFinancialAssistanceHistory';
 import { useEffectiveGraduationDate } from '@/hooks/useEffectiveGraduationDate';
+import { useRequestLineItems } from '@/hooks/useRequestLineItems';
 import {
   evaluateFinancialAssistance,
   type PolicyEvaluation,
@@ -30,6 +31,21 @@ export interface RequestPolicyEvaluationResult {
 }
 
 /** Requests dated on/after the effective graduation date draw on the Alumni Support fund. */
+/** Whole months from graduation to the request date; null when either is unknown. */
+export function monthsBetween(
+  graduationDate: string | null | undefined,
+  createdAt: string | null | undefined
+): number | null {
+  if (!graduationDate || !createdAt) return null;
+  const grad = new Date(graduationDate);
+  const created = new Date(createdAt);
+  if (Number.isNaN(grad.getTime()) || Number.isNaN(created.getTime())) return null;
+  let months =
+    (created.getFullYear() - grad.getFullYear()) * 12 + (created.getMonth() - grad.getMonth());
+  if (created.getDate() < grad.getDate()) months -= 1;
+  return months;
+}
+
 export function classifyFund(
   createdAt: string | null | undefined,
   graduationDate: string | null | undefined
@@ -70,6 +86,7 @@ export function useRequestPolicyEvaluation({
     requestId
   );
   const graduationQuery = useEffectiveGraduationDate(hasMonetaryContext ? studentId : undefined);
+  const lineItemsQuery = useRequestLineItems(requestId, hasMonetaryContext);
 
   const graduationDate = graduationQuery.data?.date ?? null;
   const fundType = classifyFund(requestCreatedAt, graduationDate);
@@ -91,6 +108,12 @@ export function useRequestPolicyEvaluation({
         amountFromApprovedRecord: amountFromApproved,
         fundType,
         graduationDateKnown: !!graduationDate,
+        monthsSinceGraduation: monthsBetween(graduationDate, requestCreatedAt),
+        lineItems: (lineItemsQuery.data ?? []).map((li) => ({
+          label: li.label,
+          amount: li.amount,
+          isEligible: li.is_eligible,
+        })),
       })
     : null;
 

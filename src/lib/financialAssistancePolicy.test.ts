@@ -159,12 +159,13 @@ describe('balance math', () => {
     ).toBe(150);
   });
 
-  it('only flags the near-cap note when the request stays within the cap', () => {
+  it('flags the lifetime cap only when the request exceeds it', () => {
     const within = evaluateFinancialAssistance({ ...clean, requestedAmount: 400, priorApprovedTotal: 550 });
-    expect(within.findings.some((f) => f.id === 'lifetime-near-cap')).toBe(true);
+    expect(within.findings.some((f) => f.id === 'lifetime-cap')).toBe(false);
     const over = evaluateFinancialAssistance({ ...clean, requestedAmount: 400, priorApprovedTotal: 800 });
-    expect(over.findings.some((f) => f.id === 'lifetime-near-cap')).toBe(false);
+    expect(over.findings.some((f) => f.id === 'lifetime-cap')).toBe(true);
   });
+
 });
 
 describe('final recommended decision', () => {
@@ -181,7 +182,31 @@ describe('final recommended decision', () => {
   it('requires executive sign-off above the single-transaction limit', () => {
     const result = evaluateFinancialAssistance({ ...clean, requestedAmount: 750 });
     expect(result.decision).toBe('approve_with_executive');
-    expect(result.decisionAmount).toBe(SINGLE_DISBURSEMENT_CAP);
+    expect(result.decisionAmount).toBe(750);
+    expect(result.maxPolicyCompliantAmount).toBe(SINGLE_DISBURSEMENT_CAP);
+  });
+
+  it('denies alumni requests outside the 12-month window', () => {
+    const result = evaluateFinancialAssistance({
+      ...clean,
+      fundType: 'alumni',
+      monthsSinceGraduation: 14,
+    });
+    expect(result.decision).toBe('deny');
+  });
+
+  it('reduces to the eligible portion when line items are itemized', () => {
+    const result = evaluateFinancialAssistance({
+      ...clean,
+      requestedAmount: 400,
+      lineItems: [
+        { label: 'Work boots', amount: 250, isEligible: true },
+        { label: 'Gift card', amount: 150, isEligible: false },
+      ],
+    });
+    expect(result.decision).toBe('approve_reduced');
+    expect(result.decisionAmount).toBe(250);
+    expect(result.ineligibleLineTotal).toBe(150);
   });
 
   it('denies when the fund allocation is exhausted', () => {

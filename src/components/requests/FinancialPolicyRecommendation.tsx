@@ -26,6 +26,7 @@ const decisionTone: Record<PolicyDecision, string> = {
   approve_reduced: 'border-amber-500/40 bg-amber-500/5',
   approve_with_executive: 'border-amber-500/40 bg-amber-500/5',
   needs_amount: 'border-muted bg-muted/40',
+  needs_more_info: 'border-muted bg-muted/40',
   deny: 'border-destructive/40 bg-destructive/5',
 };
 
@@ -121,6 +122,28 @@ export function FinancialPolicyRecommendation({
           <span className="block text-xs text-muted-foreground">{evaluation.fundLabel}</span>
         </span>
       </div>
+
+      <div className="rounded-lg border p-3 text-sm min-w-0">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Eligibility</p>
+        <p className="font-medium break-words">
+          {evaluation.eligibility === 'eligible'
+            ? 'Eligible expense for this fund'
+            : evaluation.eligibility === 'ineligible'
+            ? 'Ineligible expense'
+            : evaluation.eligibility === 'wrong_fund'
+            ? 'Listed under the other fund'
+            : 'Needs reviewer confirmation'}
+        </p>
+        <p className="text-sm text-muted-foreground break-words">{evaluation.eligibilityDetail}</p>
+        {evaluation.hasLineItems && (
+          <p className="mt-1 text-xs text-muted-foreground break-words">
+            Itemized: {formatUsd(evaluation.qualifyingAmount ?? 0)} qualifying
+            {evaluation.ineligibleLineTotal > 0 &&
+              ` · ${formatUsd(evaluation.ineligibleLineTotal)} excluded`}
+          </p>
+        )}
+      </div>
+
 
       <ul className="space-y-2">
         {evaluation.findings.length === 0 && (

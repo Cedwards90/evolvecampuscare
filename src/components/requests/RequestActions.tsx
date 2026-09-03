@@ -48,6 +48,7 @@ import {
 } from '@/hooks/useRequest';
 import { useRequestPolicyEvaluation } from '@/hooks/useRequestPolicyEvaluation';
 import { FinancialPolicyRecommendation } from '@/components/requests/FinancialPolicyRecommendation';
+import { RequestLineItemsEditor } from '@/components/requests/RequestLineItemsEditor';
 import type { RequestStatus, RequestCategory, RequestPriority } from '@/types/database';
 
 interface RequestActionsProps {
@@ -483,6 +484,7 @@ export function RequestActions({
                   compact
                 />
               </div>
+              <RequestLineItemsEditor requestId={requestId} />
               <div className="space-y-2">
                 <Label htmlFor="policy-rationale">
                   Approval rationale <span className="text-destructive">*</span>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, Globe, LogOut, Menu, Search, Settings, Shield } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
+import { PlatformAssistant } from '@/components/assistant/PlatformAssistant';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOffline } from '@/contexts/OfflineContext';
@@ -413,6 +414,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
       </div>
 
       <MobileTabBar role={role} unreadCount={unreadCount ?? 0} onMoreClick={() => setMobileMenuOpen(true)} />
+      <PlatformAssistant />
     </div>
   );
 }
