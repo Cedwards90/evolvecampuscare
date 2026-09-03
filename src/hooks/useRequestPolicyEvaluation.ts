@@ -31,6 +31,21 @@ export interface RequestPolicyEvaluationResult {
 }
 
 /** Requests dated on/after the effective graduation date draw on the Alumni Support fund. */
+/** Whole months from graduation to the request date; null when either is unknown. */
+export function monthsBetween(
+  graduationDate: string | null | undefined,
+  createdAt: string | null | undefined
+): number | null {
+  if (!graduationDate || !createdAt) return null;
+  const grad = new Date(graduationDate);
+  const created = new Date(createdAt);
+  if (Number.isNaN(grad.getTime()) || Number.isNaN(created.getTime())) return null;
+  let months =
+    (created.getFullYear() - grad.getFullYear()) * 12 + (created.getMonth() - grad.getMonth());
+  if (created.getDate() < grad.getDate()) months -= 1;
+  return months;
+}
+
 export function classifyFund(
   createdAt: string | null | undefined,
   graduationDate: string | null | undefined
