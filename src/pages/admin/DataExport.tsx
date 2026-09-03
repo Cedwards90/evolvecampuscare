@@ -12,7 +12,17 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Database, Download, FileSpreadsheet, Loader2, ShieldAlert } from 'lucide-react';
+import { Archive, Database, Download, FileSpreadsheet, Loader2, ShieldAlert } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useExportManifest, useRunExport, type ExportFilters } from '@/hooks/useDataExport';
 import { useActiveOrganizations } from '@/hooks/useTrainingOrganizations';
 import { useAllCohorts } from '@/hooks/useCohorts';
@@ -20,20 +30,22 @@ import { useAllCohorts } from '@/hooks/useCohorts';
 export default function DataExport() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [allTime, setAllTime] = useState(true);
   const [orgId, setOrgId] = useState('all');
   const [cohortId, setCohortId] = useState('all');
   const [includeSensitive, setIncludeSensitive] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
+  const [confirmAllTime, setConfirmAllTime] = useState(false);
 
   const filters: ExportFilters = useMemo(
     () => ({
-      from: from ? new Date(from).toISOString() : null,
-      to: to ? new Date(`${to}T23:59:59`).toISOString() : null,
+      from: !allTime && from ? new Date(from).toISOString() : null,
+      to: !allTime && to ? new Date(`${to}T23:59:59`).toISOString() : null,
       orgIds: orgId !== 'all' ? [orgId] : [],
       cohortIds: cohortId !== 'all' ? [cohortId] : [],
       includeSensitive,
     }),
-    [from, to, orgId, cohortId, includeSensitive],
+    [allTime, from, to, orgId, cohortId, includeSensitive],
   );
 
   const { data: manifest, isLoading, error } = useExportManifest(filters);
@@ -63,7 +75,7 @@ export default function DataExport() {
   const toggle = (table: string) =>
     setSelected((prev) => (prev.includes(table) ? prev.filter((t) => t !== table) : [...prev, table]));
 
-  const run = (action: 'export' | 'flat', bundle: 'zip' | 'files', tables?: string[]) => {
+  const run = (action: 'export' | 'flat' | 'all-time', bundle: 'zip' | 'files', tables?: string[]) => {
     runExport.mutate(
       { action, tables, filters, bundle },
       {
@@ -103,19 +115,62 @@ export default function DataExport() {
           </AlertDescription>
         </Alert>
 
+        <Card className="border-primary/40 bg-primary/5">
+          <CardHeader className="gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <CardTitle className="text-base">Everything, all time</CardTitle>
+                <CardDescription>
+                  One ZIP with every table that has data, plus the ready-made request and student reports. Ignores the
+                  date range, organization and cohort filters below.
+                </CardDescription>
+              </div>
+              <Button
+                onClick={() => setConfirmAllTime(true)}
+                disabled={busy}
+                className="rounded-full"
+              >
+                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2 h-4 w-4" />}
+                Export all time
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Filters</CardTitle>
-            <CardDescription>Applied to every table that has a matching date or scope column.</CardDescription>
+            <CardDescription>
+              Applied to every table that has a matching date or scope column. Leave dates empty (or keep “All time”
+              on) for the full history.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2 lg:col-span-4 flex flex-wrap items-center gap-3 rounded-lg border bg-background p-3">
+              <Switch id="all-time" checked={allTime} onCheckedChange={setAllTime} />
+              <Label htmlFor="all-time" className="cursor-pointer">
+                {allTime ? 'All time (no date limit)' : 'Use a date range'}
+              </Label>
+            </div>
             <div className="space-y-2 min-w-0">
               <Label htmlFor="export-from">From</Label>
-              <Input id="export-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+              <Input
+                id="export-from"
+                type="date"
+                value={from}
+                disabled={allTime}
+                onChange={(e) => setFrom(e.target.value)}
+              />
             </div>
             <div className="space-y-2 min-w-0">
               <Label htmlFor="export-to">To</Label>
-              <Input id="export-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+              <Input
+                id="export-to"
+                type="date"
+                value={to}
+                disabled={allTime}
+                onChange={(e) => setTo(e.target.value)}
+              />
             </div>
             <div className="space-y-2 min-w-0">
               <Label>Organization</Label>
@@ -270,6 +325,24 @@ export default function DataExport() {
             </Button>
           </div>
         </div>
+
+        <AlertDialog open={confirmAllTime} onOpenChange={setConfirmAllTime}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Export the entire platform history?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This downloads every table that has data, for all time, including sensitive fields such as dates of
+                birth, contact details and case-note content. The export is logged. Store the file securely.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+              <AlertDialogAction className="rounded-full" onClick={() => run('all-time', 'zip')}>
+                Export all time
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </SidebarLayout>
   );
