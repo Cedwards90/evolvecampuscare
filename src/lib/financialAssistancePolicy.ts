@@ -139,6 +139,7 @@ export function evaluateFinancialAssistance(input: PolicyEvaluationInput): Polic
     attachmentCount = 0,
     priorApprovedTotal = 0,
     priorHistoryKnown = true,
+    amountFromApprovedRecord = false,
   } = input;
 
   const amount = typeof requestedAmount === 'number' && requestedAmount > 0 ? requestedAmount : null;
