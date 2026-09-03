@@ -176,7 +176,7 @@ export function useRunExport() {
           'manifest.csv',
           'file,rows,status,error\n' +
             ready.map((f) => `${f.name},${f.rows},complete,`).join('\n') +
-            (failed.length ? `\n${failed.map((f) => `${f.table},0,failed,"${f.error.replaceAll('"', '""')}"`).join('\n')}` : '') +
+            (failed.length ? `\n${failed.map((f) => `${f.table},0,failed,"${f.error.replace(/"/g, '""')}"`).join('\n')}` : '') +
             '\n',
         );
         const blob = await zip.generateAsync({ type: 'blob' });

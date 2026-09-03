@@ -389,7 +389,9 @@ Deno.serve(async (req) => {
 
     for (const name of tables) {
       const def = TABLES[name];
-      const { data, error } = await buildQuery(name, "*").range(offset, offset + EXPORT_CHUNK_ROWS - 1);
+      let chunkQuery = buildQuery(name, "*");
+      if (def.dateColumn) chunkQuery = chunkQuery.order(def.dateColumn, { ascending: true, nullsFirst: true });
+      const { data, error } = await chunkQuery.range(offset, offset + EXPORT_CHUNK_ROWS - 1);
       if (error) {
         console.error(`export ${name}:`, error.message);
         return new Response(
