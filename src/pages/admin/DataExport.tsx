@@ -65,7 +65,7 @@ export default function DataExport() {
   const toggle = (table: string) =>
     setSelected((prev) => (prev.includes(table) ? prev.filter((t) => t !== table) : [...prev, table]));
 
-  const run = (action: 'export' | 'flat', bundle: 'zip' | 'files', tables?: string[]) => {
+  const run = (action: 'export' | 'flat' | 'all-time', bundle: 'zip' | 'files', tables?: string[]) => {
     runExport.mutate(
       { action, tables, filters, bundle },
       {
