@@ -380,13 +380,22 @@ Deno.serve(async (req) => {
 
     const files: { name: string; csv: string; rows: number }[] = [];
     let totalRows = 0;
+    let payloadBytes = 0;
+    const MAX_PAYLOAD_BYTES = 4_000_000; // stay well under the edge response limit
+    const truncated: string[] = [];
 
     for (const name of tables) {
       const def = TABLES[name];
       const rows: any[] = [];
       for (let page = 0; ; page++) {
         const { data, error } = await buildQuery(name, "*").range(page * PAGE, page * PAGE + PAGE - 1);
-        if (error) { console.error(`export ${name}:`, error.message); break; }
+        if (error) {
+          console.error(`export ${name}:`, error.message);
+          return new Response(
+            JSON.stringify({ error: `Could not read "${name}": ${error.message}` }),
+            { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+          );
+        }
         rows.push(...(data ?? []));
         if (!data || data.length < PAGE || rows.length >= 100000) break;
       }
@@ -397,9 +406,24 @@ Deno.serve(async (req) => {
             def.sensitiveColumns!.forEach((k) => { if (k in c) c[k] = "[redacted]"; });
             return c;
           });
+      const csv = toCsv(cleaned);
+      if (payloadBytes + csv.length > MAX_PAYLOAD_BYTES) {
+        if (!files.length) {
+          return new Response(
+            JSON.stringify({
+              error: `"${name}" is too large to export in one request (${cleaned.length.toLocaleString()} rows). Narrow the date range and try again.`,
+            }),
+            { status: 413, headers: { "Content-Type": "application/json", ...corsHeaders } },
+          );
+        }
+        truncated.push(name);
+        continue;
+      }
+      payloadBytes += csv.length;
       totalRows += cleaned.length;
-      files.push({ name: `${name}.csv`, csv: toCsv(cleaned), rows: cleaned.length });
+      files.push({ name: `${name}.csv`, csv, rows: cleaned.length });
     }
+
 
     await admin.from("data_export_audit").insert({
       actor_id: userId,
