@@ -70,6 +70,7 @@ export function useRequestPolicyEvaluation({
     requestId
   );
   const graduationQuery = useEffectiveGraduationDate(hasMonetaryContext ? studentId : undefined);
+  const lineItemsQuery = useRequestLineItems(requestId, hasMonetaryContext);
 
   const graduationDate = graduationQuery.data?.date ?? null;
   const fundType = classifyFund(requestCreatedAt, graduationDate);
@@ -91,6 +92,12 @@ export function useRequestPolicyEvaluation({
         amountFromApprovedRecord: amountFromApproved,
         fundType,
         graduationDateKnown: !!graduationDate,
+        monthsSinceGraduation: monthsBetween(graduationDate, requestCreatedAt),
+        lineItems: (lineItemsQuery.data ?? []).map((li) => ({
+          label: li.label,
+          amount: li.amount,
+          isEligible: li.is_eligible,
+        })),
       })
     : null;
 
