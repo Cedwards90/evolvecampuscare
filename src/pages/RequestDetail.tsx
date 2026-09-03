@@ -184,8 +184,10 @@ export default function RequestDetail() {
                   className="text-foreground"
                 />
                 
-                {/* Monetary amounts + funding purpose + approval status for financial requests */}
-                {request.category === 'financial' && (
+                {/* Monetary amounts + funding purpose + approval status for any request involving money */}
+                {(request.category === 'financial' ||
+                  request.requested_amount != null ||
+                  request.approved_amount != null) && (
                   <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
                     {request.requested_amount != null && (
                       <div className="flex items-center justify-between text-sm">
