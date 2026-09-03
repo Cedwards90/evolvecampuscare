@@ -20,20 +20,22 @@ import { useAllCohorts } from '@/hooks/useCohorts';
 export default function DataExport() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [allTime, setAllTime] = useState(true);
   const [orgId, setOrgId] = useState('all');
   const [cohortId, setCohortId] = useState('all');
   const [includeSensitive, setIncludeSensitive] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
+  const [confirmAllTime, setConfirmAllTime] = useState(false);
 
   const filters: ExportFilters = useMemo(
     () => ({
-      from: from ? new Date(from).toISOString() : null,
-      to: to ? new Date(`${to}T23:59:59`).toISOString() : null,
+      from: !allTime && from ? new Date(from).toISOString() : null,
+      to: !allTime && to ? new Date(`${to}T23:59:59`).toISOString() : null,
       orgIds: orgId !== 'all' ? [orgId] : [],
       cohortIds: cohortId !== 'all' ? [cohortId] : [],
       includeSensitive,
     }),
-    [from, to, orgId, cohortId, includeSensitive],
+    [allTime, from, to, orgId, cohortId, includeSensitive],
   );
 
   const { data: manifest, isLoading, error } = useExportManifest(filters);
