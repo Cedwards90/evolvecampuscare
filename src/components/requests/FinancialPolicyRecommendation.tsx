@@ -26,6 +26,7 @@ const decisionTone: Record<PolicyDecision, string> = {
   approve_reduced: 'border-amber-500/40 bg-amber-500/5',
   approve_with_executive: 'border-amber-500/40 bg-amber-500/5',
   needs_amount: 'border-muted bg-muted/40',
+  needs_more_info: 'border-muted bg-muted/40',
   deny: 'border-destructive/40 bg-destructive/5',
 };
 
