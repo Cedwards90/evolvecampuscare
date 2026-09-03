@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
 interface StatusBadgeProps {
-  status: 'submitted' | 'in_progress' | 'escalated' | 'resolved' | 'cancelled';
+  status: string;
   className?: string;
 }
 
@@ -29,7 +29,10 @@ const statusConfig = {
 };
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const config = statusConfig[status];
+  const config = statusConfig[status as keyof typeof statusConfig] ?? {
+    label: (status || 'Unknown').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+    className: 'status-submitted',
+  };
   
   return (
     <span
