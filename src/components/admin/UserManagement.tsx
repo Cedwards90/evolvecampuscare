@@ -242,9 +242,9 @@ export function UserManagement() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{u.email}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={roleConfig[u.role].color}>
+                      <Badge variant="outline" className={role.color}>
                         <RoleIcon className="h-3 w-3 mr-1" />
-                        {roleConfig[u.role].label}
+                        {role.label}
                       </Badge>
                     </TableCell>
                     <TableCell>
