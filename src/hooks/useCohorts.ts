@@ -8,6 +8,8 @@ export interface Cohort {
   description: string | null;
   start_date: string | null;
   end_date: string | null;
+  /** Set when the cohort has graduated; requests dated on/after it draw on the Alumni Support fund. */
+  graduated_at: string | null;
   created_at: string;
   updated_at: string;
   student_count?: number;
@@ -19,6 +21,7 @@ export interface CohortInput {
   description?: string | null;
   start_date?: string | null;
   end_date?: string | null;
+  graduated_at?: string | null;
 }
 
 /** All cohorts visible to the current user (RLS-scoped). */
@@ -76,6 +79,7 @@ export function useCreateCohort() {
           description: input.description?.trim() || null,
           start_date: input.start_date || null,
           end_date: input.end_date || null,
+          graduated_at: input.graduated_at || null,
         })
         .select()
         .single();
@@ -100,6 +104,7 @@ export function useUpdateCohort() {
           ...('description' in patch ? { description: patch.description?.toString().trim() || null } : {}),
           ...('start_date' in patch ? { start_date: patch.start_date || null } : {}),
           ...('end_date' in patch ? { end_date: patch.end_date || null } : {}),
+          ...('graduated_at' in patch ? { graduated_at: patch.graduated_at || null } : {}),
         })
         .eq('id', id)
         .select()

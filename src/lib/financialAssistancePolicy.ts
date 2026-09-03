@@ -23,13 +23,27 @@ export type ApprovalTier = 'director' | 'executive' | 'none';
 
 export type Recommendation = 'recommended' | 'conditional' | 'not_recommended';
 
+/**
+ * Barrier Mitigation applies during active enrollment; Alumni Support applies
+ * after the participant's graduation / career start. Each fund carries its own
+ * lifetime allocation and the funds are non-transferable.
+ */
+export type FundType = 'barrier' | 'alumni';
+
+export type PolicyDecision =
+  | 'approve'
+  | 'approve_reduced'
+  | 'approve_with_executive'
+  | 'deny'
+  | 'needs_amount';
+
 export interface PolicyEvaluationInput {
   requestedAmount?: number | null;
   fundingPurpose?: string | null;
   title?: string | null;
   description?: string | null;
   attachmentCount?: number;
-  /** Sum of previously approved amounts for this participant's financial requests. */
+  /** Sum of previously approved amounts drawn from the SAME fund as this request. */
   priorApprovedTotal?: number;
   priorHistoryKnown?: boolean;
   /**
@@ -37,18 +51,41 @@ export interface PolicyEvaluationInput {
    * record has no requested amount (legacy request predating the structured fields).
    */
   amountFromApprovedRecord?: boolean;
+  /** Which fund this request draws on, derived from the effective graduation date. */
+  fundType?: FundType;
+  /** False when no graduation date exists for the participant or their cohort. */
+  graduationDateKnown?: boolean;
 }
 
 export interface PolicyEvaluation {
   findings: PolicyFinding[];
   tier: ApprovalTier;
   tierLabel: string;
+  fundType: FundType;
+  fundLabel: string;
+  /** Approved to date from this fund, before the request under review. */
   usedLifetime: number;
+  /** Balance before this request. */
   remainingLifetime: number;
+  /** This request's amount (0 when unknown). */
+  requestAmount: number;
+  /** Balance after approving this request, clamped at 0. */
+  remainingAfter: number;
+  /** Amount by which this request would exceed the fund's lifetime cap (0 when within it). */
+  overageAmount: number;
+  /** Largest amount that complies with both the remaining balance and the $500 single-transaction limit. */
+  maxPolicyCompliantAmount: number;
   projectedTotal: number;
   exceedsLifetimeCap: boolean;
   recommendation: Recommendation;
   recommendationLabel: string;
+  decision: PolicyDecision;
+  decisionLabel: string;
+  decisionReason: string;
+  /** Suggested amount when the decision is a reduced approval. */
+  decisionAmount: number | null;
+  /** Items the reviewer should resolve before approving. */
+  blockers: string[];
   requiresRationale: boolean;
 }
 
@@ -116,8 +153,6 @@ const ELIGIBLE_KEYWORDS: { keyword: string; label: string }[] = [
   { keyword: 'rent', label: 'emergency rental assistance' },
 ];
 
-const FUND_TYPE_KEYWORDS = ['barrier mitigation', 'alumni support', 'alumni fund', 'barrier fund'];
-
 function matchKeywords<T extends { keyword: string; label: string }>(haystack: string, list: T[]) {
   const labels = new Set<string>();
   for (const entry of list) {
@@ -130,6 +165,11 @@ export function formatUsd(amount: number): string {
   return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+export const FUND_LABELS: Record<FundType, string> = {
+  barrier: 'Barrier Mitigation Fund (active enrollment)',
+  alumni: 'Alumni Support Fund (post-graduation)',
+};
+
 export function evaluateFinancialAssistance(input: PolicyEvaluationInput): PolicyEvaluation {
   const {
     requestedAmount,
@@ -140,6 +180,8 @@ export function evaluateFinancialAssistance(input: PolicyEvaluationInput): Polic
     priorApprovedTotal = 0,
     priorHistoryKnown = true,
     amountFromApprovedRecord = false,
+    fundType = 'barrier',
+    graduationDateKnown = true,
   } = input;
 
   const amount = typeof requestedAmount === 'number' && requestedAmount > 0 ? requestedAmount : null;
@@ -149,8 +191,34 @@ export function evaluateFinancialAssistance(input: PolicyEvaluationInput): Polic
 
   const usedLifetime = Math.max(0, priorApprovedTotal);
   const remainingLifetime = Math.max(0, LIFETIME_CAP - usedLifetime);
-  const projectedTotal = usedLifetime + (amount ?? 0);
+  const requestAmount = amount ?? 0;
+  const projectedTotal = usedLifetime + requestAmount;
   const exceedsLifetimeCap = amount !== null && projectedTotal > LIFETIME_CAP;
+  const remainingAfter = Math.max(0, LIFETIME_CAP - projectedTotal);
+  const overageAmount = Math.max(0, projectedTotal - LIFETIME_CAP);
+  const maxPolicyCompliantAmount = Math.min(remainingLifetime, SINGLE_DISBURSEMENT_CAP);
+  const fundLabel = FUND_LABELS[fundType];
+
+  // --- Fund routing ---
+  if (graduationDateKnown) {
+    findings.push({
+      id: 'fund-type',
+      severity: 'info',
+      title: `Draws on the ${fundType === 'alumni' ? 'Alumni Support Fund' : 'Barrier Mitigation Fund'}`,
+      detail:
+        fundType === 'alumni'
+          ? 'The request was submitted after the participant’s graduation date, so it draws on the post-placement Alumni Support Fund. The two funds are separate and non-transferable.'
+          : 'The request was submitted before the participant’s graduation date, so it draws on the Barrier Mitigation Fund for active enrollment. The two funds are separate and non-transferable.',
+    });
+  } else {
+    findings.push({
+      id: 'graduation-unknown',
+      severity: 'warning',
+      title: 'Graduation date not recorded',
+      detail:
+        'No graduation date exists for this participant or their cohort, so the request is treated as Barrier Mitigation. Set the cohort graduation date (or the participant’s own) to confirm the correct fund.',
+    });
+  }
 
   // --- Amount / cap checks ---
   if (amount === null) {
@@ -166,19 +234,21 @@ export function evaluateFinancialAssistance(input: PolicyEvaluationInput): Polic
       findings.push({
         id: 'lifetime-cap',
         severity: 'critical',
-        title: `Exceeds the ${formatUsd(LIFETIME_CAP)} lifetime cap`,
-        detail: `${formatUsd(usedLifetime)} already approved for this participant. Remaining balance is ${formatUsd(
+        title: `Exceeds the ${formatUsd(LIFETIME_CAP)} lifetime cap for this fund`,
+        detail: `${formatUsd(usedLifetime)} already approved from this fund. Balance before this request is ${formatUsd(
           remainingLifetime
-        )}, but this request would bring the total to ${formatUsd(projectedTotal)}.`,
+        )}, so this request is ${formatUsd(overageAmount)} over the cap (total would reach ${formatUsd(
+          projectedTotal
+        )}).`,
       });
-    } else if (remainingLifetime - amount <= 100) {
+    } else if (remainingAfter <= 100) {
       findings.push({
         id: 'lifetime-near-cap',
         severity: 'info',
         title: 'Nearly exhausts the lifetime allocation',
         detail: `After this disbursement the participant would have ${formatUsd(
-          Math.max(0, remainingLifetime - amount)
-        )} left of the ${formatUsd(LIFETIME_CAP)} lifetime cap.`,
+          remainingAfter
+        )} left of the ${formatUsd(LIFETIME_CAP)} lifetime allocation for this fund.`,
       });
     }
 
@@ -187,8 +257,9 @@ export function evaluateFinancialAssistance(input: PolicyEvaluationInput): Polic
         id: 'single-disbursement-cap',
         severity: 'warning',
         title: `Single transaction over ${formatUsd(SINGLE_DISBURSEMENT_CAP)}`,
-        detail:
-          'Single transactions cannot exceed $500 without prior Executive Leadership approval, regardless of the remaining balance.',
+        detail: `Single transactions cannot exceed ${formatUsd(
+          SINGLE_DISBURSEMENT_CAP
+        )} without prior Executive Leadership approval, regardless of the remaining balance.`,
       });
     }
   }
@@ -212,8 +283,6 @@ export function evaluateFinancialAssistance(input: PolicyEvaluationInput): Polic
         'This request has no requested amount on file, so the guidance uses the recorded approved amount. It predates the structured financial fields — verify the figures against the original documentation.',
     });
   }
-
-
 
   // --- Expense category guidance ---
   const ineligible = matchKeywords(haystack, INELIGIBLE_KEYWORDS);
@@ -279,17 +348,6 @@ export function evaluateFinancialAssistance(input: PolicyEvaluationInput): Polic
     });
   }
 
-  const fundTypeStated = FUND_TYPE_KEYWORDS.some((k) => haystack.includes(k));
-  if (!fundTypeStated) {
-    findings.push({
-      id: 'missing-fund-type',
-      severity: 'warning',
-      title: 'Fund type not indicated',
-      detail:
-        'Confirm whether this draws on the Barrier Mitigation Fund (active enrollment) or the Alumni Support Fund (post-placement). The funds are separate and non-transferable.',
-    });
-  }
-
   // --- Approval tier ---
   let tier: ApprovalTier = 'none';
   let tierLabel = 'Confirm amount to determine the approval tier';
@@ -319,16 +377,90 @@ export function evaluateFinancialAssistance(input: PolicyEvaluationInput): Polic
       ? 'Recommend with conditions'
       : 'Not recommended per policy';
 
+  const blockers = findings
+    .filter((f) => f.severity === 'critical' || f.severity === 'warning')
+    .map((f) => f.title);
+
+  // --- Final recommended decision ---
+  const blockingCritical = ineligible.length > 0 || cashHit;
+
+  let decision: PolicyDecision;
+  let decisionLabel: string;
+  let decisionReason: string;
+  let decisionAmount: number | null = null;
+
+  if (blockingCritical) {
+    decision = 'deny';
+    decisionLabel = 'Do not approve';
+    decisionReason = cashHit
+      ? 'A direct cash payment to the participant is prohibited — restructure as a vendor payment before reconsidering.'
+      : 'The expense appears to fall in a strictly ineligible category.';
+  } else if (amount === null) {
+    decision = 'needs_amount';
+    decisionLabel = 'Confirm the amount before deciding';
+    decisionReason = `No dollar amount is on record. ${formatUsd(
+      remainingLifetime
+    )} remains in this fund, and up to ${formatUsd(
+      maxPolicyCompliantAmount
+    )} can be approved in a single transaction without Executive Leadership sign-off.`;
+  } else if (remainingLifetime === 0) {
+    decision = 'deny';
+    decisionLabel = 'Do not approve';
+    decisionReason = `The participant has used the full ${formatUsd(
+      LIFETIME_CAP
+    )} lifetime allocation for this fund.`;
+  } else if (amount > remainingLifetime) {
+    decision = 'approve_reduced';
+    decisionAmount = maxPolicyCompliantAmount;
+    decisionLabel = `Approve a reduced amount of ${formatUsd(maxPolicyCompliantAmount)}`;
+    decisionReason = `The request is ${formatUsd(
+      overageAmount
+    )} over the remaining balance of ${formatUsd(remainingLifetime)} for this fund.`;
+  } else if (amount > SINGLE_DISBURSEMENT_CAP) {
+    decision = 'approve_with_executive';
+    decisionLabel = 'Approve only with Executive Leadership sign-off';
+    decisionReason = `The amount is within the remaining balance of ${formatUsd(
+      remainingLifetime
+    )} but above the ${formatUsd(
+      SINGLE_DISBURSEMENT_CAP
+    )} single-transaction limit, so it needs Tier 2 approval. Reducing it to ${formatUsd(
+      maxPolicyCompliantAmount
+    )} would keep it at Tier 1.`;
+    decisionAmount = maxPolicyCompliantAmount;
+  } else {
+    decision = 'approve';
+    decisionLabel = 'Approve as requested';
+    decisionReason =
+      blockers.length > 0
+        ? `Within the caps for this fund; ${formatUsd(
+            remainingAfter
+          )} would remain. Resolve the open items below first.`
+        : `Within the caps for this fund, documented and eligible; ${formatUsd(
+            remainingAfter
+          )} would remain.`;
+  }
+
   return {
     findings,
     tier,
     tierLabel,
+    fundType,
+    fundLabel,
     usedLifetime,
     remainingLifetime,
+    requestAmount,
+    remainingAfter,
+    overageAmount,
+    maxPolicyCompliantAmount,
     projectedTotal,
     exceedsLifetimeCap,
     recommendation,
     recommendationLabel,
+    decision,
+    decisionLabel,
+    decisionReason,
+    decisionAmount,
+    blockers,
     requiresRationale: recommendation !== 'recommended',
   };
 }

@@ -1,6 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+export interface FinancialDisbursementRow {
+  id: string;
+  approvedAmount: number;
+  createdAt: string;
+}
+
+export interface FinancialAssistanceHistory {
+  /** Every non-denied approved disbursement, so callers can split it per fund. */
+  rows: FinancialDisbursementRow[];
+  approvedTotal: number;
+  disbursementCount: number;
+}
+
 /**
  * Read-only summary of a participant's previously approved financial assistance,
  * used to compute the remaining lifetime allocation. Relies on existing RLS.
@@ -12,7 +25,7 @@ export function useFinancialAssistanceHistory(
   return useQuery({
     queryKey: ['financial-assistance-history', studentId, excludeRequestId],
     enabled: !!studentId,
-    queryFn: async () => {
+    queryFn: async (): Promise<FinancialAssistanceHistory> => {
       // Counts approved amounts across every category so legacy/miscategorized
       // disbursements still count against the lifetime allocation.
       let query = supabase
@@ -28,10 +41,17 @@ export function useFinancialAssistanceHistory(
       const { data, error } = await query;
       if (error) throw error;
 
-      const rows = (data || []).filter((r) => r.approval_status !== 'denied');
-      const total = rows.reduce((sum, r) => sum + Number(r.approved_amount ?? 0), 0);
+      const rows = (data || [])
+        .filter((r) => r.approval_status !== 'denied')
+        .map((r) => ({
+          id: r.id as string,
+          approvedAmount: Number(r.approved_amount ?? 0),
+          createdAt: r.created_at as string,
+        }));
 
-      return { approvedTotal: total, disbursementCount: rows.length };
+      const total = rows.reduce((sum, r) => sum + r.approvedAmount, 0);
+
+      return { rows, approvedTotal: total, disbursementCount: rows.length };
     },
   });
 }
