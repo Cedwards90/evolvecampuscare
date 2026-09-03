@@ -231,6 +231,143 @@ Deno.serve(async (req) => {
       });
     }
 
+    const fetchAll = async (table: string, select: string) => {
+      const out: any[] = [];
+      for (let page = 0; ; page++) {
+        const { data, error } = await admin.from(table).select(select).range(page * PAGE, page * PAGE + PAGE - 1);
+        if (error) { console.error(`fetchAll ${table}:`, error.message); break; }
+        out.push(...(data ?? []));
+        if (!data || data.length < PAGE) break;
+      }
+      return out;
+    };
+
+    if (action === "flat") {
+      const [profiles, orgs, cohorts, roleRows, assignments] = await Promise.all([
+        fetchAll("profiles", "*"),
+        fetchAll("training_organizations", "id,name"),
+        fetchAll("cohorts", "id,name,graduated_at,organization_id"),
+        fetchAll("user_roles", "user_id,role"),
+        fetchAll("student_assignments", "student_id,case_manager_id"),
+      ]);
+      const pMap = new Map(profiles.map((p: any) => [p.user_id, p]));
+      const oMap = new Map(orgs.map((o: any) => [o.id, o.name]));
+      const cMap = new Map(cohorts.map((c: any) => [c.id, c]));
+      const studentIds = new Set(roleRows.filter((r: any) => r.role === "student").map((r: any) => r.user_id));
+
+      const inScope = (uid: string | null) => !uid || !scopedUserIds || scopedUserIds.includes(uid);
+
+      let requests = await fetchAll("support_requests", "*");
+      if (from) requests = requests.filter((r: any) => r.created_at >= from);
+      if (to) requests = requests.filter((r: any) => r.created_at <= to);
+      requests = requests.filter((r: any) => inScope(r.student_id));
+
+      const requestRows = requests
+        .sort((a: any, b: any) => (a.created_at < b.created_at ? 1 : -1))
+        .map((r: any) => {
+          const sp: any = pMap.get(r.student_id) ?? {};
+          const cm: any = r.assigned_case_manager_id ? pMap.get(r.assigned_case_manager_id) ?? {} : {};
+          const coh: any = sp.cohort_id ? cMap.get(sp.cohort_id) ?? {} : {};
+          const hours = r.resolved_at
+            ? Math.round(((new Date(r.resolved_at).getTime() - new Date(r.created_at).getTime()) / 3600000) * 100) / 100
+            : "";
+          return {
+            request_id: r.id, created_at: r.created_at, updated_at: r.updated_at,
+            resolved_at: r.resolved_at ?? "", escalated_at: r.escalated_at ?? "",
+            status: r.status, priority: r.priority, category: r.category, is_emergency: r.is_emergency,
+            title: r.title, description: includeSensitive ? r.description : "[redacted]",
+            requested_amount: r.requested_amount ?? "", approved_amount: r.approved_amount ?? "",
+            approval_status: r.approval_status ?? "", approval_decided_at: r.approval_decided_at ?? "",
+            funding_purpose: r.funding_purpose ?? "", resolution_hours: hours,
+            student_name: sp.full_name ?? "", student_email: sp.email ?? "",
+            student_phone: includeSensitive ? sp.phone ?? "" : "[redacted]",
+            student_dob: includeSensitive ? sp.date_of_birth ?? "" : "[redacted]",
+            organization: sp.organization_id ? oMap.get(sp.organization_id) ?? "" : "",
+            cohort: coh.name ?? "",
+            case_manager: cm.full_name ?? "", case_manager_email: cm.email ?? "",
+            student_id: r.student_id, assigned_case_manager_id: r.assigned_case_manager_id ?? "",
+          };
+        });
+
+      const [checkins, notes, certs, surveyResponses, intake, plans] = await Promise.all([
+        fetchAll("student_checkins", "student_id"),
+        fetchAll("file_notes", "student_id"),
+        fetchAll("student_certifications", "student_id"),
+        fetchAll("impact_survey_responses", "student_id"),
+        fetchAll("intake_responses", "student_id"),
+        fetchAll("post_graduation_plans", "student_id"),
+      ]);
+      const tally = (rows: any[]) => {
+        const m = new Map<string, number>();
+        rows.forEach((r) => m.set(r.student_id, (m.get(r.student_id) ?? 0) + 1));
+        return m;
+      };
+      const tCheck = tally(checkins), tNotes = tally(notes), tCerts = tally(certs),
+        tSurvey = tally(surveyResponses), tIntake = tally(intake), tPlans = tally(plans);
+      const cmByStudent = new Map<string, string[]>();
+      assignments.forEach((a: any) => {
+        const cmName = (pMap.get(a.case_manager_id) as any)?.full_name;
+        if (!cmName) return;
+        cmByStudent.set(a.student_id, [...(cmByStudent.get(a.student_id) ?? []), cmName]);
+      });
+      const reqByStudent = new Map<string, any[]>();
+      requests.forEach((r: any) => reqByStudent.set(r.student_id, [...(reqByStudent.get(r.student_id) ?? []), r]));
+
+      const studentRows = profiles
+        .filter((p: any) => studentIds.has(p.user_id) && inScope(p.user_id))
+        .sort((a: any, b: any) => String(a.full_name ?? "").localeCompare(String(b.full_name ?? "")))
+        .map((p: any) => {
+          const coh: any = p.cohort_id ? cMap.get(p.cohort_id) ?? {} : {};
+          const mine = reqByStudent.get(p.user_id) ?? [];
+          const age = p.date_of_birth
+            ? Math.floor((Date.now() - new Date(p.date_of_birth).getTime()) / 31557600000)
+            : "";
+          const s = (v: unknown) => (includeSensitive ? v ?? "" : "[redacted]");
+          return {
+            student_user_id: p.user_id, student_number: p.student_id ?? "", full_name: p.full_name ?? "",
+            preferred_name: p.preferred_name ?? "", legal_first_name: s(p.legal_first_name), legal_last_name: s(p.legal_last_name),
+            email: p.email ?? "", phone: s(p.phone), date_of_birth: s(p.date_of_birth), age: includeSensitive ? age : "[redacted]",
+            address_line1: s(p.address_line1), address_line2: s(p.address_line2), city: s(p.city),
+            state_region: s(p.state_region), postal_code: s(p.postal_code), country: s(p.country),
+            preferred_language: p.preferred_language ?? "", department: p.department ?? "",
+            organization: p.organization_id ? oMap.get(p.organization_id) ?? "" : "",
+            cohort: coh.name ?? "", cohort_graduated_at: coh.graduated_at ?? "",
+            cohort_start_date: p.cohort_start_date ?? "", graduation_date: p.graduation_date ?? "",
+            placement_date: p.placement_date ?? "", year_of_study: p.year_of_study ?? "",
+            account_created_at: p.created_at, onboarding_completed_at: p.onboarding_completed_at ?? "",
+            deactivated_at: p.deactivated_at ?? "",
+            case_managers: (cmByStudent.get(p.user_id) ?? []).join("; "),
+            requests_total: mine.length,
+            requests_resolved: mine.filter((r: any) => r.status === "resolved").length,
+            total_approved_amount: mine.reduce((sum: number, r: any) => sum + Number(r.approved_amount ?? 0), 0),
+            checkins: tCheck.get(p.user_id) ?? 0,
+            case_notes: tNotes.get(p.user_id) ?? 0,
+            certifications: tCerts.get(p.user_id) ?? 0,
+            survey_responses: tSurvey.get(p.user_id) ?? 0,
+            intake_responses: tIntake.get(p.user_id) ?? 0,
+            post_grad_plans: tPlans.get(p.user_id) ?? 0,
+          };
+        });
+
+      await admin.from("data_export_audit").insert({
+        actor_id: userId,
+        tables: ["requests_full", "students_full"],
+        filters: { from, to, orgIds, cohortIds },
+        include_sensitive: includeSensitive,
+        row_count: requestRows.length + studentRows.length,
+        format: "flat",
+      });
+
+      return new Response(JSON.stringify({
+        files: [
+          { name: "requests_full.csv", csv: toCsv(requestRows), rows: requestRows.length },
+          { name: "students_full.csv", csv: toCsv(studentRows), rows: studentRows.length },
+        ],
+        totalRows: requestRows.length + studentRows.length,
+      }), { headers: { "Content-Type": "application/json", ...corsHeaders } });
+    }
+
+
     // ---- export ----
     const requested: string[] = Array.isArray(body.tables) ? body.tables.filter((t: any) => typeof t === "string") : [];
     const tables = requested.filter(allowed);
