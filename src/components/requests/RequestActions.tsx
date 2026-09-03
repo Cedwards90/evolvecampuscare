@@ -46,6 +46,10 @@ import {
   useEscalateRequest,
   useEditRequest 
 } from '@/hooks/useRequest';
+import { useRequestAttachments } from '@/hooks/useRequestAttachments';
+import { useFinancialAssistanceHistory } from '@/hooks/useFinancialAssistanceHistory';
+import { evaluateFinancialAssistance } from '@/lib/financialAssistancePolicy';
+import { FinancialPolicyRecommendation } from '@/components/requests/FinancialPolicyRecommendation';
 import type { RequestStatus, RequestCategory, RequestPriority } from '@/types/database';
 
 interface RequestActionsProps {
@@ -84,6 +88,8 @@ export function RequestActions({
   const [reason, setReason] = useState('');
   const [approvalType, setApprovalType] = useState<ApprovalType>('full');
   const [customAmount, setCustomAmount] = useState('');
+  const [policyRationale, setPolicyRationale] = useState('');
+  
   
   // Edit form state
   const [editTitle, setEditTitle] = useState('');
@@ -108,7 +114,37 @@ export function RequestActions({
     escalateRequest.isPending ||
     editRequest.isPending;
 
+  // --- Advisory financial policy evaluation (financial requests only) ---
+  const isFinancial = requestCategory === 'financial';
+  const { data: attachments } = useRequestAttachments(isFinancial ? requestId : undefined);
+  const historyQuery = useFinancialAssistanceHistory(isFinancial ? studentId : undefined, requestId);
+
+  const policyEvaluation = isFinancial
+    ? evaluateFinancialAssistance({
+        requestedAmount: requestedAmount,
+        fundingPurpose: fundingPurpose,
+        title: requestTitle,
+        description: requestDescription,
+        attachmentCount: attachments?.length ?? 0,
+        priorApprovedTotal: historyQuery.data?.approvedTotal ?? 0,
+        priorHistoryKnown: !historyQuery.isError,
+      })
+    : null;
+
+  const rationaleRequired = !!policyEvaluation?.requiresRationale;
+
+
   const handleApprove = async () => {
+    if (rationaleRequired && policyRationale.trim().length < 10) {
+      toast({
+        title: 'Approval rationale required',
+        description:
+          'This request is not cleanly recommended under the Financial Control Protocol. Document why you are approving it.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       let approvedAmount: number | undefined;
       
@@ -130,7 +166,12 @@ export function RequestActions({
         // If 'none', approvedAmount remains undefined
       }
 
-      await approveRequest.mutateAsync({ requestId, userId, approvedAmount });
+      await approveRequest.mutateAsync({
+        requestId,
+        userId,
+        approvedAmount,
+        policyRationale: rationaleRequired ? policyRationale : undefined,
+      });
       toast({
         title: 'Request Approved',
         description: approvedAmount 
@@ -140,6 +181,7 @@ export function RequestActions({
       setDialogType(null);
       setApprovalType('full');
       setCustomAmount('');
+      setPolicyRationale('');
       onActionComplete?.();
     } catch (error) {
       toast({
@@ -229,6 +271,7 @@ export function RequestActions({
     setReason('');
     setApprovalType('full');
     setCustomAmount('');
+    setPolicyRationale('');
   };
 
   const openEditDialog = () => {
@@ -298,6 +341,15 @@ export function RequestActions({
 
   return (
     <>
+      {policyEvaluation && (canApprove || canDeny) && (
+        <div className="mb-4">
+          <FinancialPolicyRecommendation
+            evaluation={policyEvaluation}
+            isLoading={historyQuery.isLoading}
+          />
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {canEdit && (
           <Button
@@ -429,10 +481,40 @@ export function RequestActions({
               </div>
             </div>
           )}
+
+          {policyEvaluation && rationaleRequired && (
+            <div className="space-y-3 py-2 max-h-[40vh] overflow-y-auto">
+              <div className="rounded-lg border p-3">
+                <FinancialPolicyRecommendation
+                  evaluation={policyEvaluation}
+                  isLoading={historyQuery.isLoading}
+                  compact
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="policy-rationale">
+                  Approval rationale <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="policy-rationale"
+                  rows={3}
+                  placeholder="Explain why this approval is appropriate despite the policy findings above..."
+                  value={policyRationale}
+                  onChange={(e) => setPolicyRationale(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Recorded in the request timeline for audit.
+                </p>
+              </div>
+            </div>
+          )}
           
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleApprove} disabled={isLoading}>
+            <AlertDialogAction
+              onClick={handleApprove}
+              disabled={isLoading || (rationaleRequired && policyRationale.trim().length < 10)}
+            >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Approve
             </AlertDialogAction>

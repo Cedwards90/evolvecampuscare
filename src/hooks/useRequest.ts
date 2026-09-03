@@ -116,11 +116,14 @@ export function useApproveRequest() {
     mutationFn: async ({ 
       requestId, 
       userId,
-      approvedAmount 
+      approvedAmount,
+      policyRationale,
     }: { 
       requestId: string; 
       userId: string;
       approvedAmount?: number;
+      /** Reviewer rationale recorded when approving against policy guidance. */
+      policyRationale?: string;
     }) => {
       // Fetch request details first
       const { data: requestData } = await supabase
@@ -181,6 +184,10 @@ export function useApproveRequest() {
       } else if (approvedAmount !== undefined) {
         const formattedApproved = approvedAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
         note = `Request ${isAlreadyInProgress ? 'confirmed' : 'approved'} for ${formattedApproved}.`;
+      }
+
+      if (policyRationale && policyRationale.trim()) {
+        note = `${note} Approval rationale: ${policyRationale.trim()}`;
       }
 
       // Add approval note
