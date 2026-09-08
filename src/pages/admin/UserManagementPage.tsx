@@ -23,6 +23,8 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StudentCrmSection } from '@/components/admin/crm/StudentCrmSection';
 import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
 import { PendingInvitationsSection } from '@/components/admin/PendingInvitationsSection';
 import { OrgAdminAssignmentDialog } from '@/components/admin/OrgAdminAssignmentDialog';
@@ -312,6 +314,17 @@ export default function UserManagementPage() {
           </Card>
         </div>
 
+        <Tabs defaultValue="students">
+          <TabsList>
+            <TabsTrigger value="students">Students</TabsTrigger>
+            <TabsTrigger value="all">All users</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="students" className="mt-4">
+            <StudentCrmSection />
+          </TabsContent>
+
+          <TabsContent value="all" className="mt-4 space-y-6">
         {/* Pending Invitations Section */}
         <PendingInvitationsSection />
 
@@ -621,6 +634,8 @@ export default function UserManagementPage() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Role Change Confirmation Dialog */}
