@@ -23,6 +23,8 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StudentCrmSection } from '@/components/admin/crm/StudentCrmSection';
 import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
 import { PendingInvitationsSection } from '@/components/admin/PendingInvitationsSection';
 import { OrgAdminAssignmentDialog } from '@/components/admin/OrgAdminAssignmentDialog';
