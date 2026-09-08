@@ -632,6 +632,8 @@ export default function UserManagementPage() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Role Change Confirmation Dialog */}
