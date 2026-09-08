@@ -312,6 +312,17 @@ export default function UserManagementPage() {
           </Card>
         </div>
 
+        <Tabs defaultValue="students">
+          <TabsList>
+            <TabsTrigger value="students">Students</TabsTrigger>
+            <TabsTrigger value="all">All users</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="students" className="mt-4">
+            <StudentCrmSection />
+          </TabsContent>
+
+          <TabsContent value="all" className="mt-4 space-y-6">
         {/* Pending Invitations Section */}
         <PendingInvitationsSection />
 

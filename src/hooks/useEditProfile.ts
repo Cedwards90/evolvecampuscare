@@ -15,7 +15,12 @@ export interface EditableProfileFields {
   state_region?: string | null;
   postal_code?: string | null;
   country?: string | null;
+  /** Program dates — staff editable from the student CRM. */
+  cohort_start_date?: string | null;
+  graduation_date?: string | null;
+  placement_date?: string | null;
 }
+
 
 /**
  * Update a user's profile. RLS enforces role-based permissions:
