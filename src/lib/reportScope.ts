@@ -20,7 +20,7 @@ export function hasActiveScope(f: ReportScopeFilters): boolean {
 }
 
 function matchesRequest(r: SupportRequest, f: ReportScopeFilters): boolean {
-  const s = r.student;
+  const s = r.student as (SupportRequest['student'] & { cohort_id?: string | null; year_of_study?: string | number | null }) | undefined;
   if (f.organizationId.length && (!s?.organization_id || !f.organizationId.includes(s.organization_id))) return false;
   if (f.cohort.length && (!s?.cohort_id || !f.cohort.includes(s.cohort_id))) return false;
   if (f.yearOfStudy.length && (!s?.year_of_study || !f.yearOfStudy.includes(String(s.year_of_study)))) return false;
