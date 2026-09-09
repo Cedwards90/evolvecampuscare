@@ -163,6 +163,12 @@ export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
                 <p className="text-sm font-medium truncate">{s.full_name || 'Unnamed'}</p>
                 <p className="text-xs text-muted-foreground truncate">{s.email}</p>
               </div>
+              {s.needs_organization && (
+                <Badge variant="outline" className="shrink-0 text-xs">No organization</Badge>
+              )}
+              {!s.needs_organization && !s.cohort_id && (
+                <Badge variant="secondary" className="shrink-0 text-xs">No class</Badge>
+              )}
             </li>
           ))}
         </ul>
