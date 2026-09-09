@@ -345,8 +345,11 @@ export default function Dashboard() {
     if (role === 'student') {
       return {
         subtitle: 'Here’s what you can do next.',
-        primaryAction: { label: 'Submit a request', href: '/requests/new', icon: Plus },
-        secondaryActions: [{ label: 'My requests', href: '/requests/mine', icon: Clock }],
+        primaryAction: { label: 'Get help', href: '/requests/new', icon: Plus },
+        secondaryActions: [
+          { label: 'Track my request', href: '/requests/mine', icon: Clock },
+          { label: 'Message my case manager', href: '/messages', icon: MessageSquare },
+        ],
         stats: [
           { label: 'Open requests', value: stats.pendingRequests, href: '/requests/mine' },
           { label: 'Resolved', value: stats.resolvedRequests, href: '/requests/mine' },
