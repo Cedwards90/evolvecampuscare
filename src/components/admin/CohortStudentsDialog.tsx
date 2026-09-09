@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useOrgStudents, useBulkAssignCohort, type Cohort } from '@/hooks/useCohorts';
+import { useAssignableStudents, useBulkAssignCohort, type Cohort } from '@/hooks/useCohorts';
 import {
   useCohortCaseManagers,
   useAvailableCaseManagers,
@@ -24,7 +24,7 @@ interface Props {
 }
 
 export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
-  const { data: students, isLoading } = useOrgStudents(cohort?.organization_id);
+  const { data: students, isLoading } = useAssignableStudents(cohort?.organization_id);
   const bulk = useBulkAssignCohort();
   const { toast } = useToast();
 
@@ -32,6 +32,7 @@ export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
   const [selectedAvailable, setSelectedAvailable] = useState<Set<string>>(new Set());
   const [selectedInCohort, setSelectedInCohort] = useState<Set<string>>(new Set());
   const [pendingCM, setPendingCM] = useState<string>('');
+  const [onlyNoClass, setOnlyNoClass] = useState(false);
 
   // CM hooks
   const { data: cohortCMs, isLoading: cmLoading } = useCohortCaseManagers(cohort?.id);
@@ -45,21 +46,25 @@ export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
       setSelectedAvailable(new Set());
       setSelectedInCohort(new Set());
       setPendingCM('');
+      setOnlyNoClass(false);
     }
   }, [open, cohort?.id]);
 
-  const { available, inCohort } = useMemo(() => {
+  const { available, inCohort, noClassCount, orphanSelected } = useMemo(() => {
     const list = students || [];
     const q = search.trim().toLowerCase();
     const match = (s: typeof list[number]) =>
       !q ||
       (s.full_name || '').toLowerCase().includes(q) ||
       (s.email || '').toLowerCase().includes(q);
+    const others = list.filter((s) => s.cohort_id !== cohort?.id);
     return {
-      available: list.filter((s) => s.cohort_id !== cohort?.id && match(s)),
+      available: others.filter((s) => match(s) && (!onlyNoClass || !s.cohort_id)),
       inCohort: list.filter((s) => s.cohort_id === cohort?.id && match(s)),
+      noClassCount: others.filter((s) => !s.cohort_id).length,
+      orphanSelected: others.filter((s) => s.needs_organization && selectedAvailable.has(s.user_id)).length,
     };
-  }, [students, search, cohort?.id]);
+  }, [students, search, cohort?.id, onlyNoClass, selectedAvailable]);
 
   const cmIdsInCohort = useMemo(
     () => new Set((cohortCMs || []).map((c) => c.case_manager_id)),
@@ -80,7 +85,11 @@ export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
   const handleAdd = async () => {
     if (!cohort) return;
     try {
-      await bulk.mutateAsync({ studentIds: Array.from(selectedAvailable), cohortId: cohort.id });
+      await bulk.mutateAsync({
+        studentIds: Array.from(selectedAvailable),
+        cohortId: cohort.id,
+        organizationId: cohort.organization_id,
+      });
       toast({ title: `Added ${selectedAvailable.size} student(s)` });
       setSelectedAvailable(new Set());
     } catch (e: any) {
@@ -154,6 +163,12 @@ export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
                 <p className="text-sm font-medium truncate">{s.full_name || 'Unnamed'}</p>
                 <p className="text-xs text-muted-foreground truncate">{s.email}</p>
               </div>
+              {s.needs_organization && (
+                <Badge variant="outline" className="shrink-0 text-xs">No organization</Badge>
+              )}
+              {!s.needs_organization && !s.cohort_id && (
+                <Badge variant="secondary" className="shrink-0 text-xs">No class</Badge>
+              )}
             </li>
           ))}
         </ul>
@@ -165,9 +180,9 @@ export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Manage cohort — {cohort?.name}</DialogTitle>
+          <DialogTitle>Manage class — {cohort?.name}</DialogTitle>
           <DialogDescription>
-            Add or remove students and case managers. Records are never deleted — only their cohort link changes.
+            Add or remove students and case managers. Records are never deleted — only their class link changes.
           </DialogDescription>
         </DialogHeader>
 
@@ -178,15 +193,33 @@ export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
           </TabsList>
 
           <TabsContent value="students" className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name or email…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[200px] flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name or email…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button
+                type="button"
+                variant={onlyNoClass ? 'default' : 'outline'}
+                size="sm"
+                className="rounded-full"
+                onClick={() => setOnlyNoClass((v) => !v)}
+              >
+                In no class ({noClassCount})
+              </Button>
             </div>
+
+            {orphanSelected > 0 && (
+              <p className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+                {orphanSelected} of the students you selected have no organization yet. Adding them to this class also
+                puts them in <strong>this class's organization</strong>. Nothing else about their record changes.
+              </p>
+            )}
 
             {isLoading ? (
               <div className="flex justify-center py-10">

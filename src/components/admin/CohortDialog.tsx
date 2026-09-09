@@ -5,21 +5,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCreateCohort, useUpdateCohort, type Cohort } from '@/hooks/useCohorts';
+import { useActiveOrganizations } from '@/hooks/useTrainingOrganizations';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  organizationId: string;
+  /** Fixed organization. Leave undefined to let the user pick one in the form. */
+  organizationId?: string;
   cohort?: Cohort | null;
+  /** Limits the organization picker, e.g. to the organizations an org admin runs. */
+  allowedOrganizationIds?: string[];
 }
 
-export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Props) {
+export function CohortDialog({ open, onOpenChange, organizationId, cohort, allowedOrganizationIds }: Props) {
   const { toast } = useToast();
   const create = useCreateCohort();
   const update = useUpdateCohort();
+  const { data: organizations } = useActiveOrganizations();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -27,6 +33,8 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Pro
   const [endDate, setEndDate] = useState('');
   const [graduated, setGraduated] = useState(false);
   const [graduatedAt, setGraduatedAt] = useState('');
+  const [orgId, setOrgId] = useState('');
+
 
   useEffect(() => {
     if (open) {
@@ -36,8 +44,14 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Pro
       setEndDate(cohort?.end_date ?? '');
       setGraduated(!!cohort?.graduated_at);
       setGraduatedAt(cohort?.graduated_at ?? '');
+      setOrgId(cohort?.organization_id ?? organizationId ?? '');
     }
-  }, [open, cohort]);
+  }, [open, cohort, organizationId]);
+
+  const orgOptions = (organizations || []).filter(
+    (o) => !allowedOrganizationIds || allowedOrganizationIds.includes(o.id),
+  );
+  const showOrgPicker = !organizationId && !cohort;
 
   const submitting = create.isPending || update.isPending;
   const isEdit = !!cohort;
@@ -46,6 +60,10 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Pro
     const trimmed = name.trim();
     if (!trimmed) {
       toast({ title: 'Name required', variant: 'destructive' });
+      return;
+    }
+    if (!cohort && !orgId) {
+      toast({ title: 'Choose an organization', variant: 'destructive' });
       return;
     }
     if (graduated && !graduatedAt) {
@@ -69,7 +87,7 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Pro
         toast({ title: 'Cohort updated' });
       } else {
         await create.mutateAsync({
-          organization_id: organizationId,
+          organization_id: orgId,
           name: trimmed,
           description,
           start_date: startDate || null,
@@ -92,12 +110,29 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Pro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit cohort' : 'New cohort'}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit class' : 'New class'}</DialogTitle>
           <DialogDescription>
-            Group students within this organization into a class or cohort.
+            Group students into a class or cohort. You can add students right after saving.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {showOrgPicker && (
+            <div className="space-y-2">
+              <Label htmlFor="cohort-org">Organization</Label>
+              <Select value={orgId} onValueChange={setOrgId}>
+                <SelectTrigger id="cohort-org">
+                  <SelectValue placeholder="Choose an organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {orgOptions.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="cohort-name">Name</Label>
             <Input
@@ -165,7 +200,7 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Pro
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {isEdit ? 'Save changes' : 'Create cohort'}
+            {isEdit ? 'Save changes' : 'Create class'}
           </Button>
         </DialogFooter>
       </DialogContent>
