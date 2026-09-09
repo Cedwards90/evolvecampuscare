@@ -171,8 +171,9 @@
   }
 
   /* Status colors */
+  /* Submitted = received, not yet worked (neutral slate) — clearly different from Resolved */
   .status-submitted {
-    @apply bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300;
+    @apply bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-300 dark:bg-slate-800/60 dark:text-slate-200 dark:ring-slate-600;
   }
 
   .status-in-progress {
@@ -183,8 +184,9 @@
     @apply bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300;
   }
 
+  /* Resolved = done (solid forest green, the only strong green in the status set) */
   .status-resolved {
-    @apply bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300;
+    @apply bg-primary text-primary-foreground;
   }
 
   .status-cancelled {
