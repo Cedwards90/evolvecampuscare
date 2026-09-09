@@ -10,6 +10,10 @@ export interface RequestFilters {
   search?: string;
   assignedCaseManagerId?: string;
   studentId?: string;
+  /** Archived records stay in the database; set true for history and reporting views. */
+  includeArchived?: boolean;
+  /** Practice/test records are excluded from working lists by default. */
+  includeTestRecords?: boolean;
 }
 
 export function useRequests(filters: RequestFilters = {}) {
@@ -20,6 +24,15 @@ export function useRequests(filters: RequestFilters = {}) {
         .from('support_requests')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (!filters.includeArchived) {
+        query = query.is('archived_at', null);
+      }
+
+      if (!filters.includeTestRecords) {
+        query = query.or('is_test_record.is.null,is_test_record.eq.false');
+      }
+
 
       // Apply filters
       if (filters.status && filters.status !== 'all') {

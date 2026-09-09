@@ -243,6 +243,11 @@ function App() {
                 <DataExport />
               </ProtectedRoute>
             } />
+            <Route path="/admin/internal-controls" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <InternalControls />
+              </ProtectedRoute>
+            } />
             <Route path="/admin/users" element={
                     <ProtectedRoute allowedRoles={['admin']}>
                       <UserManagementPage />
