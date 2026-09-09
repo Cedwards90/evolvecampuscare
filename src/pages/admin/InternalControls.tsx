@@ -53,7 +53,6 @@ export default function InternalControls() {
       <PageHeader
         title="Internal controls"
         description="Approvals, payment records, funding codes, account review and retention — the evidence an auditor asks for."
-        icon={ShieldCheck}
       />
       <Tabs defaultValue="settings" className="mt-4">
         <TabsList className="flex-wrap h-auto">
