@@ -8,7 +8,7 @@ import {
   Clock,
   Lock,
   ArrowRight,
-  Trash2,
+  Undo2,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -65,21 +65,27 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
 
   const canDelete = (update: RequestUpdate) => {
     if (!user) return false;
+    if ((update as any).retracted_at) return false;
     if (role === 'admin') return true;
     if (role === 'case_manager' && update.user_id === user.id) return true;
     return false;
   };
 
+  /** Entries are retracted, never removed: the record must stay auditable. */
   const handleDelete = async (id: string) => {
+    if (!user) return;
     setDeletingId(id);
-    const { error } = await supabase.from('request_updates').delete().eq('id', id);
+    const { error } = await (supabase as any)
+      .from('request_updates')
+      .update({ retracted_at: new Date().toISOString(), retracted_by: user.id })
+      .eq('id', id);
     setDeletingId(null);
     setPendingDelete(null);
     if (error) {
-      toast.error('Failed to delete entry: ' + error.message);
+      toast.error('Failed to retract entry: ' + error.message);
       return;
     }
-    toast.success('Activity entry deleted');
+    toast.success('Activity entry retracted');
     if (requestId) {
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
     }
@@ -155,6 +161,9 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
                 <span className="text-xs text-muted-foreground ml-auto">
                   {formatDistanceToNow(new Date(update.created_at), { addSuffix: true })}
                 </span>
+                {(update as any).retracted_at && (
+                  <Badge variant="outline" className="text-xs">Retracted</Badge>
+                )}
                 {canDelete(update) && (
                   <Button
                     type="button"
@@ -163,12 +172,13 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
                     onClick={() => setPendingDelete(update.id)}
                     disabled={deletingId === update.id}
-                    aria-label="Delete activity entry"
+                    aria-label="Retract activity entry"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Undo2 className="h-3.5 w-3.5" />
                   </Button>
                 )}
               </div>
+
 
               {isStatusChange && update.previous_status && update.new_status && (
                 <div className="flex items-center gap-2 mb-2 text-sm">
@@ -187,8 +197,16 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
                   text={update.note}
                   clampLines={6}
                   showCopy
-                  className="text-sm text-foreground"
+                  className={cn(
+                    'text-sm text-foreground',
+                    (update as any).retracted_at && 'line-through opacity-60',
+                  )}
                 />
+              )}
+              {(update as any).retracted_at && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Retracted {formatDistanceToNow(new Date((update as any).retracted_at), { addSuffix: true })}
+                </p>
               )}
             </div>
           </div>
@@ -198,18 +216,16 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
       <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete activity entry?</AlertDialogTitle>
+            <AlertDialogTitle>Retract this entry?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes this entry from the activity timeline. This action cannot be undone. The request status itself will not change.
+              The entry stays on the timeline, struck through and marked as retracted by you, so the record remains
+              complete. Nothing is deleted and the request status will not change.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => pendingDelete && handleDelete(pendingDelete)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
+            <AlertDialogAction onClick={() => pendingDelete && handleDelete(pendingDelete)}>
+              Retract entry
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

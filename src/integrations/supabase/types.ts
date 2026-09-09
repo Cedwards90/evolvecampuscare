@@ -912,6 +912,72 @@ export type Database = {
         }
         Relationships: []
       }
+      funding_sources: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      grant_budget_lines: {
+        Row: {
+          code: string | null
+          created_at: string
+          created_by: string | null
+          grant_name: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          grant_name?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          grant_name?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       impact_report_audit: {
         Row: {
           actor_id: string
@@ -1123,6 +1189,36 @@ export type Database = {
           section?: string
           student_id?: string
           superseded_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      internal_controls_settings: {
+        Row: {
+          designated_delete_admin_id: string | null
+          id: number
+          retention_months: number
+          second_approval_threshold: number
+          spending_last_reconciled_at: string | null
+          spending_reconciled_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          designated_delete_admin_id?: string | null
+          id?: number
+          retention_months?: number
+          second_approval_threshold?: number
+          spending_last_reconciled_at?: string | null
+          spending_reconciled_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          designated_delete_admin_id?: string | null
+          id?: number
+          retention_months?: number
+          second_approval_threshold?: number
+          spending_last_reconciled_at?: string | null
+          spending_reconciled_by?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1962,6 +2058,81 @@ export type Database = {
           },
         ]
       }
+      request_category_budget_map: {
+        Row: {
+          budget_line_id: string
+          category: Database["public"]["Enums"]["request_category"]
+          created_at: string
+          created_by: string | null
+          funding_source_id: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          budget_line_id: string
+          category: Database["public"]["Enums"]["request_category"]
+          created_at?: string
+          created_by?: string | null
+          funding_source_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          budget_line_id?: string
+          category?: Database["public"]["Enums"]["request_category"]
+          created_at?: string
+          created_by?: string | null
+          funding_source_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_category_budget_map_budget_line_id_fkey"
+            columns: ["budget_line_id"]
+            isOneToOne: false
+            referencedRelation: "grant_budget_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_category_budget_map_funding_source_id_fkey"
+            columns: ["funding_source_id"]
+            isOneToOne: false
+            referencedRelation: "funding_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      request_delete_audit: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          id: string
+          reason: string
+          request_id: string
+          snapshot: Json
+          student_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          reason: string
+          request_id: string
+          snapshot: Json
+          student_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string
+          request_id?: string
+          snapshot?: Json
+          student_id?: string | null
+        }
+        Relationships: []
+      }
       request_line_items: {
         Row: {
           amount: number
@@ -2103,6 +2274,8 @@ export type Database = {
           note: string | null
           previous_status: Database["public"]["Enums"]["request_status"] | null
           request_id: string
+          retracted_at: string | null
+          retracted_by: string | null
           user_id: string
         }
         Insert: {
@@ -2113,6 +2286,8 @@ export type Database = {
           note?: string | null
           previous_status?: Database["public"]["Enums"]["request_status"] | null
           request_id: string
+          retracted_at?: string | null
+          retracted_by?: string | null
           user_id: string
         }
         Update: {
@@ -2123,6 +2298,8 @@ export type Database = {
           note?: string | null
           previous_status?: Database["public"]["Enums"]["request_status"] | null
           request_id?: string
+          retracted_at?: string | null
+          retracted_by?: string | null
           user_id?: string
         }
         Relationships: [
@@ -2188,6 +2365,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      retention_export_log: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          period_end: string
+          period_start: string
+          row_counts: Json | null
+          storage_path: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          period_end: string
+          period_start: string
+          row_counts?: Json | null
+          storage_path?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          row_counts?: Json | null
+          storage_path?: string | null
+        }
+        Relationships: []
       }
       scheduled_survey_distributions: {
         Row: {
@@ -2561,72 +2768,131 @@ export type Database = {
       }
       support_requests: {
         Row: {
+          amount_paid: number | null
           approval_decided_at: string | null
           approval_decided_by: string | null
           approval_status: string
           approved_amount: number | null
+          archive_reason: string | null
+          archived_at: string | null
+          archived_by: string | null
           assigned_case_manager_id: string | null
           category: Database["public"]["Enums"]["request_category"]
+          cohort_id: string | null
           created_at: string
           description: string
           escalated_at: string | null
           funding_purpose: string | null
+          funding_source_id: string | null
           id: string
           is_emergency: boolean | null
+          is_test_record: boolean
+          paid_at: string | null
+          paid_by: string | null
+          participant_confirmed_amount: number | null
+          participant_confirmed_at: string | null
+          payment_method: string | null
+          payment_reference: string | null
           priority: Database["public"]["Enums"]["request_priority"]
           qr_session_id: string | null
+          receipt_override_by: string | null
+          receipt_override_reason: string | null
           requested_amount: number | null
           resolved_at: string | null
+          second_approval_at: string | null
+          second_approval_by: string | null
           status: Database["public"]["Enums"]["request_status"]
           student_id: string
           title: string
           updated_at: string
         }
         Insert: {
+          amount_paid?: number | null
           approval_decided_at?: string | null
           approval_decided_by?: string | null
           approval_status?: string
           approved_amount?: number | null
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_case_manager_id?: string | null
           category: Database["public"]["Enums"]["request_category"]
+          cohort_id?: string | null
           created_at?: string
           description: string
           escalated_at?: string | null
           funding_purpose?: string | null
+          funding_source_id?: string | null
           id?: string
           is_emergency?: boolean | null
+          is_test_record?: boolean
+          paid_at?: string | null
+          paid_by?: string | null
+          participant_confirmed_amount?: number | null
+          participant_confirmed_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
           priority?: Database["public"]["Enums"]["request_priority"]
           qr_session_id?: string | null
+          receipt_override_by?: string | null
+          receipt_override_reason?: string | null
           requested_amount?: number | null
           resolved_at?: string | null
+          second_approval_at?: string | null
+          second_approval_by?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           student_id: string
           title: string
           updated_at?: string
         }
         Update: {
+          amount_paid?: number | null
           approval_decided_at?: string | null
           approval_decided_by?: string | null
           approval_status?: string
           approved_amount?: number | null
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_case_manager_id?: string | null
           category?: Database["public"]["Enums"]["request_category"]
+          cohort_id?: string | null
           created_at?: string
           description?: string
           escalated_at?: string | null
           funding_purpose?: string | null
+          funding_source_id?: string | null
           id?: string
           is_emergency?: boolean | null
+          is_test_record?: boolean
+          paid_at?: string | null
+          paid_by?: string | null
+          participant_confirmed_amount?: number | null
+          participant_confirmed_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
           priority?: Database["public"]["Enums"]["request_priority"]
           qr_session_id?: string | null
+          receipt_override_by?: string | null
+          receipt_override_reason?: string | null
           requested_amount?: number | null
           resolved_at?: string | null
+          second_approval_at?: string | null
+          second_approval_by?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           student_id?: string
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "support_requests_funding_source_fk"
+            columns: ["funding_source_id"]
+            isOneToOne: false
+            referencedRelation: "funding_sources"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suppressed_emails: {
         Row: {

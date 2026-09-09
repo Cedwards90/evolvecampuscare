@@ -594,11 +594,24 @@ export function useAddReply() {
   });
 }
 
-export function useDeleteRequest() {
+/**
+ * Permanent deletion is reserved for the single designated administrator and is
+ * always logged by the database. The reason is written to the record first so the
+ * audit trail keeps it after the row is gone.
+ */
+export function useHardDeleteRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ requestId }: { requestId: string }) => {
+    mutationFn: async ({ requestId, reason, userId }: { requestId: string; reason: string; userId: string }) => {
+      if (!reason.trim()) throw new Error('A reason is required.');
+
+      const { error: reasonError } = await (supabase as any)
+        .from('support_requests')
+        .update({ archive_reason: reason.trim(), archived_at: new Date().toISOString(), archived_by: userId })
+        .eq('id', requestId);
+      if (reasonError) throw reasonError;
+
       // Best-effort: remove attachment files from storage
       const { data: attachments } = await supabase
         .from('request_attachments')
@@ -628,6 +641,7 @@ export function useDeleteRequest() {
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
       queryClient.invalidateQueries({ queryKey: ['requests'] });
       queryClient.invalidateQueries({ queryKey: ['student-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['request-delete-audit'] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });

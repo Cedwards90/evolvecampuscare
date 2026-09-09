@@ -12,11 +12,14 @@ import {
   FileText,
   Pencil,
   Share2,
-  Trash2
+  Archive,
+  ArchiveRestore
 } from 'lucide-react';
 import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
 import { SharePdfDialog } from '@/components/requests/SharePdfDialog';
-import { DeleteRequestDialog } from '@/components/requests/DeleteRequestDialog';
+import { ArchiveRequestDialog } from '@/components/requests/ArchiveRequestDialog';
+import { RequestControlsCard } from '@/components/requests/RequestControlsCard';
+import { useUnarchiveRequest } from '@/hooks/useRequestControls';
 import { formatDistanceToNow, format } from 'date-fns';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { Button } from '@/components/ui/button';
@@ -48,11 +51,13 @@ export default function RequestDetail() {
   const { data: request, isLoading, error } = useRequest(id);
   const [editOpen, setEditOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const unarchive = useUnarchiveRequest();
 
   const isStaff = role === 'case_manager' || role === 'admin';
   const canShare = role === 'case_manager' || role === 'admin' || role === 'org_admin';
-  const canDelete = role === 'admin' || role === 'case_manager' || role === 'org_admin';
+  const canArchive = role === 'admin' || role === 'case_manager' || role === 'org_admin';
+  const isArchived = !!(request as any)?.archived_at;
   const canTakeActions = isStaff && (
     role === 'admin' || 
     request?.assigned_case_manager_id === user?.id
@@ -328,26 +333,51 @@ export default function RequestDetail() {
               </>
             )}
 
-            {/* Danger Zone - staff delete */}
-            {canDelete && (
-              <Card className="border-destructive/40">
+            {/* Approval, payment and receipt confirmation record */}
+            <RequestControlsCard
+              request={request}
+              isStaff={isStaff || role === 'org_admin'}
+              isAdmin={role === 'admin'}
+              isOwner={request.student_id === user?.id}
+            />
+
+            {/* Archive - the record is always kept */}
+            {canArchive && (
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-destructive flex items-center gap-2">
-                    <Trash2 className="h-5 w-5" />
-                    Danger Zone
+                  <CardTitle className="flex items-center gap-2">
+                    <Archive className="h-5 w-5" />
+                    Archive
                   </CardTitle>
                   <CardDescription>
-                    Permanently delete this request and all related history. This cannot be undone.
+                    {isArchived
+                      ? 'This request is archived. It stays in history and reports, and is hidden from active lists.'
+                      : 'Move this request out of the active lists. Nothing is deleted — history, amounts and attachments are kept.'}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <Button
-                    variant="destructive"
-                    onClick={() => setDeleteOpen(true)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete request
-                  </Button>
+                <CardContent className="space-y-3">
+                  {isArchived ? (
+                    <>
+                      {(request as any).archive_reason && (
+                        <p className="text-sm text-muted-foreground break-words">
+                          Reason: {(request as any).archive_reason}
+                        </p>
+                      )}
+                      <Button
+                        variant="outline"
+                        disabled={unarchive.isPending}
+                        onClick={() => user && unarchive.mutate({ requestId: request.id, userId: user.id })}
+                      >
+                        <ArchiveRestore className="h-4 w-4 mr-2" />
+                        Restore from archive
+                      </Button>
+                    </>
+                  ) : (
+                    <Button variant="outline" onClick={() => setArchiveOpen(true)}>
+                      <Archive className="h-4 w-4 mr-2" />
+                      Archive request
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -530,14 +560,14 @@ export default function RequestDetail() {
           requestTitle={request.title}
         />
       )}
-      {canDelete && (
-        <DeleteRequestDialog
-          open={deleteOpen}
-          onOpenChange={setDeleteOpen}
+      {canArchive && (
+        <ArchiveRequestDialog
+          open={archiveOpen}
+          onOpenChange={setArchiveOpen}
           requestId={request.id}
           requestTitle={request.title}
           studentName={request.student?.full_name || undefined}
-          onDeleted={() => navigate('/requests')}
+          onArchived={() => navigate('/requests')}
         />
       )}
     </SidebarLayout>
