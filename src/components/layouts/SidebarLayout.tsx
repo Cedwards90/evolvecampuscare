@@ -63,6 +63,13 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     ? filteredNavGroups.flatMap((g) => g.items)
     : FALLBACK_NAV_ITEMS;
 
+  // The mobile "More" drawer only lists secondary destinations — the ones that
+  // are not already a tab in the bottom bar.
+  const mobileTabHrefs = new Set(mobileTabsForRole(role).map((t) => t.href));
+  const moreDrawerGroups: NavGroup[] = filteredNavGroups
+    .map((group) => ({ ...group, items: group.items.filter((i) => !mobileTabHrefs.has(i.href)) }))
+    .filter((group) => group.items.length > 0);
+
   const filteredBottomNavItems = BOTTOM_NAV_ITEMS.filter((item) => role && item.roles.includes(role));
 
   const getInitials = (name: string | null) => {
