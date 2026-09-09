@@ -148,9 +148,9 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     </div>
   );
 
-  const renderGroups = (onNavigate?: () => void) => (
+  const renderGroups = (onNavigate?: () => void, groups: NavGroup[] = filteredNavGroups) => (
     <div className="space-y-3">
-      {filteredNavGroups.map((group) => {
+      {groups.map((group) => {
         if (group.items.length === 1) {
           return (
             <ul key={group.id} className="space-y-1">
