@@ -197,8 +197,16 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
                   text={update.note}
                   clampLines={6}
                   showCopy
-                  className="text-sm text-foreground"
+                  className={cn(
+                    'text-sm text-foreground',
+                    (update as any).retracted_at && 'line-through opacity-60',
+                  )}
                 />
+              )}
+              {(update as any).retracted_at && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Retracted {formatDistanceToNow(new Date((update as any).retracted_at), { addSuffix: true })}
+                </p>
               )}
             </div>
           </div>
@@ -208,18 +216,16 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
       <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete activity entry?</AlertDialogTitle>
+            <AlertDialogTitle>Retract this entry?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes this entry from the activity timeline. This action cannot be undone. The request status itself will not change.
+              The entry stays on the timeline, struck through and marked as retracted by you, so the record remains
+              complete. Nothing is deleted and the request status will not change.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => pendingDelete && handleDelete(pendingDelete)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
+            <AlertDialogAction onClick={() => pendingDelete && handleDelete(pendingDelete)}>
+              Retract entry
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
