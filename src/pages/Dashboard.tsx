@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useIntakeSurvey } from '@/hooks/useIntakeSurvey';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLatestCheckIn } from '@/hooks/useStudentCheckIns';
