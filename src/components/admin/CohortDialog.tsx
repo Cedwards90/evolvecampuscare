@@ -5,21 +5,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCreateCohort, useUpdateCohort, type Cohort } from '@/hooks/useCohorts';
+import { useActiveOrganizations } from '@/hooks/useTrainingOrganizations';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  organizationId: string;
+  /** Fixed organization. Leave undefined to let the user pick one in the form. */
+  organizationId?: string;
   cohort?: Cohort | null;
+  /** Limits the organization picker, e.g. to the organizations an org admin runs. */
+  allowedOrganizationIds?: string[];
 }
 
-export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Props) {
+export function CohortDialog({ open, onOpenChange, organizationId, cohort, allowedOrganizationIds }: Props) {
   const { toast } = useToast();
   const create = useCreateCohort();
   const update = useUpdateCohort();
+  const { data: organizations } = useActiveOrganizations();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -27,6 +33,8 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort }: Pro
   const [endDate, setEndDate] = useState('');
   const [graduated, setGraduated] = useState(false);
   const [graduatedAt, setGraduatedAt] = useState('');
+  const [orgId, setOrgId] = useState('');
+
 
   useEffect(() => {
     if (open) {
