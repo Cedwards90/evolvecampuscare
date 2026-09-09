@@ -33,6 +33,7 @@ import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
 import RequestAnalytics from "./pages/admin/RequestAnalytics";
 import DataExport from "./pages/admin/DataExport";
 import InternalControls from "./pages/admin/InternalControls";
+import ClassesPage from "./pages/admin/ClassesPage";
 import CaseManagersPage from "./pages/admin/CaseManagersPage";
 import TrainingOrganizations from "./pages/admin/TrainingOrganizations";
 import OrganizationDetail from "./pages/admin/OrganizationDetail";

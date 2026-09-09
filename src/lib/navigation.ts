@@ -17,6 +17,7 @@ import {
   ClipboardList,
   UserCog,
   FileBarChart,
+  GraduationCap,
   QrCode,
   Sparkles,
   ClipboardCheck,
