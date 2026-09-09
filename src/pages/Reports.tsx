@@ -224,6 +224,20 @@ export default function Reports() {
               </CardContent>
             </Card>
 
+            <div className="rounded-lg border border-border/60 bg-muted/40 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                This report covers
+              </p>
+              <ul className="mt-1 space-y-0.5 text-sm">
+                {scopeLines.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+              <p className="mt-1 text-xs text-muted-foreground">
+                The numbers below and every download use exactly this scope.
+              </p>
+            </div>
+
             <ReportPreview
               data={filteredData}
               isLoading={isLoading && !!selectedCmId}
