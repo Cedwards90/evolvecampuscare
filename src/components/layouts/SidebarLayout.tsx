@@ -30,6 +30,7 @@ import {
   FALLBACK_NAV_ITEMS,
   labelForPath,
   navGroupsForRole,
+  mobileTabsForRole,
   type NavGroup,
   type NavItem,
 } from '@/lib/navigation';
