@@ -368,21 +368,32 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
                 <CardDescription>Select the category that best describes your request</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <RadioGroup
+                  value={watchCategory}
+                  onValueChange={(v) => form.setValue('category', v as RequestCategory)}
+                  aria-label="Type of support you need"
+                  className="grid gap-4 sm:grid-cols-2"
+                >
                   {categories.map((cat) => (
-                    <div
+                    <Label
                       key={cat.value}
-                      onClick={() => form.setValue('category', cat.value)}
+                      htmlFor={`category-${cat.value}`}
                       className={cn(
-                        'flex cursor-pointer items-start gap-4 rounded-lg border p-4 transition-colors hover:border-primary/50',
-                        watchCategory === cat.value && 'border-primary bg-primary/5'
+                        'flex cursor-pointer items-start gap-4 rounded-lg border p-4 font-normal transition-colors hover:border-primary/50',
+                        'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
+                        watchCategory === cat.value && 'border-primary bg-primary/5 ring-1 ring-primary'
                       )}
                     >
+                      <RadioGroupItem
+                        id={`category-${cat.value}`}
+                        value={cat.value}
+                        className="mt-1 shrink-0"
+                      />
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                         <cat.icon className="h-5 w-5 text-primary" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-semibold">{cat.label}</h3>
+                        <span className="block font-semibold">{cat.label}</span>
                         <p className="text-sm text-muted-foreground">{cat.description}</p>
                         <ul className="mt-2 space-y-0.5">
                           {cat.examples.map((ex, i) => (
@@ -390,9 +401,9 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
                           ))}
                         </ul>
                       </div>
-                    </div>
+                    </Label>
                   ))}
-                </div>
+                </RadioGroup>
                 <p className="mt-4 text-sm text-muted-foreground text-center">
                   <HelpCircle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
                   Not sure which category fits? Choose <strong>"Other"</strong> and we'll route it to the right team.
