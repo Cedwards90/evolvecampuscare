@@ -214,12 +214,12 @@ export function mobileTabsForRole(role: AppRole | null): TabItem[] {
       return [
         { label: 'Home', href: ROUTES.dashboard, icon: LayoutDashboard },
         { label: 'Get help', href: ROUTES.requestNew, icon: FileText },
-        { label: 'Surveys', href: '/surveys', icon: ClipboardList },
+        { label: 'My requests', href: ROUTES.requestsMine, icon: Clock },
         { label: 'Messages', href: ROUTES.messages, icon: MessageSquare },
       ];
     case 'case_manager':
       return [
-        { label: 'Home', href: ROUTES.dashboard, icon: LayoutDashboard },
+        { label: 'Today', href: ROUTES.dashboard, icon: LayoutDashboard },
         { label: 'Queue', href: ROUTES.requestsQueue, icon: Users },
         { label: 'Students', href: ROUTES.students, icon: FolderOpen },
         { label: 'Reports', href: ROUTES.reports, icon: FileBarChart },
@@ -227,7 +227,7 @@ export function mobileTabsForRole(role: AppRole | null): TabItem[] {
     case 'admin':
     case 'org_admin':
       return [
-        { label: 'Home', href: ROUTES.dashboard, icon: LayoutDashboard },
+        { label: 'Overview', href: ROUTES.dashboard, icon: LayoutDashboard },
         { label: 'Requests', href: ROUTES.requests, icon: FileText },
         { label: 'Students', href: ROUTES.students, icon: FolderOpen },
         { label: 'Reports', href: ROUTES.reports, icon: FileBarChart },
@@ -237,7 +237,6 @@ export function mobileTabsForRole(role: AppRole | null): TabItem[] {
         { label: 'Home', href: ROUTES.dashboard, icon: LayoutDashboard },
         { label: 'Help', href: ROUTES.support, icon: HelpCircle },
         { label: 'Settings', href: ROUTES.settings, icon: Settings },
-        { label: 'Language', href: ROUTES.settings, icon: Globe },
       ];
   }
 }
