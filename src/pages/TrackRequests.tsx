@@ -138,15 +138,23 @@ export default function TrackRequests() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <PageHeader
-            title="Track Your Requests"
-            description="View the status of your support requests and schedule meetings"
+            title="My Requests"
+            description="Track your support requests, open saved drafts, and schedule meetings"
           />
-          <Button asChild>
-            <Link to="/requests/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Request
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to="/requests/drafts">
+                <WifiOff className="mr-2 h-4 w-4" />
+                Saved drafts
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/requests/new">
+                <Plus className="mr-2 h-4 w-4" />
+                New Request
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* Upcoming Appointments */}
