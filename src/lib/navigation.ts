@@ -3,6 +3,7 @@ import {
   FileText,
   Clock,
   Download,
+  ShieldCheck,
   WifiOff,
   Users,
   BarChart3,
