@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useOrgStudents, useBulkAssignCohort, type Cohort } from '@/hooks/useCohorts';
+import { useAssignableStudents, useBulkAssignCohort, type Cohort } from '@/hooks/useCohorts';
 import {
   useCohortCaseManagers,
   useAvailableCaseManagers,
@@ -24,7 +24,7 @@ interface Props {
 }
 
 export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
-  const { data: students, isLoading } = useOrgStudents(cohort?.organization_id);
+  const { data: students, isLoading } = useAssignableStudents(cohort?.organization_id);
   const bulk = useBulkAssignCohort();
   const { toast } = useToast();
 
@@ -32,6 +32,7 @@ export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
   const [selectedAvailable, setSelectedAvailable] = useState<Set<string>>(new Set());
   const [selectedInCohort, setSelectedInCohort] = useState<Set<string>>(new Set());
   const [pendingCM, setPendingCM] = useState<string>('');
+  const [onlyNoClass, setOnlyNoClass] = useState(false);
 
   // CM hooks
   const { data: cohortCMs, isLoading: cmLoading } = useCohortCaseManagers(cohort?.id);

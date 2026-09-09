@@ -200,7 +200,7 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort, allow
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {isEdit ? 'Save changes' : 'Create cohort'}
+            {isEdit ? 'Save changes' : 'Create class'}
           </Button>
         </DialogFooter>
       </DialogContent>
