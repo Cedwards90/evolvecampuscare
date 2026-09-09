@@ -549,11 +549,11 @@ export default function Dashboard() {
                       <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                         <Plus className="h-6 w-6 text-primary" />
                       </div>
-                      <div>
-                        <h3 className="font-display font-semibold">Submit New Request</h3>
-                        <p className="text-sm text-muted-foreground">Get help with any issue</p>
+                      <div className="min-w-0">
+                        <h3 className="font-display font-semibold">Get help</h3>
+                        <p className="text-sm text-muted-foreground">Submit a new support request</p>
                       </div>
-                      <ArrowRight className="ml-auto h-5 w-5 text-muted-foreground" />
+                      <ArrowRight className="ml-auto h-5 w-5 flex-shrink-0 text-muted-foreground" />
                     </CardContent>
                   </Link>
                 </Card>
@@ -564,29 +564,30 @@ export default function Dashboard() {
                       <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                         <Clock className="h-6 w-6 text-primary" />
                       </div>
-                      <div>
-                        <h3 className="font-display font-semibold">Track Requests</h3>
-                        <p className="text-sm text-muted-foreground">View status & schedule</p>
+                      <div className="min-w-0">
+                        <h3 className="font-display font-semibold">Track my request</h3>
+                        <p className="text-sm text-muted-foreground">Status, drafts, and meetings</p>
                       </div>
-                      <ArrowRight className="ml-auto h-5 w-5 text-muted-foreground" />
+                      <ArrowRight className="ml-auto h-5 w-5 flex-shrink-0 text-muted-foreground" />
                     </CardContent>
                   </Link>
                 </Card>
 
                 <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer">
-                  <Link to="/requests/drafts">
+                  <Link to="/messages">
                     <CardContent className="flex items-center gap-4 p-6">
                       <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                        <FileText className="h-6 w-6 text-primary" />
+                        <MessageSquare className="h-6 w-6 text-primary" />
                       </div>
-                      <div>
-                        <h3 className="font-display font-semibold">Offline Drafts</h3>
-                        <p className="text-sm text-muted-foreground">Save requests offline</p>
+                      <div className="min-w-0">
+                        <h3 className="font-display font-semibold">Message my case manager</h3>
+                        <p className="text-sm text-muted-foreground">Ask a question any time</p>
                       </div>
-                      <ArrowRight className="ml-auto h-5 w-5 text-muted-foreground" />
+                      <ArrowRight className="ml-auto h-5 w-5 flex-shrink-0 text-muted-foreground" />
                     </CardContent>
                   </Link>
                 </Card>
+
               </div>
             </section>
 
