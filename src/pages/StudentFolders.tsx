@@ -214,7 +214,9 @@ export default function StudentFolders() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </Card>
+          </>
         )}
       </div>
     </SidebarLayout>
