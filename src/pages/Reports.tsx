@@ -80,35 +80,37 @@ export default function Reports() {
 
 
   const { filters } = useGlobalFilters();
-  const filteredData = useMemo(() => {
-    if (!data) return data;
-    const { organizationId: orgs, cohort, yearOfStudy, assignedCaseManagerId } = filters;
-    if (!orgs.length && !cohort.length && !yearOfStudy.length && !assignedCaseManagerId.length) return data;
-    const matches = (r: any) => {
-      const s = r.student;
-      if (orgs.length && (!s?.organization_id || !orgs.includes(s.organization_id))) return false;
-      if (cohort.length && (!s?.cohort_id || !cohort.includes(s.cohort_id))) return false;
-      if (yearOfStudy.length && (!s?.year_of_study || !yearOfStudy.includes(s.year_of_study))) return false;
-      if (assignedCaseManagerId.length && (!r.assigned_case_manager_id || !assignedCaseManagerId.includes(r.assigned_case_manager_id))) return false;
-      return true;
-    };
-    return {
-      ...data,
-      unresolved: data.unresolved.filter(matches),
-    };
-  }, [data, filters]);
+  const { data: filterOptions } = useFilterOptions();
+
+  const filteredData = useMemo(() => applyReportScope(data, filters), [data, filters]);
+
+  const scopeLines = useMemo(
+    () =>
+      describeReportScope({
+        from,
+        to,
+        filters,
+        labelFor: (key, value) => {
+          if (key === 'organizationId') return filterOptions?.organizations.find((o) => o.value === value)?.label || value;
+          if (key === 'cohort') return filterOptions?.cohorts.find((o) => o.value === value)?.label || value;
+          if (key === 'assignedCaseManagerId') return filterOptions?.caseManagers.find((o) => o.value === value)?.label || value;
+          return value;
+        },
+      }),
+    [from, to, filters, filterOptions],
+  );
 
   const [exporting, setExporting] = useState<null | 'pdf' | 'csv'>(null);
 
   const handleExportPdf = async () => {
-    if (!data) return;
+    if (!filteredData) return;
     setExporting('pdf');
     try {
-      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data, caseNotesForExport));
+      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(filteredData, caseNotesForExport));
       if (!ai) {
         toast({ title: 'AI summary unavailable', description: 'Exporting PDF without the AI summary.' });
       }
-      exportReportPdf(data, ai);
+      exportReportPdf(filteredData, ai, scopeLines);
     } catch (e) {
       toast({ title: 'PDF export failed', description: (e as Error).message, variant: 'destructive' });
     } finally {
@@ -117,14 +119,14 @@ export default function Reports() {
   };
 
   const handleExportCsv = async () => {
-    if (!data) return;
+    if (!filteredData) return;
     setExporting('csv');
     try {
-      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(data, caseNotesForExport));
+      const ai = await tryFetchAiSummary(buildCaseloadAiPayload(filteredData, caseNotesForExport));
       if (!ai) {
         toast({ title: 'AI summary unavailable', description: 'Exporting CSV without the AI summary.' });
       }
-      exportReportCsv(data, ai);
+      exportReportCsv(filteredData, ai, scopeLines);
     } catch (e) {
       toast({ title: 'CSV export failed', description: (e as Error).message, variant: 'destructive' });
     } finally {
@@ -132,7 +134,7 @@ export default function Reports() {
     }
   };
 
-  const exportsDisabled = !data || isLoading || exporting !== null;
+  const exportsDisabled = !filteredData || isLoading || exporting !== null;
 
   return (
     <SidebarLayout>
