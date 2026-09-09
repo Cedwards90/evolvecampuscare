@@ -39,6 +39,52 @@ export function useAllCohorts() {
   });
 }
 
+export interface CohortWithDetails extends Cohort {
+  organization_name: string | null;
+  student_count: number;
+  case_manager_count: number;
+}
+
+/**
+ * Every cohort the current user may see, across organizations, with the
+ * organization name plus student and case-manager counts for the index page.
+ */
+export function useAllCohortsDetailed() {
+  return useQuery({
+    queryKey: ['cohorts', 'all-detailed'],
+    queryFn: async (): Promise<CohortWithDetails[]> => {
+      const { data: cohorts, error } = await supabase.from('cohorts').select('*').order('name');
+      if (error) throw error;
+      const list = (cohorts || []) as Cohort[];
+      if (list.length === 0) return [];
+
+      const ids = list.map((c) => c.id);
+      const [orgsRes, profilesRes, cmRes] = await Promise.all([
+        supabase.from('training_organizations').select('id, name'),
+        supabase.from('profiles').select('cohort_id').in('cohort_id', ids),
+        supabase.from('cohort_case_managers').select('cohort_id').in('cohort_id', ids),
+      ]);
+
+      const orgNames = new Map((orgsRes.data || []).map((o: any) => [o.id, o.name as string]));
+      const studentCounts = new Map<string, number>();
+      (profilesRes.data || []).forEach((p: any) => {
+        if (p.cohort_id) studentCounts.set(p.cohort_id, (studentCounts.get(p.cohort_id) || 0) + 1);
+      });
+      const cmCounts = new Map<string, number>();
+      (cmRes.data || []).forEach((c: any) => {
+        cmCounts.set(c.cohort_id, (cmCounts.get(c.cohort_id) || 0) + 1);
+      });
+
+      return list.map((c) => ({
+        ...c,
+        organization_name: orgNames.get(c.organization_id) ?? null,
+        student_count: studentCounts.get(c.id) || 0,
+        case_manager_count: cmCounts.get(c.id) || 0,
+      }));
+    },
+  });
+}
+
 /** Cohorts for a single organization, with student counts. */
 export function useOrgCohorts(organizationId: string | null | undefined) {
   return useQuery({
