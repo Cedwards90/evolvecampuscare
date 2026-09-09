@@ -14,7 +14,8 @@ import {
   UserPlus,
   PlayCircle,
   CalendarCheck,
-  CheckCircle2
+  CheckCircle2,
+  WifiOff
 } from 'lucide-react';
 import { SidebarLayout } from '@/components/layouts/SidebarLayout';
 import { PageHeader } from '@/components/PageHeader';
