@@ -69,6 +69,13 @@ const requestSchema = z.object({
     if (val.requestedAmount === undefined || val.requestedAmount === null || Number.isNaN(val.requestedAmount) || val.requestedAmount <= 0) {
       ctx.addIssue({ code: 'custom', path: ['requestedAmount'], message: 'Enter the amount you are requesting' });
     }
+    if (!val.fundingPurpose || val.fundingPurpose.trim().length < 10) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['fundingPurpose'],
+        message: 'Explain what the money will be used for (at least 10 characters)',
+      });
+    }
   }
 });
 
@@ -486,7 +493,7 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="fundingPurpose">Purpose of funds (optional)</Label>
+                      <Label htmlFor="fundingPurpose">Purpose of funds *</Label>
                       <Textarea
                         id="fundingPurpose"
                         rows={3}
@@ -494,8 +501,11 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
                         placeholder="e.g., Textbooks for spring semester, past-due utility bill, transportation to interview…"
                         {...form.register('fundingPurpose')}
                       />
+                      {form.formState.errors.fundingPurpose && (
+                        <p className="text-sm text-destructive">{form.formState.errors.fundingPurpose.message}</p>
+                      )}
                       <p className="text-xs text-muted-foreground">
-                        Briefly explain what the funds will be used for. Helps reviewers approve faster.
+                        Explain what the funds will be used for. This is required for money requests.
                       </p>
                     </div>
                   </div>
