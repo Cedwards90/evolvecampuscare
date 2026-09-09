@@ -168,6 +168,7 @@ export const NAV_GROUPS: NavGroup[] = [
     id: 'administration',
     label: 'Administration',
     items: [
+      { label: 'Classes', href: '/admin/classes', icon: GraduationCap, roles: ['admin', 'org_admin'] },
       { label: 'QR codes', href: '/admin/qr-codes', icon: QrCode, roles: ['admin', 'org_admin'] },
       { label: 'Manage resources', href: '/admin/resources', icon: Heart, roles: STAFF },
       { label: 'NDA', href: '/admin/nda', icon: FileText, roles: ['admin'] },

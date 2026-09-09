@@ -249,6 +249,11 @@ function App() {
                 <InternalControls />
               </ProtectedRoute>
             } />
+            <Route path="/admin/classes" element={
+              <ProtectedRoute allowedRoles={['admin', 'org_admin']}>
+                <ClassesPage />
+              </ProtectedRoute>
+            } />
             <Route path="/admin/users" element={
                     <ProtectedRoute allowedRoles={['admin']}>
                       <UserManagementPage />
