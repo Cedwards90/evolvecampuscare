@@ -119,9 +119,9 @@ export default function StudentFolders() {
             ))}
           </div>
 
-          <div className="hidden sm:block">
+          <Card className="hidden sm:block border border-border/50 overflow-hidden">
+            <div className="overflow-x-auto">
 
-          <Card className="border border-border/50">
             <Table>
               <TableHeader>
                 <TableRow>
