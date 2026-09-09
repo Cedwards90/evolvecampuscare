@@ -281,7 +281,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                   ))}
                 </ul>
               ) : (
-                renderGroups(() => setMobileMenuOpen(false))
+                renderGroups(() => setMobileMenuOpen(false), moreDrawerGroups)
               )}
             </>
           )}
