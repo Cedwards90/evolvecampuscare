@@ -282,6 +282,16 @@ export function exportReportPdf(r: InteractionReport, ai?: AISummaryResult | nul
     40,
     y,
   );
+  if (scope?.length) {
+    doc.setFontSize(9);
+    doc.setTextColor(90, 90, 90);
+    scope.forEach((line) => {
+      y += 12;
+      doc.text(line, 40, y);
+    });
+    doc.setFontSize(10);
+    doc.setTextColor(40, 40, 40);
+  }
   y += 10;
 
 
