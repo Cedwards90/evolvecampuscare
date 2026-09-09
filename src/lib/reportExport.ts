@@ -45,7 +45,7 @@ function toCsvSection(title: string, headers: string[], rows: unknown[][]): stri
   return lines.join('\n');
 }
 
-export function exportReportCsv(r: InteractionReport, ai?: AISummaryResult | null) {
+export function exportReportCsv(r: InteractionReport, ai?: AISummaryResult | null, scope?: string[]) {
   const sections: string[] = [];
   sections.push(
     toCsvSection(
@@ -62,6 +62,11 @@ export function exportReportCsv(r: InteractionReport, ai?: AISummaryResult | nul
       ]],
     ),
   );
+
+  if (scope?.length) {
+    sections.push(toCsvSection('Applied Scope', ['Filter'], scope.map((s) => [s])));
+  }
+
 
 
   sections.push(
