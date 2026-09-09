@@ -45,7 +45,8 @@ import { useMyStudents } from '@/hooks/useMyStudents';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 import { applyToRequests } from '@/lib/applyGlobalFilters';
-import type { RequestStatus, RequestPriority } from '@/types/database';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { RequestStatus, RequestPriority, RequestCategory } from '@/types/database';
 
 type QueueView = 'active' | 'resolved' | 'all';
 
