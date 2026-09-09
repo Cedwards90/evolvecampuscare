@@ -21,11 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useStudentFolders } from '@/hooks/useStudentFolders';
-import { useAllCohorts } from '@/hooks/useCohorts';
-import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
-import { useAuth } from '@/contexts/AuthContext';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
