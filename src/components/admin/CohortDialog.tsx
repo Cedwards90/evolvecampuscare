@@ -87,7 +87,7 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort, allow
         toast({ title: 'Cohort updated' });
       } else {
         await create.mutateAsync({
-          organization_id: organizationId,
+          organization_id: orgId,
           name: trimmed,
           description,
           start_date: startDate || null,
@@ -110,12 +110,29 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort, allow
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit cohort' : 'New cohort'}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit class' : 'New class'}</DialogTitle>
           <DialogDescription>
-            Group students within this organization into a class or cohort.
+            Group students into a class or cohort. You can add students right after saving.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {showOrgPicker && (
+            <div className="space-y-2">
+              <Label htmlFor="cohort-org">Organization</Label>
+              <Select value={orgId} onValueChange={setOrgId}>
+                <SelectTrigger id="cohort-org">
+                  <SelectValue placeholder="Choose an organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {orgOptions.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="cohort-name">Name</Label>
             <Input
