@@ -46,21 +46,25 @@ export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
       setSelectedAvailable(new Set());
       setSelectedInCohort(new Set());
       setPendingCM('');
+      setOnlyNoClass(false);
     }
   }, [open, cohort?.id]);
 
-  const { available, inCohort } = useMemo(() => {
+  const { available, inCohort, noClassCount, orphanSelected } = useMemo(() => {
     const list = students || [];
     const q = search.trim().toLowerCase();
     const match = (s: typeof list[number]) =>
       !q ||
       (s.full_name || '').toLowerCase().includes(q) ||
       (s.email || '').toLowerCase().includes(q);
+    const others = list.filter((s) => s.cohort_id !== cohort?.id);
     return {
-      available: list.filter((s) => s.cohort_id !== cohort?.id && match(s)),
+      available: others.filter((s) => match(s) && (!onlyNoClass || !s.cohort_id)),
       inCohort: list.filter((s) => s.cohort_id === cohort?.id && match(s)),
+      noClassCount: others.filter((s) => !s.cohort_id).length,
+      orphanSelected: others.filter((s) => s.needs_organization && selectedAvailable.has(s.user_id)).length,
     };
-  }, [students, search, cohort?.id]);
+  }, [students, search, cohort?.id, onlyNoClass, selectedAvailable]);
 
   const cmIdsInCohort = useMemo(
     () => new Set((cohortCMs || []).map((c) => c.case_manager_id)),
@@ -81,7 +85,11 @@ export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
   const handleAdd = async () => {
     if (!cohort) return;
     try {
-      await bulk.mutateAsync({ studentIds: Array.from(selectedAvailable), cohortId: cohort.id });
+      await bulk.mutateAsync({
+        studentIds: Array.from(selectedAvailable),
+        cohortId: cohort.id,
+        organizationId: cohort.organization_id,
+      });
       toast({ title: `Added ${selectedAvailable.size} student(s)` });
       setSelectedAvailable(new Set());
     } catch (e: any) {
