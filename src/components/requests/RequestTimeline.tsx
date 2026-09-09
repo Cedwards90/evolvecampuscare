@@ -8,7 +8,7 @@ import {
   Clock,
   Lock,
   ArrowRight,
-  Trash2,
+  Undo2,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -161,6 +161,9 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
                 <span className="text-xs text-muted-foreground ml-auto">
                   {formatDistanceToNow(new Date(update.created_at), { addSuffix: true })}
                 </span>
+                {(update as any).retracted_at && (
+                  <Badge variant="outline" className="text-xs">Retracted</Badge>
+                )}
                 {canDelete(update) && (
                   <Button
                     type="button"
@@ -169,12 +172,13 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
                     onClick={() => setPendingDelete(update.id)}
                     disabled={deletingId === update.id}
-                    aria-label="Delete activity entry"
+                    aria-label="Retract activity entry"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Undo2 className="h-3.5 w-3.5" />
                   </Button>
                 )}
               </div>
+
 
               {isStatusChange && update.previous_status && update.new_status && (
                 <div className="flex items-center gap-2 mb-2 text-sm">
