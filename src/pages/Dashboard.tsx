@@ -63,6 +63,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { startTour, hasCompletedTour, getLoginCount } = useProductTour();
   const showOnboardingTip = !hasCompletedTour() && getLoginCount() <= 3;
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   
   // Fetch real data from Supabase
   const { data: allRequests = [], isLoading: requestsLoading } = useRequests({});
