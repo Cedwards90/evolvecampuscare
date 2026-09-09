@@ -42,11 +42,11 @@ import { useFormPersistence } from '@/hooks/useFormPersistence';
 import { DraftIndicator } from '@/components/forms/DraftIndicator';
 
 const categories: { value: RequestCategory; label: string; icon: React.ComponentType<{ className?: string }>; description: string; examples: string[] }[] = [
-  { value: 'academic', label: 'Academic', icon: GraduationCap, description: 'Course registration, grades, academic advising', examples: ['Trouble enrolling in a required class', 'Appealing a grade or academic probation', 'Need to change your major or advisor'] },
-  { value: 'financial', label: 'Financial', icon: DollarSign, description: 'Financial aid, scholarships, tuition', examples: ['Unexpected bill you can\'t cover', 'Scholarship or grant application help', 'Emergency funds for books or supplies'] },
-  { value: 'mental_health', label: 'Mental Health', icon: Heart, description: 'Counseling, wellness, support services', examples: ['Feeling overwhelmed or anxious', 'Looking for a counselor referral', 'Need someone to talk to about stress'] },
-  { value: 'housing', label: 'Housing', icon: Home, description: 'Dorms, housing assignments, maintenance', examples: ['Roommate conflict or safety concern', 'Facing eviction or housing insecurity', 'Maintenance issue in your dorm'] },
-  { value: 'other', label: 'Other', icon: HelpCircle, description: 'General inquiries or anything that doesn\'t fit above', examples: ['Parking or transportation issues', 'Questions about campus services', 'Not sure where to start — we\'ll route it for you'] },
+  { value: 'academic', label: 'Training & Program', icon: GraduationCap, description: 'Training attendance, class schedule, certifications, career readiness', examples: ['Trouble getting to training on time', 'Need to make up missed training hours', 'Help with a certification or exam'] },
+  { value: 'financial', label: 'Financial Assistance', icon: DollarSign, description: 'Transportation, work gear, childcare, tools, and other costs', examples: ['Bus pass, gas, or car repair to get to work', 'Work boots, uniform, or tools for a new job', 'Childcare so you can attend training or work'] },
+  { value: 'mental_health', label: 'Wellbeing', icon: Heart, description: 'Counseling, stress, and personal support', examples: ['Feeling overwhelmed or anxious', 'Looking for a counselor referral', 'Need someone to talk to about stress'] },
+  { value: 'housing', label: 'Housing Stability', icon: Home, description: 'Staying housed and safe', examples: ['Behind on rent or facing eviction', 'Need emergency or temporary shelter', 'Unsafe or unstable living situation'] },
+  { value: 'other', label: 'Other', icon: HelpCircle, description: 'Employment support or anything that doesn\'t fit above', examples: ['Help with a job search, resume, or interview', 'Documents like an ID, license, or birth certificate', 'Not sure where to start — we\'ll route it for you'] },
 ];
 
 const priorities: { value: RequestPriority; label: string; description: string }[] = [
