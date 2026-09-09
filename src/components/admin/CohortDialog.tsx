@@ -62,6 +62,10 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort, allow
       toast({ title: 'Name required', variant: 'destructive' });
       return;
     }
+    if (!cohort && !orgId) {
+      toast({ title: 'Choose an organization', variant: 'destructive' });
+      return;
+    }
     if (graduated && !graduatedAt) {
       toast({
         title: 'Graduation date required',
