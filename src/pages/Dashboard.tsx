@@ -426,121 +426,56 @@ export default function Dashboard() {
           }
         />
 
-        {/* 3. Overview and analytics */}
-        {role !== 'student' && <GlobalFilterBar />}
+        {/* 3. Analytics — staff only, collapsed so urgent work stays above the fold */}
+        {role !== 'student' && (
+          <Collapsible open={analyticsOpen} onOpenChange={setAnalyticsOpen} className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-display text-lg font-semibold">Analytics</h2>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm">
+                  {analyticsOpen ? 'Hide analytics' : 'Show analytics'}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+            <CollapsibleContent className="space-y-6">
+              <GlobalFilterBar />
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="font-display text-lg font-semibold">Overview</h2>
-          <p className="text-xs text-muted-foreground">{format(new Date(), 'yyyy')}</p>
-        </div>
+              <div className="grid gap-6 lg:grid-cols-3">
+                <div className="lg:col-span-2 space-y-6">
+                  <AreaChartCard
+                    title="Request Activity"
+                    description="Requests created over time"
+                    summary={`${stats.totalRequests} requests in this view, ${stats.pendingRequests} still open.`}
+                    href="/requests"
+                    linkLabel="View requests"
+                    data={chartData}
+                    className="border border-border/50 shadow-sm"
+                  />
 
-        {/* Stats Grid - Fraction Style */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <KpiCard
-            label="Total Requests"
-            value={stats.totalRequests}
-            icon={DollarSign}
-            helper="All requests in your current view"
-            action={{ label: 'View requests', href: '/requests' }}
-          />
+                  <StatsSummaryBar
+                    items={[
+                      { label: 'Submitted', value: stats.pendingRequests, color: 'blue', href: '/requests?status=submitted' },
+                      { label: 'Escalated', value: stats.escalatedRequests, color: 'orange', href: '/requests?status=escalated' },
+                      { label: 'Emergency', value: stats.emergencyRequests, color: 'red', href: '/requests?is_emergency=true' },
+                      { label: 'Resolved', value: stats.resolvedRequests, color: 'green', href: '/requests?status=resolved' },
+                    ]}
+                  />
+                </div>
 
-          <FractionStatsCard
-            title="In Progress"
-            current={stats.pendingRequests}
-            total={stats.totalRequests || 1}
-            icon={Target}
-            color="green"
-            href="/requests?status=in_progress"
-          />
-          <FractionStatsCard
-            title="Resolved"
-            current={stats.resolvedRequests}
-            total={stats.totalRequests || 1}
-            icon={CheckCircle}
-            color="green"
-            href="/requests?status=resolved"
-          />
-          <PercentageStatsCard
-            title="Resolution Rate"
-            percentage={stats.totalRequests > 0 ? (stats.resolvedRequests / stats.totalRequests) * 100 : 0}
-            subtitle={`${stats.resolvedRequests} of ${stats.totalRequests} requests resolved`}
-            icon={TrendingUp}
-            progressColor="gradient"
-          />
-        </div>
+                <SummaryCard
+                  title="Request Summary"
+                  totalValue={stats.resolvedRequests}
+                  totalLabel="Total Resolved"
+                  items={summaryItems}
+                  headerHref="/requests?status=resolved"
+                  footerHref="/requests"
+                  footerLabel="View all requests"
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
-
-        {/* Main Content Grid */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Area Chart - Takes 2 columns */}
-          <div className="lg:col-span-2 space-y-6">
-            <AreaChartCard
-              title="Request Activity"
-              description="Requests created over time"
-              summary={`${stats.totalRequests} requests in this view, ${stats.pendingRequests} still open.`}
-              href="/requests"
-              linkLabel="View requests"
-              data={chartData}
-              className="border border-border/50 shadow-sm"
-            />
-
-            {/* Summary Bar */}
-            <StatsSummaryBar
-              items={[
-                { label: 'Pending', value: stats.pendingRequests, color: 'blue', href: '/requests?status=submitted' },
-                { label: 'Resolved', value: stats.resolvedRequests, color: 'green', href: '/requests?status=resolved' },
-                { label: 'Escalated', value: stats.escalatedRequests, color: 'orange', href: '/requests?status=escalated' },
-                { label: 'Emergency', value: stats.emergencyRequests, color: 'red', href: '/requests?is_emergency=true' },
-              ]}
-            />
-          </div>
-
-          {/* Summary Card - Takes 1 column */}
-          <SummaryCard
-            title="Request Summary"
-            totalValue={stats.resolvedRequests}
-            totalLabel="Total Resolved"
-            items={summaryItems}
-            headerHref="/requests?status=resolved"
-            footerHref="/requests"
-            footerLabel="View all requests"
-          />
-
-        </div>
-
-        {/* Sparkline Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <SparklineCard
-            title="Tasks Completed"
-            subtitle={`${stats.resolvedRequests}/${stats.totalRequests || 1} completed`}
-            current={stats.resolvedRequests}
-            total={stats.totalRequests || 1}
-            data={sparklineData}
-            trend={{ value: 28, isPositive: true }}
-            icon={Star}
-            color="blue"
-          />
-          <SparklineCard
-            title="New Requests"
-            subtitle={`${stats.pendingRequests} pending`}
-            current={stats.pendingRequests}
-            total={stats.totalRequests || 1}
-            data={sparklineData}
-            trend={{ value: 34, isPositive: true }}
-            icon={FileText}
-            color="green"
-          />
-          <SparklineCard
-            title="Cases Closed"
-            subtitle={`${stats.resolvedRequests} resolved`}
-            current={stats.resolvedRequests}
-            total={stats.totalRequests || 1}
-            data={sparklineData}
-            trend={{ value: 42, isPositive: true }}
-            icon={CheckCircle}
-            color="red"
-          />
-        </div>
 
         {/* Role-specific content */}
         {role === 'student' && (
