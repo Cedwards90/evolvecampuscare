@@ -45,7 +45,7 @@ function toCsvSection(title: string, headers: string[], rows: unknown[][]): stri
   return lines.join('\n');
 }
 
-export function exportReportCsv(r: InteractionReport, ai?: AISummaryResult | null) {
+export function exportReportCsv(r: InteractionReport, ai?: AISummaryResult | null, scope?: string[]) {
   const sections: string[] = [];
   sections.push(
     toCsvSection(
@@ -62,6 +62,11 @@ export function exportReportCsv(r: InteractionReport, ai?: AISummaryResult | nul
       ]],
     ),
   );
+
+  if (scope?.length) {
+    sections.push(toCsvSection('Applied Scope', ['Filter'], scope.map((s) => [s])));
+  }
+
 
 
   sections.push(
@@ -237,7 +242,7 @@ export function exportReportCsv(r: InteractionReport, ai?: AISummaryResult | nul
   downloadBlob('\ufeff' + sections.join('\n'), 'text/csv;charset=utf-8', reportFilename(r, 'csv'));
 }
 
-export function exportReportPdf(r: InteractionReport, ai?: AISummaryResult | null) {
+export function exportReportPdf(r: InteractionReport, ai?: AISummaryResult | null, scope?: string[]) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const orgName = r.organization?.name?.trim();
@@ -277,6 +282,16 @@ export function exportReportPdf(r: InteractionReport, ai?: AISummaryResult | nul
     40,
     y,
   );
+  if (scope?.length) {
+    doc.setFontSize(9);
+    doc.setTextColor(90, 90, 90);
+    scope.forEach((line) => {
+      y += 12;
+      doc.text(line, 40, y);
+    });
+    doc.setFontSize(10);
+    doc.setTextColor(40, 40, 40);
+  }
   y += 10;
 
 

@@ -9,22 +9,22 @@ interface CategoryBadgeProps {
 
 const categoryConfig = {
   academic: {
-    label: 'Academic',
+    label: 'Training & Program',
     icon: GraduationCap,
     className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   },
   financial: {
-    label: 'Financial Aid',
+    label: 'Financial Assistance',
     icon: DollarSign,
     className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
   },
   mental_health: {
-    label: 'Mental Health',
+    label: 'Wellbeing',
     icon: Heart,
     className: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300',
   },
   housing: {
-    label: 'Housing',
+    label: 'Housing Stability',
     icon: Home,
     className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   },

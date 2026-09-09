@@ -8,7 +8,8 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EmptyState } from '@/components/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -20,11 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useStudentFolders } from '@/hooks/useStudentFolders';
-import { useAllCohorts } from '@/hooks/useCohorts';
-import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
-import { useAuth } from '@/contexts/AuthContext';
 
 function getInitials(name: string | null): string {
   if (!name) return '?';
@@ -32,42 +30,18 @@ function getInitials(name: string | null): string {
 }
 
 export default function StudentFolders() {
-  const { role } = useAuth();
   const { data: students, isLoading } = useStudentFolders();
-  const { data: cohorts } = useAllCohorts();
-  const { data: filterOptions } = useFilterOptions();
   const [search, setSearch] = useState('');
-  const [orgFilter, setOrgFilter] = useState<string>('all');
-  const [cohortFilter, setCohortFilter] = useState<string>('all');
-  const [cmFilter, setCmFilter] = useState<string>('all');
-
-  const canFilterByCM = role === 'admin' || role === 'org_admin';
-
-  const orgOptions = useMemo(
-    () => [...new Map((students || []).filter(s => s.organization_name).map(s => [s.organization_id, s.organization_name])).entries()],
-    [students],
-  );
-
-  // Cohorts scoped to currently selected org (or all visible)
-  const cohortOptions = useMemo(() => {
-    const list = cohorts || [];
-    if (orgFilter === 'all') return list;
-    return list.filter((c) => c.organization_id === orgFilter);
-  }, [cohorts, orgFilter]);
-
-  const cmOptions = filterOptions?.caseManagers ?? [];
 
   const { filters: gf } = useGlobalFilters();
-  const filtered = (students || []).filter(s => {
+  const filtered = useMemo(() => (students || []).filter(s => {
     const q = search.toLowerCase();
     const matchesSearch = (s.full_name || '').toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
-    const matchesOrg = orgFilter === 'all' || s.organization_id === orgFilter;
-    const matchesGlobalOrg = gf.organizationId.length === 0 || (s.organization_id && gf.organizationId.includes(s.organization_id));
-    const matchesLocalCohort = cohortFilter === 'all' || s.cohort_id === cohortFilter;
-    const matchesGlobalCohort = gf.cohort.length === 0 || (s.cohort_id && gf.cohort.includes(s.cohort_id));
-    const matchesCM = cmFilter === 'all' || s.case_manager_id === cmFilter;
-    return matchesSearch && matchesOrg && matchesGlobalOrg && matchesLocalCohort && matchesGlobalCohort && matchesCM;
-  });
+    const matchesOrg = gf.organizationId.length === 0 || (s.organization_id && gf.organizationId.includes(s.organization_id));
+    const matchesCohort = gf.cohort.length === 0 || (s.cohort_id && gf.cohort.includes(s.cohort_id));
+    const matchesCM = gf.assignedCaseManagerId.length === 0 || (s.case_manager_id && gf.assignedCaseManagerId.includes(s.case_manager_id));
+    return matchesSearch && matchesOrg && matchesCohort && matchesCM;
+  }), [students, search, gf]);
 
   return (
     <SidebarLayout>
@@ -77,7 +51,7 @@ export default function StudentFolders() {
           description="Browse student files, intake responses, and request history."
         />
 
-        <GlobalFilterBar visible={['cohort', 'yearOfStudy', 'organizationId']} />
+        <GlobalFilterBar visible={['organizationId', 'cohort', 'assignedCaseManagerId']} />
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -89,48 +63,6 @@ export default function StudentFolders() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          {orgOptions.length > 0 && (
-            <Select value={orgFilter} onValueChange={(v) => { setOrgFilter(v); setCohortFilter('all'); }}>
-              <SelectTrigger className="w-48">
-                <Building2 className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by org" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Organizations</SelectItem>
-                {orgOptions.map(([id, name]) => (
-                  <SelectItem key={id} value={id!}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {cohortOptions.length > 0 && (
-            <Select value={cohortFilter} onValueChange={setCohortFilter}>
-              <SelectTrigger className="w-48">
-                <GraduationCap className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by cohort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Cohorts</SelectItem>
-                {cohortOptions.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {canFilterByCM && cmOptions.length > 0 && (
-            <Select value={cmFilter} onValueChange={setCmFilter}>
-              <SelectTrigger className="w-56">
-                <UserCheck className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by case manager" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Case Managers</SelectItem>
-                {cmOptions.map((cm) => (
-                  <SelectItem key={cm.value} value={cm.value}>{cm.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
           <Badge variant="secondary" className="whitespace-nowrap">
             {filtered.length} student{filtered.length !== 1 ? 's' : ''}
           </Badge>
@@ -145,7 +77,49 @@ export default function StudentFolders() {
             description={search ? 'Try adjusting your search.' : 'No students match the current filters.'}
           />
         ) : (
-          <Card className="border border-border/50">
+          <>
+          {/* Mobile card list */}
+          <div className="space-y-3 sm:hidden">
+            {filtered.map((student) => (
+              <Card key={student.user_id} className="border border-border/50 p-4 space-y-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                      {getInitials(student.full_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">{student.full_name || 'Unknown'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{student.email}</p>
+                  </div>
+                  {student.pending_requests > 0 && (
+                    <Badge variant="destructive" className="text-xs shrink-0">
+                      {student.pending_requests} pending
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5 text-xs">
+                  {student.cohort_name && (
+                    <Badge variant="outline" className="gap-1 text-xs">
+                      <GraduationCap className="h-3 w-3" />
+                      {student.cohort_name}
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="gap-1 text-xs">
+                    <UserCheck className="h-3 w-3" />
+                    {student.case_manager_name || 'Unassigned'}
+                  </Badge>
+                </div>
+                <Button asChild variant="outline" size="sm" className="w-full">
+                  <Link to={`/students/${student.user_id}`}>Open folder</Link>
+                </Button>
+              </Card>
+            ))}
+          </div>
+
+          <Card className="hidden sm:block border border-border/50 overflow-hidden">
+            <div className="overflow-x-auto">
+
             <Table>
               <TableHeader>
                 <TableRow>
@@ -238,7 +212,9 @@ export default function StudentFolders() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </Card>
+          </>
         )}
       </div>
     </SidebarLayout>

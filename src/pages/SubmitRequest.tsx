@@ -42,11 +42,11 @@ import { useFormPersistence } from '@/hooks/useFormPersistence';
 import { DraftIndicator } from '@/components/forms/DraftIndicator';
 
 const categories: { value: RequestCategory; label: string; icon: React.ComponentType<{ className?: string }>; description: string; examples: string[] }[] = [
-  { value: 'academic', label: 'Academic', icon: GraduationCap, description: 'Course registration, grades, academic advising', examples: ['Trouble enrolling in a required class', 'Appealing a grade or academic probation', 'Need to change your major or advisor'] },
-  { value: 'financial', label: 'Financial', icon: DollarSign, description: 'Financial aid, scholarships, tuition', examples: ['Unexpected bill you can\'t cover', 'Scholarship or grant application help', 'Emergency funds for books or supplies'] },
-  { value: 'mental_health', label: 'Mental Health', icon: Heart, description: 'Counseling, wellness, support services', examples: ['Feeling overwhelmed or anxious', 'Looking for a counselor referral', 'Need someone to talk to about stress'] },
-  { value: 'housing', label: 'Housing', icon: Home, description: 'Dorms, housing assignments, maintenance', examples: ['Roommate conflict or safety concern', 'Facing eviction or housing insecurity', 'Maintenance issue in your dorm'] },
-  { value: 'other', label: 'Other', icon: HelpCircle, description: 'General inquiries or anything that doesn\'t fit above', examples: ['Parking or transportation issues', 'Questions about campus services', 'Not sure where to start — we\'ll route it for you'] },
+  { value: 'academic', label: 'Training & Program', icon: GraduationCap, description: 'Training attendance, class schedule, certifications, career readiness', examples: ['Trouble getting to training on time', 'Need to make up missed training hours', 'Help with a certification or exam'] },
+  { value: 'financial', label: 'Financial Assistance', icon: DollarSign, description: 'Transportation, work gear, childcare, tools, and other costs', examples: ['Bus pass, gas, or car repair to get to work', 'Work boots, uniform, or tools for a new job', 'Childcare so you can attend training or work'] },
+  { value: 'mental_health', label: 'Wellbeing', icon: Heart, description: 'Counseling, stress, and personal support', examples: ['Feeling overwhelmed or anxious', 'Looking for a counselor referral', 'Need someone to talk to about stress'] },
+  { value: 'housing', label: 'Housing Stability', icon: Home, description: 'Staying housed and safe', examples: ['Behind on rent or facing eviction', 'Need emergency or temporary shelter', 'Unsafe or unstable living situation'] },
+  { value: 'other', label: 'Other', icon: HelpCircle, description: 'Employment support or anything that doesn\'t fit above', examples: ['Help with a job search, resume, or interview', 'Documents like an ID, license, or birth certificate', 'Not sure where to start — we\'ll route it for you'] },
 ];
 
 const priorities: { value: RequestPriority; label: string; description: string }[] = [
@@ -368,21 +368,32 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
                 <CardDescription>Select the category that best describes your request</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <RadioGroup
+                  value={watchCategory}
+                  onValueChange={(v) => form.setValue('category', v as RequestCategory)}
+                  aria-label="Type of support you need"
+                  className="grid gap-4 sm:grid-cols-2"
+                >
                   {categories.map((cat) => (
-                    <div
+                    <Label
                       key={cat.value}
-                      onClick={() => form.setValue('category', cat.value)}
+                      htmlFor={`category-${cat.value}`}
                       className={cn(
-                        'flex cursor-pointer items-start gap-4 rounded-lg border p-4 transition-colors hover:border-primary/50',
-                        watchCategory === cat.value && 'border-primary bg-primary/5'
+                        'flex cursor-pointer items-start gap-4 rounded-lg border p-4 font-normal transition-colors hover:border-primary/50',
+                        'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
+                        watchCategory === cat.value && 'border-primary bg-primary/5 ring-1 ring-primary'
                       )}
                     >
+                      <RadioGroupItem
+                        id={`category-${cat.value}`}
+                        value={cat.value}
+                        className="mt-1 shrink-0"
+                      />
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                         <cat.icon className="h-5 w-5 text-primary" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-semibold">{cat.label}</h3>
+                        <span className="block font-semibold">{cat.label}</span>
                         <p className="text-sm text-muted-foreground">{cat.description}</p>
                         <ul className="mt-2 space-y-0.5">
                           {cat.examples.map((ex, i) => (
@@ -390,9 +401,9 @@ export default function SubmitRequest({ standalone = false, qrCodeOverride }: Su
                           ))}
                         </ul>
                       </div>
-                    </div>
+                    </Label>
                   ))}
-                </div>
+                </RadioGroup>
                 <p className="mt-4 text-sm text-muted-foreground text-center">
                   <HelpCircle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
                   Not sure which category fits? Choose <strong>"Other"</strong> and we'll route it to the right team.

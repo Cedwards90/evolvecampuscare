@@ -96,7 +96,8 @@ export const NAV_GROUPS: NavGroup[] = [
     id: 'home',
     label: 'Home',
     items: [
-      { label: 'Home', href: ROUTES.dashboard, icon: LayoutDashboard, roles: ALL },
+      { label: 'Home', href: ROUTES.dashboard, icon: LayoutDashboard, roles: ['student', 'admin', 'org_admin'] },
+      { label: 'Today', href: ROUTES.dashboard, icon: LayoutDashboard, roles: ['case_manager'] },
       { label: 'Messages', href: ROUTES.messages, icon: MessageSquare, roles: ALL },
     ],
   },
@@ -106,17 +107,16 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Submit a request', href: ROUTES.requestNew, icon: FileText, roles: ['student'] },
       { label: 'My requests', href: ROUTES.requestsMine, icon: Clock, roles: ['student'] },
-      { label: 'Drafts', href: ROUTES.requestsDrafts, icon: WifiOff, roles: ['student'] },
     ],
   },
   {
     id: 'my-progress',
     label: 'My Progress',
     items: [
-      { label: 'Surveys', href: '/surveys', icon: ClipboardList, roles: ['student'] },
+      { label: 'My surveys', href: '/surveys', icon: ClipboardList, roles: ['student'] },
       { label: 'Weekly check-in', href: '/check-in', icon: HeartHandshake, roles: ['student'] },
       { label: 'My submissions', href: '/my-submissions', icon: ClipboardCheck, roles: ['student'] },
-      { label: 'Resources', href: ROUTES.resources, icon: Heart, roles: ['student'] },
+      { label: 'Resources', href: ROUTES.resources, icon: Heart, roles: ALL },
     ],
   },
   {
@@ -126,15 +126,15 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Request queue', href: ROUTES.requestsQueue, icon: Users, roles: ['case_manager', 'org_admin'] },
       { label: 'Students', href: ROUTES.students, icon: FolderOpen, roles: STAFF },
       { label: 'Appointments', href: ROUTES.appointments, icon: CalendarDays, roles: STAFF },
-      { label: 'Resources', href: ROUTES.resources, icon: Heart, roles: STAFF },
+      { label: 'My hours', href: '/time-tracking', icon: Timer, roles: ['case_manager'] },
     ],
   },
   {
     id: 'operations',
     label: 'Operations',
     items: [
-      { label: 'Admin overview', href: ROUTES.admin, icon: BarChart3, roles: ['admin', 'org_admin'] },
-      { label: 'All requests', href: ROUTES.requests, icon: FileText, roles: ['admin', 'org_admin'] },
+      { label: 'Overview', href: ROUTES.admin, icon: BarChart3, roles: ['admin', 'org_admin'] },
+      { label: 'Requests', href: ROUTES.requests, icon: FileText, roles: ['admin', 'org_admin'] },
     ],
   },
   {
@@ -148,21 +148,16 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     id: 'reporting',
-    label: 'Reporting',
+    label: 'Reports',
     items: [
       { label: 'Reports', href: ROUTES.reports, icon: FileBarChart, roles: STAFF },
       { label: 'Case notes', href: '/admin/case-notes', icon: NotebookPen, roles: STAFF },
-      { label: 'Surveys', href: '/admin/surveys', icon: ClipboardList, roles: STAFF },
+      { label: 'Survey management', href: '/admin/surveys', icon: ClipboardList, roles: STAFF },
+      { label: 'Life skills', href: '/admin/lifeskills', icon: Sparkles, roles: STAFF },
       { label: 'Request analytics', href: '/admin/request-analytics', icon: BarChart3, roles: ['admin', 'org_admin'] },
       { label: 'Impact', href: '/admin/impact', icon: Sparkles, roles: ['admin', 'org_admin'] },
-    ],
-  },
-  {
-    id: 'time',
-    label: 'Time',
-    items: [
-      { label: 'My hours', href: '/time-tracking', icon: Timer, roles: ['case_manager'] },
       { label: 'Time reports', href: '/admin/time-tracking', icon: Timer, roles: ['admin', 'org_admin'] },
+      { label: 'Data export', href: '/admin/data-export', icon: Download, roles: ['admin', 'org_admin'] },
     ],
   },
   {
@@ -174,7 +169,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Manage resources', href: '/admin/resources', icon: Heart, roles: STAFF },
       { label: 'NDA', href: '/admin/nda', icon: FileText, roles: ['admin'] },
       { label: 'Login activity', href: '/admin/login-activity', icon: Clock, roles: ['admin', 'org_admin'] },
-      { label: 'Data export', href: '/admin/data-export', icon: Download, roles: ['admin', 'org_admin'] },
       { label: 'Internal controls', href: '/admin/internal-controls', icon: ShieldCheck, roles: ['admin'] },
     ],
   },
@@ -220,12 +214,12 @@ export function mobileTabsForRole(role: AppRole | null): TabItem[] {
       return [
         { label: 'Home', href: ROUTES.dashboard, icon: LayoutDashboard },
         { label: 'Get help', href: ROUTES.requestNew, icon: FileText },
-        { label: 'Surveys', href: '/surveys', icon: ClipboardList },
+        { label: 'My requests', href: ROUTES.requestsMine, icon: Clock },
         { label: 'Messages', href: ROUTES.messages, icon: MessageSquare },
       ];
     case 'case_manager':
       return [
-        { label: 'Home', href: ROUTES.dashboard, icon: LayoutDashboard },
+        { label: 'Today', href: ROUTES.dashboard, icon: LayoutDashboard },
         { label: 'Queue', href: ROUTES.requestsQueue, icon: Users },
         { label: 'Students', href: ROUTES.students, icon: FolderOpen },
         { label: 'Reports', href: ROUTES.reports, icon: FileBarChart },
@@ -233,7 +227,7 @@ export function mobileTabsForRole(role: AppRole | null): TabItem[] {
     case 'admin':
     case 'org_admin':
       return [
-        { label: 'Home', href: ROUTES.dashboard, icon: LayoutDashboard },
+        { label: 'Overview', href: ROUTES.dashboard, icon: LayoutDashboard },
         { label: 'Requests', href: ROUTES.requests, icon: FileText },
         { label: 'Students', href: ROUTES.students, icon: FolderOpen },
         { label: 'Reports', href: ROUTES.reports, icon: FileBarChart },
@@ -243,7 +237,6 @@ export function mobileTabsForRole(role: AppRole | null): TabItem[] {
         { label: 'Home', href: ROUTES.dashboard, icon: LayoutDashboard },
         { label: 'Help', href: ROUTES.support, icon: HelpCircle },
         { label: 'Settings', href: ROUTES.settings, icon: Settings },
-        { label: 'Language', href: ROUTES.settings, icon: Globe },
       ];
   }
 }
