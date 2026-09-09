@@ -28,6 +28,8 @@ import { toast } from '@/hooks/use-toast';
 import { GlobalFilterBar } from '@/components/filters/GlobalFilterBar';
 import { useGlobalFilters } from '@/contexts/GlobalFiltersContext';
 import { useCaseNotesSummary } from '@/hooks/useCaseNotesSummary';
+import { useFilterOptions } from '@/hooks/useFilterOptions';
+import { applyReportScope, describeReportScope } from '@/lib/reportScope';
 
 export default function Reports() {
   const { user, role } = useAuth();
