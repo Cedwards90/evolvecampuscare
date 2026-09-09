@@ -65,21 +65,27 @@ export function RequestTimeline({ updates, showInternal, requestId }: RequestTim
 
   const canDelete = (update: RequestUpdate) => {
     if (!user) return false;
+    if ((update as any).retracted_at) return false;
     if (role === 'admin') return true;
     if (role === 'case_manager' && update.user_id === user.id) return true;
     return false;
   };
 
+  /** Entries are retracted, never removed: the record must stay auditable. */
   const handleDelete = async (id: string) => {
+    if (!user) return;
     setDeletingId(id);
-    const { error } = await supabase.from('request_updates').delete().eq('id', id);
+    const { error } = await (supabase as any)
+      .from('request_updates')
+      .update({ retracted_at: new Date().toISOString(), retracted_by: user.id })
+      .eq('id', id);
     setDeletingId(null);
     setPendingDelete(null);
     if (error) {
-      toast.error('Failed to delete entry: ' + error.message);
+      toast.error('Failed to retract entry: ' + error.message);
       return;
     }
-    toast.success('Activity entry deleted');
+    toast.success('Activity entry retracted');
     if (requestId) {
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
     }
