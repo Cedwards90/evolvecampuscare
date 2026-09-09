@@ -44,8 +44,14 @@ export function CohortDialog({ open, onOpenChange, organizationId, cohort, allow
       setEndDate(cohort?.end_date ?? '');
       setGraduated(!!cohort?.graduated_at);
       setGraduatedAt(cohort?.graduated_at ?? '');
+      setOrgId(cohort?.organization_id ?? organizationId ?? '');
     }
-  }, [open, cohort]);
+  }, [open, cohort, organizationId]);
+
+  const orgOptions = (organizations || []).filter(
+    (o) => !allowedOrganizationIds || allowedOrganizationIds.includes(o.id),
+  );
+  const showOrgPicker = !organizationId && !cohort;
 
   const submitting = create.isPending || update.isPending;
   const isEdit = !!cohort;
