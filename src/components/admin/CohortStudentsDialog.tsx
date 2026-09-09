@@ -180,9 +180,9 @@ export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Manage cohort — {cohort?.name}</DialogTitle>
+          <DialogTitle>Manage class — {cohort?.name}</DialogTitle>
           <DialogDescription>
-            Add or remove students and case managers. Records are never deleted — only their cohort link changes.
+            Add or remove students and case managers. Records are never deleted — only their class link changes.
           </DialogDescription>
         </DialogHeader>
 
@@ -193,15 +193,33 @@ export function CohortStudentsDialog({ open, onOpenChange, cohort }: Props) {
           </TabsList>
 
           <TabsContent value="students" className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name or email…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[200px] flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name or email…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button
+                type="button"
+                variant={onlyNoClass ? 'default' : 'outline'}
+                size="sm"
+                className="rounded-full"
+                onClick={() => setOnlyNoClass((v) => !v)}
+              >
+                In no class ({noClassCount})
+              </Button>
             </div>
+
+            {orphanSelected > 0 && (
+              <p className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+                {orphanSelected} of the students you selected have no organization yet. Adding them to this class also
+                puts them in <strong>this class's organization</strong>. Nothing else about their record changes.
+              </p>
+            )}
 
             {isLoading ? (
               <div className="flex justify-center py-10">
