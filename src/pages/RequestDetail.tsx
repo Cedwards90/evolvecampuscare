@@ -560,14 +560,14 @@ export default function RequestDetail() {
           requestTitle={request.title}
         />
       )}
-      {canDelete && (
-        <DeleteRequestDialog
-          open={deleteOpen}
-          onOpenChange={setDeleteOpen}
+      {canArchive && (
+        <ArchiveRequestDialog
+          open={archiveOpen}
+          onOpenChange={setArchiveOpen}
           requestId={request.id}
           requestTitle={request.title}
           studentName={request.student?.full_name || undefined}
-          onDeleted={() => navigate('/requests')}
+          onArchived={() => navigate('/requests')}
         />
       )}
     </SidebarLayout>

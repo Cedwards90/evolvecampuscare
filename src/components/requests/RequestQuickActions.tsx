@@ -21,7 +21,7 @@ import {
 import { useApproveRequest, useDenyRequest } from '@/hooks/useRequest';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { DeleteRequestDialog } from './DeleteRequestDialog';
+import { ArchiveRequestDialog } from './ArchiveRequestDialog';
 import type { SupportRequest } from '@/types/database';
 
 interface RequestQuickActionsProps {
