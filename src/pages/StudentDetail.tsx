@@ -104,6 +104,7 @@ export default function StudentDetail() {
 
   const isStaff = role === 'admin' || role === 'case_manager';
   const canEditProfile = role === 'admin' || role === 'case_manager' || role === 'org_admin';
+  const canSeeDocuments = canEditProfile;
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
 
