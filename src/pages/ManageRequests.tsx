@@ -112,14 +112,24 @@ export default function ManageRequests() {
   const { user } = useAuth();
 
   // Keep the URL in sync so a shared link reproduces exactly this list.
+  // Only the queue's own keys are touched — app-wide filter keys (org, cohort,
+  // case manager, status, ...) are left untouched so shared links keep them.
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (view !== 'active') params.set('view', view);
-    if (statusFilter !== 'all') params.set('status', statusFilter);
-    if (priorityFilter !== 'all') params.set('priority', priorityFilter);
-    if (categoryFilter !== 'all') params.set('category', categoryFilter);
-    if (emergencyOnly) params.set('is_emergency', 'true');
-    setSearchParams(params, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.delete('status'); // legacy key, now owned by the global filter bar
+        const set = (key: string, value: string | null) =>
+          value ? params.set(key, value) : params.delete(key);
+        set('view', view !== 'active' ? view : null);
+        set('qstatus', statusFilter !== 'all' ? statusFilter : null);
+        set('priority', priorityFilter !== 'all' ? priorityFilter : null);
+        set('category', categoryFilter !== 'all' ? categoryFilter : null);
+        set('is_emergency', emergencyOnly ? 'true' : null);
+        return params;
+      },
+      { replace: true },
+    );
   }, [view, statusFilter, priorityFilter, categoryFilter, emergencyOnly, setSearchParams]);
 
   // Fetch real data from Supabase
