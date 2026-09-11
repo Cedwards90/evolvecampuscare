@@ -3402,6 +3402,16 @@ export type Database = {
         }
         Returns: number
       }
+      notify_user: {
+        Args: {
+          _link?: string
+          _message: string
+          _title: string
+          _type: string
+          _user_id: string
+        }
+        Returns: string
+      }
       org_admin_can_access_time_entry: {
         Args: { _actor: string; _entry_id: string }
         Returns: boolean
