@@ -97,13 +97,16 @@ async function createInAppNotification(params: {
   link: string;
 }) {
   try {
-    await supabase.from('notifications').insert({
-      user_id: params.userId,
-      title: params.title,
-      message: params.message,
-      type: params.type,
-      link: params.link,
+    // Row-level security blocks inserting notifications for another user, so
+    // this goes through the security-definer RPC which checks staff access.
+    const { error } = await (supabase as any).rpc('notify_user', {
+      _user_id: params.userId,
+      _title: params.title,
+      _message: params.message,
+      _type: params.type,
+      _link: params.link,
     });
+    if (error) throw error;
   } catch (error) {
     console.error('Failed to create in-app notification:', error);
   }

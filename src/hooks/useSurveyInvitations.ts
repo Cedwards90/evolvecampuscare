@@ -113,14 +113,20 @@ export function useSendSurvey() {
         message: 'Your case manager has requested you complete a survey.',
         link: '/surveys',
       };
-      const noteRows = targets.map((sid) => ({
-        user_id: sid,
-        type: 'survey_request',
-        title: notif.title,
-        message: notif.message,
-        link: notif.link,
-      }));
-      await supabase.from('notifications').insert(noteRows);
+      // Notifications for other users must go through the security-definer RPC;
+      // a direct insert is blocked by row-level security.
+      await Promise.all(
+        targets.map(async (sid) => {
+          const { error } = await (supabase as any).rpc('notify_user', {
+            _user_id: sid,
+            _title: notif.title,
+            _message: notif.message,
+            _type: 'survey_request',
+            _link: notif.link,
+          });
+          if (error) console.error('Failed to notify student:', sid, error);
+        }),
+      );
 
       return { assigned: targets.length, skipped };
     },
