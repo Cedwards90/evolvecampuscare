@@ -118,8 +118,12 @@ export function StudentDocuments({ studentId }: Props) {
         setTimeout(() => setUploading((u) => u.filter((x) => x.id !== tempId)), 400);
       }
     }
-    setDescription('');
-    toast.success('Upload complete');
+    if (succeeded > 0) setDescription('');
+    if (succeeded > 0 && failed === 0) {
+      toast.success(succeeded === 1 ? 'File uploaded' : `${succeeded} files uploaded`);
+    } else if (succeeded > 0 && failed > 0) {
+      toast.warning(`${succeeded} uploaded, ${failed} failed`);
+    }
   };
 
   const openDocument = async (doc: StudentDocument) => {
