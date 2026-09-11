@@ -409,7 +409,7 @@ export default function StudentDetail() {
               { value: 'checkins', label: 'Check-Ins' },
               { value: 'grad-plan', label: 'Post-Grad Plan' },
               { value: 'certifications', label: 'Certifications' },
-              ...(isStaff ? [{ value: 'documents', label: 'Documents' }] : []),
+              ...(canSeeDocuments ? [{ value: 'documents', label: 'Documents' }] : []),
               { value: 'resources', label: 'Resources' },
               { value: 'profile', label: 'Profile & Intake' },
             ];
@@ -610,7 +610,7 @@ export default function StudentDetail() {
           </TabsContent>
 
           {/* Documents Tab */}
-          {isStaff && (
+          {canSeeDocuments && (
             <TabsContent value="documents" className="space-y-4">
               <StudentDocuments studentId={id!} />
             </TabsContent>
