@@ -118,7 +118,7 @@ export default function ManageRequests() {
     setSearchParams(
       (prev) => {
         const params = new URLSearchParams(prev);
-        params.delete('status'); // legacy key, now owned by the global filter bar
+        
         const set = (key: string, value: string | null) =>
           value ? params.set(key, value) : params.delete(key);
         set('view', view !== 'active' ? view : null);
