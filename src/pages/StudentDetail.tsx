@@ -49,6 +49,7 @@ import { useStudentDetail } from '@/hooks/useStudentDetail';
 import { ScheduleMeetingDialog } from '@/components/scheduling/ScheduleMeetingDialog';
 import { GenerateStudentReportCard } from '@/components/reports/GenerateStudentReportCard';
 import { SurveysSummaryCard } from '@/components/students/SurveysSummaryCard';
+import { StudentDocuments } from '@/components/students/StudentDocuments';
 import { useFileNotes } from '@/hooks/useFileNotes';
 import { useStudentCheckIns } from '@/hooks/useStudentCheckIns';
 import { useOrgName } from '@/hooks/useOrgName';
@@ -407,6 +408,7 @@ export default function StudentDetail() {
               { value: 'checkins', label: 'Check-Ins' },
               { value: 'grad-plan', label: 'Post-Grad Plan' },
               { value: 'certifications', label: 'Certifications' },
+              ...(isStaff ? [{ value: 'documents', label: 'Documents' }] : []),
               { value: 'resources', label: 'Resources' },
               { value: 'profile', label: 'Profile & Intake' },
             ];
@@ -605,6 +607,13 @@ export default function StudentDetail() {
           <TabsContent value="certifications" className="space-y-4">
             <CertificationsSection studentId={id!} canManage={role !== 'student'} />
           </TabsContent>
+
+          {/* Documents Tab */}
+          {isStaff && (
+            <TabsContent value="documents" className="space-y-4">
+              <StudentDocuments studentId={id!} />
+            </TabsContent>
+          )}
 
           {/* Resources Tab */}
           <TabsContent value="resources" className="space-y-4">
