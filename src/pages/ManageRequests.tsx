@@ -73,7 +73,12 @@ export default function ManageRequests() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const statusParam = searchParams.get('status') as RequestStatus | null;
+  // The queue's own status filter uses `qstatus` so it never collides with the
+  // app-wide filter bar, which owns the `status` query key. Legacy `status`
+  // links from dashboards are still honoured on first read.
+  const statusParam = (searchParams.get('qstatus') ?? searchParams.get('status')) as
+    | RequestStatus
+    | null;
   const priorityParam = searchParams.get('priority') as RequestPriority | null;
   const categoryParam = searchParams.get('category') as RequestCategory | null;
   const emergencyParam = searchParams.get('is_emergency') === 'true';
