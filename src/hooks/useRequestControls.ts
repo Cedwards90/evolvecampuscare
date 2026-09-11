@@ -113,13 +113,14 @@ export function useRecordPayment() {
         .eq('id', requestId)
         .maybeSingle();
       if (req?.student_id) {
-        await supabase.from('notifications').insert({
-          user_id: req.student_id,
-          title: 'Confirm the funds you received',
-          message: `A payment of ${formatted} was recorded for "${req.title}". Please confirm the amount and date you received it.`,
-          type: 'status_update',
-          link: `/requests/${requestId}`,
+        const { error: notifyError } = await db.rpc('notify_user', {
+          _user_id: req.student_id,
+          _title: 'Confirm the funds you received',
+          _message: `A payment of ${formatted} was recorded for "${req.title}". Please confirm the amount and date you received it.`,
+          _type: 'status_update',
+          _link: `/requests/${requestId}`,
         });
+        if (notifyError) console.error('Failed to notify participant:', notifyError);
       }
     },
     onSuccess: (_d, v) => invalidate(qc, v.requestId),

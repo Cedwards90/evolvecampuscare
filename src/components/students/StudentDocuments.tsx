@@ -97,6 +97,8 @@ export function StudentDocuments({ studentId }: Props) {
       toast.error(`Max ${MAX_DOCS_PER_STUDENT} documents per student.`);
       return;
     }
+    let succeeded = 0;
+    let failed = 0;
     for (const f of list) {
       const tempId = `${Date.now()}-${f.name}`;
       setUploading((u) => [...u, { id: tempId, name: f.name, progress: 10 }]);
@@ -107,16 +109,21 @@ export function StudentDocuments({ studentId }: Props) {
       }, 250);
       try {
         await upload.mutateAsync({ file: f, category, description });
+        succeeded += 1;
         setUploading((u) => u.map((x) => (x.id === tempId ? { ...x, progress: 100 } : x)));
       } catch {
-        // toast handled in hook
+        failed += 1; // per-file error toast comes from the hook
       } finally {
         clearInterval(interval);
         setTimeout(() => setUploading((u) => u.filter((x) => x.id !== tempId)), 400);
       }
     }
-    setDescription('');
-    toast.success('Upload complete');
+    if (succeeded > 0) setDescription('');
+    if (succeeded > 0 && failed === 0) {
+      toast.success(succeeded === 1 ? 'File uploaded' : `${succeeded} files uploaded`);
+    } else if (succeeded > 0 && failed > 0) {
+      toast.warning(`${succeeded} uploaded, ${failed} failed`);
+    }
   };
 
   const openDocument = async (doc: StudentDocument) => {
